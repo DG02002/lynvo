@@ -1,8 +1,9 @@
-import { useEffect, useId, useState } from "react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useId, useState } from "react"
 
 import { cn } from "~/lib/utils"
+
 import {
   useActiveHeadingTracker,
   useDocumentHeadings,
@@ -26,7 +27,7 @@ export function MobilePageOutline({
 }) {
   const panelId = useId()
   const [open, setOpen] = useState(false)
-  const [visible, setVisible] = useState(!revealAfterSelector)
+  const [revealedByScroll, setRevealedByScroll] = useState(false)
   const headings = useDocumentHeadings(providedHeadings, targetId)
   const [activeHeadingId, setActiveHeadingId] = useActiveHeadingTracker(
     headings,
@@ -35,11 +36,11 @@ export function MobilePageOutline({
   const handleHeadingClick = useHeadingClickHandler(setActiveHeadingId, () =>
     setOpen(false)
   )
+  const visible = !revealAfterSelector || revealedByScroll
 
   useEffect(() => {
     if (!revealAfterSelector) {
-      setVisible(true)
-      return
+      return undefined
     }
 
     let animationFrameId: number | undefined
@@ -51,7 +52,7 @@ export function MobilePageOutline({
         revealAfter instanceof HTMLElement &&
         revealAfter.getBoundingClientRect().bottom <= getHeaderHeight()
 
-      setVisible(nextVisible)
+      setRevealedByScroll(nextVisible)
       if (!nextVisible) {
         setOpen(false)
       }

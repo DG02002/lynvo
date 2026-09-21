@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
+
 import {
   drainAccountErasures,
   initiateAccountErasure,
@@ -7,8 +8,8 @@ import {
 } from "../../workers/d1/account-erasure"
 import { createOrUpdateSavedLink } from "../../workers/d1/links"
 import { createSession } from "../../workers/d1/sessions"
-import { getUserById, insertGoogleUser } from "../../workers/d1/users"
 import { reserveManagedExtraction } from "../../workers/d1/usage"
+import { getUserById, insertGoogleUser } from "../../workers/d1/users"
 
 const NOW = 1_750_000_000_000
 
@@ -71,7 +72,7 @@ const seedErasableAccount = async () => {
     .bind(
       `ERASUR${
         suffix
-          .replace(/[^A-Z]/gi, "")
+          .replaceAll(/[^A-Z]/gi, "")
           .toUpperCase()
           .slice(0, 6) || "ABCDEF"
       }`,

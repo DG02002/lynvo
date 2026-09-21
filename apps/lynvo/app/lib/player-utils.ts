@@ -1,4 +1,5 @@
 import { Result, Schema } from "effect"
+
 import { PlayerIdSchema, type PlayerId } from "~/lib/api-contracts"
 import { showPlayerLaunchError } from "~/lib/player-launch-events"
 
@@ -39,8 +40,8 @@ export const PLAYER_DEFINITIONS: readonly PlayerDefinition[] = [
   },
 ]
 
-export const DEFAULT_RANGE_PLAYER_ID: PlayerId = "just"
-export const DEFAULT_NON_RANGE_PLAYER_ID: PlayerId = "vlc"
+const DEFAULT_RANGE_PLAYER_ID: PlayerId = "just"
+const DEFAULT_NON_RANGE_PLAYER_ID: PlayerId = "vlc"
 
 const RANGE_PLAYER_STORAGE_KEY = "lynvo:player:range-supported:v1"
 const NON_RANGE_PLAYER_STORAGE_KEY = "lynvo:player:range-unsupported:v1"
@@ -52,7 +53,7 @@ const playerById = new Map(
   PLAYER_DEFINITIONS.map((player) => [player.id, player])
 )
 
-export const isPlayerId = <Value>(value: Value): value is Value & PlayerId =>
+const isPlayerId = <Value>(value: Value): value is Value & PlayerId =>
   Result.isSuccess(Schema.decodeUnknownResult(PlayerIdSchema)(value))
 
 const getStoredPlayerId = (
@@ -194,7 +195,7 @@ const launchIntentViaAnchor = (intentUrl: string): boolean => {
   return true
 }
 
-export const openInSpecificPlayer = async (
+const openInSpecificPlayer = async (
   targetUrl: string,
   player: PlayerDefinition
 ) => {

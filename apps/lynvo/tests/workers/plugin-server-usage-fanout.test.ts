@@ -1,4 +1,6 @@
+import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import { describe, expect, it, vi } from "vitest"
+
 import { createFakeD1Database } from "../support/fake-d1"
 
 const PLUGIN_SERVER_COUNT = 6
@@ -69,7 +71,7 @@ describe("Plugin Server usage HTTP fan-out", () => {
       .mockImplementation(async () => {
         activeRequests += 1
         maximumActiveRequests = Math.max(maximumActiveRequests, activeRequests)
-        await new Promise((resolve) => setTimeout(resolve, 10))
+        await sleep(10)
         activeRequests -= 1
         return Response.json({
           metrics: [

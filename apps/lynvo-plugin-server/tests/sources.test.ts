@@ -1,13 +1,14 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   ProtocolError,
   toProtocolErrorResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { LYNVO_PLUGIN_CATALOG } from "../src/plugin-catalog"
+import { afterEach, describe, expect, it, vi } from "vitest"
+
 import {
   BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
   BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT,
 } from "../src/constants"
+import { LYNVO_PLUGIN_CATALOG } from "../src/plugin-catalog"
 import {
   createBhadooNodes,
   extractBhadooGoogleDriveIndex,
@@ -15,10 +16,7 @@ import {
   getBhadooPathFilename,
   type BhadooGoogleDriveListResponse,
 } from "../src/sources/bhadoo-google-drive-index"
-import {
-  createOneDriveNodes,
-  extractOneDriveIndex,
-} from "../src/sources/onedrive-index"
+import { extractDirectMedia } from "../src/sources/direct-media"
 import {
   createGoogleDriveDownloadUrl,
   createGoogleDrivePublicFolderNodes,
@@ -29,10 +27,38 @@ import {
   fetchGoogleDrivePublicFileMetadata,
   parseGoogleDrivePublicFolderItems,
 } from "../src/sources/google-drive-public-files"
-import { extractDirectMedia } from "../src/sources/direct-media"
+import {
+  createOneDriveNodes,
+  extractOneDriveIndex,
+} from "../src/sources/onedrive-index"
 import { fetchValidatedUpstream } from "../src/upstream-response"
 
 afterEach(() => vi.restoreAllMocks())
+
+type FetchCall = Parameters<typeof fetch>
+
+/** Read the URL a recorded fetch call names. */
+const calledUrl = (call: FetchCall | undefined): string => {
+  const input = call?.[0]
+  if (input === undefined) {
+    throw new Error("Expected a recorded fetch call")
+  }
+  if (input instanceof Request) {
+    return input.url
+  }
+  return input instanceof URL ? input.href : input
+}
+
+/** Parse a JSON string body from a recorded fetch call. */
+const calledJsonBody = (call: FetchCall | undefined) => {
+  const body = call?.[1]?.body
+  if (body === null || body === undefined) {
+    throw new Error("Expected a JSON string fetch body")
+  }
+  // SAFETY: source adapters serialize their JSON request bodies as strings.
+  const jsonBody = body as string
+  return JSON.parse(jsonBody)
+}
 
 const createBhadooReverseEnvelope = (
   response: BhadooGoogleDriveListResponse
@@ -414,19 +440,19 @@ describe("Bhadoo source adapter", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(2)
     const [calledItemRequest] = fetchSpy.mock.calls
-    expect(String(calledItemRequest?.[0])).toBe(
+    expect(calledUrl(calledItemRequest)).toBe(
       "https://index.example/0:fallback"
     )
-    expect(JSON.parse(String(calledItemRequest?.[1]?.body))).toEqual({
+    expect(calledJsonBody(calledItemRequest)).toEqual({
       id: "encoded-folder-token",
     })
     const [, calledRequest] = fetchSpy.mock.calls
-    expect(String(calledRequest?.[0])).toBe("https://index.example/0:fallback")
+    expect(calledUrl(calledRequest)).toBe("https://index.example/0:fallback")
     expect(calledRequest?.[1]).toMatchObject({
       method: "POST",
       headers: { "Content-Type": "application/json" },
     })
-    expect(JSON.parse(String(calledRequest?.[1]?.body))).toEqual({
+    expect(calledJsonBody(calledRequest)).toEqual({
       id: "encoded-folder-token",
       type: "folder",
       password: "",
@@ -472,8 +498,8 @@ describe("Bhadoo source adapter", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1)
     const [calledRequest] = fetchSpy.mock.calls
-    expect(String(calledRequest?.[0])).toBe("https://index.example/0:fallback")
-    expect(JSON.parse(String(calledRequest?.[1]?.body))).toEqual({
+    expect(calledUrl(calledRequest)).toBe("https://index.example/0:fallback")
+    expect(calledJsonBody(calledRequest)).toEqual({
       id: "encoded-file-token",
     })
     expect(result.nodes).toMatchObject([
@@ -503,7 +529,7 @@ describe("Bhadoo source adapter", () => {
       publicAssetOrigin: "https://lynvo.example",
     })
     const [calledRequest] = fetchSpy.mock.calls
-    expect(String(calledRequest[0])).toBe("https://drive.example/0:/")
+    expect(calledUrl(calledRequest)).toBe("https://drive.example/0:/")
     expect(calledRequest[1]?.headers).toMatchObject({
       Authorization: `Basic ${btoa("viewer:secret")}`,
     })
@@ -739,7 +765,7 @@ describe("OneDrive source adapter", () => {
     })
 
     expect(result.nodes).toMatchObject([{ label: "continued.mp4" }])
-    expect(String(fetchSpy.mock.calls[1][0])).toContain(
+    expect(calledUrl(fetchSpy.mock.calls[1])).toContain(
       "next=initial-continuation"
     )
   })
@@ -930,7 +956,7 @@ describe("Google Drive public files source adapter", () => {
     ])
   })
 
-  it("parses public folders into lazy folders and playable root files", () => {
+  it("parses public folders into unresolved items and playable root files", () => {
     expect(
       extractGoogleDriveFolderId(
         "https://drive.google.com/drive/folders/folder-id?usp=sharing"
@@ -1076,7 +1102,7 @@ describe("Google Drive public files source adapter", () => {
 
     const expectedUrl =
       "https://drive.usercontent.google.com/download?id=resource-key-file-id&export=download&confirm=t&resourcekey=0-example-key"
-    expect(String(fetchSpy.mock.calls[0]?.[0])).toBe(expectedUrl)
+    expect(calledUrl(fetchSpy.mock.calls[0])).toBe(expectedUrl)
     expect(result.nodes[0]).toMatchObject({
       url: expectedUrl,
       size: "193.65 MB",

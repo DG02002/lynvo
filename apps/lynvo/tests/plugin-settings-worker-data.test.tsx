@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import { PluginsSettings } from "~/features/site/settings/plugins-settings"
 
 describe("Plugin settings browser data", () => {

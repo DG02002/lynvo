@@ -1,21 +1,22 @@
 import { useMemo, useState, type ReactNode } from "react"
+
+import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
+import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
+import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
+import { SaveListBrowser } from "~/components/save-list/save-list-browser"
+import { useGalleryGroupRoute } from "~/components/save-list/use-gallery-group-route"
+import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
+import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
-import { SaveListBrowser } from "~/components/save-list/save-list-browser"
-import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
-import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
-import { useHybridGroupRoute } from "~/components/save-list/use-hybrid-group-route"
-import { useLinkActions } from "~/hooks/use-link-actions"
-import { useLinks } from "~/hooks/use-links"
-import { cn } from "~/lib/utils"
-import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
-import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
-import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/spinner"
-import type { InitialSnapshotMeta } from "~/features/links/use-links"
-import { useIsTvBroAndroidTv } from "~/lib/client-profile"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { GalleryGroup } from "~/features/links/media-artwork"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
+import { useLinkActions } from "~/features/links/use-link-actions"
+import { useLinks, type InitialSnapshotMeta } from "~/features/links/use-links"
+import { useIsTvBroAndroidTv } from "~/lib/client-profile"
+import { cn } from "~/lib/utils"
 
 declare global {
   interface SaveListProps {
@@ -26,10 +27,10 @@ declare global {
 
 interface SaveListContentOptions {
   readonly isGroupRoute: boolean
-  readonly openHybridGroup: HybridCardGroup | undefined
-  readonly isHybridMediaView: boolean
+  readonly openGalleryGroup: GalleryGroup | undefined
+  readonly isGalleryMediaView: boolean
   readonly isFolderRoute: boolean
-  readonly hybridCardGroups: readonly HybridCardGroup[] | undefined
+  readonly galleryGroups: readonly GalleryGroup[] | undefined
   readonly linkItemActions: LinkItemActions
   readonly extractingItems: Set<string>
   readonly isHydrating: boolean
@@ -44,10 +45,10 @@ interface SaveListContentOptions {
 
 const renderSaveListContent = ({
   isGroupRoute,
-  openHybridGroup,
-  isHybridMediaView,
+  openGalleryGroup,
+  isGalleryMediaView,
   isFolderRoute,
-  hybridCardGroups,
+  galleryGroups,
   linkItemActions,
   extractingItems,
   isHydrating,
@@ -59,10 +60,10 @@ const renderSaveListContent = ({
   onExitGroup,
   onOpenGroup,
 }: SaveListContentOptions): ReactNode => {
-  if (isGroupRoute && openHybridGroup) {
+  if (isGroupRoute && openGalleryGroup) {
     return (
-      <HybridGroupBrowser
-        group={openHybridGroup}
+      <GalleryGroupBrowser
+        group={openGalleryGroup}
         actions={linkItemActions}
         extractingItems={extractingItems}
         onExit={onExitGroup}
@@ -71,10 +72,10 @@ const renderSaveListContent = ({
     )
   }
 
-  if (isHybridMediaView && !isFolderRoute && hybridCardGroups) {
+  if (isGalleryMediaView && !isFolderRoute && galleryGroups) {
     return (
-      <HybridSaveGrid
-        groups={hybridCardGroups}
+      <GallerySaveGrid
+        groups={galleryGroups}
         actions={linkItemActions}
         extractingItems={extractingItems}
         isHydrating={isHydrating}
@@ -96,7 +97,7 @@ const renderSaveListContent = ({
       extractingItems={extractingItems}
       highlightedId={highlightedId}
       isHydrating={isHydrating}
-      shouldShowRowPosters={isHybridMediaView}
+      shouldShowRowPosters={isGalleryMediaView}
     />
   )
 }
@@ -104,14 +105,15 @@ const renderSaveListContent = ({
 const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
   const isSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const hasInitialItems = initialItems !== undefined
   const resolvedInitialSnapshotMeta = useMemo<InitialSnapshotMeta>(
     () => ({
       hasRouteSnapshot:
-        initialSnapshotMeta?.hasRouteSnapshot ?? initialItems !== undefined,
+        initialSnapshotMeta?.hasRouteSnapshot ?? hasInitialItems,
       dataVersion: initialSnapshotMeta?.dataVersion,
     }),
     [
-      initialItems !== undefined,
+      hasInitialItems,
       initialSnapshotMeta?.dataVersion,
       initialSnapshotMeta?.hasRouteSnapshot,
     ]
@@ -136,14 +138,14 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
     setHighlightedId,
   })
   const {
-    isHybridMediaView,
-    hybridCardGroups,
-    openHybridGroup,
+    isGalleryMediaView,
+    galleryGroups,
+    openGalleryGroup,
     isGroupRoute,
     isImmersiveRoute,
     exitGroup,
     openGroup,
-  } = useHybridGroupRoute({ links, isFolderRoute, isPending })
+  } = useGalleryGroupRoute({ links, isFolderRoute, isPending })
 
   useSaveListFullscreen(isImmersiveRoute)
   const savedUrls = useMemo(
@@ -155,7 +157,7 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
       <div
         className="fixed inset-0 flex min-h-svh items-center justify-center bg-background"
         role="status"
-        aria-label="Loading saved folder…"
+        aria-label="Loading folder…"
       >
         <Spinner aria-hidden="true" />
       </div>
@@ -189,10 +191,10 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
       <div className="w-full">
         {renderSaveListContent({
           isGroupRoute,
-          openHybridGroup,
-          isHybridMediaView,
+          openGalleryGroup,
+          isGalleryMediaView,
           isFolderRoute,
-          hybridCardGroups,
+          galleryGroups,
           linkItemActions,
           extractingItems,
           isHydrating,

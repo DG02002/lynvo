@@ -4,8 +4,8 @@ import {
   STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT,
   USER_STORAGE_LIMIT_BYTES,
 } from "../constants"
-import { LinkTooLargeError, StorageLimitError } from "./errors"
 import type { OwnedWriteGuard } from "./data-version"
+import { LinkTooLargeError, StorageLimitError } from "./errors"
 import {
   PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,
@@ -28,7 +28,7 @@ export const LEDGER_DOMAIN_COLUMNS = {
   pluginCredentialBytes: "plugin_credential_bytes",
 } as const
 
-export type StorageLedgerDomain = keyof typeof LEDGER_DOMAIN_COLUMNS
+type StorageLedgerDomain = keyof typeof LEDGER_DOMAIN_COLUMNS
 
 export interface AppOwnedStorageUsage {
   readonly profileBytes: number
@@ -77,10 +77,11 @@ const mapLedgerRow = (row: StorageLedgerRow): StorageLedgerRecord => ({
 
 const encoder = new TextEncoder()
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Measures every stored D1 document shape (profile, link, plugin server, domain, credential rows); anti-slop/no-unknown-parameters (error) bans `unknown`, and no single named type spans them.
 export const byteLength = <Document>(document: Document): number =>
   encoder.encode(JSON.stringify(document)).length
 
-const sumDocumentBytes = <Document>(documents: readonly Document[]): number =>
+const sumDocumentBytes = (documents: readonly unknown[]): number =>
   documents.reduce<number>(
     (totalBytes, document) => totalBytes + byteLength(document),
     0
@@ -220,7 +221,7 @@ export const ensureStorageLedger = async (
   }
 }
 
-export interface LedgerMutationPlan {
+interface LedgerMutationPlan {
   readonly domain: StorageLedgerDomain
   readonly currentBytes: number
   readonly nextBytes: number

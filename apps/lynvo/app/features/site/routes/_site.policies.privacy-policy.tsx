@@ -1,5 +1,5 @@
-import type { Route } from "./+types/_site.policies.privacy-policy"
 import { PrivacyPolicyContent } from "../content/privacy-policy-content"
+import type { Route } from "./+types/_site.policies.privacy-policy"
 
 export function meta(_: Route.MetaArgs) {
   return [

@@ -1,5 +1,6 @@
-import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin"
 import path from "node:path"
+
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin"
 import { defineConfig } from "vitest/config"
 
 const WORKER_TEST_TIMEOUT_MS = 15_000
@@ -13,6 +14,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "~": path.resolve(import.meta.dirname, "app"),
+      "~shared": path.resolve(import.meta.dirname, "shared"),
       "virtual:react-router/server-build": path.resolve(
         import.meta.dirname,
         "tests/workers/empty-server-build.ts"

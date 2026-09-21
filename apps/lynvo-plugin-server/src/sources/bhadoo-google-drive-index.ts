@@ -4,35 +4,35 @@ import {
   type ExtractSuccessResponse,
   type HttpBasicAuth,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { Schema } from "effect"
+
 import { createBasicAuthorization } from "../auth"
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   BHADOO_FALLBACK_API_PATH,
   BHADOO_FALLBACK_PATH,
-  EXTRACTION_ELAPSED_TIME_LIMIT_MS,
-  EXTRACTION_NODE_LIMIT,
   BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
   BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT,
-  PAGINATION_PAGE_LIMIT,
 } from "../constants"
 import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
-} from "../plugin-catalog"
-import {
-  assertSafeUpstreamUrl,
-  decodeUrlComponent,
-  encodeUrlPathSegment,
-} from "../url-policy"
-import { isVideoFile } from "./video-file"
-import { formatFileSize } from "./file-size"
-import { extractDirectMedia } from "./direct-media"
+} from "../plugin-adapter"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
-import { Schema } from "effect"
+import {
+  assertSafeUpstreamUrl,
+  decodeUrlComponent,
+  encodeUrlPathSegment,
+} from "../url-policy"
+import { extractDirectMedia } from "./direct-media"
+import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
+import { paginateUpstream, type UpstreamPage } from "./pagination"
+import { isVideoFile } from "./video-file"
 
 export interface BhadooGoogleDriveItem {
   id: string
@@ -176,14 +176,12 @@ export const createBhadooNodes = (
     playableUrl.username = ""
     playableUrl.password = ""
     const size = formatBhadooFileSize(item.size)
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 
@@ -360,31 +358,16 @@ const fetchBhadooNodes = async ({
   basicAuth,
   folderUrl,
 }: BhadooPaginationOptions): Promise<MediaNode[]> => {
-  const nodes: MediaNode[] = []
-  const seenTokens = new Set<string>()
-  const startedAtMs = Date.now()
+  let nextPageIndex = 0
   const fetchPage = async (
-    pageToken: string,
-    pageIndex: number
-  ): Promise<void> => {
-    if (
-      pageIndex >= PAGINATION_PAGE_LIMIT ||
-      Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
-    ) {
-      throw new Error("Bhadoo Index pagination exceeded its limit.")
-    }
-    if (pageToken && seenTokens.has(pageToken)) {
-      throw new Error("Bhadoo Index repeated a continuation token.")
-    }
-    if (pageToken) {
-      seenTokens.add(pageToken)
-    }
+    pageToken: string
+  ): Promise<UpstreamPage<BhadooGoogleDriveListResponse>> => {
     const result = await requestBhadooPage({
       endpointUrl,
       fallbackId,
       basicAuth,
       pageToken,
-      pageIndex,
+      pageIndex: nextPageIndex,
     })
     if (result.error) {
       throw new Error(
@@ -394,17 +377,18 @@ const fetchBhadooNodes = async ({
     if (!Number.isInteger(result.curPageIndex)) {
       throw new Error("Bhadoo Index returned a malformed page.")
     }
-    nodes.push(...createBhadooNodes(result.data?.files ?? [], folderUrl))
-    if (nodes.length > EXTRACTION_NODE_LIMIT) {
-      throw new Error("Bhadoo Index returned too many nodes.")
-    }
-    const nextPageToken = result.nextPageToken ?? ""
-    if (nextPageToken) {
-      await fetchPage(nextPageToken, result.curPageIndex + 1)
+    nextPageIndex = result.curPageIndex + 1
+    return {
+      value: result,
+      nextToken: result.nextPageToken ?? undefined,
     }
   }
-  await fetchPage("", 0)
-  return nodes
+
+  return paginateUpstream(
+    fetchPage,
+    (result) => createBhadooNodes(result.data?.files ?? [], folderUrl),
+    { sourceName: "Bhadoo Index" }
+  )
 }
 
 export const extractBhadooGoogleDriveIndex = async ({

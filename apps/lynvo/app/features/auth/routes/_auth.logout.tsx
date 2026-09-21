@@ -1,4 +1,5 @@
 import * as React from "react"
+
 import { signOut } from "~/lib/session-http"
 
 export default function Logout() {

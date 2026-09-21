@@ -26,6 +26,8 @@ export {
   validateVerifyErrorContract,
 } from "./contracts.js"
 export { createPluginServerRuntime } from "./runtime.js"
+export { sleep } from "./sleep.js"
+export { runWithRetries } from "./retry.js"
 export { isBlockedIpUrl, isLocalUrl } from "./ip-address-policy.js"
 export { validateBearerCredential } from "./auth.js"
 export {

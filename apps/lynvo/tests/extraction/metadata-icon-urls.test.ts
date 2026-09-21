@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { resolveMetadataIconUrls } from "~/lib/extraction/metadata-icon-urls"
 
 describe("resolveMetadataIconUrls", () => {

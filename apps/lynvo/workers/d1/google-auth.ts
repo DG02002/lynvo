@@ -1,5 +1,8 @@
 import { Result, Schema } from "effect"
+
 import { getCookieValue } from "../../app/lib/auth-cookie"
+import { createOutboundHttpTransport } from "../../app/lib/outbound-http"
+import { toBase64Url } from "../base64-url"
 import {
   GOOGLE_OAUTH_AUTH_ENDPOINT,
   GOOGLE_OAUTH_CODE_VERIFIER_BYTES,
@@ -11,7 +14,6 @@ import {
   GOOGLE_OAUTH_TOKEN_ENDPOINT,
   GOOGLE_OAUTH_TOKEN_TIMEOUT_MS,
 } from "../constants"
-import { toBase64Url } from "../base64-url"
 
 export interface GoogleOAuthCredentials {
   readonly clientId: string
@@ -176,11 +178,14 @@ export const exchangeGoogleAuthorizationCode = async (input: {
   form.set("redirect_uri", input.redirectUri)
   let response
   try {
-    response = await fetch(GOOGLE_OAUTH_TOKEN_ENDPOINT, {
-      method: "POST",
-      body: form,
-      signal: AbortSignal.timeout(GOOGLE_OAUTH_TOKEN_TIMEOUT_MS),
-    })
+    response = await createOutboundHttpTransport().fetch(
+      GOOGLE_OAUTH_TOKEN_ENDPOINT,
+      {
+        method: "POST",
+        body: form,
+        timeoutMs: GOOGLE_OAUTH_TOKEN_TIMEOUT_MS,
+      }
+    )
   } catch {
     return null
   }

@@ -1,10 +1,13 @@
-import { useState } from "react"
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { SmartPhone02Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { useState } from "react"
+
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { Spinner } from "~/components/spinner"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/spinner"
-import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+
+import { settingsCopy } from "./settings-copy"
 import { SettingsList, SettingsRow } from "./settings-layout"
 
 const LaptopMinimalIcon = [
@@ -158,7 +161,7 @@ export const ActiveSessionsView = ({
                     setRevokeDialogOpen(true)
                   }}
                 >
-                  Log out
+                  Sign out
                 </Button>
               )}
             </SettingsRow>
@@ -169,11 +172,11 @@ export const ActiveSessionsView = ({
       <div className="mt-6 flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1 pr-4">
           <h3 className="font-normal text-foreground text-sm">
-            Log out of all sessions
+            Sign out of all sessions
           </h3>
           <p className="text-sm text-muted-foreground leading-snug">
-            End every active session, including this one. Session termination
-            may take up to 30 minutes.
+            End every active session, including this one.{" "}
+            {settingsCopy.sessions.terminationDelay}
           </p>
         </div>
         <Button
@@ -185,7 +188,7 @@ export const ActiveSessionsView = ({
           {busy === "revokeAll" && (
             <Spinner data-icon="inline-start" aria-hidden="true" />
           )}
-          Log out all
+          Sign out of all sessions
         </Button>
       </div>
 
@@ -196,14 +199,14 @@ export const ActiveSessionsView = ({
             setRevokeDialogOpen(open)
           }
         }}
-        title="Log out this session?"
+        title="Sign out this session?"
         description={
           <>
             This logs <strong>{sessionToRevoke?.deviceName}</strong> out of
             Lynvo.
           </>
         }
-        confirmLabel="Log out"
+        confirmLabel="Sign out"
         confirmVariant="destructive"
         pending={isRevoking}
         onConfirm={() => void handleConfirmRevoke()}

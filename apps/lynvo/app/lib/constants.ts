@@ -1,4 +1,4 @@
-import { DAY_MS } from "../../shared/constants"
+import { DAY_MS } from "~shared/constants"
 
 export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
 export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000
@@ -29,35 +29,33 @@ export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
 export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
 export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
-export const TMDB_IMAGE_WIDE_CARD_BASE_URL = TMDB_IMAGE_DETAIL_BASE_URL
-export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
-  TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL
 export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
-export const MEDIA_ARTWORK_CACHE_VERSION = 4
+export const MEDIA_ARTWORK_CACHE_VERSION = 5
 export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
 export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
 export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS
 export const CARD_MENU_LONG_PRESS_DURATION_MS = 500
 export const CARD_MENU_LONG_PRESS_MOVEMENT_TOLERANCE_PX = 10
+export const TOAST_AUTO_DISMISS_TIMEOUT_MS = 8_000
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
 export const EXTRACTION_STATUS_MESSAGES = [
-  "Getting link info…",
-  "Extracting links…",
-  "Finding playable links…",
-  "Getting things ready…",
-  "Following the link trail…",
-  "Asking the internet nicely…",
-  "Checking promising routes…",
-  "Looking for playable links…",
-  "Checking whether this link has friends…",
-  "Sorting the useful bits…",
-  "Doing a little link detective work…",
-  "Giving the metadata a gentle nudge…",
-  "Putting the pieces together…",
-  "Finishing link details…",
-  "Polishing the final details…",
-  "Wrapping up link extraction…",
+  "Checking the link…",
+  "Working on the link…",
+  "Reviewing the source…",
+  "Looking for more details…",
+  "Checking the results…",
+  "Comparing the links…",
+  "Gathering link details…",
+  "Considering the results…",
+  "Organizing the details…",
+  "Putting the details together…",
+  "Examining the information…",
+  "Sorting the link details…",
+  "Working through the results…",
+  "Looking through the available links…",
+  "Checking the saved link…",
+  "Assessing the available information…",
 ] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160

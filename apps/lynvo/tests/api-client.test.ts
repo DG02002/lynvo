@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { client, requestSameOrigin } from "~/lib/api/client"
+
+import {
+  client,
+  requestNoStoreSameOriginWithSessionIdentity,
+  requestSameOrigin,
+} from "~/lib/api/client"
 import { readLynvoUsage } from "~/lib/settings/storage-http"
+
+import { requestUrl } from "./support/request-inspection"
 
 const fetchMock = vi.fn<typeof globalThis.fetch>()
 const nativeFetch = globalThis.fetch
@@ -30,9 +37,9 @@ describe("browser API client", () => {
       payload: { rangeSupportedPlayerId: "vlc" },
     })
 
-    const [input, init] = fetchMock.mock.calls[0]!
+    const [[input, init]] = fetchMock.mock.calls
     const request = new Request(
-      new URL(String(input), window.location.href),
+      new URL(requestUrl(input), window.location.href),
       init
     )
     expect(new URL(request.url).pathname).toBe("/api/settings/player")
@@ -55,9 +62,9 @@ describe("browser API client", () => {
       headers: { "Content-Type": "application/json" },
     })
 
-    const [input, init] = fetchMock.mock.calls[0]!
+    const [[input, init]] = fetchMock.mock.calls
     const request = new Request(
-      new URL(String(input), window.location.href),
+      new URL(requestUrl(input), window.location.href),
       init
     )
     expect(request.credentials).toBe("same-origin")
@@ -66,6 +73,65 @@ describe("browser API client", () => {
     expect(request.headers.get("x-csrf-token")).toBeNull()
     expect(request.headers.get("x-lynvo-expected-user-id")).toBe("user-1")
     expect(request.headers.get("x-lynvo-expected-session-id")).toBe("session-1")
+  })
+
+  it("lets legacy data callers preserve an identity-free JSON request", async () => {
+    fetchMock.mockResolvedValue(Response.json({ links: [] }))
+
+    await requestSameOrigin("/api/data/links", {
+      includeSessionIdentityHeaders: false,
+      method: "POST",
+      headers: { Accept: "application/json" },
+      payload: { operationId: "op-1" },
+    })
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    expect(request.headers.get("accept")).toBe("application/json")
+    expect(request.headers.get("content-type")).toBe("application/json")
+    expect(request.headers.get("x-lynvo-expected-user-id")).toBeNull()
+    expect(request.headers.get("x-lynvo-expected-session-id")).toBeNull()
+    await expect(request.json()).resolves.toEqual({ operationId: "op-1" })
+  })
+
+  it("passes cache policy and timeout settings to raw same-origin requests", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ok: true }))
+
+    await requestSameOrigin("/api/version", {
+      cache: "no-store",
+      timeoutMs: 1000,
+    })
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    expect(request.cache).toBe("no-store")
+    expect(request.signal).toBeDefined()
+  })
+
+  it("binds session identity in the URL without duplicating identity headers", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ok: true }))
+
+    await requestNoStoreSameOriginWithSessionIdentity("/api/remote/receivers")
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    const requestUrlValue = new URL(request.url)
+    expect(requestUrlValue.searchParams.get("expectedUserId")).toBe("user-1")
+    expect(requestUrlValue.searchParams.get("expectedSessionId")).toBe(
+      "session-1"
+    )
+    expect(request.cache).toBe("no-store")
+    expect(request.headers.get("x-lynvo-expected-user-id")).toBeNull()
+    expect(request.headers.get("x-lynvo-expected-session-id")).toBeNull()
   })
 
   it("preserves tagged API errors and response metadata", async () => {
@@ -104,7 +170,7 @@ describe("browser API client", () => {
 
     await expect(readLynvoUsage()).resolves.toEqual({ metrics: [] })
 
-    const [input, init] = fetchMock.mock.calls[0]!
+    const [[input, init]] = fetchMock.mock.calls
     const request = new Request(input, init)
     expect(new URL(request.url).pathname).toBe("/api/data/usage")
     expect(request.credentials).toBe("same-origin")

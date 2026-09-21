@@ -15,6 +15,9 @@ import { statSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
+// Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
+const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
+
 const docsHighlighter = await createHighlighterCore({
   themes: [
     import("@shikijs/themes/github-light-default"),
@@ -97,7 +100,7 @@ function wranglerTypesWatcher() {
       server.watcher.on("change", (path: string) => {
         if (path.endsWith("wrangler.jsonc")) {
           console.log("wrangler.jsonc changed, running wrangler types...")
-          exec("pnpm run cf-typegen", (err, stdout, stderr) => {
+          exec("pnpm run cf-typegen", (err, _stdout, stderr) => {
             if (err) {
               console.error("Error running wrangler types:", stderr)
             } else {
@@ -140,6 +143,12 @@ export default defineConfig({
     },
     wranglerTypesWatcher(),
     cloudflare({
+      config: (config) => ({
+        vars: {
+          ...config.vars,
+          LYNVO_NO_AUTH: developmentAuthBypass ? "true" : "false",
+        },
+      }),
       viteEnvironment: { name: "ssr" },
       auxiliaryWorkers: [
         {

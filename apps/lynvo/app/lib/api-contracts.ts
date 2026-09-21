@@ -1,16 +1,13 @@
 import { Schema } from "effect"
+import { PluginServerUsageSchema } from "~shared/usage-contracts"
+
 import { remoteCommandFieldsSchema } from "./remote-play/wire"
-import { PluginServerUsageSchema } from "../../shared/usage-contracts"
-export {
-  LynvoUsageSnapshotSchema,
-  PluginServerUsageSchema,
-  UsageMetricSchema,
-} from "../../shared/usage-contracts"
+export { LynvoUsageSnapshotSchema } from "~shared/usage-contracts"
 export type {
   LynvoUsageSnapshot,
   PluginServerUsage,
   UsageMetric,
-} from "../../shared/usage-contracts"
+} from "~shared/usage-contracts"
 
 export const MutationResultSchema = Schema.Struct({
   success: Schema.Boolean,
@@ -25,7 +22,7 @@ export const VersionedMutationBodySchema = Schema.Struct({
 
 export type VersionedMutationBody = typeof VersionedMutationBodySchema.Type
 
-export const CustomPluginServerSchema = Schema.Struct({
+const CustomPluginServerSchema = Schema.Struct({
   id: Schema.String,
   userId: Schema.String,
   baseUrl: Schema.String,
@@ -85,7 +82,7 @@ export const SetCredentialPayloadSchema = Schema.Struct({
   password: Schema.String,
 })
 
-export const PluginDomainSchema = Schema.Struct({
+const PluginDomainSchema = Schema.Struct({
   id: Schema.String,
   userId: Schema.String,
   pluginServerId: Schema.String,
@@ -151,7 +148,7 @@ export const RemotePollQuerySchema = Schema.Struct({
   receiverId: Schema.String,
 })
 
-export const RemoteCommandSchema = remoteCommandFieldsSchema
+const RemoteCommandSchema = remoteCommandFieldsSchema
 
 export const RemotePollResponseSchema = Schema.Struct({
   commands: Schema.Array(RemoteCommandSchema),
@@ -177,7 +174,7 @@ export const PlayerPreferencesSchema = Schema.Struct({
   rangeUnsupportedPlayerId: Schema.optional(PlayerIdSchema),
 })
 
-export const UserSessionSchema = Schema.Struct({
+const UserSessionSchema = Schema.Struct({
   id: Schema.String,
   deviceName: Schema.String,
   lastActiveAt: Schema.Number,
@@ -194,7 +191,6 @@ export const PluginServerUsageListSchema = Schema.Array(PluginServerUsageSchema)
 export const PluginDomainListSchema = Schema.Array(PluginDomainSchema)
 export const UserSessionListSchema = Schema.Array(UserSessionSchema)
 
-export type CustomPluginServer = typeof CustomPluginServerSchema.Type
 export type CreatePluginServerPayload =
   typeof CreatePluginServerPayloadSchema.Type
 export type TogglePluginServerPayload =
@@ -206,23 +202,18 @@ export type RefreshProxyBalanceResponse =
 export type CreatePluginDomainPayload =
   typeof CreatePluginDomainPayloadSchema.Type
 export type SetCredentialPayload = typeof SetCredentialPayloadSchema.Type
-export type PluginDomain = typeof PluginDomainSchema.Type
 export type StorageSettingsSnapshot = typeof StorageSettingsSnapshotSchema.Type
-export type RetentionPreviewResponse =
-  typeof RetentionPreviewResponseSchema.Type
 export type UpdateRetentionResponse = typeof UpdateRetentionResponseSchema.Type
 export type ClearLinksResponse = typeof ClearLinksResponseSchema.Type
 export type RemoteSendPayload = typeof RemoteSendPayloadSchema.Type
 export type ExtractQuery = typeof ExtractQuerySchema.Type
 export type MetadataQuery = typeof MetadataQuerySchema.Type
 export type RemotePollQuery = typeof RemotePollQuerySchema.Type
-export type RemoteCommand = typeof RemoteCommandSchema.Type
 export type RemotePollResponse = typeof RemotePollResponseSchema.Type
 export type RemoteResultPayload = typeof RemoteResultPayloadSchema.Type
 export type ActivityPayload = typeof ActivityPayloadSchema.Type
 export type PlayerId = typeof PlayerIdSchema.Type
 export type PlayerPreferences = typeof PlayerPreferencesSchema.Type
-export type UserSession = typeof UserSessionSchema.Type
 export type DeleteAccountPayload = typeof DeleteAccountPayloadSchema.Type
 export type PluginServerList = typeof PluginServerListSchema.Type
 export type PluginServerUsageList = typeof PluginServerUsageListSchema.Type

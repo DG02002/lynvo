@@ -1,13 +1,6 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { WebAuth, CsrfMiddleware } from "../middleware"
-import {
-  UnauthorizedApiError,
-  CsrfApiError,
-  ValidationApiError,
-  PluginServerRegistrationApiError,
-  BackendApiError,
-} from "../../errors"
+
 import {
   CreatePluginServerPayloadSchema,
   PluginServerListSchema,
@@ -17,6 +10,14 @@ import {
   SetProxyKeyResponseSchema,
   TogglePluginServerPayloadSchema,
 } from "../../../api-contracts"
+import {
+  UnauthorizedApiError,
+  CsrfApiError,
+  ValidationApiError,
+  PluginServerRegistrationApiError,
+  BackendApiError,
+} from "../../errors"
+import { WebAuth, CsrfMiddleware } from "../middleware"
 import {
   VersionedMutationResponseSchema,
   withDataVersionResponseSchema,

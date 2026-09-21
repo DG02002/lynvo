@@ -1,30 +1,66 @@
 import { describe, expect, it } from "vitest"
-import { getSaveErrorMessage } from "~/features/links/use-link-actions/save-error-message"
+
+import { getSaveError } from "~/features/links/use-link-actions/save-error-message"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
-describe("getSaveErrorMessage", () => {
-  it("hides transport and decode implementation details", () => {
+describe("getSaveError", () => {
+  it("classifies the protocol unsupported URL response", () => {
     expect(
-      getSaveErrorMessage(new Error("Decode error (400 GET /api/extract)"))
-    ).toBe("The link couldn’t be opened. Check the link, then try again.")
+      getSaveError({
+        _tag: "ExtractionError",
+        message: "UNSUPPORTED_URL",
+      })
+    ).toEqual({
+      kind: "unsupported",
+      message: "The link is not supported.",
+    })
   })
 
-  it("keeps authentication and validation errors actionable", () => {
-    expect(getSaveErrorMessage({ _tag: "UnauthorizedError" })).toBe(
-      "The session expired. Log in, then save the link again."
-    )
+  it("hides transport and decode implementation details", () => {
     expect(
-      getSaveErrorMessage({
+      getSaveError(new Error("Decode error (400 GET /api/extract)"))
+    ).toEqual({
+      kind: "generic",
+      message: "The link couldn’t be opened. Check the link, then try again.",
+    })
+  })
+
+  it("keeps authentication and availability errors generic", () => {
+    expect(getSaveError({ _tag: "UnauthorizedError" })).toEqual({
+      kind: "generic",
+      message: "The session expired. Sign in, then save the link again.",
+    })
+
+    const availabilityMessages = [
+      "The saved Plugin Server is unavailable.",
+      "Sign in to extract links with the Lynvo Plugin Server.",
+      "The saved Plugin is unavailable.",
+    ]
+
+    for (const message of availabilityMessages) {
+      expect(getSaveError({ _tag: "ValidationError", message })).toEqual({
+        kind: "generic",
+        message,
+      })
+    }
+
+    expect(
+      getSaveError({
         _tag: "ValidationError",
         message: "Please enter a supported URL.",
       })
-    ).toBe("Please enter a supported URL.")
+    ).toEqual({
+      kind: "generic",
+      message: "Please enter a supported URL.",
+    })
   })
 
   it("uses a source-neutral extraction message", () => {
-    expect(getSaveErrorMessage({ _tag: "ExtractionError" })).toBe(
-      "Links couldn’t be loaded from this address. Check the link, then try again."
-    )
+    expect(getSaveError({ _tag: "ExtractionError" })).toEqual({
+      kind: "generic",
+      message:
+        "Links couldn’t be loaded from this address. Check the link, then try again.",
+    })
   })
 
   it("only preserves explicitly trusted errors", () => {

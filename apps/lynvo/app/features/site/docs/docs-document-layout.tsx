@@ -1,10 +1,11 @@
-import type { ReactNode } from "react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import type { ReactNode } from "react"
 import { Link } from "react-router"
 
 import { MobilePageOutline } from "~/components/mobile-page-outline"
 import { PageTableOfContents } from "~/components/page-table-of-contents"
+
 import { DocsPageActions } from "./docs-page-actions"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {

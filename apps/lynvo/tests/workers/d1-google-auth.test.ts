@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import {
   createGoogleSignInStart,
   decryptStatePayload,
@@ -11,13 +12,23 @@ const CLIENT_SECRET = "test-client-secret"
 const CLIENT_ID = "test-client-id"
 const NOW = 1_750_000_000_000
 
-const encodeIdToken = <Claims>(claims: Claims): string => {
-  const encodePart = <Value>(value: Value) =>
-    btoa(JSON.stringify(value))
-      .replaceAll("+", "-")
-      .replaceAll("/", "_")
-      .replace(/=+$/, "")
-  return `${encodePart({ alg: "RS256", typ: "JWT" })}.${encodePart(claims)}.signature`
+interface IdTokenClaims {
+  readonly iss: string
+  readonly aud: string
+  readonly exp: number
+  readonly sub: string
+  readonly email: string
+  readonly email_verified: boolean
+  readonly name: string
+  readonly picture: string
+}
+
+const encodeIdToken = (claims: IdTokenClaims): string => {
+  const encodePart = (json: string) =>
+    btoa(json).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  return `${encodePart(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${encodePart(
+    JSON.stringify(claims)
+  )}.signature`
 }
 
 describe("google oauth state cookie", () => {

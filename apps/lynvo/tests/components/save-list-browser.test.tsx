@@ -2,11 +2,13 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 
 const LocationProbe = () => {
@@ -254,7 +256,7 @@ describe("SaveListBrowser", () => {
     })
     expect(seasonFolderButton).toHaveAttribute("aria-current", "page")
     expect(seasonFolderButton).toHaveAttribute("data-folder-state", "open")
-    fireEvent.click(seasonFolderButton!)
+    fireEvent.click(seasonFolderButton)
     expect(await screen.findByText("Episode One")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
@@ -384,7 +386,7 @@ describe("SaveListBrowser", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: "Folder Two" }).at(-1)!
     )
-    await screen.findByRole("button", { name: "Nested Episode" })
+    await screen.findByRole("button", { name: "Nested Episode, new" })
     expect(
       screen
         .getAllByRole("button", { name: "Folder Two" })
@@ -420,7 +422,7 @@ describe("SaveListBrowser", () => {
         "/save/folder/nested-navigation?path=folder-one/folder-two"
       )
     )
-    await screen.findByRole("button", { name: "Nested Episode" })
+    await screen.findByRole("button", { name: "Nested Episode, new" })
     expect(scrollTo).toHaveBeenCalledWith({ top: 128 })
 
     fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
@@ -430,7 +432,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
-    await screen.findByRole("button", { name: "Root Episode" })
+    await screen.findByRole("button", { name: "Root Episode, new" })
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/save/folder/nested-navigation"
     )
@@ -442,7 +444,7 @@ describe("SaveListBrowser", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: "Folder Two" }).at(-1)!
     )
-    await screen.findByRole("button", { name: "Nested Episode" })
+    await screen.findByRole("button", { name: "Nested Episode, new" })
 
     fireEvent.keyDown(window, { key: "Escape" })
     await screen.findAllByRole("button", { name: "Folder Two" })
@@ -846,7 +848,7 @@ describe("SaveListBrowser", () => {
     ).toHaveAttribute("data-folder-state", "open")
   })
 
-  it("does not reopen a folder when lazy expansion resolves after browser back", async () => {
+  it("does not reopen a folder when unresolved item expansion resolves after browser back", async () => {
     let finishExpansion: ((links: ExtractedLink[]) => void) | undefined
     const resolvedLinks: ExtractedLink[] = [
       {
@@ -867,7 +869,7 @@ describe("SaveListBrowser", () => {
       id: "lazy-race",
       url: "https://media.example/lazy-race",
       timestamp: 1,
-      title: "Lazy Race",
+      title: "Unresolved item race",
       metadata: {
         schemaVersion: 3,
         source: {},
@@ -876,7 +878,7 @@ describe("SaveListBrowser", () => {
             {
               id: "lazy-folder",
               url: "https://media.example/lazy-folder",
-              label: "Lazy Folder",
+              label: "Unresolved item",
               mediaNodeKind: "resolvable",
               resolutionKind: "folder",
               type: "folder",
@@ -905,7 +907,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Lazy Folder" }).at(-1)!
+      screen.getAllByRole("button", { name: "Unresolved item" }).at(-1)!
     )
     await waitFor(() => expect(expandFolder).toHaveBeenCalled())
 
@@ -921,7 +923,7 @@ describe("SaveListBrowser", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/save")
   })
 
-  it("shows a single resolvable container directly on the save page", async () => {
+  it("shows a single unresolved item directly in the library", async () => {
     const onSelectedItemUrlChange = vi.fn()
     const markOpened = vi.fn()
     const expandMirror = vi.fn().mockResolvedValue([
@@ -969,7 +971,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Playable Item Alpha.mkv" })
+      screen.getByRole("button", { name: "Playable Item Alpha.mkv, new" })
     )
 
     expect(markOpened).not.toHaveBeenCalled()
@@ -1093,7 +1095,7 @@ describe("SaveListBrowser", () => {
 
     render(<Harness />)
     const playableItemButton = screen.getByRole("button", {
-      name: "Playable Item One",
+      name: "Playable Item One, new",
     })
     fireEvent.click(playableItemButton)
 
@@ -1288,7 +1290,7 @@ describe("SaveListBrowser", () => {
 
     render(<Harness />)
     const cachedItemButton = screen.getByRole("button", {
-      name: "Cached Playable Item",
+      name: "Cached Playable Item, new",
     })
     const cachedItemRow = cachedItemButton.parentElement
     expect(cachedItemRow).toHaveAttribute("data-resolution-state", "resolving")
@@ -1336,7 +1338,7 @@ describe("SaveListBrowser", () => {
       />
     )
     fireEvent.click(
-      screen.getByRole("button", { name: "Metadata Update Item" })
+      screen.getByRole("button", { name: "Metadata Update Item, new" })
     )
     expect(await screen.findByText("Old cached mirror")).toBeVisible()
 
@@ -1372,7 +1374,7 @@ describe("SaveListBrowser", () => {
       />
     )
     const itemButton = screen.getByRole("button", {
-      name: "Failure Metadata Update Item",
+      name: "Failure Metadata Update Item, new",
     })
     const itemRow = itemButton.parentElement
     fireEvent.click(itemButton)
@@ -1425,7 +1427,7 @@ describe("SaveListBrowser", () => {
       />
     )
     const itemButton = screen.getByRole("button", {
-      name: "Stale Resolution Item",
+      name: "Stale Resolution Item, new",
     })
     const itemRow = itemButton.parentElement
     fireEvent.click(itemButton)
@@ -1479,7 +1481,7 @@ describe("SaveListBrowser", () => {
         />
       )
       const itemButton = screen.getByRole("button", {
-        name: "Stale Rejection Item",
+        name: "Stale Rejection Item, new",
       })
       const itemRow = itemButton.parentElement
       fireEvent.click(itemButton)
@@ -1549,7 +1551,7 @@ describe("SaveListBrowser", () => {
     )
 
     const failedPlayableItemButton = screen.getByRole("button", {
-      name: "Playable Item Resolution Failure",
+      name: "Playable Item Resolution Failure, new",
     })
     fireEvent.click(failedPlayableItemButton)
 
@@ -1605,7 +1607,7 @@ describe("SaveListBrowser", () => {
       )
 
       const itemButton = screen.getByRole("button", {
-        name: "Thrown Resolution Item",
+        name: "Thrown Resolution Item, new",
       })
       fireEvent.click(itemButton)
 
@@ -1697,9 +1699,9 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: /video.mp4/ })).toHaveClass(
-      "bg-sky-500/15"
-    )
+    expect(
+      screen.getByRole("button", { name: "Open video.mp4, opened" })
+    ).toHaveClass("bg-sky-500/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")
@@ -1831,13 +1833,13 @@ describe("SaveListBrowser", () => {
     )
 
     const itemButton = screen.getByRole("button", {
-      name: "Open expiring-video.mp4",
+      name: "Open expiring-video.mp4, new",
     })
     const filename = screen.getByText("expiring-video.mp4")
     expect(itemButton).toBeEnabled()
     expect(filename).not.toHaveClass("line-through")
 
-    act(() => vi.advanceTimersByTime(30_000))
+    void act(() => vi.advanceTimersByTime(30_000))
 
     expect(itemButton).toBeDisabled()
     expect(filename).toHaveClass("line-through")
@@ -1893,7 +1895,7 @@ describe("SaveListBrowser", () => {
       )
     ).toBe(true)
     const folderButton = screen.getByRole("button", {
-      name: "View source.example",
+      name: "View source.example, new",
     })
     expect(folderButton.parentElement?.querySelectorAll("svg")).toHaveLength(1)
     fireEvent.click(folderButton)

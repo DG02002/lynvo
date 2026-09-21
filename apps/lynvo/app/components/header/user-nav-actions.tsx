@@ -1,10 +1,12 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import { FolderLibraryIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
-import { buttonVariants } from "~/components/ui/button-variants"
+
 import { RemotePlayButton } from "~/components/remote-play-button"
+import { buttonVariants } from "~/components/ui/button-variants"
 import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
+
 import { UserMenu } from "./user-menu"
 
 export const UserNavActions = ({
@@ -31,6 +33,7 @@ export const UserNavActions = ({
           to="/save"
           prefetch="intent"
           viewTransition={viewTransition}
+          aria-label="Save"
           className={cn(
             buttonVariants({ variant: "ghost" }),
             "gap-2 px-2 sm:px-4 text-foreground rounded-full"

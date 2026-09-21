@@ -3,6 +3,7 @@ import type {
   JsonValue,
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import type { MediaArtworkIdentity } from "~shared/api-contracts"
 
 export interface ExtractedLink {
   nodeKey?: string
@@ -61,7 +62,7 @@ export interface LinkMetadata {
   }
   playback: {
     openedUrls: string[]
-    resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
+    resolvedMirrors?: Record<string, ExtractedLink[]> // unresolved item URL → mirrors
   }
   /** Bounded, newest-last record of Plugin Server communication. */
   debugLog?: LinkDebugLogEntry[]
@@ -106,7 +107,7 @@ export interface SavedLinkListItem extends LinkViewItem {
   kind: "saved"
 }
 
-export interface LinkListItemMap {
+interface LinkListItemMap {
   saved: SavedLinkListItem
 }
 

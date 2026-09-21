@@ -1,8 +1,12 @@
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { type LoaderFunctionArgs, useLoaderData } from "react-router"
+import {
+  type LoaderFunctionArgs,
+  useLoaderData,
+  useRevalidator,
+} from "react-router"
 
-import type { Route } from "./+types/_site.plugins"
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { PluginIcon } from "~/components/plugin-icon"
 import {
   Table,
@@ -15,8 +19,10 @@ import {
 import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
 import { getServerEnv } from "~/lib/env.server"
 
+import type { Route } from "./+types/_site.plugins"
+
 export const meta = (_: Route.MetaArgs) => [
-  { title: "Lynvo Plugins | Lynvo" },
+  { title: "Plugins | Lynvo" },
   {
     name: "description",
     content: "Explore Lynvo-managed Plugins for supported Sources.",
@@ -32,17 +38,18 @@ export const loader = async (args: LoaderFunctionArgs) => {
 
 const Plugins = () => {
   const { lynvoPlugins } = useLoaderData<typeof loader>()
+  const revalidator = useRevalidator()
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12 md:px-8 md:py-24">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
         <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
-          Lynvo plugins
+          Lynvo Plugins
         </h1>
       </header>
 
       <section
-        aria-label="Lynvo plugins"
+        aria-label="Lynvo Plugins"
         className="mx-auto mt-10 max-w-4xl md:mt-14"
       >
         <Table>
@@ -59,7 +66,11 @@ const Plugins = () => {
                   colSpan={2}
                   className="px-0 py-8 whitespace-normal text-muted-foreground"
                 >
-                  Lynvo plugin information is currently unavailable.
+                  <LoadErrorRetry
+                    message="Lynvo Plugin information is currently unavailable."
+                    isRetrying={revalidator.state === "loading"}
+                    onRetry={() => revalidator.revalidate()}
+                  />
                 </TableCell>
               </TableRow>
             ) : (

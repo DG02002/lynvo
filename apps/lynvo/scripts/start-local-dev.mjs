@@ -7,8 +7,12 @@ const rawArguments = process.argv.slice(2)
 const isNoUsageEnabled =
   rawArguments.includes("--no-usage") ||
   rawArguments.includes("--disable-usage")
+const isNoAuthEnabled = rawArguments.includes("--no-auth")
 const filteredArguments = rawArguments.filter(
-  (argument) => argument !== "--no-usage" && argument !== "--disable-usage"
+  (argument) =>
+    argument !== "--no-usage" &&
+    argument !== "--disable-usage" &&
+    argument !== "--no-auth"
 )
 
 const reactRouterArguments = filteredArguments.map(quoteShellArgument)
@@ -17,9 +21,11 @@ const reactRouterCommand = ["react-router dev", ...reactRouterArguments].join(
   " "
 )
 
-const environmentPrefix = isNoUsageEnabled
-  ? "CLOUDFLARE_ENV=local DISABLE_USAGE_LIMITS=true"
-  : "CLOUDFLARE_ENV=local"
+const environmentPrefix = [
+  "CLOUDFLARE_ENV=local",
+  ...(isNoUsageEnabled ? ["DISABLE_USAGE_LIMITS=true"] : []),
+  ...(isNoAuthEnabled ? ["LYNVO_NO_AUTH=true"] : []),
+].join(" ")
 
 const migrationProcess = spawnSync(
   "pnpm",

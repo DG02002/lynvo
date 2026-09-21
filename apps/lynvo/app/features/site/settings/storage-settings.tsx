@@ -1,7 +1,9 @@
-import * as React from "react"
 import { Alert01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { SelectTrigger } from "~/components/select-trigger"
 import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
 import {
@@ -11,32 +13,32 @@ import {
   SelectItem,
   SelectValue,
 } from "~/components/ui/select"
-import { SelectTrigger } from "~/components/select-trigger"
-import {
-  SettingsPanel,
-  SettingsList,
-  SettingsRow,
-  SettingsRowInfo,
-} from "./settings-layout"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import {
-  showErrorToast,
-  showSuccessToast,
-  showWarningToast,
-} from "~/lib/toast-notifications"
+import { useAsyncResource } from "~/hooks/use-async-resource"
 import {
   clearSavedLinksOverHttp,
   previewStorageRetention,
   readStorageSettings,
   updateStorageRetention,
 } from "~/lib/settings/storage-http"
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from "~/lib/toast-notifications"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
+import { getSettingsDataCacheKey } from "./settings-data-cache"
+import {
+  SettingsPanel,
+  SettingsList,
+  SettingsRow,
+  SettingsRowInfo,
+} from "./settings-layout"
 import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import { useAsyncResource } from "~/hooks/use-async-resource"
-import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) {
@@ -229,7 +231,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
             className="mx-auto size-16 text-destructive"
           />
         }
-        description="This permanently removes every saved link and its extracted link data from the account. This cannot be undone."
+        description="This permanently removes every saved link and everything inside it from the account. This cannot be undone."
         confirmLabel="Delete all saved links"
         confirmVariant="destructive"
         pending={isClearingLinks}

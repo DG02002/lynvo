@@ -1,10 +1,10 @@
-import { Outlet, useLocation } from "react-router"
 import type { ComponentType, ReactNode } from "react"
+import { Outlet, useLocation } from "react-router"
 
-import { Header } from "~/components/header"
 import { Footer } from "~/components/footer"
-import { RemoteCommandListener } from "~/components/remote-command-listener"
+import { Header } from "~/components/header"
 import { ReceiverOverlay } from "~/components/receiver-overlay"
+import { RemoteCommandListener } from "~/components/remote-command-listener"
 import { savePaths } from "~/lib/paths"
 
 declare global {

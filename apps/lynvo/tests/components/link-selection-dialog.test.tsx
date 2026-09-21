@@ -1,20 +1,23 @@
-import { useState } from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
+
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import type { ExtractedLink } from "~/features/links/types"
 
-interface LazyFolderHarnessProps {
+interface UnresolvedItemHarnessProps {
   resolveFolder: () => Promise<ExtractedLink[]>
 }
 
-const LazyFolderHarness = ({ resolveFolder }: LazyFolderHarnessProps) => {
+const UnresolvedItemHarness = ({
+  resolveFolder,
+}: UnresolvedItemHarnessProps) => {
   const [links, setLinks] = useState<ExtractedLink[]>([
     {
       id: "lazy-folder",
       url: "https://drive.example/0:/lazy-folder/",
-      label: "Lazy folder",
+      label: "Unresolved item",
       mediaNodeKind: "resolvable",
       type: "folder",
       selectable: true,
@@ -43,6 +46,14 @@ const LazyFolderHarness = ({ resolveFolder }: LazyFolderHarnessProps) => {
       }}
     />
   )
+}
+
+const getTreeItemRow = (treeItem: HTMLElement) => {
+  const row = treeItem.querySelector<HTMLElement>('[tabindex="0"]')
+  if (!row) {
+    throw new Error("Expected the tree item to contain a focusable row")
+  }
+  return row
 }
 
 describe("LinkSelectionDialog", () => {
@@ -165,11 +176,26 @@ describe("LinkSelectionDialog", () => {
     )
 
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
-    fireEvent.click(seasonRow)
+    expect(seasonRow.parentElement).toHaveAttribute("role", "tree")
+    expect(seasonRow).toHaveAttribute("aria-level", "1")
+    expect(seasonRow).toHaveAttribute("aria-posinset", "1")
+    expect(seasonRow).toHaveAttribute("aria-setsize", "1")
+    const seasonRowControl = getTreeItemRow(seasonRow)
+    seasonRowControl.focus()
+    expect(seasonRowControl).toHaveFocus()
+    fireEvent.click(screen.getByText("Season 1"))
     expect(seasonRow).toHaveAttribute("aria-expanded", "true")
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
-    fireEvent.click(qualityFolderRow)
+    expect(qualityFolderRow.parentElement).toHaveAttribute("role", "group")
+    expect(qualityFolderRow).toHaveAttribute("aria-level", "2")
+    expect(qualityFolderRow).toHaveAttribute("aria-posinset", "1")
+    expect(qualityFolderRow).toHaveAttribute("aria-setsize", "2")
+    fireEvent.click(screen.getByText("2160p"))
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
+    const episodeOneRow = screen.getByRole("treeitem", { name: /Episode One/ })
+    expect(episodeOneRow).toHaveAttribute("aria-level", "3")
+    expect(episodeOneRow).toHaveAttribute("aria-posinset", "1")
+    expect(episodeOneRow).toHaveAttribute("aria-setsize", "1")
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
     expect(screen.getByText("3 selected")).toBeVisible()
@@ -191,7 +217,7 @@ describe("LinkSelectionDialog", () => {
     ])
   })
 
-  it("does not expand a collapsed folder when its checkbox is selected", () => {
+  it("selects a folder from the checkbox keyboard path without expanding it", () => {
     render(
       <LinkSelectionDialog
         open
@@ -221,11 +247,19 @@ describe("LinkSelectionDialog", () => {
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    const checkbox = screen.getByRole("checkbox", { name: "Select Season 1" })
+    checkbox.focus()
+    fireEvent.keyDown(checkbox, { key: " " })
+    // jsdom does not synthesize the browser's Space-to-click activation.
+    checkbox.click()
 
+    expect(checkbox).toBeChecked()
     expect(screen.getByText("1 selected")).toBeVisible()
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+
+    fireEvent.keyDown(checkbox, { key: "Enter" })
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
   })
 
   it("does not expand selected child folders when their parent is opened", () => {
@@ -264,9 +298,8 @@ describe("LinkSelectionDialog", () => {
       />
     )
 
-    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
-    fireEvent.click(seasonRow)
+    fireEvent.click(screen.getByText("Season 1"))
 
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "false")
@@ -293,7 +326,7 @@ describe("LinkSelectionDialog", () => {
     )
 
     const fileRow = screen.getByRole("treeitem", { name: /Video One/ })
-    fireEvent.click(fileRow)
+    fireEvent.click(screen.getByText("Video One"))
     expect(screen.getByText("1 selected")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
@@ -301,7 +334,9 @@ describe("LinkSelectionDialog", () => {
       expect.objectContaining({ id: "video-one" }),
     ])
 
-    fireEvent.keyDown(fileRow, { key: "Enter" })
+    const fileRowControl = getTreeItemRow(fileRow)
+    fileRowControl.focus()
+    fireEvent.keyDown(fileRowControl, { key: "Enter" })
     expect(screen.getByText("0 selected")).toBeVisible()
   })
 
@@ -337,7 +372,7 @@ describe("LinkSelectionDialog", () => {
     expect(screen.getByText("0 selected")).toBeVisible()
   })
 
-  it("selects children discovered after a selected lazy folder is expanded", async () => {
+  it("selects children discovered after a selected unresolved item is expanded", async () => {
     const resolveFolder = vi.fn().mockResolvedValue([
       {
         id: "video-one",
@@ -347,40 +382,40 @@ describe("LinkSelectionDialog", () => {
         type: "file",
       },
     ])
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+    render(<UnresolvedItemHarness resolveFolder={resolveFolder} />)
 
     fireEvent.click(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     )
-    fireEvent.click(screen.getByText("Lazy folder"))
+    fireEvent.click(screen.getByText("Unresolved item"))
     await screen.findByText("Video One")
 
     expect(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     ).toBeChecked()
     expect(
       screen.getByRole("checkbox", { name: "Select Video One" })
     ).toBeChecked()
   })
 
-  it("selects a lazy folder without expanding it when its checkbox is selected", () => {
+  it("selects an unresolved item without expanding it when its checkbox is selected", () => {
     const resolveFolder = vi.fn().mockResolvedValue([])
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+    render(<UnresolvedItemHarness resolveFolder={resolveFolder} />)
 
     fireEvent.click(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     )
 
     expect(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     ).toBeChecked()
     expect(resolveFolder).not.toHaveBeenCalled()
     expect(
-      screen.getByRole("treeitem", { name: /Lazy folder/ })
+      screen.getByRole("treeitem", { name: /Unresolved item/ })
     ).toHaveAttribute("data-folder-state", "lazy-closed")
   })
 
-  it("loads and expands a lazy folder when its row is opened", async () => {
+  it("loads and expands an unresolved item when its row is opened", async () => {
     let finishFolderResolution: ((links: ExtractedLink[]) => void) | undefined
     const resolveFolder = vi.fn(
       () =>
@@ -388,22 +423,20 @@ describe("LinkSelectionDialog", () => {
           finishFolderResolution = resolve
         })
     )
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+    render(<UnresolvedItemHarness resolveFolder={resolveFolder} />)
 
-    fireEvent.click(screen.getByText("Lazy folder"))
+    fireEvent.click(screen.getByText("Unresolved item"))
 
     const folderTreeItem = screen.getByRole("treeitem", {
-      name: /Lazy folder/,
+      name: /Unresolved item/,
     })
     expect(
-      await screen.findByRole("status", { name: "Loading Lazy folder…" })
+      await screen.findByRole("status", { name: "Loading Unresolved item…" })
     ).toBeVisible()
     const resolvingSpinner = folderTreeItem.querySelector(
       '[data-slot="spinner"]'
     )
     expect(resolvingSpinner).toHaveClass("size-5")
-    expect(resolvingSpinner?.parentElement).toBe(folderTreeItem)
-
     finishFolderResolution?.([
       {
         id: "video-one",
@@ -499,10 +532,12 @@ describe("LinkSelectionDialog", () => {
     )
 
     expect(
-      screen.getByRole("treeitem", { name: /Folder without metadata/ })
+      getTreeItemRow(
+        screen.getByRole("treeitem", { name: /Folder without metadata/ })
+      )
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]")
     expect(
-      screen.getByRole("treeitem", { name: /File with size/ })
+      getTreeItemRow(screen.getByRole("treeitem", { name: /File with size/ }))
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]")
   })
 })

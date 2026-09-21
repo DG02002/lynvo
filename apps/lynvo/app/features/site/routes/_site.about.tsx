@@ -59,7 +59,7 @@ const About = () => (
             <p>
               Just Player could open network streams, but it had no screen for
               pasting a URL on Android TV. Its documented approach was to
-              receive the URL through Android's share sheet.
+              receive the URL through Android&apos;s share sheet.
             </p>
             <p>
               I could have forked the player and added a URL input. That would
@@ -103,9 +103,10 @@ const About = () => (
             </p>
             <p>
               Plugins made the workflow useful beyond direct media links. Lynvo
-              Plugins resolve supported Bhadoo Google Drive Index and OneDrive
-              Index pages. The Plugin Server Protocol lets developers connect
-              other compatible Sources.
+              Plugins resolve supported Bhadoo&rsquo;s Google Drive Index,
+              Google Drive Public Folders & Files, and Spencerwooo&rsquo;s
+              OneDrive Vercel Index pages. The Plugin Server Protocol lets
+              developers connect other compatible Sources.
             </p>
             <p>
               The first version worked, but it was still a rough personal tool.
@@ -127,7 +128,7 @@ const About = () => (
             <p>
               A catalogue may not have the exact quality, version, or language
               you want. Lynvo starts with the link you choose, so your library
-              contains your selections instead of an add-on's catalogue.
+              contains your selections instead of an add-on&apos;s catalogue.
             </p>
             <p>
               Lynvo does not provide media or help users discover unauthorized

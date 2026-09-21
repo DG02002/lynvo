@@ -1,8 +1,9 @@
 import { useCallback } from "react"
-import type { ExtractedLink } from "~/features/links/types"
-import { useRemoteControl } from "~/context/remote-control-context"
-import { playbackTarget } from "./playback-flow"
+
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
+import { useRemoteControl } from "~/context/remote-control-context"
+import { playableLinkHandoff } from "~/features/links/playable-link-handoff"
+import type { ExtractedLink } from "~/features/links/types"
 
 export const usePlaybackActions = ({
   isOpeningRef,
@@ -24,7 +25,7 @@ export const usePlaybackActions = ({
       setIsOpening(true)
 
       try {
-        return await playbackTarget.handoff({
+        return await playableLinkHandoff.handoff({
           target,
           activeSessionId,
           sendRemotePlayback,
@@ -35,6 +36,9 @@ export const usePlaybackActions = ({
       }
     },
     [
+      // exhaustive-deps requires these inputs, while memo-dependencies
+      // incorrectly treats the context values as removable.
+      // oxlint-disable-next-line react/memo-dependencies
       activeSessionId,
       isOpeningRef,
       playerPreferenceUserId,

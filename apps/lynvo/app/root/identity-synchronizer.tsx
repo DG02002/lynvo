@@ -1,3 +1,4 @@
+import { Result, Schema } from "effect"
 import {
   createContext,
   use,
@@ -6,8 +7,8 @@ import {
   useRef,
   type ReactNode,
 } from "react"
-import { bindSessionIdentityToUrl } from "~/lib/session-identity"
-import { Result, Schema } from "effect"
+
+import { requestNoStoreSameOriginWithSessionIdentity } from "~/lib/api/client"
 
 const identityStatusSchema = Schema.Union([
   Schema.Struct({ status: Schema.Literal("unauthenticated") }),
@@ -44,14 +45,12 @@ export const IdentitySynchronizer = ({
     }
     const generation = validationGeneration.current
     const identity = userId && sessionId ? { userId, sessionId } : undefined
-    const url = bindSessionIdentityToUrl(
-      new URL("/api/auth/session/status", window.location.href),
-      identity
+    const request = requestNoStoreSameOriginWithSessionIdentity(
+      "/api/auth/session/status",
+      {
+        identity,
+      }
     )
-    const request = fetch(url, {
-      credentials: "same-origin",
-      cache: "no-store",
-    })
       .then(async (response) => {
         if (
           response.status >= 500 ||
@@ -131,6 +130,9 @@ export const IdentitySynchronizer = ({
 
   return (
     <SessionIdentityContext.Provider value={ensureFreshIdentity}>
+      {/* The render prop consumes this only from event callbacks
+          (onConnectionOpen); no ref is read during render. */}
+      {/* oxlint-disable-next-line react/refs */}
       {children(ensureIdentityIsSafe)}
     </SessionIdentityContext.Provider>
   )

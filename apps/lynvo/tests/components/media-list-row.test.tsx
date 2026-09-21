@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { MediaListRow } from "~/components/save-list/media-list-row"
 
 beforeEach(() => {
@@ -96,9 +97,25 @@ describe("MediaListRow", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: "Title text" })).toHaveClass(
-      "bg-sky-500/15"
+    expect(
+      screen.getByRole("button", { name: "Title text, opened" })
+    ).toHaveClass("bg-sky-500/15")
+  })
+
+  it("announces a new row state", () => {
+    render(
+      <MediaListRow
+        label="Title text"
+        icon={null}
+        title={{ value: "Title text" }}
+        newBadge={{ mobilePlacement: "metadata" }}
+        onActivate={() => {}}
+      />
     )
+
+    expect(
+      screen.getByRole("button", { name: "Title text, new" })
+    ).toBeInTheDocument()
   })
 
   it("renders the overlay in a full-height trailing cell beside the button", () => {
@@ -178,6 +195,7 @@ describe("MediaListRow", () => {
     )
 
     const [mobileNewBadge, desktopNewBadge] = screen.getAllByText("New")
+    expect(mobileNewBadge).toHaveAttribute("aria-hidden", "true")
     expect(mobileNewBadge?.parentElement).toHaveClass(
       "shrink-0",
       "self-center",

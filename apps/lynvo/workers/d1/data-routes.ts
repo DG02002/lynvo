@@ -1,5 +1,8 @@
-import { Hono, type Context as HonoContext } from "hono"
 import { Result, Schema } from "effect"
+import { Hono, type Context as HonoContext } from "hono"
+
+import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
+import { MediaArtworkRequestSchema } from "../../shared/api-contracts"
 import {
   DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,
@@ -10,17 +13,21 @@ import {
   DATA_VERSION_RESPONSE_HEADER,
   MEDIA_ARTWORK_REQUEST_BATCH_LIMIT,
 } from "../constants"
+import { processSavedLinkExtraction } from "../link-extraction-runner"
+import { lookupMediaArtworkCached } from "../media-metadata/artwork-cache"
 import {
   addRequestContext,
   type RequestLoggingEnvironment,
 } from "../request-logging"
 import { isSameOriginRequest } from "../same-origin"
+import { notifyAccountDataChanged } from "./data-version-notification"
 import { getD1Database } from "./db"
 import {
   LinkNotFoundError,
   LinkTooLargeError,
   StorageLimitError,
 } from "./errors"
+import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
 import {
   applySavedLinkMetadataOperation,
   clearSavedLinks,
@@ -32,22 +39,17 @@ import {
   listSavedLinksWithDataVersion,
   updateSavedLinkMeta,
 } from "./links"
-import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
+import {
+  encryptSavedLinkExtractionCredential,
+  type SavedLinkExtractionCredentialWrite,
+} from "./saved-link-extraction-credentials"
 import { resolveD1Session, type SessionRecord } from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "./storage-ledger"
-import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 import { getUsage } from "./usage"
-import { notifyAccountDataChanged } from "./data-version-notification"
-import { processSavedLinkExtraction } from "../link-extraction-runner"
-import { lookupMediaArtworkCached } from "../media-metadata/artwork-cache"
-import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
-import {
-  encryptSavedLinkExtractionCredential,
-  type SavedLinkExtractionCredentialWrite,
-} from "./saved-link-extraction-credentials"
+import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
@@ -83,13 +85,13 @@ const respondDataFailure = async ({
   kind,
   message,
 }: RespondDataFailureInput): Promise<Response> =>
-  await context.json({ failure: { kind, message } }, status)
+  context.json({ failure: { kind, message } }, status)
 
 const dataApp = new Hono<RequestLoggingEnvironment>()
 
 dataApp.onError(async (error, context) => {
   if (error instanceof StorageLimitError) {
-    return await context.json(
+    return context.json(
       {
         failure: {
           kind: "storage-limit",
@@ -101,7 +103,7 @@ dataApp.onError(async (error, context) => {
     )
   }
   if (error instanceof LinkTooLargeError) {
-    return await context.json(
+    return context.json(
       {
         failure: {
           kind: "link-too-large",
@@ -195,7 +197,7 @@ const beginDataRequest = async (
       }),
     }
   }
-  const session = await resolveD1Session(context.req.raw, database)
+  const session = await resolveD1Session(context.req.raw, database, context.env)
   if (!session) {
     return {
       kind: "terminated",
@@ -233,10 +235,10 @@ interface DataRequestInvalid {
 
 type DataRequestBodyResult<Body> = DataRequestBody<Body> | DataRequestInvalid
 
-const readDataJsonBody = async <S extends Schema.Decoder<any>>(
+const readDataJsonBody = async <S extends Schema.ConstraintDecoder<unknown>>(
   context: DataRouteContext,
   schema: S
-): Promise<DataRequestBodyResult<Schema.Schema.Type<S>>> => {
+): Promise<DataRequestBodyResult<S["Type"]>> => {
   let payload: unknown
   try {
     payload = await context.req.json()
@@ -378,17 +380,8 @@ const retentionDaysSchema = Schema.Struct({
   deleteExpiredLinks: Schema.optional(Schema.Boolean),
 })
 
-const mediaArtworkRequestItemSchema = Schema.Struct({
-  title: Schema.NonEmptyString,
-  mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
-  year: Schema.optional(Schema.Number),
-  seasonNumber: Schema.optional(Schema.Number),
-  episodeNumber: Schema.optional(Schema.Number),
-  providerId: Schema.optional(Schema.Number),
-})
-
 const mediaArtworkRequestSchema = Schema.Struct({
-  requests: Schema.Array(mediaArtworkRequestItemSchema),
+  requests: Schema.Array(MediaArtworkRequestSchema),
 })
 
 dataApp.get("/links", async (context) => {
@@ -623,26 +616,26 @@ dataApp.patch("/storage-settings", async (context) => {
     preparation.session.userId,
     { days: body.days, now: Date.now() }
   )
-  let deletedLinks = 0
   // The deletion is the last owned write; its version is the response's
   // version, not the retention update's.
-  let dataVersion = result.dataVersion
-  if (body.deleteExpiredLinks) {
-    const deletion = await deleteExpiredLinksForUser({
-      database: preparation.database,
-      userId: preparation.session.userId,
-      retentionDays: body.days,
-      now: Date.now(),
-    })
-    deletedLinks = deletion.deletedCount
-    dataVersion = deletion.dataVersion
-  }
+  const deletion = body.deleteExpiredLinks
+    ? await deleteExpiredLinksForUser({
+        database: preparation.database,
+        userId: preparation.session.userId,
+        retentionDays: body.days,
+        now: Date.now(),
+      })
+    : { deletedCount: 0, dataVersion: result.dataVersion }
   await notifyAccountDataChanged(
     context.env,
     preparation.session.userId,
-    dataVersion
+    deletion.dataVersion
   )
-  return context.json({ success: true, deletedLinks, dataVersion })
+  return context.json({
+    success: true,
+    deletedLinks: deletion.deletedCount,
+    dataVersion: deletion.dataVersion,
+  })
 })
 
 dataApp.get("/usage", async (context) => {

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest"
+
 import { createRemoteCommandNotificationDelivery } from "../workers/remote-command-notification-delivery"
 import { createFakeD1Database } from "./support/fake-d1"
+import { readJsonInitBody } from "./support/request-inspection"
 
 describe("remote command notification delivery", () => {
   it("leaves the notification pending when no receiver socket was notified", async () => {
     const acknowledged: string[] = []
     const database = createFakeD1Database((sql) => {
       if (sql.includes("UPDATE remote_commands SET notification_pending")) {
-        acknowledged.push(String("ack"))
+        acknowledged.push("ack")
         return { rows: [] }
       }
       return undefined
@@ -50,7 +52,7 @@ describe("remote command notification delivery", () => {
             fetch: async (url, init) => {
               expect(url).toBe("https://realtime.internal/notify-inbox")
               expect(userId).toBe("user-one")
-              const body = JSON.parse(String(init?.body))
+              const body = readJsonInitBody(init)
               expect(body).toEqual({ receiverId: "receiver-one" })
               notifiedReceivers.push("receiver-one")
               return Response.json({ deliveredSocketCount: 2 })
@@ -106,7 +108,7 @@ describe("remote command notification delivery", () => {
             fetch: async (_url, init) => {
               deliveredRequests.push({
                 userId,
-                body: JSON.parse(String(init?.body)),
+                body: readJsonInitBody(init),
               })
               return Response.json({ deliveredSocketCount: 1 })
             },

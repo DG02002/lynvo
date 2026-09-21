@@ -1,0 +1,470 @@
+import type { MediaArtworkRequest } from "~shared/api-contracts"
+
+import {
+  getSaveDateGroupKey,
+  getSaveDateGroupLabel,
+} from "~/lib/save-date-groups"
+
+import {
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemMetadata,
+} from "../link-metadata-accessors"
+import { toLinkViewModel } from "../link-view-models"
+import { getSavedLinkInteractionState } from "../saved-link-interaction"
+import type { ExtractedLink, LinkListItem } from "../types"
+import type { GalleryGroup } from "./media-artwork-types"
+import { isNonMediaFilename, parseMediaFilename } from "./media-filename-parser"
+
+interface GalleryIdentity {
+  readonly mediaKind: "movie" | "tv"
+  readonly normalizedTitle: string
+  readonly requestTitle: string
+  readonly displayTitle: string
+  readonly year?: number
+  readonly seasonNumber?: number
+}
+
+interface GalleryIdentityOptions {
+  // Descendant labels are quality tags ("HQ-Rip 1080p") and resolved link names
+  // ("Direct"), so they may only identify a group when the parse is confident:
+  // a movie needs a year and a tv label an explicit episode/season marker.
+  readonly requireConfidentParse?: boolean
+}
+
+interface MutableGalleryGroup {
+  key: string
+  mediaKind: "movie" | "tv" | "unmatched"
+  normalizedTitle?: string
+  anchorYear?: number
+  anchorSeason?: number
+  requestTitle?: string
+  displayTitle: string
+  lastAddedAt: number
+  items: LinkListItem[]
+}
+
+interface GalleryGroupDateSection {
+  readonly key: string
+  readonly label: string
+  readonly groups: readonly GalleryGroup[]
+}
+
+export const getGalleryItemLabel = (item: LinkListItem): string => {
+  const interactionState = getSavedLinkInteractionState(item, Date.now())
+  const directLinkLabel = interactionState.directLink?.label
+  if (directLinkLabel) {
+    return directLinkLabel
+  }
+  return toLinkViewModel(item).title || new URL(item.url).hostname
+}
+
+const getTwoDigitSeasonLabel = (seasonNumber: number): string =>
+  String(seasonNumber).padStart(2, "0")
+
+const getTvDisplayTitle = (
+  title: string,
+  year: number | undefined,
+  seasonNumber: number | undefined
+) => {
+  const yearLabel = year === undefined ? "" : ` (${year})`
+  const seasonLabel =
+    seasonNumber === undefined
+      ? ""
+      : ` S${getTwoDigitSeasonLabel(seasonNumber)}`
+  return `${title}${yearLabel}${seasonLabel}`
+}
+
+const getGalleryIdentity = (
+  label: string,
+  parentFolderName?: string,
+  { requireConfidentParse = false }: GalleryIdentityOptions = {}
+): GalleryIdentity | undefined => {
+  const candidate = parseMediaFilename(label, parentFolderName)
+  if (!candidate.title || !candidate.normalizedTitle) {
+    return undefined
+  }
+  if (requireConfidentParse && candidate.confidence !== "high") {
+    return undefined
+  }
+
+  if (candidate.kind === "movie") {
+    return {
+      mediaKind: "movie",
+      normalizedTitle: candidate.normalizedTitle,
+      requestTitle: candidate.title,
+      displayTitle: candidate.year
+        ? `${candidate.title} (${candidate.year})`
+        : candidate.title,
+      year: candidate.year,
+    }
+  }
+
+  if (
+    candidate.kind === "episode" ||
+    candidate.kind === "episode-range" ||
+    candidate.kind === "season"
+  ) {
+    return {
+      mediaKind: "tv",
+      normalizedTitle: candidate.normalizedTitle,
+      requestTitle: candidate.title,
+      displayTitle: getTvDisplayTitle(
+        candidate.title,
+        candidate.year,
+        candidate.seasonNumber
+      ),
+      year: candidate.year,
+      seasonNumber: candidate.seasonNumber,
+    }
+  }
+
+  return undefined
+}
+
+const getGalleryIdentityKey = (identity: GalleryIdentity): string =>
+  `${identity.mediaKind}:${identity.normalizedTitle}:${identity.seasonNumber ?? ""}`
+
+// A wrapper may only borrow a descendant identity when every confidently
+// parsed descendant agrees; a listing spanning several titles or seasons is
+// a mixed group and must keep its own name instead of posing as the first
+// descendant it contains.
+const collectConfidentDescendantIdentities = (
+  nodes: readonly ExtractedLink[],
+  parentFolderName?: string
+): Map<string, GalleryIdentity> => {
+  const identitiesByKey = new Map<string, GalleryIdentity>()
+  const visitNodes = (
+    childNodes: readonly ExtractedLink[],
+    childParentFolderName?: string
+  ) => {
+    for (const node of childNodes) {
+      if (identitiesByKey.size > 1) {
+        return
+      }
+      const nodeLabel = node.label?.trim()
+      const children = node.children ?? []
+      if (nodeLabel) {
+        const identity = getGalleryIdentity(nodeLabel, childParentFolderName, {
+          requireConfidentParse: true,
+        })
+        if (
+          identity &&
+          (identity.mediaKind === "tv" || children.length === 0)
+        ) {
+          identitiesByKey.set(getGalleryIdentityKey(identity), identity)
+        }
+      }
+      if (children.length === 0) {
+        continue
+      }
+      const childFolderName = [childParentFolderName, nodeLabel]
+        .filter((value): value is string => Boolean(value))
+        .join(" ")
+      visitNodes(children, childFolderName)
+    }
+  }
+  visitNodes(nodes, parentFolderName)
+  return identitiesByKey
+}
+
+const getGalleryItemIdentity = (
+  item: LinkListItem,
+  itemLabel: string
+): GalleryIdentity | undefined => {
+  const extractedLinks = getLinkViewItemExtractedLinks(item)
+  if (extractedLinks.length > 0) {
+    const descendantIdentities =
+      collectConfidentDescendantIdentities(extractedLinks)
+    if (descendantIdentities.size > 1) {
+      return undefined
+    }
+    const [descendantIdentity] = descendantIdentities.values()
+    if (descendantIdentity) {
+      const savedTitle =
+        descendantIdentity.mediaKind === "tv"
+          ? item.title?.trim() || itemLabel
+          : itemLabel
+      return reconcileSavedTitle(descendantIdentity, savedTitle)
+    }
+  }
+  return getGalleryIdentity(itemLabel)
+}
+
+// The selection's title may retain an article omitted by release filenames.
+// Only borrow it when the remaining title and any explicit years agree.
+const withoutArticle = (title: string) => title.replace(/^(?:the|an|a) /, "")
+
+const reconcileSavedTitle = (
+  identity: GalleryIdentity,
+  savedTitle?: string
+): GalleryIdentity => {
+  const saved = savedTitle ? getGalleryIdentity(savedTitle) : undefined
+  if (!saved) {
+    return identity
+  }
+
+  if (identity.mediaKind === "movie") {
+    if (
+      identity.year !== undefined ||
+      saved.year === undefined ||
+      saved.normalizedTitle !== identity.normalizedTitle
+    ) {
+      return identity
+    }
+    return {
+      ...identity,
+      year: saved.year,
+      displayTitle: `${identity.requestTitle} (${saved.year})`,
+    }
+  }
+
+  if (
+    withoutArticle(saved.normalizedTitle) !==
+      withoutArticle(identity.normalizedTitle) ||
+    (saved.year !== undefined &&
+      identity.year !== undefined &&
+      saved.year !== identity.year)
+  ) {
+    return identity
+  }
+
+  const year = identity.year ?? saved.year
+  return {
+    ...identity,
+    requestTitle: saved.requestTitle,
+    year,
+    displayTitle:
+      identity.mediaKind === "tv"
+        ? getTvDisplayTitle(saved.requestTitle, year, identity.seasonNumber)
+        : `${saved.requestTitle}${year === undefined ? "" : ` (${year})`}`,
+  }
+}
+
+const toUnmatchedGroup = (
+  item: LinkListItem,
+  label: string
+): MutableGalleryGroup => ({
+  key: `item:${item.id ?? item.url}`,
+  mediaKind: "unmatched",
+  displayTitle: label,
+  lastAddedAt: item.timestamp,
+  items: [item],
+})
+
+const getGalleryGroupKey = (identity: GalleryIdentity): string => {
+  const seasonSegment =
+    identity.seasonNumber === undefined
+      ? ""
+      : `:S${getTwoDigitSeasonLabel(identity.seasonNumber)}`
+  return `${identity.mediaKind}:${identity.normalizedTitle}:${identity.year ?? ""}${seasonSegment}`
+}
+
+const findOrAdoptYearGroup = (
+  bucket: MutableGalleryGroup[],
+  identity: GalleryIdentity
+): MutableGalleryGroup => {
+  if (identity.year === undefined) {
+    const mostRecentGroup = bucket.at(-1)
+    if (mostRecentGroup) {
+      return mostRecentGroup
+    }
+  } else {
+    const matchingYearGroup = bucket.find(
+      (group) => group.anchorYear === identity.year
+    )
+    if (matchingYearGroup) {
+      return matchingYearGroup
+    }
+    const soleUndefinedYearGroup =
+      bucket.length === 1 && bucket[0]?.anchorYear === undefined
+        ? bucket[0]
+        : undefined
+    if (soleUndefinedYearGroup) {
+      soleUndefinedYearGroup.anchorYear = identity.year
+      soleUndefinedYearGroup.displayTitle = identity.displayTitle
+      return soleUndefinedYearGroup
+    }
+  }
+
+  const createdGroup: MutableGalleryGroup = {
+    key: getGalleryGroupKey(identity),
+    mediaKind: identity.mediaKind,
+    normalizedTitle: identity.normalizedTitle,
+    anchorYear: identity.year,
+    anchorSeason: identity.seasonNumber,
+    requestTitle: identity.requestTitle,
+    displayTitle: identity.displayTitle,
+    lastAddedAt: 0,
+    items: [],
+  }
+  bucket.push(createdGroup)
+  return createdGroup
+}
+
+const getGroupArtworkRequest = (
+  group: MutableGalleryGroup
+): MediaArtworkRequest | undefined => {
+  if (group.mediaKind === "unmatched" || !group.requestTitle) {
+    return undefined
+  }
+  // A stored identity is authoritative: resolve by immutable id and skip
+  // title matching entirely.
+  const storedArtwork = group.items.find(
+    (item) => getLinkViewItemMetadata(item).artwork !== undefined
+  )?.metadata.artwork
+  if (storedArtwork) {
+    return {
+      // The stored pick's kind is authoritative: a movie id and a tv id can
+      // collide numerically, so by-id lookups must not guess from the
+      // filename classification.
+      mediaKind: storedArtwork.mediaKind ?? group.mediaKind,
+      title: storedArtwork.title,
+      providerId: storedArtwork.providerId,
+      year: storedArtwork.year,
+    }
+  }
+  if (group.mediaKind === "tv") {
+    return {
+      mediaKind: "tv",
+      title: group.requestTitle,
+      year: group.anchorYear,
+      seasonNumber: group.anchorSeason,
+    }
+  }
+  return {
+    mediaKind: "movie",
+    title: group.requestTitle,
+    year: group.anchorYear,
+  }
+}
+
+const toImmutableGroup = (group: MutableGalleryGroup): GalleryGroup => ({
+  key: group.key,
+  displayTitle: group.displayTitle,
+  artworkRequest: getGroupArtworkRequest(group),
+  lastAddedAt: group.lastAddedAt,
+  items: group.items,
+})
+
+const sortGroups = (groups: readonly GalleryGroup[]): GalleryGroup[] =>
+  groups.toSorted((firstGroup, secondGroup) => {
+    if (secondGroup.lastAddedAt !== firstGroup.lastAddedAt) {
+      return secondGroup.lastAddedAt - firstGroup.lastAddedAt
+    }
+    return firstGroup.displayTitle.localeCompare(secondGroup.displayTitle)
+  })
+
+export const getSharedSeasonIdentity = (
+  labels: readonly string[],
+  parentFolderName?: string,
+  savedTitle?: string
+): SharedSeasonIdentity | undefined => {
+  const mediaLabels = labels.filter((label) => !isNonMediaFilename(label))
+  if (mediaLabels.length === 0) {
+    return undefined
+  }
+
+  let sharedIdentity: SharedSeasonIdentity | undefined
+  for (const label of mediaLabels) {
+    const candidate = parseMediaFilename(label, parentFolderName)
+    const isEpisode =
+      candidate.kind === "episode" || candidate.kind === "episode-range"
+    if (
+      !isEpisode ||
+      !candidate.title ||
+      !candidate.normalizedTitle ||
+      candidate.seasonNumber === undefined
+    ) {
+      return undefined
+    }
+    if (sharedIdentity === undefined) {
+      sharedIdentity = {
+        requestTitle: candidate.title,
+        normalizedTitle: candidate.normalizedTitle,
+        year: candidate.year,
+        seasonNumber: candidate.seasonNumber,
+        displayTitle: getTvDisplayTitle(
+          candidate.title,
+          candidate.year,
+          candidate.seasonNumber
+        ),
+      }
+      continue
+    }
+    if (
+      candidate.normalizedTitle !== sharedIdentity.normalizedTitle ||
+      candidate.seasonNumber !== sharedIdentity.seasonNumber
+    ) {
+      return undefined
+    }
+  }
+  if (!sharedIdentity) {
+    return undefined
+  }
+  const reconciled = reconcileSavedTitle(
+    { ...sharedIdentity, mediaKind: "tv" },
+    savedTitle
+  )
+  return {
+    ...sharedIdentity,
+    requestTitle: reconciled.requestTitle,
+    year: reconciled.year,
+    displayTitle: reconciled.displayTitle,
+  }
+}
+
+export const getGalleryGroups = (
+  items: readonly LinkListItem[]
+): readonly GalleryGroup[] => {
+  const titleBuckets = new Map<string, MutableGalleryGroup[]>()
+  const unmatchedGroups: MutableGalleryGroup[] = []
+  const sortedItems = items.toSorted(
+    (firstItem, secondItem) => secondItem.timestamp - firstItem.timestamp
+  )
+
+  for (const item of sortedItems) {
+    const itemLabel = getGalleryItemLabel(item)
+    const identity = getGalleryItemIdentity(item, itemLabel)
+
+    if (!identity) {
+      unmatchedGroups.push(toUnmatchedGroup(item, itemLabel))
+      continue
+    }
+
+    const bucketKey = `${identity.mediaKind}:${identity.normalizedTitle}:${identity.seasonNumber ?? ""}`
+    const bucket = titleBuckets.get(bucketKey) ?? []
+    const targetGroup = findOrAdoptYearGroup(bucket, identity)
+    targetGroup.items.push(item)
+    targetGroup.lastAddedAt = Math.max(targetGroup.lastAddedAt, item.timestamp)
+    titleBuckets.set(bucketKey, bucket)
+  }
+
+  return sortGroups([
+    ...[...titleBuckets.values()].flat().map(toImmutableGroup),
+    ...unmatchedGroups.map(toImmutableGroup),
+  ])
+}
+
+export const getGalleryGroupSections = (
+  groups: readonly GalleryGroup[],
+  currentTimeMs = Date.now()
+): readonly GalleryGroupDateSection[] => {
+  const dateGroups = new Map<string, GalleryGroupDateSection>()
+  for (const group of groups) {
+    const key = getSaveDateGroupKey(group.lastAddedAt, currentTimeMs)
+    const existingDateGroup = dateGroups.get(key)
+    if (existingDateGroup) {
+      dateGroups.set(key, {
+        ...existingDateGroup,
+        groups: [...existingDateGroup.groups, group],
+      })
+      continue
+    }
+    dateGroups.set(key, {
+      key,
+      label: getSaveDateGroupLabel(group.lastAddedAt, currentTimeMs),
+      groups: [group],
+    })
+  }
+  return [...dateGroups.values()]
+}

@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
 import type { ShouldRevalidateFunction } from "react-router"
+import { describe, expect, it } from "vitest"
+
 import {
   shouldRevalidateSaveFolderRoute,
   shouldRevalidateSaveRoute,
@@ -23,7 +24,7 @@ const navigation = createNavigation(shouldRevalidateSaveRoute)
 const folderNavigation = createNavigation(shouldRevalidateSaveFolderRoute)
 
 describe("save route revalidation", () => {
-  it("reuses the snapshot when only the hybrid group changes", () => {
+  it("reuses the snapshot when only the gallery group changes", () => {
     expect(navigation("/save?group=one", "/save?group=two")).toBe(false)
     expect(navigation("/save", "/save?group=two")).toBe(false)
   })

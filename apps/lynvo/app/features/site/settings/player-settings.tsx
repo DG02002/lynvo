@@ -1,14 +1,26 @@
-import * as React from "react"
 import { Result, Schema } from "effect"
+import * as React from "react"
+
+import { SelectTrigger } from "~/components/select-trigger"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectValue,
 } from "~/components/ui/select"
-import { SelectTrigger } from "~/components/select-trigger"
-import { PLAYER_DEFINITIONS, type PlayerId } from "~/lib/player-utils"
+import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
+import {
+  clearAsyncResourceCache,
+  useAsyncResource,
+} from "~/hooks/use-async-resource"
 import { PlayerIdSchema } from "~/lib/api-contracts"
+import { PLAYER_DEFINITIONS, type PlayerId } from "~/lib/player-utils"
+import {
+  loadCloudPlayerPreferences,
+  saveCloudPlayerPreferences,
+} from "~/lib/settings/player-preferences-api"
+
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
   SettingsList,
@@ -19,17 +31,7 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { useRangePlayerPreferences } from "./use-range-player-preferences"
-import {
-  clearAsyncResourceCache,
-  useAsyncResource,
-} from "~/hooks/use-async-resource"
-import { getSettingsDataCacheKey } from "./settings-data-cache"
-import {
-  loadCloudPlayerPreferences,
-  saveCloudPlayerPreferences,
-} from "~/lib/settings/player-preferences-api"
 
 export const PlayerSettings = ({
   loadPlayerPreferences = loadCloudPlayerPreferences,

@@ -1,13 +1,4 @@
 import {
-  isValidElement,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from "react"
-import {
   ApiIcon,
   ArrowUpRight01Icon,
   CopyIcon,
@@ -19,9 +10,18 @@ import {
   WifiError01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import type { MDXComponents } from "mdx/types.js"
-import { Link } from "react-router"
 import { Result, Schema } from "effect"
+import type { MDXComponents } from "mdx/types.js"
+import {
+  isValidElement,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
+import { Link } from "react-router"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
@@ -160,13 +160,7 @@ const getCodeCopyStatusMessage = (
   return ""
 }
 
-export function DocSection({
-  id,
-  children,
-}: {
-  id: string
-  children: ReactNode
-}) {
+function DocSection({ id, children }: { id: string; children: ReactNode }) {
   return (
     <section id={id} className="scroll-mt-24">
       {children}
@@ -174,7 +168,7 @@ export function DocSection({
   )
 }
 
-export function CodeBlock({
+function CodeBlock({
   label,
   children,
 }: {
@@ -272,13 +266,7 @@ export function CodeBlock({
   )
 }
 
-export function DocsNote({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function DocsNote({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Alert className="not-typeset mt-[var(--typeset-flow)]">
       <AlertTitle>{title}</AlertTitle>
@@ -287,7 +275,7 @@ export function DocsNote({
   )
 }
 
-export const AndroidTvRemoteTroubleshooting = () => (
+const AndroidTvRemoteTroubleshooting = () => (
   <aside
     aria-labelledby="virtual-remote-troubleshooting-title"
     className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
@@ -345,8 +333,8 @@ const getNodeText = (node: ReactNode): string => {
 const createHeadingId = (children: ReactNode) =>
   getNodeText(children)
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/(^-|-$)/g, "")
 
 const DocsHeadingAnchor = ({
   headingId,

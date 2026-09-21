@@ -4,6 +4,7 @@ import {
   layout,
   index,
 } from "@react-router/dev/routes"
+
 import { savePaths } from "./lib/paths"
 
 export const createRoutes = (isDevelopment: boolean) =>

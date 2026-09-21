@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { spawn } from "node:child_process"
 import {
   mkdir,
   mkdtemp,
@@ -9,9 +10,8 @@ import {
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
-import { spawn } from "node:child_process"
 import { test, after } from "node:test"
+import { fileURLToPath } from "node:url"
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url))
 const cli = join(packageRoot, "bin/create-lynvo-plugin-server.mjs")
@@ -46,12 +46,7 @@ after(async () => {
   )
 })
 
-test("generates a standalone project with a semver protocol dependency", async () => {
-  const root = await makeTemporaryDirectory()
-  const result = await run(["my-plugin-server", "--skip-install"], root)
-  assert.equal(result.code, 0, result.stderr)
-
-  const destination = join(root, "my-plugin-server")
+const assertMyPluginServerProject = async (destination, result) => {
   const packageJson = JSON.parse(
     await readFile(join(destination, "package.json"), "utf8")
   )
@@ -89,6 +84,15 @@ test("generates a standalone project with a semver protocol dependency", async (
   )
   assert.match(result.stdout, /pnpm test/)
   assert.match(result.stdout, /pnpm deploy/)
+}
+
+test("generates a standalone project with a semver protocol dependency", async () => {
+  const root = await makeTemporaryDirectory()
+  const result = await run(["my-plugin-server", "--skip-install"], root)
+  assert.equal(result.code, 0, result.stderr)
+
+  const destination = join(root, "my-plugin-server")
+  await assertMyPluginServerProject(destination, result)
 })
 
 test("refuses an invalid name and a non-empty destination", async () => {

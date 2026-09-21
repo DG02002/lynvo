@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { CopyIcon } from "@hugeicons/core-free-icons"
-import { showLinkCopiedToast } from "~/lib/toast-notifications"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useState } from "react"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,8 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
-import type { LinkViewItem } from "~/features/links/types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import type { LinkViewItem } from "~/features/links/types"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
+
 import { highlightLogJson } from "./log-json-highlight"
 
 interface LinkDebugLogDialogProps {
@@ -25,7 +27,7 @@ const LinkDebugLogDialog = ({
   open,
   onOpenChange,
 }: LinkDebugLogDialogProps) => {
-  const [highlightedLog, setHighlightedLog] = useState<string | undefined>()
+  const [highlightedResult, setHighlightedResult] = useState<string>()
   const debugLog = item ? getLinkViewItemMetadata(item).debugLog : undefined
   const hasLog = Boolean(debugLog && debugLog.length > 0)
   const serializedLog = JSON.stringify(
@@ -42,19 +44,21 @@ const LinkDebugLogDialog = ({
 
   useEffect(() => {
     if (!open || !hasLog) {
-      setHighlightedLog(undefined)
-      return
+      return undefined
     }
     let cancelled = false
     void highlightLogJson(serializedLog).then((html) => {
       if (!cancelled) {
-        setHighlightedLog(html)
+        setHighlightedResult(html)
       }
     })
     return () => {
       cancelled = true
     }
   }, [open, hasLog, serializedLog])
+
+  // Stale highlights from a previous log or a closed dialog never render.
+  const highlightedLog = open && hasLog ? highlightedResult : undefined
 
   const handleCopy = async () => {
     try {
@@ -71,7 +75,7 @@ const LinkDebugLogDialog = ({
       <AlertDialogContent className="flex max-h-[85vh] w-full flex-col gap-4 p-6 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-lg">
         <AlertDialogHeader className="w-full min-w-0 shrink-0">
           <AlertDialogTitle className="text-center text-xl font-normal sm:text-2xl">
-            Log
+            Link log
           </AlertDialogTitle>
         </AlertDialogHeader>
         {hasLog ? (

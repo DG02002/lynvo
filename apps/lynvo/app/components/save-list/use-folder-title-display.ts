@@ -4,8 +4,7 @@ declare global {
   type FolderTitleDisplay = "episode" | "filename"
 }
 
-export const FOLDER_TITLE_DISPLAY_STORAGE_KEY =
-  "lynvo:settings:folder-title-display"
+const FOLDER_TITLE_DISPLAY_STORAGE_KEY = "lynvo:settings:folder-title-display"
 
 const FOLDER_TITLE_DISPLAY_EVENT = "lynvo:folder-title-display-changed"
 

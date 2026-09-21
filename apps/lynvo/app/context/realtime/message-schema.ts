@@ -1,4 +1,5 @@
 import { Result, Schema } from "effect"
+
 import { remoteCommandWireMessageSchema } from "~/lib/remote-play/wire"
 
 declare global {
@@ -26,7 +27,7 @@ declare global {
     | SessionHelloRealtimeMessage
 }
 
-export const remoteInboxChangedRealtimeMessageSchema = Schema.Struct({
+const remoteInboxChangedRealtimeMessageSchema = Schema.Struct({
   type: Schema.Literal("remote-inbox.changed"),
   payload: Schema.Struct({}),
 })
@@ -40,7 +41,7 @@ export const sessionHelloRealtimeMessageSchema = Schema.Struct({
   ),
 })
 
-export const dataChangedRealtimeMessageSchema = Schema.Struct({
+const dataChangedRealtimeMessageSchema = Schema.Struct({
   type: Schema.Literal("data-changed"),
   payload: Schema.Struct({
     version: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),

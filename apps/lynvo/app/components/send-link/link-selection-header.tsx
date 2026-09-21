@@ -1,8 +1,9 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import { AudioWave01Icon } from "@hugeicons/core-free-icons"
-import { DialogHeader, DialogTitle } from "~/components/ui/dialog"
-import { PluginIcon } from "~/components/plugin-icon"
+import { HugeiconsIcon } from "@hugeicons/react"
+
 import { ExpandableFilename } from "~/components/expandable-filename"
+import { PluginIcon } from "~/components/plugin-icon"
+import { DialogHeader, DialogTitle } from "~/components/ui/dialog"
 
 interface LinkSelectionHeaderProps {
   pluginIcon?: string

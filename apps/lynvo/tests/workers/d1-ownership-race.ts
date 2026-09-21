@@ -50,13 +50,13 @@ export const createD1OwnershipReadPause = (
           const pausedStatement =
             input.readMethod === "all"
               ? {
-                  async all<Result>() {
-                    return await pauseRead(() => bound.all<Result>())
+                  async all() {
+                    return await pauseRead(() => bound.all())
                   },
                 }
               : {
-                  async first<Result>() {
-                    return await pauseRead(() => bound.first<Result>())
+                  async first() {
+                    return await pauseRead(() => bound.first())
                   },
                 }
           // SAFETY: The selected read method matches the targeted operation.

@@ -33,11 +33,16 @@
     "access": "public"
   },
   "scripts": {
-    "check": "pnpm run check:package && pnpm run lint && pnpm test",
+    "check": "pnpm run fmt:check && pnpm run check:package && pnpm run lint && pnpm test",
     "check:package": "node scripts/check-package.mjs",
     "lint": "oxlint scripts tests template/src template/tests template/scripts template/vitest.config.ts",
     "prepack": "pnpm run check:package",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "fmt": "oxfmt bin scripts tests package.json template/package.json",
+    "fmt:check": "oxfmt bin scripts tests package.json template/package.json --check"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:"
   },
   "engines": {
     "node": ">=26.8.1"

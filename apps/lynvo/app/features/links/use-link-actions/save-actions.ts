@@ -1,37 +1,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
-import type {
-  ExtractedLink,
-  MetaData,
-  LinkViewItem,
-} from "~/features/links/types"
+
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
-import {
-  parsePluginDomainCandidate,
-  type PluginDomainSuggestion,
-} from "~/lib/plugin-domain"
 import {
   confirmSaveIntent,
   resolveSaveIntent,
   type ConfirmSaveIntentResult,
   type SaveIntentResult,
 } from "~/features/links/save-intent"
-import type { SelectionDialogState } from "./interaction-state"
+import {
+  reportGenericSavedLinkError,
+  reportSavedLinkError,
+  shouldOfferPluginDomainSuggestion,
+  type SavedLinkInteractionError,
+  type SavedLinkInteractionReporter,
+} from "~/features/links/saved-link-interaction"
+import type {
+  ExtractedLink,
+  MetaData,
+  LinkViewItem,
+} from "~/features/links/types"
+import { client } from "~/lib/api/client"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
+import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import type { OpenSelectionDialogOptions } from "./action-types"
+import type { SelectionDialogState } from "./interaction-state"
+import { getSaveError } from "./save-error-message"
 import {
   clearHighlightAfterDelay,
   resetSaveView,
   vibrateSaveStart,
   vibrateSaveSuccess,
 } from "./save-feedback"
-import { getSaveErrorMessage } from "./save-error-message"
-import { client } from "~/lib/api/client"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import {
-  shouldOfferPluginDomainSuggestion,
-  type SavedLinkInteractionReporter,
-} from "~/features/links/saved-link-interaction"
 
 export const useSaveActions = ({
   url,
@@ -63,7 +68,7 @@ export const useSaveActions = ({
   setExtractionPreview: (preview: { meta: MetaData } | null) => void
   closeSelectionDialog: () => void
   selectionDialogState: SelectionDialogState
-  setError: (error: string | null) => void
+  setError: (error: SavedLinkInteractionError | null) => void
   setCurrentUrl: (url: string) => void
   setHighlightedId: (id: string | null) => void
 }) => {
@@ -81,7 +86,7 @@ export const useSaveActions = ({
             setError(null)
             break
           case "error":
-            setError(outcome.message)
+            setError(outcome.error)
             break
           case "clear-preview":
             setExtractionPreview(null)
@@ -164,6 +169,9 @@ export const useSaveActions = ({
         continue
       }
 
+      // The suggestion state is only set after the awaited availability
+      // check inside offerPluginDomainSuggestion, never synchronously.
+      // oxlint-disable-next-line react/set-state-in-effect
       void offerPluginDomainSuggestion(
         createPluginDomainSuggestion(
           parsePluginDomainCandidate(completedQueuedItem.url),
@@ -182,11 +190,14 @@ export const useSaveActions = ({
 
     switch (result.kind) {
       case "error":
-        reporter.publish({ kind: "error", message: result.message })
+        reportGenericSavedLinkError(reporter, result.message)
         reporter.publish({ kind: "clear-preview" })
         return undefined
       case "duplicate":
-        reporter.publish({ kind: "error", message: result.message })
+        reporter.publish({
+          kind: "error",
+          error: { kind: "duplicate" },
+        })
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
         return undefined
       case "selection-required":
@@ -209,6 +220,7 @@ export const useSaveActions = ({
         vibrateSaveSuccess()
         return result.pluginDomainSuggestion
     }
+    return undefined
   }
 
   const applyConfirmSaveIntentResult = (
@@ -216,7 +228,7 @@ export const useSaveActions = ({
   ): PluginDomainSuggestion | undefined => {
     switch (result.kind) {
       case "error":
-        reporter.publish({ kind: "error", message: result.message })
+        reportGenericSavedLinkError(reporter, result.message)
         return undefined
       case "updated":
         reporter.publish({
@@ -234,6 +246,7 @@ export const useSaveActions = ({
         vibrateSaveSuccess()
         return result.pluginDomainSuggestion
     }
+    return undefined
   }
 
   const handleSave = async (overrideUrl?: string) => {
@@ -259,7 +272,7 @@ export const useSaveActions = ({
     } catch (error) {
       console.error(error)
       reporter.publish({ kind: "clear-preview" })
-      reporter.publish({ kind: "error", message: getSaveErrorMessage(error) })
+      reportSavedLinkError(reporter, getSaveError(error))
     } finally {
       setIsSaving(false)
     }
@@ -286,10 +299,10 @@ export const useSaveActions = ({
       await offerPluginDomainSuggestion(applyConfirmSaveIntentResult(result))
     } catch (error) {
       console.error(error)
-      reporter.publish({
-        kind: "error",
-        message: "Unable to save the selected links. Try again.",
-      })
+      reportGenericSavedLinkError(
+        reporter,
+        "Unable to save the selected links. Try again."
+      )
     } finally {
       setIsSaving(false)
     }

@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+
 import {
   getPlayerPreferences,
   normalizePlayerPreferences,
@@ -16,7 +17,7 @@ export const AccountSettingsSynchronization = ({
 }) => {
   useEffect(() => {
     if (!userId) {
-      return
+      return undefined
     }
     let didCancel = false
     loadPlayerPreferences()

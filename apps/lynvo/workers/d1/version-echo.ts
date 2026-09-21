@@ -1,9 +1,10 @@
 import { Result, Schema } from "effect"
 import type { MiddlewareHandler } from "hono"
+
 import { DATA_VERSION_RESPONSE_HEADER } from "../constants"
 import type { RequestLoggingEnvironment } from "../request-logging"
-import { getD1Database } from "./db"
 import { getDataVersion } from "./data-version"
+import { getD1Database } from "./db"
 import { resolveD1Session } from "./sessions"
 
 const dataVersionBodySchema = Schema.Struct({
@@ -37,7 +38,11 @@ export const echoDataVersion =
       if (!database) {
         return
       }
-      const session = await resolveD1Session(context.req.raw, database)
+      const session = await resolveD1Session(
+        context.req.raw,
+        database,
+        context.env
+      )
       if (!session) {
         return
       }

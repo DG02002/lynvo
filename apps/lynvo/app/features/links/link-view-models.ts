@@ -1,6 +1,6 @@
-import type { ExtractedLink, LinkMetadata, LinkViewItem } from "./types"
 import { applyOpenedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
+import type { ExtractedLink, LinkMetadata, LinkViewItem } from "./types"
 
 export interface SavedLink {
   id: string

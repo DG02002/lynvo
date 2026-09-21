@@ -1,4 +1,5 @@
 import { Effect } from "effect"
+
 import { getD1Database } from "../../../workers/d1/db"
 import {
   resolveSessionContext,
@@ -17,7 +18,12 @@ export const resolveOptionalSession = (
   const database = getD1Database(environment)
   return database
     ? Effect.promise(() =>
-        resolveSessionContext(webRequest, database, Date.now())
+        resolveSessionContext({
+          request: webRequest,
+          database,
+          now: Date.now(),
+          environment,
+        })
       )
     : Effect.succeed(null)
 }

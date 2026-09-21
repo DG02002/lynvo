@@ -1,65 +1,80 @@
-import { HugeiconsIcon } from "@hugeicons/react"
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { AirplayLineIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useRef } from "react"
+
 import { Button } from "~/components/ui/button"
+import {
+  Dialog,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "~/components/ui/dialog"
 import { useRemoteControl } from "~/context/remote-control-context"
 
 export const ReceiverOverlay = () => {
   const { controllingDevices, handleReceiverDisconnect } = useRemoteControl()
-
-  if (!controllingDevices || controllingDevices.length === 0) {
-    return null
-  }
+  const disconnectButtonRef = useRef<HTMLButtonElement>(null)
+  const isOpen = controllingDevices.length > 0
 
   return (
-    <div
-      data-receiver-overlay="true"
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 p-6 opacity-100 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0"
-    >
-      <div className="max-w-md w-full flex flex-col gap-6 bg-card p-8 rounded-xl border shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-full bg-primary/ shrink-0">
-            <HugeiconsIcon
-              icon={AirplayLineIcon}
-              className="size-6 text-primary"
-            />
-          </div>
-          <h2 className="text-xl font-semibold tracking-tight">
-            Connected to remote device
-          </h2>
-        </div>
+    <Dialog open={isOpen}>
+      <DialogPortal>
+        <DialogOverlay className="bg-background! backdrop-blur-none!" />
+        <DialogPrimitive.Popup
+          data-receiver-overlay="true"
+          initialFocus={disconnectButtonRef}
+          finalFocus={true}
+          className="fixed inset-0 z-50 flex h-svh w-screen flex-col items-center justify-center bg-background p-6 opacity-100 outline-none transition-opacity duration-300 starting:opacity-0"
+        >
+          <div className="max-w-md w-full flex flex-col gap-6 rounded-xl border bg-card p-8 shadow-2xl">
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 rounded-full bg-primary/10 p-3">
+                <HugeiconsIcon
+                  icon={AirplayLineIcon}
+                  className="size-6 text-primary"
+                />
+              </div>
+              <DialogTitle className="text-xl font-semibold leading-normal tracking-tight">
+                Connected to a controlling device
+              </DialogTitle>
+            </div>
 
-        <div className="flex flex-col gap-4">
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Controlled by
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {controllingDevices.map((device) => (
-              <span
-                key={device.id}
-                className="inline-flex items-center rounded-full bg-primary px-6 py-2 text-lg font-bold text-primary ring-1 ring-inset ring-blue-700/10"
+            <div className="flex flex-col gap-4">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Controlled by
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {controllingDevices.map((device) => (
+                  <span
+                    key={device.id}
+                    className="inline-flex items-center rounded-full bg-primary px-6 py-2 text-lg font-bold text-primary ring-1 ring-inset ring-blue-700/10"
+                  >
+                    {device.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-border" />
+
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                Links sent from the controlling device open in this device’s
+                Android player.
+              </p>
+              <Button
+                ref={disconnectButtonRef}
+                variant="destructive"
+                className="w-full"
+                onClick={handleReceiverDisconnect}
               >
-                {device.name}
-              </span>
-            ))}
+                Disconnect
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="w-full h-px bg-border" />
-
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Links sent from the controlling device open in this device’s Android
-            player.
-          </p>
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={handleReceiverDisconnect}
-          >
-            Disconnect
-          </Button>
-        </div>
-      </div>
-    </div>
+        </DialogPrimitive.Popup>
+      </DialogPortal>
+    </Dialog>
   )
 }

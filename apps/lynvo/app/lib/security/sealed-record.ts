@@ -1,3 +1,5 @@
+import { Result, Schema } from "effect"
+
 import {
   SEALED_RECORD_ALGORITHM,
   SEALED_RECORD_KEY_LENGTH_BYTES,
@@ -5,7 +7,6 @@ import {
   SEALED_RECORD_NONCE_LENGTH_BYTES,
   SEALED_RECORD_WEB_CRYPTO_ALGORITHM,
 } from "./constants"
-import { Result, Schema } from "effect"
 
 export interface SealedRecord {
   readonly ciphertext: string
@@ -33,9 +34,7 @@ const sealedRecordSchema = Schema.Struct({
   keyVersion: Schema.Literal(SEALED_RECORD_KEY_VERSION),
 })
 
-export const decodeSealedRecordBase64 = (
-  value: string
-): Uint8Array<ArrayBuffer> => {
+const decodeSealedRecordBase64 = (value: string): Uint8Array<ArrayBuffer> => {
   const decodedValue = atob(value)
   const bytes = new Uint8Array(decodedValue.length)
   for (let index = 0; index < decodedValue.length; index += 1) {

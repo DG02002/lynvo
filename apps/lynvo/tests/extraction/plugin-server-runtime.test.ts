@@ -1,17 +1,18 @@
-import { describe, expect, it, vi } from "vitest"
 import {
   ProtocolError,
   createPluginServerRuntime,
+  type ExtractRequest,
   type ExtractSuccessResponse,
   type PluginServerManifest,
   type UsageResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { describe, expect, it, vi } from "vitest"
 
 interface TestEnv {
   validApiKey: string
 }
 
-const createRequest = <Body>(body: Body, apiKey = "secret") =>
+const createRequest = (body: ExtractRequest, apiKey = "secret") =>
   new Request("https://pluginServer.example/extract", {
     method: "POST",
     headers: {

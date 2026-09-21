@@ -1,10 +1,5 @@
 import { Result, Schema, SchemaIssue } from "effect"
-import {
-  extractSuccessSchema,
-  pluginServerManifestSchema,
-  usageResponseSchema,
-  verifyErrorSchema,
-} from "./schemas.js"
+
 import { getLynvoManifestExtension } from "./matching.js"
 import type {
   ContractIssue,
@@ -14,11 +9,27 @@ import type {
   PluginServerManifest,
   UsageResponse,
 } from "./models.js"
+import {
+  extractSuccessSchema,
+  pluginServerManifestSchema,
+  usageResponseSchema,
+  verifyErrorSchema,
+} from "./schemas.js"
 
 const issue = (path: string, message: string): ContractIssue => ({
   path,
   message,
 })
+
+/**
+ * Render a Standard Schema issue path segment. A wrapped `PathSegment` renders
+ * its `key`; bare property keys render through their own string conversion,
+ * never the "[object Object]" default stringification.
+ */
+const formatPathSegment = (
+  segment: PropertyKey | { readonly key: PropertyKey }
+): string =>
+  segment instanceof Object ? segment.key.toString() : segment.toString()
 
 const isSupportedIconUrl = (url: string): boolean =>
   url.endsWith(".webp") || url.endsWith(".svg") || url.endsWith(".png")
@@ -33,8 +44,7 @@ const mapSchemaIssues = (
   return result.issues.map((standardIssue) =>
     issue(
       standardIssue.path
-        ? standardIssue.path.map((segment) => String(segment)).join(".") ||
-            fallbackPath
+        ? standardIssue.path.map(formatPathSegment).join(".") || fallbackPath
         : fallbackPath,
       standardIssue.message
     )
@@ -153,13 +163,15 @@ const usageDeclarationSchema = Schema.Struct({
   usage: Schema.Unknown,
 })
 
-const checkUsageDeclared = <Value>(value: Value): boolean =>
-  Result.isSuccess(Schema.decodeUnknownResult(usageDeclarationSchema)(value))
-
+// Contract entry points accept arbitrary wire values. Their generic input is
+// required because anti-slop/no-unknown-parameters rejects unknown parameters.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 export const parsePluginServerManifestContract = <Value>(
   value: Value
 ): ContractParseResult<PluginServerManifest> => {
-  const didDeclareUsage = checkUsageDeclared(value)
+  const didDeclareUsage = Result.isSuccess(
+    Schema.decodeUnknownResult(usageDeclarationSchema)(value)
+  )
   const result = Schema.decodeUnknownResult(pluginServerManifestSchema)(value)
   if (Result.isFailure(result)) {
     return {
@@ -175,6 +187,7 @@ export const parsePluginServerManifestContract = <Value>(
   return validation.ok ? { ...validation, value: manifestData } : validation
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validatePluginServerManifestContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -214,6 +227,7 @@ const validateParsedExtractSuccessContract = (
   }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const parseExtractSuccessContract = <Value>(
   value: Value
 ): ContractParseResult<ExtractSuccessResponse> => {
@@ -229,6 +243,7 @@ export const parseExtractSuccessContract = <Value>(
   return validation.ok ? { ...validation, value: extractData } : validation
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validateExtractSuccessContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -258,6 +273,7 @@ const validateParsedUsageContract = (
   return { ok: issues.length === 0, issues }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const parseUsageResponseContract = <Value>(
   value: Value
 ): ContractParseResult<UsageResponse> => {
@@ -273,6 +289,7 @@ export const parseUsageResponseContract = <Value>(
   return validation.ok ? { ...validation, value: usageData } : validation
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validateUsageContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -280,6 +297,7 @@ export const validateUsageContract = <Value>(
   return { ok: parsed.ok, issues: parsed.issues }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validateVerifyErrorContract = <Value>(
   value: Value
 ): ContractValidationResult => {

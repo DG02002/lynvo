@@ -1,6 +1,6 @@
-import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight02Icon, AlertCircleIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
 
 import { Spinner } from "~/components/spinner"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
@@ -10,12 +10,15 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import { linkCopy } from "~/features/links/link-copy"
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
+import type { ExtractionPreview } from "~/features/links/use-link-actions"
 import { cn } from "~/lib/utils"
-import { useClipboardUrl } from "./use-clipboard-url"
-import { ClipboardPermissionDialog } from "./clipboard-permission-dialog"
+
 import { ClipboardAccessIcon } from "./clipboard-access-icon"
+import { ClipboardPermissionDialog } from "./clipboard-permission-dialog"
 import { ExtractionSourceFlow } from "./extraction-source-flow"
-import type { ExtractionPreview } from "~/features/links/use-link-actions/action-types"
+import { useClipboardUrl } from "./use-clipboard-url"
 
 const sourceStatusMessage = (status: string | undefined) => {
   if (status === "maintenance") {
@@ -43,15 +46,14 @@ const sourceStatusLabel = (status: string) => {
   return "Status unavailable"
 }
 
-const getErrorTitle = (error: string, isExistingLinkWarning: boolean) => {
-  if (isExistingLinkWarning) {
-    return "Link already saved"
-  }
-  if (error.toLowerCase().includes("supported")) {
-    return "Link not supported"
-  }
-  return "Link couldn’t be opened"
-}
+const errorTitles = {
+  duplicate: linkCopy.errors.duplicate,
+  generic: linkCopy.errors.generic,
+  unsupported: linkCopy.errors.unsupported,
+} satisfies Record<SavedLinkInteractionError["kind"], string>
+
+const getErrorTitle = (error: SavedLinkInteractionError) =>
+  errorTitles[error.kind]
 
 interface LinkInputSectionProps {
   url: string
@@ -59,13 +61,12 @@ interface LinkInputSectionProps {
   onSave: (url?: string) => void
   isSaving: boolean
   extractionPreview: ExtractionPreview | null
-  error: string | null
-  setError: (err: string | null) => void
+  error: SavedLinkInteractionError | null
+  setError: (error: SavedLinkInteractionError | null) => void
   savedUrls?: ReadonlySet<string>
 }
 
 const EMPTY_SAVED_URLS = new Set<string>()
-
 export function LinkInputSection({
   url,
   setUrl,
@@ -76,9 +77,9 @@ export function LinkInputSection({
   setError,
   savedUrls = EMPTY_SAVED_URLS,
 }: LinkInputSectionProps) {
+  const linkInputErrorId = React.useId()
   const [isClipboardDialogOpen, setIsClipboardDialogOpen] =
     React.useState(false)
-  const isExistingLinkWarning = error === "Link already exists on your account."
   const {
     clipboardUrl,
     clipboardPermission,
@@ -125,18 +126,17 @@ export function LinkInputSection({
       {error && (
         <div className="mb-4 translate-y-0 opacity-100 transition-[opacity,transform] duration-200 starting:-translate-y-2 starting:opacity-0">
           <Alert
-            variant={isExistingLinkWarning ? "default" : "destructive"}
+            id={linkInputErrorId}
+            variant={error.kind === "duplicate" ? "default" : "destructive"}
             className={cn(
-              isExistingLinkWarning &&
+              error.kind === "duplicate" &&
                 "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
             )}
           >
             <HugeiconsIcon icon={AlertCircleIcon} />
-            <AlertTitle>
-              {getErrorTitle(error, isExistingLinkWarning)}
-            </AlertTitle>
-            {!isExistingLinkWarning && (
-              <AlertDescription>{error}</AlertDescription>
+            <AlertTitle>{getErrorTitle(error)}</AlertTitle>
+            {error.kind !== "duplicate" && (
+              <AlertDescription>{error.message}</AlertDescription>
             )}
           </Alert>
         </div>
@@ -167,7 +167,8 @@ export function LinkInputSection({
               onSave()
             }
           }}
-          aria-invalid={Boolean(error && !isExistingLinkWarning)}
+          aria-invalid={Boolean(error && error.kind !== "duplicate")}
+          aria-describedby={error ? linkInputErrorId : undefined}
         />
         <InputGroupAddon align="inline-end">
           {(clipboardPermission === "prompt" ||

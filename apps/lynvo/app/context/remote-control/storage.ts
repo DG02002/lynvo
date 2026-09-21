@@ -1,9 +1,10 @@
+import { Result, Schema } from "effect"
+
 import {
   REMOTE_COMMAND_DELIVERY_KEY,
   REMOTE_DEVICE_NAME_KEY,
   REMOTE_SESSION_ID_KEY,
 } from "./constants"
-import { Result, Schema } from "effect"
 
 const EMPTY_DELIVERY_RECORD: RemoteCommandDeliveryRecord = {
   processed: [],

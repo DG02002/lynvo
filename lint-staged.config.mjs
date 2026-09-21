@@ -2,37 +2,58 @@ import { existsSync } from "node:fs"
 import { relative, sep } from "node:path"
 
 const sourceFilePattern = /\.(?:c|m)?[jt]sx?$/
-const ignoredPathPrefixes = ["apps/lynvo/app/components/ui/"]
-const ignoredFileNames = new Set(["worker-configuration.d.ts"])
 
 const getRelativePath = (absolutePath) =>
   relative(process.cwd(), absolutePath).split(sep).join("/")
 
-const isLintableSourceFile = (absolutePath) => {
-  const relativePath = getRelativePath(absolutePath)
-  const fileName = relativePath.slice(relativePath.lastIndexOf("/") + 1)
-
-  return (
-    existsSync(absolutePath) &&
-    sourceFilePattern.test(relativePath) &&
-    !ignoredFileNames.has(fileName) &&
-    !ignoredPathPrefixes.some((prefix) => relativePath.startsWith(prefix))
+const getExistingFilePaths = (filePaths, filePattern) =>
+  filePaths.filter(
+    (filePath) =>
+      existsSync(filePath) && filePattern.test(getRelativePath(filePath))
   )
-}
 
 const quoteShellArgument = (filePath) =>
   `'${filePath.replaceAll("'", "'\\''")}'`
 
+const getFileArguments = (filePaths) =>
+  filePaths.map(quoteShellArgument).join(" ")
+
+const jsonFilePattern = /(?:^|\/)(?:package|knip)\.json$/
+
+const markdownFilePattern = /\.(?:md|mdx)$/
+
 export default {
   "*": (stagedFilePaths) => {
-    const sourceFilePaths = stagedFilePaths.filter(isLintableSourceFile)
+    const sourceFilePaths = getExistingFilePaths(
+      stagedFilePaths,
+      sourceFilePattern
+    )
+    const jsonFilePaths = getExistingFilePaths(stagedFilePaths, jsonFilePattern)
+    const markdownFilePaths = getExistingFilePaths(
+      stagedFilePaths,
+      markdownFilePattern
+    )
 
-    if (sourceFilePaths.length === 0) {
-      return []
+    const commands = []
+
+    if (sourceFilePaths.length > 0) {
+      const fileArguments = getFileArguments(sourceFilePaths)
+      commands.push(
+        `oxfmt --no-error-on-unmatched-pattern ${fileArguments}`,
+        `oxlint --no-error-on-unmatched-pattern ${fileArguments}`
+      )
     }
 
-    const fileArguments = sourceFilePaths.map(quoteShellArgument).join(" ")
+    if (jsonFilePaths.length > 0) {
+      const fileArguments = getFileArguments(jsonFilePaths)
+      commands.push(`oxfmt --no-error-on-unmatched-pattern ${fileArguments}`)
+    }
 
-    return [`oxfmt ${fileArguments}`, `oxlint ${fileArguments}`]
+    if (markdownFilePaths.length > 0) {
+      const fileArguments = getFileArguments(markdownFilePaths)
+      commands.push(`markdownlint-cli2 --no-globs --fix ${fileArguments}`)
+    }
+
+    return commands
   },
 }

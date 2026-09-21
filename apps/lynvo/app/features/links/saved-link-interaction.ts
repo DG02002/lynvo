@@ -1,11 +1,12 @@
-import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
+import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
+
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 import { toLinkViewModel } from "./link-view-models"
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import {
   getMediaNodeInteractionState,
   isMirrorResolvableMediaNode,
 } from "./media-node-interaction"
+import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
 
 export interface SavedLinkInteractionState {
   directLink?: ExtractedLink
@@ -14,53 +15,61 @@ export interface SavedLinkInteractionState {
   isResolvableContainer: boolean
 }
 
-export interface SavedLinkClearErrorOutcome {
+export const SAVED_LINK_REFRESH_ERROR_MESSAGE =
+  "The saved link couldn’t be refreshed. Try again."
+
+export type SavedLinkInteractionError =
+  | { kind: "duplicate" }
+  | { kind: "unsupported"; message: string }
+  | { kind: "generic"; message: string }
+
+interface SavedLinkClearErrorOutcome {
   kind: "clear-error"
 }
 
-export interface SavedLinkErrorOutcome {
+interface SavedLinkErrorOutcome {
   kind: "error"
-  message: string
+  error: SavedLinkInteractionError
 }
 
-export interface SavedLinkClearPreviewOutcome {
+interface SavedLinkClearPreviewOutcome {
   kind: "clear-preview"
 }
 
-export interface SavedLinkPreviewOutcome {
+interface SavedLinkPreviewOutcome {
   kind: "preview"
   meta: MetaData
 }
 
-export interface SavedLinkSelectionRequiredOutcome {
+interface SavedLinkSelectionRequiredOutcome {
   kind: "selection-required"
   selection: SavedLinkSelection
 }
 
-export interface SavedLinkSelectionClosedOutcome {
+interface SavedLinkSelectionClosedOutcome {
   kind: "selection-closed"
 }
 
-export interface SavedLinkFocusedOutcome {
+interface SavedLinkFocusedOutcome {
   kind: "link-focused"
   linkId: string
 }
 
-export interface SavedLinkViewResetOutcome {
+interface SavedLinkViewResetOutcome {
   kind: "view-reset"
 }
 
-export interface SavedLinksUpdatedOutcome {
+interface SavedLinksUpdatedOutcome {
   kind: "links-updated"
   itemUrl: string
   links: ExtractedLink[]
 }
 
-export interface SavedLinkRefreshSucceededOutcome {
+interface SavedLinkRefreshSucceededOutcome {
   kind: "refresh-succeeded"
 }
 
-export type SavedLinkInteractionOutcome =
+type SavedLinkInteractionOutcome =
   | SavedLinkClearErrorOutcome
   | SavedLinkErrorOutcome
   | SavedLinkClearPreviewOutcome
@@ -83,6 +92,28 @@ export interface SavedLinkSelection {
 export interface SavedLinkInteractionReporter {
   publish: (outcome: SavedLinkInteractionOutcome) => void
 }
+
+export const reportSavedLinkError = (
+  reporter: SavedLinkInteractionReporter,
+  error: SavedLinkInteractionError
+): void => {
+  reporter.publish({
+    kind: "error",
+    error,
+  })
+}
+
+export const reportGenericSavedLinkError = (
+  reporter: SavedLinkInteractionReporter,
+  message: string
+): void => {
+  reportSavedLinkError(reporter, { kind: "generic", message })
+}
+
+export const getSavedLinkRefreshErrorMessage = (
+  error: SavedLinkInteractionError
+): string =>
+  error.kind === "generic" ? error.message : SAVED_LINK_REFRESH_ERROR_MESSAGE
 
 export interface PluginDomainIdentity {
   pluginServerId: string

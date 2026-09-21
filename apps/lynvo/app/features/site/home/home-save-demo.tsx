@@ -1,12 +1,4 @@
 import {
-  useEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type RefObject,
-} from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
-import {
   ArrowRight01Icon,
   ArrowRight02Icon,
   ArrowUpRight01Icon,
@@ -18,7 +10,17 @@ import {
   PlayIcon,
   Shield01Icon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type RefObject,
+} from "react"
+
 import { NewBadge } from "~/components/save-list/new-badge"
+import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import {
   InputGroup,
@@ -26,7 +28,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import { Spinner } from "~/components/spinner"
+
 import {
   HOME_DEMO_BROWSER_URL,
   HOME_DEMO_CLIPBOARD_URL,
@@ -40,6 +42,7 @@ import {
 import { useAnimationActivity } from "./use-animation-activity"
 
 interface HomeDemoItem {
+  id: string
   icon: typeof PlayIcon
   title: string
   detail: string
@@ -99,27 +102,31 @@ interface DemoRemoveDialogProps {
 
 const HOME_DEMO_ITEMS: HomeDemoItem[] = [
   {
+    id: "midnight-relay",
     icon: PlayIcon,
     title: "Midnight Relay — Episode 06 · 1080p",
-    detail: "Direct Media",
+    detail: "Direct Media (built in)",
     isOpened: true,
   },
   {
+    id: "glass-frontier",
     icon: PackageSearchIcon,
     title: "The Glass Frontier — Chapter 12 · 1080p",
     detail: "Lynvo Plugin Server",
     meta: "2.4 GB",
   },
   {
+    id: "northstar-files",
     icon: Folder01Icon,
     title: "Northstar Files — Season 01",
-    detail: "Open collection",
+    detail: "Open folder",
     meta: "8 items",
     isFolder: true,
   },
 ]
 
 const CREATED_HOME_DEMO_ITEM: HomeDemoItem = {
+  id: "aurora-station",
   icon: PlayIcon,
   title: "Aurora Station — Episode 03 · 1080p",
   detail: "Direct Media",
@@ -250,7 +257,7 @@ const useHomeDemoCursor = (
 
     const demoStage = stage.current
     if (!cursorTarget || !demoStage) {
-      return
+      return undefined
     }
 
     const updateCursorPosition = () => {
@@ -321,7 +328,7 @@ export const HomeSaveDemo = () => {
 
   useEffect(() => {
     if (isReducedMotion || !isAnimationActive) {
-      return
+      return undefined
     }
 
     const delay = HOME_DEMO_STEP_DELAYS_MS[step]
@@ -385,7 +392,7 @@ export const HomeSaveDemo = () => {
         </span>
         <button
           ref={copySourceRef}
-          aria-label="Copy source link"
+          aria-label="Copy Source link"
           className={`pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 ${isCopySourcePressed ? "scale-[0.96] bg-blue-500 text-white" : "bg-muted/80"}`}
           onClick={handleCopySourceClick}
           tabIndex={isCopySourceVisible ? 0 : -1}
@@ -484,9 +491,9 @@ export const HomeSaveDemo = () => {
           </div>
 
           <section className="relative border-t">
-            {visibleHomeDemoItems.map((item, itemIndex) => (
+            {visibleHomeDemoItems.map((item) => (
               <DemoLibraryItem
-                key={`home-demo-library-slot-${itemIndex}`}
+                key={`home-demo-library-item-${item.id}`}
                 item={item}
                 menuTriggerRef={item.isNew ? menuTriggerRef : undefined}
                 isMenuTriggerPressed={item.isNew && isMenuTriggerPressed}
@@ -644,8 +651,8 @@ const DemoRemoveDialog = ({
           Remove this link?
         </h2>
         <p className="w-full text-center text-base text-muted-foreground">
-          This removes the link from your list. You can save it again from the
-          source link.
+          This removes the link from your library. You can save it again from
+          the source link.
         </p>
       </div>
       <div className="mt-4 flex w-full flex-col gap-3">

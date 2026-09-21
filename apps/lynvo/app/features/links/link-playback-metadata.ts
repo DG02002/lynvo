@@ -1,6 +1,6 @@
-import type { ExtractedLink, LinkMetadata } from "./types"
 import { mergeUnique } from "./link-tree-metadata"
 import { getMediaNodeTargetOrUndefined } from "./media-node-interaction"
+import type { ExtractedLink, LinkMetadata } from "./types"
 
 export const applyOpenedState = (
   links: ExtractedLink[],

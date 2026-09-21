@@ -1,25 +1,28 @@
-import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert01Icon, ChevronRightIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { useAsyncResource } from "~/hooks/use-async-resource"
+import { client } from "~/lib/api/client"
+import { signOut } from "~/lib/session-http"
 import {
   showErrorToast,
   showSuccessToast,
   showWarningToast,
 } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
+import { ActiveSessionsView } from "./active-sessions-view"
+import { DeleteAccountDialog } from "./delete-account-dialog"
+import { settingsCopy } from "./settings-copy"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
   SettingsList,
   SettingsActionRow,
   SettingsRowInfo,
 } from "./settings-layout"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { ActiveSessionsView } from "./active-sessions-view"
-import { DeleteAccountDialog } from "./delete-account-dialog"
-import { signOut } from "~/lib/session-http"
-import { client } from "~/lib/api/client"
-import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { useAsyncResource } from "~/hooks/use-async-resource"
-import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 type SettingsUser = {
   id: string
@@ -55,10 +58,10 @@ export function SecuritySettings({
       window.location.href = "/"
     } catch (error) {
       showErrorToast({
-        title: "Couldn’t log out all sessions",
+        title: "Couldn’t sign out of all sessions",
         description: getUserFacingErrorMessage(
           error,
-          "The sessions couldn’t be logged out. Try again."
+          "The sessions couldn’t be signed out. Try again."
         ),
       })
     } finally {
@@ -112,10 +115,10 @@ export function SecuritySettings({
               await reload()
             } catch (error) {
               showErrorToast({
-                title: "Couldn’t log out the session",
+                title: "Couldn’t sign out the session",
                 description: getUserFacingErrorMessage(
                   error,
-                  "The session couldn’t be logged out. Try again."
+                  "The session couldn’t be signed out. Try again."
                 ),
               })
               throw error
@@ -126,15 +129,15 @@ export function SecuritySettings({
         <ConfirmationAlertDialog
           open={revokeAllDialogOpen}
           onOpenChange={setRevokeAllDialogOpen}
-          title="Log out all sessions?"
+          title="Sign out of all sessions?"
           media={
             <HugeiconsIcon
               icon={Alert01Icon}
               className="mx-auto size-16 text-destructive"
             />
           }
-          description="This logs out every device, including this one. Unsaved work on those devices may be lost. Session termination may take up to 30 minutes."
-          confirmLabel="Log out all sessions"
+          description={`This signs out every device, including this one. Unsaved work on those devices may be lost. ${settingsCopy.sessions.terminationDelay}`}
+          confirmLabel="Sign out of all sessions"
           confirmVariant="destructive"
           pending={busy === "revokeAll"}
           onConfirm={() => void handleRevokeAllSessions()}
@@ -153,7 +156,7 @@ export function SecuritySettings({
           >
             <SettingsRowInfo
               label="Active sessions"
-              description="View all devices that have accessed your account. You can review active sessions, remove trusted devices, or use Log out all to end all sessions."
+              description="View all devices that have accessed your account. You can review active sessions, remove trusted devices, or use Sign out of all sessions to end all sessions."
             />
             <div className="flex items-center gap-1.5 shrink-0 text-foreground">
               <span className="text-sm font-normal tabular-nums">

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { TickDouble02Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useState } from "react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { OPENED_CONFIRMATION_EVENT } from "~/lib/opened-confirmation-events"
 

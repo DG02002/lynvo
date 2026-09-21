@@ -11,30 +11,33 @@ import {
   useLocation,
   useNavigate,
   useNavigationType,
+  NavigationType,
   type BlockerFunction,
 } from "react-router"
-import { toLinkViewModel } from "~/features/links/link-view-models"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
+import { openInPlayerAndMarkOpened } from "~/features/links/open-in-player"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import { savePaths } from "~/lib/paths"
+
+import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"
 import {
   getLinkKey,
   getLinksAtFolderPath,
   resolveFolderPath,
   type FolderLevel,
 } from "./save-list-browser-model"
-import { openInPlayerAndMarkOpened } from "~/features/links/open-in-player"
-import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
-import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
-import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"
-import { savePaths } from "~/lib/paths"
 import {
   areFolderIdsEqual,
   useFinderFolderHistory,
 } from "./use-finder-folder-history"
+import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
+import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem
@@ -104,6 +107,10 @@ export const useFinderBrowserState = ({
   const navigationType = useNavigationType()
   const currentLocationKeyRef = useRef(location.key)
   currentLocationKeyRef.current = location.key
+  // Folder navigation can run after awaits (unresolved item expansion), when the
+  // creating render's location is stale; always read the latest one.
+  const locationRef = useRef(location)
+  locationRef.current = location
   const isMountedRef = useRef(true)
   const folderOpenRequestRef = useRef(0)
   const parsedFolderPath = useMemo(
@@ -155,22 +162,34 @@ export const useFinderBrowserState = ({
     storageKey: item.id ? getFolderScrollStorageKey(item.id) : undefined,
   })
 
-  const navigateToFolderPath = useEffectEvent(
-    (nextFolderPath: FolderLevel[], replace: boolean) => {
-      setFolderPath(nextFolderPath)
-      const nextSearch = createFolderPathSearch(location.search, nextFolderPath)
-      if (nextSearch === location.search) {
-        return
-      }
-      void navigate(
-        {
-          pathname: location.pathname,
-          search: nextSearch,
-          hash: location.hash,
-        },
-        { preventScrollReset: true, replace }
-      )
+  const applyFolderNavigation = (
+    nextFolderPath: FolderLevel[],
+    replace: boolean
+  ) => {
+    const currentLocation = locationRef.current
+    setFolderPath(nextFolderPath)
+    const nextSearch = createFolderPathSearch(
+      currentLocation.search,
+      nextFolderPath
+    )
+    if (nextSearch === currentLocation.search) {
+      return
     }
+    void navigate(
+      {
+        pathname: currentLocation.pathname,
+        search: nextSearch,
+        hash: currentLocation.hash,
+      },
+      { preventScrollReset: true, replace }
+    )
+  }
+
+  // Effect-only wrapper: delegates through the effect-event ref. User-event
+  // paths call applyFolderNavigation directly.
+  const navigateToFolderPath = useEffectEvent(
+    (nextFolderPath: FolderLevel[], replace: boolean) =>
+      applyFolderNavigation(nextFolderPath, replace)
   )
 
   // The URL is authoritative for a deep link and for browser POP navigations.
@@ -214,6 +233,10 @@ export const useFinderBrowserState = ({
       }
     }
     setRootLinks(itemRootLinks)
+    // Deliberately tracks only itemRootLinks: re-running when the URL folder
+    // param appears or disappears would reset rootLinks to the initial items
+    // and discard links resolved by unresolved item expansion.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [itemRootLinks])
 
   useEffect(() => {
@@ -280,7 +303,7 @@ export const useFinderBrowserState = ({
   const navigateToFallbackParent = (currentFolderPath: FolderLevel[]) => {
     beginFolderNavigation()
     queueForwardFolderPath(currentFolderPath)
-    navigateToFolderPath(currentFolderPath.slice(0, -1), true)
+    applyFolderNavigation(currentFolderPath.slice(0, -1), true)
   }
 
   const navigateToParentFolder = () => {
@@ -306,7 +329,7 @@ export const useFinderBrowserState = ({
 
   const shouldBlockFolderExit = useCallback<BlockerFunction>(
     ({ currentLocation, nextLocation, historyAction }) =>
-      historyAction === "POP" &&
+      historyAction === NavigationType.Pop &&
       visibleFolderPath.length > 0 &&
       currentLocation.pathname.startsWith(savePaths.folderPrefix) &&
       !nextLocation.pathname.startsWith(savePaths.folderPrefix),
@@ -355,17 +378,15 @@ export const useFinderBrowserState = ({
       return
     }
     consumeForwardFolderPath()
-    navigateToFolderPath(nextFolderPath, false)
+    applyFolderNavigation(nextFolderPath, false)
   }
 
-  const hasNoRootLinks = rootLinks.length === 0
   const { resetHorizontalGesture } = useFinderWheelNavigation({
     contentRef,
     hasForwardFolderPaths:
       forwardFolderPaths.length > 0 ||
       historyForwardFolderIds !== undefined ||
       hasBrowserFolderForward,
-    hasNoRootLinks,
     navigateToParentFolder,
     navigateToNextFolder,
   })
@@ -399,7 +420,7 @@ export const useFinderBrowserState = ({
       setRootLinks(resolvedLinks)
     }
     resetFolderNavigation()
-    navigateToFolderPath(targetPath, false)
+    applyFolderNavigation(targetPath, false)
   }
 
   const openLink = async (link: ExtractedLink) => {
@@ -447,7 +468,7 @@ export const useFinderBrowserState = ({
     selectRoot: () => {
       resetHorizontalGesture()
       resetFolderNavigation()
-      navigateToFolderPath([], true)
+      applyFolderNavigation([], true)
     },
   }
 }

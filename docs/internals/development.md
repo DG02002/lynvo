@@ -63,6 +63,9 @@ Regenerate Cloudflare bindings after changing Wrangler configuration:
 pnpm --filter @lynvo/app cf-typegen
 ```
 
+The generated `worker-configuration.d.ts` files are gitignored; the apps
+regenerate them inside `check`/`typecheck`. Do not commit them.
+
 ## Inspect local state
 
 [Cloudflare Local Explorer](https://developers.cloudflare.com/workers/local-development/local-explorer/)
@@ -129,17 +132,49 @@ This React Router app depends on Vite's generated
 ## Test TV Bro-specific UI
 
 Run `pnpm dev`, sign in, and open Settings > Development. Turn on **Use TV
-Bro-specific UI**, then open the Save page. The setting applies only to the
+Bro-specific UI**, then open the library. The setting applies only to the
 current browser and is available only in the development build. Turn it off to
 return to the standard browser UI.
 
-The same section contains **Freeze usage** for local extraction testing. It is
-enabled by default in development builds and skips Lynvo's per-account daily
-and monthly usage counters for that browser; global capacity and Plugin Server
-limits still apply. Turn it off when you need to test usage accounting.
+To test the TV Bro layout before signing in, configure a Chrome custom device
+with the desired TV dimensions and prepend `TV Bro/1.0` to its user-agent
+string. The development build recognizes that prefix, so the sign-in and device
+sign-in pages can be tested without an authenticated session. Production still
+requires TV Bro's native bridge.
+
+The same settings section contains **Freeze usage** for local extraction
+testing. It is enabled by default in development builds and skips Lynvo's
+per-account daily and monthly usage counters for that browser; global capacity
+and Plugin Server limits still apply. Turn it off when you need to test usage
+accounting.
 
 Public builds do not include the Development settings UI. A direct request to
 `/settings/development` redirects to `/settings/general` instead.
+
+## Test without Google OAuth
+
+Start the app with a fixed local development account when you need to test
+without signing in through Google:
+
+```sh
+pnpm --filter @lynvo/app dev --no-auth
+```
+
+From the repository root, `pnpm dev --no-auth` is equivalent; the filtered
+command above also works from any directory in the workspace.
+
+Every request is signed in as a fixed local development user and session
+backed by local D1. The mode is not specific to the TV Bro layout: the account
+can use any authenticated surface, including saving real URLs, running
+extraction through the managed Plugin Server, and changing settings. Combine
+it with the `TV Bro/1.0` user-agent prefix above to exercise the TV Bro
+layout while signed in.
+
+The mode does not disable CSRF checks, usage limits, Plugin Server limits, or
+any other application behavior. The development launcher sets the local
+`LYNVO_NO_AUTH` binding; production builds ignore the bypass. Each request
+restores the fixed local user and session in D1, so this mode cannot test
+signed-out behavior or the Google OAuth flow.
 
 ## Quality gates
 
@@ -154,9 +189,23 @@ pnpm build
 pnpm check:plugin-server-release
 ```
 
-The checks cover formatting, lint, type generation and typechecking, browser
-tests, Worker tests, builds, and the standalone generated Plugin Server smoke
-test. `pnpm build` produces dry-run artifacts; it does not deploy them.
+The checks cover formatting, lint, unused-code detection in both default and
+production modes (knip), type generation and typechecking, browser tests,
+Worker tests, builds, and the standalone generated Plugin Server smoke test.
+`pnpm build` produces dry-run artifacts; it does not deploy them.
+
+Knip scans generated shadcn UI files for unused files while ignoring export
+noise inside them. Vendored code stays outside its scope: `.repos/**` and
+`tools/oxlint/anti-slop/**` belong to no Knip project. Resolve a finding in
+vendored code by excluding it in configuration, never by editing the file.
+
+Oxlint follows semver, but new rules arrive in minor versions, and warnings
+fail by configuration. A dependency bump can therefore turn CI red with
+findings the previous version could not see — treat that as stronger
+analysis, not a broken upgrade, and fix the new findings in the bump PR.
+Three surfaces Oxlint explicitly exempts from semver entirely are in use
+here: JS plugins (the anti-slop rules), type-aware linting, and nursery
+rules if ever enabled; their behavior may change in any release.
 
 For a docs-only change, check changed repository links and run the affected
 in-app documentation tests. Do not deploy as a verification step.

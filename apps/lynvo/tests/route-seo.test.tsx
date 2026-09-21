@@ -1,5 +1,6 @@
 import { render, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
+
 import {
   PRODUCTION_ORIGIN,
   RouteSeoMetadata,

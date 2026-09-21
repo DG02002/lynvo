@@ -8,7 +8,7 @@ const removeFrontmatter = (content: string) =>
   content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
 
 const convertNotes = (content: string) =>
-  content.replace(
+  content.replaceAll(
     /<DocsNote title="([^"]+)">\s*([\s\S]*?)\s*<\/DocsNote>/g,
     (_, title: string, note: string) =>
       [
@@ -23,9 +23,9 @@ const convertNotes = (content: string) =>
 
 export const cleanDocumentationMarkdown = (content: string) =>
   convertNotes(removeFrontmatter(content))
-    .replace(/^<\/?DocSection(?:\s[^>]*)?>\s*$/gm, "")
-    .replace(/^<\/?CodeBlock(?:\s[^>]*)?>\s*$/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
+    .replaceAll(/^<\/?DocSection(?:\s[^>]*)?>\s*$/gm, "")
+    .replaceAll(/^<\/?CodeBlock(?:\s[^>]*)?>\s*$/gm, "")
+    .replaceAll(/\n{3,}/g, "\n\n")
     .trim()
 
 export const extractDocumentationSection = (content: string, id: string) => {

@@ -5,16 +5,18 @@ import React, {
   useMemo,
   useSyncExternalStore,
 } from "react"
+
+import {
+  useRealtime,
+  type RealtimeContextValue,
+} from "~/context/realtime-context"
 import {
   showErrorToast,
   showInfoToast,
   showSuccessToast,
 } from "~/lib/toast-notifications"
-import {
-  useRealtime,
-  type RealtimeContextValue,
-} from "~/context/realtime-context"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import { remoteApi } from "./remote-control/api"
 import { REMOTE_CONNECTION_FAILURE_MESSAGE } from "./remote-control/constants"
 import { createRemoteControlMachine } from "./remote-control/machine"
@@ -103,7 +105,7 @@ export const RemoteControlProviderContent = ({
   )
   useEffect(() => {
     if (!user?.sessionId) {
-      return
+      return undefined
     }
     const poll = () => {
       if (navigator.onLine) {
@@ -166,14 +168,15 @@ export const RemoteControlProviderContent = ({
           })
         } else if (outcome.type === "delivery-unavailable") {
           notifications.showErrorToast({
-            title: "Remote Play is temporarily unavailable",
+            title: "Remote Play connection issue",
             description:
-              "Remote Play updates are temporarily unavailable. Check the connection.",
+              "Lynvo couldn’t update Remote Play. Check this device’s internet connection, then try again.",
           })
         } else if (outcome.type === "invalid-command") {
           notifications.showErrorToast({
-            title: "Invalid playback request",
-            description: "Remote Play received an invalid playback request.",
+            title: "Remote Play request couldn’t be understood",
+            description:
+              "The controlling device sent a request Lynvo couldn’t understand. Try again.",
           })
         }
       }),

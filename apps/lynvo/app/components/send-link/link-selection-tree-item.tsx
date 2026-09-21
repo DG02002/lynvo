@@ -1,5 +1,3 @@
-import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight01Icon,
   Folder01Icon,
@@ -7,17 +5,21 @@ import {
   FolderSymlinkIcon,
   Video02Icon,
 } from "@hugeicons/core-free-icons"
-import { Checkbox } from "~/components/ui/checkbox"
-import { Spinner } from "~/components/spinner"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
 import { ExpandableFilename } from "~/components/expandable-filename"
-import type { ExtractedLink } from "~/features/links/types"
+import { Spinner } from "~/components/spinner"
+import { Checkbox } from "~/components/ui/checkbox"
 import {
   getMediaNodeKey,
   getMediaNodeTargetOrUndefined,
   getMediaNodeInteractionState,
 } from "~/features/links/media-node-interaction"
-import { cn } from "~/lib/utils"
+import type { ExtractedLink } from "~/features/links/types"
 import { formatItemCount } from "~/lib/format-item-count"
+import { cn } from "~/lib/utils"
+
 import { getLinkSelectionState } from "./link-selection-state"
 
 interface LinkSelectionTreeItemProps {
@@ -25,6 +27,9 @@ interface LinkSelectionTreeItemProps {
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onExpandFolder?: (linkId: string, linkUrl: string) => Promise<boolean>
+  level: number
+  positionInSet: number
+  setSize: number
 }
 
 const getLinkSelectionFolderState = (
@@ -110,6 +115,9 @@ export const LinkSelectionTreeItem = ({
   selectedIds,
   onToggleSelect,
   onExpandFolder,
+  level,
+  positionInSet,
+  setSize,
 }: LinkSelectionTreeItemProps) => {
   const {
     linkId,
@@ -119,6 +127,7 @@ export const LinkSelectionTreeItem = ({
     canExpand,
     isSelected,
   } = getLinkSelectionState(link, selectedIds)
+  const labelId = React.useId()
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [isResolving, setIsResolving] = React.useState(false)
   const { canResolve, folderState, itemIcon, hasTrailingContent } =
@@ -162,15 +171,20 @@ export const LinkSelectionTreeItem = ({
   }
 
   return (
-    <div className="flex min-w-0 select-none flex-col">
+    <div
+      role="treeitem"
+      aria-labelledby={labelId}
+      aria-level={level}
+      aria-posinset={positionInSet}
+      aria-setsize={setSize}
+      aria-expanded={canExpand || canResolve ? isExpanded : undefined}
+      aria-selected={isSelectionControlAvailable ? isSelected : undefined}
+      data-folder-state={folderState}
+      className="flex min-w-0 select-none flex-col"
+    >
       <div
-        role="treeitem"
-        aria-expanded={canExpand || canResolve ? isExpanded : undefined}
-        aria-selected={isSelectionControlAvailable ? isSelected : undefined}
-        data-folder-state={folderState}
-        tabIndex={0}
         className={cn(
-          "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
+          "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           isSelectionControlAvailable &&
             (hasTrailingContent
               ? "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]"
@@ -187,7 +201,10 @@ export const LinkSelectionTreeItem = ({
             "cursor-default",
           isSelected && "bg-muted/30"
         )}
-        onClick={() => void handleRowAction()}
+        tabIndex={0}
+        onClick={() => {
+          void handleRowAction()
+        }}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) {
             return
@@ -225,7 +242,7 @@ export const LinkSelectionTreeItem = ({
           />
         )}
 
-        <div className="min-w-0">
+        <div id={labelId} className="min-w-0">
           <ExpandableFilename
             value={link.label}
             className="block text-sm font-normal"
@@ -256,14 +273,20 @@ export const LinkSelectionTreeItem = ({
       </div>
 
       {canExpand && isExpanded && link.children && (
-        <div className="ml-3 mt-1 flex min-w-0 flex-col gap-1 border-l border-border/40 pl-1.5">
-          {link.children.map((child) => (
+        <div
+          role="group"
+          className="ml-3 mt-1 flex min-w-0 flex-col gap-1 border-l border-border/40 pl-1.5"
+        >
+          {link.children.map((child, index) => (
             <LinkSelectionTreeItem
               key={getMediaNodeKey(child)}
               link={child}
               selectedIds={selectedIds}
               onToggleSelect={onToggleSelect}
               onExpandFolder={onExpandFolder}
+              level={level + 1}
+              positionInSet={index + 1}
+              setSize={link.children?.length ?? 0}
             />
           ))}
         </div>

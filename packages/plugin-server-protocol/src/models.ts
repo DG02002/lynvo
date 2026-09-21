@@ -380,8 +380,10 @@ export interface PluginServerRuntime<Env> {
 
 export const PROTOCOL_VERSION = "1.0" as const
 
+export const UNSUPPORTED_URL_CODE = "UNSUPPORTED_URL" as const
+
 export const ERROR_CODES = [
-  "UNSUPPORTED_URL",
+  UNSUPPORTED_URL_CODE,
   "UNSUPPORTED_TARGET",
   "AUTH_INVALID",
   "AUTH_REQUIRED",

@@ -13,7 +13,7 @@ Use this before registering a Custom Plugin Server in Lynvo.
 - `GET /manifest` returns the Plugin Server Manifest.
 - `POST /verify` validates the bearer token Lynvo will use.
 - `GET /usage` returns authenticated finite usage metrics for the bearer credential.
-- `POST /extract` returns protocol nodes for a source URL or lazy node.
+- `POST /extract` returns protocol nodes for a source URL or unresolved item.
 - Plugin Servers advertising `features.discovery` implement authenticated
   `POST /discover` and return a stable source id with pattern or verified
   confidence.

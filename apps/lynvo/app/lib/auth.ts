@@ -1,12 +1,13 @@
 import { data, redirect } from "react-router"
-import { getCookieValue, normalizeReturnTo } from "./auth-cookie"
+
+import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
 import { getD1Database } from "../../workers/d1/db"
 import {
   createD1SessionCookie,
   resolveSessionContext,
 } from "../../workers/d1/sessions"
+import { getCookieValue, normalizeReturnTo } from "./auth-cookie"
 import { MILLISECONDS_PER_SECOND } from "./constants"
-import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
 
 export interface SessionResult {
   readonly user: {
@@ -79,7 +80,7 @@ export const requireGuestOrRedirect = (
   }
 }
 
-export const getSessionContext = async (
+const getSessionContext = async (
   request: Request,
   env: Env
 ): Promise<{
@@ -96,7 +97,12 @@ export const getSessionContext = async (
   if (!database) {
     return { user: null, available: false }
   }
-  const session = await resolveSessionContext(request, database, Date.now())
+  const session = await resolveSessionContext({
+    request,
+    database,
+    now: Date.now(),
+    environment: env,
+  })
   return {
     user: session
       ? {

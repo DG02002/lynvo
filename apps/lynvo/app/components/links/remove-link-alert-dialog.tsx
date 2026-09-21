@@ -16,7 +16,7 @@ export const RemoveLinkAlertDialog = ({
     open={open}
     onOpenChange={onOpenChange}
     title="Remove this link?"
-    description="This removes the link from your list. You can save it again from the source link."
+    description="This removes the link from your library. You can save it again from the source link."
     confirmLabel="Remove"
     confirmVariant="destructive"
     onConfirm={() => {

@@ -1,5 +1,10 @@
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import { UNSUPPORTED_URL_CODE } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
+
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
+import { sessionExpiredCopy } from "~/lib/session-copy"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import { getKnownExtractionErrorMessage } from "./extraction-error-message"
 
 const taggedSaveErrorSchema = Schema.Struct({
@@ -7,34 +12,60 @@ const taggedSaveErrorSchema = Schema.Struct({
   message: Schema.optional(Schema.String),
 })
 
-export const getSaveErrorMessage = <Value>(error: Value): string => {
-  const knownExtractionErrorMessage = getKnownExtractionErrorMessage(error)
+type SaveError = Exclude<SavedLinkInteractionError, { kind: "duplicate" }>
+type ParsedSaveError = typeof taggedSaveErrorSchema.Type
+
+const UNSUPPORTED_URL_FALLBACK_MESSAGE = "The link is not supported."
+
+const genericSaveError = (message: string): SaveError => ({
+  kind: "generic",
+  message,
+})
+
+const getUnsupportedUrlMessage = (
+  error: ParsedSaveError
+): string | undefined => {
+  return error._tag === "ExtractionError" &&
+    error.message !== undefined &&
+    error.message === UNSUPPORTED_URL_CODE
+    ? UNSUPPORTED_URL_FALLBACK_MESSAGE
+    : undefined
+}
+
+export const getSaveError = (cause: unknown): SaveError => {
+  const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(cause)
+  if (Result.isSuccess(parsedError)) {
+    const unsupportedUrlMessage = getUnsupportedUrlMessage(parsedError.success)
+    if (unsupportedUrlMessage) {
+      return { kind: "unsupported", message: unsupportedUrlMessage }
+    }
+
+    if (parsedError.success._tag === "UnauthorizedError") {
+      return genericSaveError(sessionExpiredCopy.saveLink)
+    }
+
+    if (parsedError.success._tag === "ExtractionError") {
+      return genericSaveError(
+        "Links couldn’t be loaded from this address. Check the link, then try again."
+      )
+    }
+  }
+
+  const knownExtractionErrorMessage = getKnownExtractionErrorMessage(cause)
   if (knownExtractionErrorMessage) {
-    return knownExtractionErrorMessage
+    return genericSaveError(knownExtractionErrorMessage)
   }
 
-  const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(error)
   if (Result.isFailure(parsedError)) {
-    return "The link couldn’t be opened. Check the link, then try again."
+    return genericSaveError(
+      "The link couldn’t be opened. Check the link, then try again."
+    )
   }
 
-  if (parsedError.success._tag === "UnauthorizedError") {
-    return "The session expired. Log in, then save the link again."
-  }
-
-  if (
-    parsedError.success._tag === "ValidationError" &&
-    parsedError.success.message
-  ) {
-    return parsedError.success.message
-  }
-
-  if (parsedError.success._tag === "ExtractionError") {
-    return "Links couldn’t be loaded from this address. Check the link, then try again."
-  }
-
-  return getUserFacingErrorMessage(
-    error,
-    "The link couldn’t be opened. Check the link, then try again."
+  return genericSaveError(
+    getUserFacingErrorMessage(
+      cause,
+      "The link couldn’t be opened. Check the link, then try again."
+    )
   )
 }

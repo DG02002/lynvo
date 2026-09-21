@@ -1,9 +1,20 @@
 import { useCallback, useState } from "react"
-import { showErrorToast } from "~/lib/toast-notifications"
-import type { LinkListItem, LinkViewItem } from "~/features/links/types"
-import type { ExtractionPreview } from "./action-types"
+
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { LinksActions } from "~/features/links/use-links/actions"
+import {
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemFlatMeta,
+} from "~/features/links/link-metadata-accessors"
+import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
+import type { LinkListItem, LinkViewItem } from "~/features/links/types"
+import { extractionOrchestration } from "~/lib/extraction/orchestration"
+import { showErrorToast } from "~/lib/toast-notifications"
+import { useEnsureSessionIdentity } from "~/root/identity-synchronizer"
+
+import type { LinksActions } from "../use-links/actions"
+import type { ExtractionPreview } from "./action-types"
+import { getExtractionErrorMessage } from "./extraction-error-message"
 import {
   useExtractingItems,
   useOpeningState,
@@ -12,15 +23,7 @@ import {
 import { usePlaybackActions } from "./playback-actions"
 import { useRefreshActions } from "./refresh-actions"
 import { useSaveActions } from "./save-actions"
-import { extractionOrchestration } from "~/lib/extraction/orchestration"
-import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
-import { getExtractionErrorMessage } from "./extraction-error-message"
 import { runAfterSessionIdentity } from "./session-gated-action"
-import { useEnsureSessionIdentity } from "~/root/identity-synchronizer"
-import {
-  getLinkViewItemExtractedLinks,
-  getLinkViewItemFlatMeta,
-} from "~/features/links/link-metadata-accessors"
 
 interface UseLinkActionsProps {
   links: LinkListItem[]
@@ -34,7 +37,7 @@ export function useLinkActions({
   setHighlightedId,
 }: UseLinkActionsProps) {
   const [url, setUrl] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<SavedLinkInteractionError | null>(null)
   const [extractionPreview, setExtractionPreview] =
     useState<ExtractionPreview | null>(null)
   const savedLinks = links.filter((item) => item.kind === "saved")
@@ -116,7 +119,6 @@ export function useLinkActions({
 
   const expandSelectionFolder = useCallback(
     async (linkId: string, linkUrl: string) => {
-      const { originalUrl } = selectionDialogState
       try {
         const resolvedChildren = await runAfterSessionIdentity(
           ensureSessionIdentity,
@@ -131,7 +133,7 @@ export function useLinkActions({
           return null
         }
         setSelectionDialogState((currentState) =>
-          currentState.originalUrl === originalUrl
+          currentState.originalUrl === selectionDialogState.originalUrl
             ? {
                 ...currentState,
                 links: attachResolvedChildren({
@@ -197,3 +199,5 @@ export function useLinkActions({
     pluginDomainDialog,
   }
 }
+
+export type { ExtractionPreview } from "./action-types"

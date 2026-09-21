@@ -1,16 +1,19 @@
+import {
+  canPluginServerAttemptUrl,
+  createSourceExtractRequest,
+  getLynvoManifestExtension,
+  validatePluginServerManifestContract,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
+import { BHADOO_FALLBACK_PATH } from "../src/constants"
 import {
   LYNVO_PLUGIN_CATALOG,
   createLynvoPluginServerManifest,
   discoverLynvoPlugin,
+  extractWithLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
-import { BHADOO_FALLBACK_PATH } from "../src/constants"
-import {
-  canPluginServerAttemptUrl,
-  getLynvoManifestExtension,
-  validatePluginServerManifestContract,
-} from "@dg02002/lynvo-plugin-server-protocol"
 
 describe("Lynvo plugin catalog", () => {
   afterEach(() => {
@@ -80,6 +83,21 @@ describe("Lynvo plugin catalog", () => {
     expect(validatePluginServerManifestContract(manifest)).toEqual({
       ok: true,
       issues: [],
+    })
+  })
+
+  it("uses product copy when no requested Plugin matches", async () => {
+    await expect(
+      extractWithLynvoPlugin(
+        createSourceExtractRequest({
+          sourceUrl: "https://media.example/video.mkv",
+          pluginId: "missing-plugin",
+        }),
+        { kind: "url", url: "https://media.example/video.mkv" }
+      )
+    ).rejects.toMatchObject({
+      code: "UNSUPPORTED_URL",
+      message: "No Plugin matches this link.",
     })
   })
 

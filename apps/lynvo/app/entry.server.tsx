@@ -1,10 +1,11 @@
+import { isbot } from "isbot"
+import { renderToReadableStream } from "react-dom/server"
 import {
   ServerRouter,
   type EntryContext,
   type RouterContextProvider,
 } from "react-router"
-import { isbot } from "isbot"
-import { renderToReadableStream } from "react-dom/server"
+
 import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
 import { createContentSecurityPolicy } from "~/lib/content-security-policy"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"

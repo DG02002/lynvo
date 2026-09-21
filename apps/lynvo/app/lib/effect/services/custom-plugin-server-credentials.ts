@@ -1,6 +1,7 @@
-import { Effect, Schema } from "effect"
-import { CredentialVaultError } from "../errors"
 import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
+import { Effect, Schema } from "effect"
+
+import { CredentialVaultError } from "../errors"
 
 export interface EncryptedCustomPluginServerCredential {
   readonly apiKeyCiphertext: string

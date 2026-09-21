@@ -1,9 +1,10 @@
 "use client"
 
 import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react"
 
-import { cn } from "~/lib/utils"
 import { Label } from "~/components/ui/label"
+import { cn } from "~/lib/utils"
 
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
@@ -49,19 +50,50 @@ const fieldVariants = cva(
   }
 )
 
+interface FieldContextValue {
+  readonly errorId: string
+  readonly isInvalid: boolean | undefined
+}
+
+const FieldContext = React.createContext<FieldContextValue | null>(null)
+
+export const useFieldContext = () => React.useContext(FieldContext)
+
+export const useFieldErrorId = () => {
+  const context = useFieldContext()
+  return context?.isInvalid === true ? context.errorId : undefined
+}
+
 function Field({
   className,
   orientation = "vertical",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+}: React.ComponentProps<"div"> &
+  VariantProps<typeof fieldVariants> & {
+    "data-invalid"?: boolean
+  }) {
+  const errorId = `field-error-${React.useId()}`
+  // Keep omitted data-invalid distinct from an explicit false for consumers.
+  const isInvalid =
+    "data-invalid" in props ? props["data-invalid"] === true : undefined
+  const contextValue = React.useMemo(
+    () => ({
+      errorId,
+      isInvalid,
+    }),
+    [errorId, isInvalid]
+  )
+
   return (
-    <div
-      role="group"
-      data-slot="field"
-      data-orientation={orientation}
-      className={cn(fieldVariants({ orientation }), className)}
-      {...props}
-    />
+    <FieldContext.Provider value={contextValue}>
+      <div
+        role="group"
+        data-slot="field"
+        data-orientation={orientation}
+        className={cn(fieldVariants({ orientation }), className)}
+        {...props}
+      />
+    </FieldContext.Provider>
   )
 }
 
@@ -92,7 +124,7 @@ function ErrorList({
   ]
 
   if (uniqueErrors.length === 1) {
-    return <>{uniqueErrors[0]?.message}</>
+    return uniqueErrors[0]?.message
   }
 
   return (
@@ -110,15 +142,18 @@ function FieldError({
   children,
   errors,
   ...props
-}: React.ComponentProps<"div"> & {
+}: Omit<React.ComponentProps<"div">, "id"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
+  const fieldContext = useFieldContext()
+
   if (!children && (!errors || errors.length === 0)) {
     return null
   }
 
   return (
     <div
+      id={fieldContext?.errorId}
       role="alert"
       data-slot="field-error"
       className={cn("text-sm font-normal text-destructive", className)}

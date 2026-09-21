@@ -23,7 +23,7 @@ const NotFound = () => (
         to="/"
         className="underline underline-offset-4 transition-opacity hover:opacity-70"
       >
-        Take me home
+        Go home
       </Link>
     </div>
   </section>

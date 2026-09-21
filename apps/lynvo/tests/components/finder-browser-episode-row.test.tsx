@@ -1,9 +1,13 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+
+import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
+import { readJsonInitBody } from "../support/request-inspection"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -22,9 +26,7 @@ const localStorageStub = {
 const createMediaArtworkFetch = () =>
   vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     // SAFETY: the test fetch receives the JSON body produced by the artwork client
-    const requestBody = JSON.parse(
-      String(init?.body)
-    ) as MediaArtworkBatchRequest
+    const requestBody = readJsonInitBody(init) as MediaArtworkBatchRequest
     const results = requestBody.requests.map((request) =>
       request.episodeNumber === undefined
         ? {}
@@ -234,9 +236,8 @@ describe("FinderBrowser episode rows", () => {
     )
 
     expect(
-      screen.queryByRole("switch", { name: "Episode names" })
+      screen.queryByRole("switch", { name: "Show episode names" })
     ).not.toBeInTheDocument()
-    expect(screen.queryByText("Episode names")).not.toBeInTheDocument()
     expect(screen.queryByText("Show episode names")).not.toBeInTheDocument()
 
     const headerMenu = screen.getByRole("button", {
@@ -306,7 +307,7 @@ describe("FinderBrowser episode rows", () => {
     )
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     await screen.findByText("1. Episode 1")
     const sourceName = screen.getByText("Streambox")
@@ -392,7 +393,7 @@ describe("FinderBrowser episode rows", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("switch", { name: "Episode names" }))
+    fireEvent.click(screen.getByRole("switch", { name: "Show episode names" }))
     await screen.findByText(episodeFilename)
 
     const [mobileNewBadge] = screen.getAllByText("New")
@@ -418,13 +419,13 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("heading", { name: "Stranger Things S05" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("button", { name: "1. Episode 1" })
+      await screen.findByRole("button", { name: "1. Episode 1, new" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "2. Episode 1" })
+      screen.getByRole("button", { name: "2. Episode 1, new" })
     ).toBeInTheDocument()
   })
 
@@ -475,7 +476,7 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("heading", { name: "Sample Series Name S01" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
   })
 
@@ -500,19 +501,21 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("heading", { name: "Sample Show (2024) S01" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Featurettes" })).toBeVisible()
     expect(
-      await screen.findByRole("button", { name: "1. Episode 1" })
+      screen.getByRole("button", { name: "Featurettes, new" })
+    ).toBeVisible()
+    expect(
+      await screen.findByRole("button", { name: "1. Episode 1, new" })
     ).toBeVisible()
 
     await waitFor(() => {
       const artworkRequests = artworkFetch.mock.calls.flatMap(
         ([_input, requestInit]) => {
           // SAFETY: the test fetch receives the JSON body produced by the artwork client
-          const requestBody = JSON.parse(
-            String(requestInit?.body)
+          const requestBody = readJsonInitBody(
+            requestInit
           ) as MediaArtworkBatchRequest
           return requestBody.requests
         }
@@ -526,8 +529,8 @@ describe("FinderBrowser episode rows", () => {
     })
   })
 
-  it("descends once a lazy wrapper resolves after the page opens", async () => {
-    const lazyWrapperItem: LinkViewItem = {
+  it("descends once an unresolved item resolves after the page opens", async () => {
+    const unresolvedItem: LinkViewItem = {
       ...wrappedSeasonItem,
       metadata: {
         ...wrappedSeasonItem.metadata,
@@ -549,12 +552,12 @@ describe("FinderBrowser episode rows", () => {
         },
       },
     }
-    const resolvedWrapperItem = wrappedSeasonItem
+    const resolvedItem = wrappedSeasonItem
 
     const view = render(
       <SaveListBrowser
-        items={[lazyWrapperItem]}
-        selectedItemUrl={lazyWrapperItem.url}
+        items={[unresolvedItem]}
+        selectedItemUrl={unresolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions()}
         extractingItems={new Set()}
@@ -569,8 +572,8 @@ describe("FinderBrowser episode rows", () => {
 
     view.rerender(
       <SaveListBrowser
-        items={[resolvedWrapperItem]}
-        selectedItemUrl={resolvedWrapperItem.url}
+        items={[resolvedItem]}
+        selectedItemUrl={resolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions()}
         extractingItems={new Set()}
@@ -584,7 +587,7 @@ describe("FinderBrowser episode rows", () => {
       await screen.findByRole("heading", { name: "Stranger Things S05" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
   })
 

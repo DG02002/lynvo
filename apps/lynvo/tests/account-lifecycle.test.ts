@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { normalizePlayerId } from "../workers/d1/users"
 
 describe("account lifecycle", () => {

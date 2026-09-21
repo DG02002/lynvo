@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   USAGE_RESERVATION_LEASE_MS,
@@ -15,11 +16,14 @@ const requestAt = (
   path: string,
   timestampMs: number,
   init?: RequestInit
-): Promise<Response> =>
-  getUsageLimiterStub().fetch(`https://usage.internal${path}`, {
+): Promise<Response> => {
+  const headers = new Headers(init?.headers)
+  headers.set("x-lynvo-now-ms", String(timestampMs))
+  return getUsageLimiterStub().fetch(`https://usage.internal${path}`, {
     ...init,
-    headers: { "x-lynvo-now-ms": String(timestampMs), ...init?.headers },
+    headers,
   })
+}
 
 describe("usage limiter", () => {
   beforeEach(async () => {

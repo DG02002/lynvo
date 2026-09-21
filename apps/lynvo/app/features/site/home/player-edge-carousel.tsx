@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
+
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+
 import { useAnimationActivity } from "./use-animation-activity"
 
 const PLAYER_PREVIEWS = {
@@ -40,6 +42,9 @@ export const PlayerEdgeCarousel = () => {
     }
 
     const elapsed = (Date.now() - trackStartedAt) % LOOP_DURATION
+    // Mount-only animation seed persisted in localStorage; computing it
+    // during render would break server rendering.
+    // oxlint-disable-next-line react/set-state-in-effect
     setAnimationDelay(-elapsed)
   }, [])
 

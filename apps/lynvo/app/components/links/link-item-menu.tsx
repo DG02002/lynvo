@@ -1,6 +1,3 @@
-import * as React from "react"
-import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowUpRight01Icon,
   CopyIcon,
@@ -10,6 +7,12 @@ import {
   Image01Icon,
   SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
+import { PlayerOption } from "~/components/player-option"
+import { Spinner } from "~/components/spinner"
+import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,23 +24,23 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/spinner"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
-import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
-import { LinkDebugLogDialog } from "./link-debug-log-dialog"
-import { ChangeArtworkDialog } from "./change-artwork-dialog"
+import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
+import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import {
   openInSpecificPlayerForHandoff,
   PLAYER_DEFINITIONS,
 } from "~/lib/player-utils"
-import { PlayerOption } from "~/components/player-option"
-import { notifyClipboardWrite } from "~/lib/clipboard-events"
+import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
 import { cn } from "~/lib/utils"
-import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
-import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+
+import { ChangeArtworkDialog } from "./change-artwork-dialog"
+import { LinkDebugLogDialog } from "./link-debug-log-dialog"
+import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 
 interface LinkItemMenuProps {
   item: LinkViewItem
@@ -71,10 +74,10 @@ export const LinkItemMenu = ({
   const itemLabel = item.title || item.url
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
-    : "Reload link choices"
+    : "Refresh link choices"
   const refreshingLabel = shouldAutoSaveAllLinks
     ? `Refreshing ${itemLabel}…`
-    : `Reloading link choices for ${itemLabel}…`
+    : `Refreshing link choices for ${itemLabel}…`
   const refreshLink = shouldAutoSaveAllLinks
     ? actions.softRefresh
     : actions.hardRefresh
@@ -100,7 +103,7 @@ export const LinkItemMenu = ({
   }
 
   const removeItem = () => {
-    void actions.remove(item.url, item.id)
+    actions.remove(item.url, item.id)
     onRemoved?.()
   }
 
@@ -141,12 +144,12 @@ export const LinkItemMenu = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsLogDialogOpen(true)}>
                 <HugeiconsIcon icon={SourceCodeSquareIcon} />
-                Log
+                {linkCopy.actions.viewLog}
               </DropdownMenuItem>
               {actions.setArtwork && (
                 <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
                   <HugeiconsIcon icon={Image01Icon} />
-                  Change artwork
+                  {linkCopy.actions.changeArtwork}
                 </DropdownMenuItem>
               )}
               {!playableLink && (
@@ -226,7 +229,7 @@ export const LinkItemMenu = ({
         item={item}
         open={isArtworkDialogOpen}
         onOpenChange={setIsArtworkDialogOpen}
-        onSelect={(identity) => actions.setArtwork?.(item.url, identity)}
+        setArtwork={actions.setArtwork}
       />
     </>
   )

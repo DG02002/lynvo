@@ -1,15 +1,14 @@
-import { useState } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CopyIcon,
   Delete02Icon,
   EllipsisIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
-import { showLinkCopiedToast } from "~/lib/toast-notifications"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useState } from "react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
-import { cn } from "~/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
+import { cn } from "~/lib/utils"
 
 interface ResolvableLinkMenuProps {
   itemLabel: string

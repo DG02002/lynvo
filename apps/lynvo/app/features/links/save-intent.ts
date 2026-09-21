@@ -1,16 +1,17 @@
-import {
-  parsePluginDomainCandidate,
-  type PluginDomainSuggestion,
-} from "~/lib/plugin-domain"
 import type {
   ExtractedLink,
   LinkViewItem,
   MetaData,
 } from "~/features/links/types"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
+
 import type { SavedLinkSelection } from "./saved-link-interaction"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
 
-export interface SaveIntentOperations {
+interface SaveIntentOperations {
   addLink: (
     url: string,
     meta?: MetaData,
@@ -28,31 +29,30 @@ export interface SaveIntentOptions extends SaveIntentOperations {
   links: LinkViewItem[]
 }
 
-export interface SaveIntentErrorResult {
+interface SaveIntentErrorResult {
   kind: "error"
   message: string
   previewMeta?: MetaData
 }
 
-export interface SaveIntentDuplicateResult {
+interface SaveIntentDuplicateResult {
   kind: "duplicate"
   linkId: string
-  message: "Link already exists."
 }
 
-export interface SaveIntentQueuedResult {
+interface SaveIntentQueuedResult {
   kind: "queued"
   linkId: string
 }
 
-export interface SaveIntentSavedResult {
+interface SaveIntentSavedResult {
   kind: "saved"
   linkId: string
   pluginDomainSuggestion?: PluginDomainSuggestion
   previewMeta?: MetaData
 }
 
-export interface SaveIntentSelectionResult {
+interface SaveIntentSelectionResult {
   kind: "selection-required"
   selection: SavedLinkSelection
   previewMeta: MetaData
@@ -74,19 +74,19 @@ export interface ConfirmSaveIntentOptions {
   pluginDomainSuggestion?: PluginDomainSuggestion
 }
 
-export interface ConfirmSaveIntentErrorResult {
+interface ConfirmSaveIntentErrorResult {
   kind: "error"
   message: string
 }
 
-export interface ConfirmSaveIntentUpdatedResult {
+interface ConfirmSaveIntentUpdatedResult {
   kind: "updated"
   itemUrl: string
   links: ExtractedLink[]
   pluginDomainSuggestion?: PluginDomainSuggestion
 }
 
-export interface ConfirmSaveIntentSavedResult {
+interface ConfirmSaveIntentSavedResult {
   kind: "saved"
   pluginDomainSuggestion?: PluginDomainSuggestion
 }
@@ -119,7 +119,6 @@ export const resolveSaveIntent = async ({
     return {
       kind: "duplicate",
       linkId: existingItem.id || existingItem.url,
-      message: "Link already exists.",
     }
   }
 

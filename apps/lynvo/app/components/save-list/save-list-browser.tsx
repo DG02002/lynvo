@@ -1,5 +1,3 @@
-import { useMemo, useState, type ReactNode, type RefObject } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
   AlertCircleIcon,
@@ -7,62 +5,60 @@ import {
   Folder02Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
-import { Button } from "~/components/ui/button"
-import { LinkItemMenu } from "~/components/links/link-item-menu"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useMemo, useState, type ReactNode, type RefObject } from "react"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
+
+import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
+import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
+import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { Spinner } from "~/components/spinner"
+import { Button } from "~/components/ui/button"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
+import { toLinkViewModel } from "~/features/links/link-view-models"
+import {
+  getEpisodeListingLabels,
+  getMediaDisplayTitle,
+  getSharedSeasonIdentity,
+  hasEpisodeMarker,
+  isEpisodeOnlyListing,
+  parseMediaFilename,
+} from "~/features/links/media-artwork"
+import {
+  getMediaNodeInteractionState,
+  getMediaNodeTargetOrUndefined,
+} from "~/features/links/media-node-interaction"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type {
   ExtractedLink,
   LinkListItem,
   LinkViewItem,
 } from "~/features/links/types"
-import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
-import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   openInSpecificPlayerForHandoff,
   type PlayerDefinition,
 } from "~/lib/player-utils"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
-import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
-import { ExpandableFilename } from "~/components/expandable-filename"
-import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
-import {
-  getMediaDisplayTitle,
-  getEpisodeListingLabels,
-  hasEpisodeMarker,
-  isEpisodeOnlyListing,
-} from "~/features/links/media-artwork/media-artwork-identity"
-import { getSharedSeasonIdentity } from "~/features/links/media-artwork/hybrid-card-grouping"
-import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
-import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import {
-  getMediaNodeInteractionState,
-  getMediaNodeTargetOrUndefined,
-} from "~/features/links/media-node-interaction"
-import {
-  getFolderIcon,
-  getFolderVisualState,
-  getItemTitle,
-  getLinkKey,
-  getResolvableSourceName,
-  isMirrorResolvable,
-  type FolderLevel,
-} from "./save-list-browser-model"
-import { useFinderBrowserState } from "./use-finder-browser-state"
-import { useFolderTitleDisplay } from "./use-folder-title-display"
-import { openInPlayerAndLogError } from "~/features/links/open-in-player"
-import { groupSaveListItems } from "./save-list-groups"
+
 import { ExtractionFailedActions } from "./extraction-failed-actions"
-import { ResolvableContainerRow } from "./resolvable-container-row"
+import { ExtractionStatusTitle } from "./extraction-status"
+import {
+  getExtractionStatusInput,
+  getExtractionStatusLabel,
+  getExtractionStatusTitleSpec,
+} from "./extraction-status-utils"
 import {
   EpisodeStillSlot,
   FinderEpisodeStillDisplay,
   useFinderEpisodeStill,
 } from "./finder-episode-still"
-import { SaveListRowPoster } from "./save-list-row-poster"
+import { buildItemAriaLabel } from "./item-aria-label"
 import {
   MediaListRowMeta,
   MediaListRow,
@@ -77,28 +73,36 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
-import {
-  FINDER_FOLDER_CONTENT_GRID_CLASS,
-  HYBRID_GROUP_CONTENT_CLASS,
-  SAVE_LIST_BROWSER_LAYOUT_CLASS,
-  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
-} from "./save-list-layout-constants"
-import { SeasonArtworkPanel } from "./season-artwork-panel"
+import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
-import { ExtractionStatusTitle } from "./extraction-status"
 import {
-  getExtractionStatusInput,
-  getExtractionStatusLabel,
-  getExtractionStatusTitleSpec,
-} from "./extraction-status-utils"
-import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+  getFolderIcon,
+  getFolderVisualState,
+  getItemTitle,
+  getLinkKey,
+  getResolvableSourceName,
+  isMirrorResolvable,
+  type FolderLevel,
+} from "./save-list-browser-model"
+import { groupSaveListItems } from "./save-list-groups"
 import {
   FolderTitleDisplayToggleButton,
   SaveListBackButton,
 } from "./save-list-header-controls"
+import {
+  FINDER_FOLDER_CONTENT_GRID_CLASS,
+  GALLERY_GROUP_CONTENT_CLASS,
+  SAVE_LIST_BROWSER_LAYOUT_CLASS,
+  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
+} from "./save-list-layout-constants"
+import { SaveListRowPoster } from "./save-list-row-poster"
+import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+import { SeasonArtworkPanel } from "./season-artwork-panel"
+import { useFinderBrowserState } from "./use-finder-browser-state"
+import { useFolderTitleDisplay } from "./use-folder-title-display"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -209,6 +213,8 @@ interface SaveListItemAriaLabelOptions {
   readonly directLink: ExtractedLink | undefined
   readonly isExtractionIncomplete: boolean
   readonly extractionStatusLabel: string
+  readonly isOpened: boolean
+  readonly isNew: boolean
 }
 
 const getSaveListItemAriaLabel = ({
@@ -216,16 +222,20 @@ const getSaveListItemAriaLabel = ({
   directLink,
   isExtractionIncomplete,
   extractionStatusLabel,
+  isOpened,
+  isNew,
 }: SaveListItemAriaLabelOptions) => {
+  let label: string
+
   if (isExtractionIncomplete) {
-    return `${extractionStatusLabel} for ${itemTitle}`
+    label = `${extractionStatusLabel} for ${itemTitle}`
+  } else if (directLink) {
+    label = `Open ${directLink.label || itemTitle}`
+  } else {
+    label = `View ${itemTitle}`
   }
 
-  if (directLink) {
-    return `Open ${directLink.label || itemTitle}`
-  }
-
-  return `View ${itemTitle}`
+  return buildItemAriaLabel({ label, isOpened, isNew })
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -417,11 +427,11 @@ const FinderEmptyState = ({
       <div className="flex flex-col gap-1">
         <p className="font-medium">No playable links</p>
         <p className="text-sm text-muted-foreground">
-          Resolve this saved link to load its playable links.
+          Find playable links for this saved link.
         </p>
       </div>
       <Button variant="outline" onClick={() => actions.showLinks(item.url)}>
-        Resolve links
+        Find playable links
       </Button>
     </div>
   </section>
@@ -477,13 +487,16 @@ const FinderBrowserLinkRow = ({
     shouldStackEpisodeStill && shouldShowEpisodeStillForLink
   const shouldCenterMobileNewBadge =
     shouldStackIconOnMobile && titleDisplay === "episode"
-  const rowFallbackIcon = isResolving ? (
-    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
-  ) : (
+  const rowFallbackIcon = (
     <HugeiconsIcon
       icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
       className="size-6"
     />
+  )
+  const rowStatusIcon = isResolving ? (
+    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
+  ) : (
+    rowFallbackIcon
   )
   const episodeStillElement = (
     <FinderEpisodeStillDisplay
@@ -504,7 +517,7 @@ const FinderBrowserLinkRow = ({
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
-            {rowFallbackIcon}
+            {rowStatusIcon}
           </SaveListRowIcon>
         )
       }
@@ -516,7 +529,7 @@ const FinderBrowserLinkRow = ({
             shouldShowRowPosters,
             isFolder
           )}
-          rowFallbackIcon={rowFallbackIcon}
+          rowFallbackIcon={rowStatusIcon}
           isExpired={isExpired}
         />
       )
@@ -528,7 +541,7 @@ const FinderBrowserLinkRow = ({
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
-            {rowFallbackIcon}
+            {rowStatusIcon}
           </SaveListRowIcon>
         }
       >
@@ -769,7 +782,7 @@ const FinderBrowser = ({
       <div
         className={
           sharedSeasonIdentity
-            ? HYBRID_GROUP_CONTENT_CLASS
+            ? GALLERY_GROUP_CONTENT_CLASS
             : FINDER_FOLDER_CONTENT_GRID_CLASS
         }
       >
@@ -1055,6 +1068,8 @@ export const SaveListBrowser = ({
                           item,
                           isExtracting
                         ),
+                        isOpened: directLink?.opened === true,
+                        isNew: isRootItemNew,
                       })}
                       className={cn(
                         "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

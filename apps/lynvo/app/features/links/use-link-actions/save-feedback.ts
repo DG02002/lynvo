@@ -4,7 +4,7 @@ import {
   SAVE_SUCCESS_VIBRATION_MS,
 } from "./constants"
 
-export const vibrate = (durationMs: number) => {
+const vibrate = (durationMs: number) => {
   try {
     if (globalThis.navigator !== undefined && navigator.vibrate) {
       navigator.vibrate(durationMs)

@@ -1,8 +1,10 @@
-import { useState } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { Delete02Icon, SourceCodeSquareIcon } from "@hugeicons/core-free-icons"
-import { Button } from "~/components/ui/button"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useState } from "react"
+
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
+import { Button } from "~/components/ui/button"
+import { linkCopy } from "~/features/links/link-copy"
 import type { LinkViewItem } from "~/features/links/types"
 import { cn } from "~/lib/utils"
 
@@ -35,7 +37,7 @@ export const ExtractionFailedActions = ({
           onClick={() => setIsLogDialogOpen(true)}
         >
           <HugeiconsIcon icon={SourceCodeSquareIcon} />
-          Log
+          {linkCopy.actions.viewLog}
         </Button>
       </span>
       <LinkDebugLogDialog

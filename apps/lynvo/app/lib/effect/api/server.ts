@@ -1,25 +1,26 @@
 import { Effect, Layer, Option } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import * as FileSystem from "effect/FileSystem"
+import * as Path from "effect/Path"
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http"
+import * as Etag from "effect/unstable/http/Etag"
+import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
+import { HttpApiBuilder } from "effect/unstable/httpapi"
+
+import { resolveSessionContext } from "../../../../workers/d1/sessions"
+import { validateCSRF } from "../../csrf"
+import { UnauthorizedError, CsrfError } from "../errors"
+import { requireDatabaseEffect } from "../require-database"
+import { CloudflareEnv } from "../services/cloudflare-env"
+import { webRequestFromSource } from "../session-context"
 import { Api } from "./api"
-import { PluginServersHandlers } from "./handlers/plugin-servers-handlers"
-import { PluginDomainsHandlers } from "./handlers/plugin-domains-handlers"
 import { ExtractionHandlers } from "./handlers/extraction-handlers"
+import { PluginDomainsHandlers } from "./handlers/plugin-domains-handlers"
+import { PluginServersHandlers } from "./handlers/plugin-servers-handlers"
 import { RemoteHandlers } from "./handlers/remote-handlers"
 import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./middleware"
-import { validateCSRF } from "../../csrf"
-import { CloudflareEnv } from "../services/cloudflare-env"
-import { requireDatabaseEffect } from "../require-database"
-import { webRequestFromSource } from "../session-context"
-import { UnauthorizedError, CsrfError } from "../errors"
-import * as FileSystem from "effect/FileSystem"
-import * as Path from "effect/Path"
-import * as Etag from "effect/unstable/http/Etag"
-import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
-import { resolveSessionContext } from "../../../../workers/d1/sessions"
 
-export const WebAuthLive = Layer.succeed(
+const WebAuthLive = Layer.succeed(
   WebAuth,
   WebAuth.of((httpEffect) =>
     Effect.gen(function* () {
@@ -32,7 +33,12 @@ export const WebAuthLive = Layer.succeed(
         "Authentication is temporarily unavailable"
       )
       const session = yield* Effect.promise(() =>
-        resolveSessionContext(webRequest, database, Date.now())
+        resolveSessionContext({
+          request: webRequest,
+          database,
+          now: Date.now(),
+          environment,
+        })
       )
 
       if (!session) {
@@ -60,7 +66,7 @@ export const WebAuthLive = Layer.succeed(
   )
 )
 
-export const CsrfLive = Layer.succeed(
+const CsrfLive = Layer.succeed(
   CsrfMiddleware,
   CsrfMiddleware.of((httpEffect) =>
     Effect.gen(function* () {

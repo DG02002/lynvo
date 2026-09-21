@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import type {
   ExtractedLink,
   LinkDebugLogEntry,
@@ -105,19 +106,18 @@ export const metadataSchema: Schema.Codec<MetaData> = Schema.Struct({
   pluginServerId: Schema.optional(Schema.String),
 })
 
-export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
-  Schema.Struct({
-    at: Schema.Number,
-    pluginServerId: Schema.optional(Schema.String),
-    pluginId: Schema.optional(Schema.String),
-    outcome: Schema.Literals(["complete", "failed", "pending", "requeued"]),
-    errorCode: Schema.optional(Schema.String),
-    detail: Schema.optional(Schema.String),
-    httpStatus: Schema.optional(Schema.Number),
-    nodeCount: Schema.optional(Schema.Number),
-    durationMs: Schema.optional(Schema.Number),
-    attempt: Schema.optional(Schema.Number),
-  })
+const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> = Schema.Struct({
+  at: Schema.Number,
+  pluginServerId: Schema.optional(Schema.String),
+  pluginId: Schema.optional(Schema.String),
+  outcome: Schema.Literals(["complete", "failed", "pending", "requeued"]),
+  errorCode: Schema.optional(Schema.String),
+  detail: Schema.optional(Schema.String),
+  httpStatus: Schema.optional(Schema.Number),
+  nodeCount: Schema.optional(Schema.Number),
+  durationMs: Schema.optional(Schema.Number),
+  attempt: Schema.optional(Schema.Number),
+})
 
 export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   schemaVersion: Schema.Literal(3),

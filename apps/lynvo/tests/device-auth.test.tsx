@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import DeviceApproval from "~/components/auth/device-approval"
+
 import { requestPathname } from "./support/request-pathname"
 import { silenceConsoleErrorLogs } from "./support/silence-console-error-logs"
 
@@ -34,11 +36,11 @@ describe("device approval route behavior", () => {
       </MemoryRouter>
     )
     const approveButton = await screen.findByRole("button", {
-      name: "Approve login",
+      name: "Approve sign-in",
     })
-    expect(screen.getByLabelText("Login verification code")).toHaveTextContent(
-      "NXSM-BKXB"
-    )
+    expect(
+      screen.getByLabelText("Sign-in verification code")
+    ).toHaveTextContent("NXSM-BKXB")
     expect(screen.queryByText(/Living room TV/)).not.toBeInTheDocument()
     await waitFor(() => expect(approveButton).toBeEnabled())
     fireEvent.click(approveButton)
@@ -52,9 +54,11 @@ describe("device approval route behavior", () => {
       ).toBe(true)
     )
     expect(
-      await screen.findByRole("heading", { name: "Login approved" })
+      await screen.findByRole("heading", { name: "Sign-in approved" })
     ).toBeVisible()
-    expect(screen.getByText("The other device is now logged in.")).toBeVisible()
+    expect(
+      screen.getByText("Lynvo is now signed in on the other device.")
+    ).toBeVisible()
     expect(screen.getByRole("button", { name: "Go home" })).toHaveAttribute(
       "href",
       "/"
@@ -85,7 +89,7 @@ describe("device approval route behavior", () => {
     expect(screen.getByRole("alert")).toBeVisible()
     expect(screen.getByRole("button", { name: "Try again" })).toBeVisible()
     expect(
-      screen.queryByRole("button", { name: "Approve login" })
+      screen.queryByRole("button", { name: "Approve sign-in" })
     ).not.toBeInTheDocument()
   })
 
@@ -143,11 +147,11 @@ describe("device approval route behavior", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }))
 
     expect(
-      await screen.findByRole("heading", { name: "Approve login" })
+      await screen.findByRole("heading", { name: "Approve sign-in" })
     ).toBeVisible()
-    expect(screen.getByLabelText("Login verification code")).toHaveTextContent(
-      "NXSM-BKXB"
-    )
+    expect(
+      screen.getByLabelText("Sign-in verification code")
+    ).toHaveTextContent("NXSM-BKXB")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })

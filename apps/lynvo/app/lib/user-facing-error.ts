@@ -1,20 +1,22 @@
-import { ApiResponseError } from "./api-errors"
 import { Result, Schema } from "effect"
+
+import { ApiResponseError } from "./api-errors"
+import { sessionExpiredCopy } from "./session-copy"
 
 const taggedErrorSchema = Schema.Struct({
   _tag: Schema.String,
   message: Schema.optional(Schema.String),
 })
 
-const taggedErrorMessage = <Value>(error: Value): string | undefined => {
-  const parsed = Schema.decodeUnknownResult(taggedErrorSchema)(error)
+const taggedErrorMessage = (cause: unknown): string | undefined => {
+  const parsed = Schema.decodeUnknownResult(taggedErrorSchema)(cause)
   if (Result.isFailure(parsed)) {
     return undefined
   }
 
   switch (parsed.success._tag) {
     case "UnauthorizedError":
-      return "The session expired. Log in, then try again."
+      return sessionExpiredCopy.retry
     case "CsrfError":
       return "The security session expired. Refresh the page, then try again."
     case "ValidationError":
@@ -32,14 +34,14 @@ const taggedErrorMessage = <Value>(error: Value): string | undefined => {
   }
 }
 
-export const getUserFacingErrorMessage = <Value>(
-  error: Value,
+export const getUserFacingErrorMessage = (
+  cause: unknown,
   fallback: string
 ): string => {
-  if (error instanceof ApiResponseError) {
-    const reference = error.requestId ? ` Reference: ${error.requestId}` : ""
-    return `${error.message}${reference}`
+  if (cause instanceof ApiResponseError) {
+    const reference = cause.requestId ? ` Reference: ${cause.requestId}` : ""
+    return `${cause.message}${reference}`
   }
 
-  return taggedErrorMessage(error)?.trim() || fallback
+  return taggedErrorMessage(cause)?.trim() || fallback
 }

@@ -6,7 +6,7 @@ export const useSaveListFullscreen = (isFullscreen: boolean) => {
   useEffect(() => {
     if (!isFullscreen) {
       delete document.body.dataset.saveListFullscreen
-      return
+      return undefined
     }
 
     pageScrollPositionRef.current = window.scrollY

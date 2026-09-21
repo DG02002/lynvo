@@ -1,11 +1,13 @@
 import * as React from "react"
-import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
-import { client } from "~/lib/api/client"
+
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { client } from "~/lib/api/client"
+import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { isProxyTokenRemoval } from "~/lib/plugin-server-proxy"
+
+import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
 import { usePluginDomainDrafts } from "./use-plugin-domain-drafts"
 import { usePluginSettingsOperations } from "./use-plugin-settings-operations"
-import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
 
 export interface PluginDomainDraft {
   readonly domain: string
@@ -36,7 +38,7 @@ export interface CustomPluginServer {
   lastManifestRefreshAt?: number | null
 }
 
-export interface CreatePluginDomainInput {
+interface CreatePluginDomainInput {
   readonly domain: string
   readonly pluginId: string
   readonly username?: string

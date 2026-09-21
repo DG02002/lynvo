@@ -1,9 +1,9 @@
+import interLatinExtendedFontUrl from "@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url"
 import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import interLatinExtendedFontUrl from "@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url"
 import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { Link } from "react-router"
-import type { Route } from "./+types/_site.pricing"
+
 import { PluginIcon } from "~/components/plugin-icon"
 import { buttonVariants } from "~/components/ui/button"
 import {
@@ -29,14 +29,16 @@ import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { cn } from "~/lib/utils"
 
+import type { Route } from "./+types/_site.pricing"
+
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",
-  "15 Lynvo Plugin Server requests per day",
+  "30 Lynvo Plugin Server requests per day",
   "3 MB of storage for up to 1,000 saved links",
   "Access to supported Lynvo Plugins",
   "Custom Plugin Server support",
   "Real-time sync",
-  "Android player handoff and Remote Play",
+  "Open links in Android players and use Remote Play",
 ]
 
 const planCardClassName = "self-start rounded-lg"
@@ -56,9 +58,9 @@ const planDetailSections = [
     details: [
       { feature: "Price", allowance: "₹0 per month" },
       { feature: "Account storage", allowance: "3 MB" },
-      { feature: "Saved links", allowance: "Up to 100" },
-      { feature: "Maximum saved-link record", allowance: "256 KB" },
-      { feature: "Default saved-link retention", allowance: "30 days" },
+      { feature: "Saved links", allowance: "Up to 1,000" },
+      { feature: "Largest saved link", allowance: "256 KB" },
+      { feature: "How long saved links are kept", allowance: "30 days" },
       { feature: "Inactive account deletion", allowance: "After 90 days" },
     ],
   },
@@ -69,7 +71,7 @@ const planDetailSections = [
         feature: "Monthly requests",
         allowance: "200, shared across all Lynvo Plugins",
       },
-      { feature: "Daily requests", allowance: "15" },
+      { feature: "Daily requests", allowance: "30" },
       {
         feature: "Direct Media links",
         allowance: "Included",
@@ -90,7 +92,7 @@ const planDetailSections = [
         },
       },
       {
-        feature: "Spencerwooo's OneDrive Vercel Index",
+        feature: "Spencerwooo’s OneDrive Vercel Index",
         allowance: "Included",
         icon: {
           url: "/lynvo-plugin-server-assets/icons/sources/onedrive-index.webp",
@@ -145,7 +147,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => {
         <span className="rounded-full bg-background px-3 py-1 shadow-sm">
           Free
         </span>
-        <span className="px-3 py-1 text-foreground">More soon</span>
+        <span className="px-3 py-1 text-foreground">More plans</span>
       </div>
       <Link
         to={authPaths.signIn}
@@ -155,7 +157,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => {
           "mx-auto w-full max-w-2xl"
         )}
       >
-        Get Free
+        Create a free account
         <HugeiconsIcon
           icon={ArrowUpRight01Icon}
           strokeWidth={2}
@@ -180,7 +182,7 @@ export default function Pricing() {
     const comparisonEnd = comparisonEndRef.current
 
     if (!comparisonTable || !comparisonEnd) {
-      return
+      return undefined
     }
 
     const tableObserver = new IntersectionObserver(([entry]) => {

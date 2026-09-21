@@ -1,8 +1,9 @@
-import type { MetaData } from "./types"
 import type {
   PluginDomainCandidate,
   PluginDomainSuggestion,
 } from "~/lib/plugin-domain"
+
+import type { MetaData } from "./types"
 
 export const createPluginDomainSuggestion = (
   candidate: PluginDomainCandidate | undefined,

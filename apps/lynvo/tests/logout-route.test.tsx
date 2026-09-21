@@ -1,6 +1,7 @@
 import { render, waitFor } from "@testing-library/react"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { vi } from "vitest"
+
 import Logout from "../app/features/auth/routes/_auth.logout"
 
 describe("logout route", () => {

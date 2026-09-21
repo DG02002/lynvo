@@ -1,10 +1,11 @@
 import { Effect } from "effect"
+
+import { listReadyPluginServersForService } from "../../../../workers/d1/plugin-servers"
 import { BackendError, type CredentialVaultError } from "../errors"
 import {
   ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
   requireDatabaseEffect,
 } from "../require-database"
-import { listReadyPluginServersForService } from "../../../../workers/d1/plugin-servers"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import type { RegisteredPluginServer } from "./extraction-types"
 

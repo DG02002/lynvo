@@ -16,7 +16,7 @@ copy of those steps.
 Plugin Servers are independently deployed HTTPS Workers. Lynvo owns
 registration, credential storage, routing, response validation, Saved link
 state, player selection, and link launching. A Plugin Server owns Source
-matching, extraction, staged lazy resolution, its bearer secret, finite usage
+matching, extraction, staged unresolved item resolution, its bearer secret, finite usage
 accounting, and deployment.
 
 The public contract lives in

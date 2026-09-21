@@ -1,4 +1,3 @@
-import { requestJson } from "../api/client"
 import {
   ClearLinksResponseSchema,
   LynvoUsageSnapshotSchema,
@@ -10,6 +9,7 @@ import {
   type StorageSettingsSnapshot,
   type UpdateRetentionResponse,
 } from "../api-contracts"
+import { requestJson } from "../api/client"
 
 export const readStorageSettings = async (): Promise<StorageSettingsSnapshot> =>
   await requestJson(

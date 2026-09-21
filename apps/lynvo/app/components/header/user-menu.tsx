@@ -1,19 +1,20 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AirplayLineIcon,
   Logout05Icon,
   Settings01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { sitePaths } from "~/lib/paths"
 import { useViewTransition } from "~/lib/client-profile"
+import { sitePaths } from "~/lib/paths"
 
 export const UserMenu = ({
   name,
@@ -34,6 +35,7 @@ export const UserMenu = ({
         render={
           <button
             type="button"
+            aria-label={name || email || "Account"}
             className="flex h-9 items-center gap-2 rounded-full px-2 hover:bg-accent transition-colors outline-none sm:px-4"
           >
             <HugeiconsIcon icon={UserIcon} className="size-4" />
@@ -81,7 +83,7 @@ export const UserMenu = ({
               className="w-full cursor-pointer"
             >
               <HugeiconsIcon icon={Logout05Icon} />
-              <span>Log out</span>
+              <span>Sign out</span>
             </button>
           }
         />

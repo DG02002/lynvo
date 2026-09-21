@@ -30,7 +30,7 @@ export const useAnimationActivity = <
     }
 
     const intersectionObserver = new IntersectionObserver(([entry]) =>
-      setIsInViewport(Boolean(entry?.isIntersecting))
+      setIsInViewport(entry.isIntersecting)
     )
     intersectionObserver.observe(animationContainer)
 

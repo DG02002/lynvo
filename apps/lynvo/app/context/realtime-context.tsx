@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from "react"
+
 import { realtimeReducer, type RealtimeStatus } from "./realtime/reducer"
 import { openRealtimeSocket } from "./realtime/socket"
 
@@ -57,7 +58,7 @@ export function RealtimeProvider({
   useEffect(() => {
     if (!userId || globalThis.window === undefined) {
       dispatch({ type: "SET_STATUS", status: "disabled" })
-      return
+      return undefined
     }
 
     const realtimeSocket = openSocket({
@@ -79,6 +80,9 @@ export function RealtimeProvider({
     onSessionRevoked,
     openSocket,
     receiveMessage,
+    // Reopen the socket when the server rotates the session identity, even
+    // though the socket callbacks only need the account identity.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
     sessionId,
     userId,
   ])

@@ -1,11 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { HomeSaveDemo } from "~/features/site/home/home-save-demo"
+
 import {
   HOME_DEMO_FINAL_STEP,
   HOME_DEMO_STEP,
   HOME_DEMO_STEP_DELAYS_MS,
 } from "~/features/site/home/home-demo-constants"
+import { HomeSaveDemo } from "~/features/site/home/home-save-demo"
 
 describe("HomeSaveDemo", () => {
   it("keeps the library height stable without an empty item slot", () => {
@@ -27,7 +28,7 @@ describe("HomeSaveDemo", () => {
 
     expect(
       screen
-        .getByRole("button", { name: "Copy source link" })
+        .getByRole("button", { name: "Copy Source link" })
         .closest("[data-demo-browser]")
     ).toBeNull()
     expect(screen.queryByText("Source link")).not.toBeInTheDocument()
@@ -48,7 +49,7 @@ describe("HomeSaveDemo", () => {
     expect(container.querySelector(".home-demo-copy-source")).not.toHaveClass(
       "transition-[opacity,transform]"
     )
-    expect(screen.getAllByText("Direct Media")[0]).toHaveClass(
+    expect(screen.getByText("Direct Media (built in)")).toHaveClass(
       "text-foreground/80"
     )
     expect(

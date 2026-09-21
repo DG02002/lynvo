@@ -1,8 +1,10 @@
-import { useState } from "react"
-import type { RemoteSession } from "./types"
-import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
-import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 import { Result, Schema } from "effect"
+import { useState } from "react"
+
+import { requestNoStoreSameOriginWithSessionIdentity } from "~/lib/api/client"
+import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
+
+import type { RemoteSession } from "./types"
 
 declare global {
   interface RemoteSessionContract {
@@ -29,12 +31,9 @@ const remoteSessionsResponseSchema = Schema.Struct({
 
 export const loadRemoteSessions = async (
   listSessions: () => Promise<readonly RemoteSessionContract[]> = async () => {
-    const url = new URL("/api/remote/receivers", window.location.href)
-    bindSessionIdentityToUrl(url)
-    const response = await fetch(url, {
-      credentials: "same-origin",
-      cache: "no-store",
-    })
+    const response = await requestNoStoreSameOriginWithSessionIdentity(
+      "/api/remote/receivers"
+    )
     if (!response.ok) {
       throw new Error("Remote receiver presence is unavailable")
     }

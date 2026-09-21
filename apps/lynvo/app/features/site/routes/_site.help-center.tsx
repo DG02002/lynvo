@@ -1,8 +1,9 @@
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
-import type { Route } from "./+types/_site.help-center"
 import { GITHUB_ISSUES_URL, TELEGRAM_SUPPORT_URL } from "~/lib/support-links"
+
+import type { Route } from "./+types/_site.help-center"
 
 const TelegramLogo = () => (
   <svg
@@ -69,7 +70,7 @@ const supportOptions = [
 ] as const
 
 export const meta = (_: Route.MetaArgs) => [
-  { title: "Support | Lynvo" },
+  { title: "Help center | Lynvo" },
   {
     name: "description",
     content:
@@ -82,7 +83,7 @@ const HelpCenter = () => (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 sm:gap-12">
       <header className="flex flex-col items-center gap-4 text-center">
         <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
-          Get help with Lynvo
+          Help center
         </h1>
       </header>
 

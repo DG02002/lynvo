@@ -1,30 +1,66 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
-import type { loader as rootLoader } from "~/root"
+
 import { getCookieValueFromHeader } from "~/lib/auth-cookie"
 import {
   getCurrentClientProfile,
   subscribeToClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
+import type { loader as rootLoader } from "~/root"
 
-declare global {
-  type MediaView = "list" | "hybrid"
-}
+export type MediaView = "list" | "gallery"
 
 export const MEDIA_VIEW_STORAGE_KEY = "lynvo:settings:media-view"
 export const MEDIA_VIEW_PREFERENCE_EVENT = "lynvo:media-view-preference-changed"
 export const MEDIA_VIEW_COOKIE_NAME = "lynvo-media-view"
-export const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
+const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
 export const DEFAULT_MEDIA_VIEW: MediaView = "list"
-export const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "hybrid"
+const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "gallery"
+const LEGACY_MEDIA_VIEW_VALUE = "hybrid"
 
-const mediaViewValues = new Set<string>(["list", "hybrid"])
+const mediaViewValues = new Set<string>(["list", "gallery"])
 
-export const isMediaView = (value: string): value is MediaView =>
+const isMediaView = (value: string): value is MediaView =>
   mediaViewValues.has(value)
 
-export const getDefaultMediaView = (): MediaView =>
+const normalizeMediaView = (value: string): MediaView | undefined => {
+  if (value === LEGACY_MEDIA_VIEW_VALUE) {
+    return "gallery"
+  }
+  return isMediaView(value) ? value : undefined
+}
+
+interface StoredMediaView {
+  readonly rawValue: string
+  readonly mediaView: MediaView
+}
+
+const readStoredMediaView = (): StoredMediaView | undefined => {
+  if (globalThis.localStorage === undefined) {
+    return undefined
+  }
+
+  const rawValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
+  if (rawValue === null) {
+    return undefined
+  }
+
+  const mediaView = normalizeMediaView(rawValue)
+  return mediaView === undefined ? undefined : { rawValue, mediaView }
+}
+
+const migrateLegacyMediaViewPreference = (): void => {
+  const storedMediaView = readStoredMediaView()
+  if (
+    storedMediaView !== undefined &&
+    storedMediaView.mediaView !== storedMediaView.rawValue
+  ) {
+    localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, storedMediaView.mediaView)
+  }
+}
+
+const getDefaultMediaView = (): MediaView =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
     ? TVBRO_DEFAULT_MEDIA_VIEW
     : DEFAULT_MEDIA_VIEW
@@ -44,14 +80,14 @@ export const getMediaView = (): MediaView => {
     return DEFAULT_MEDIA_VIEW
   }
 
-  const storedValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
-  if (storedValue !== null && isMediaView(storedValue)) {
-    return storedValue
+  const storedMediaView = readStoredMediaView()
+  if (storedMediaView !== undefined) {
+    return storedMediaView.mediaView
   }
   return getDefaultMediaView()
 }
 
-export const writeMediaViewCookie = (mediaView: MediaView): void => {
+const writeMediaViewCookie = (mediaView: MediaView): void => {
   if (globalThis.document === undefined) {
     return
   }
@@ -66,8 +102,8 @@ export const getMediaViewFromCookieHeader = (
     MEDIA_VIEW_COOKIE_NAME
   )
 
-  if (mediaViewCookieValue !== undefined && isMediaView(mediaViewCookieValue)) {
-    return mediaViewCookieValue
+  if (mediaViewCookieValue !== undefined) {
+    return normalizeMediaView(mediaViewCookieValue)
   }
   return undefined
 }
@@ -88,6 +124,7 @@ export const useMediaView = (): MediaView => {
   )
 
   useEffect(() => {
+    migrateLegacyMediaViewPreference()
     writeMediaViewCookie(mediaView)
   }, [mediaView])
 

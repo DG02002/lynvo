@@ -1,9 +1,11 @@
 import { render, waitFor } from "@testing-library/react"
+import { useEffect } from "react"
+import { vi } from "vitest"
+
 import {
   useEnsureSessionIdentity,
   IdentitySynchronizer,
 } from "~/root/identity-synchronizer"
-import { vi } from "vitest"
 
 describe("identity synchronization", () => {
   it("accepts the successful signed-out session status", async () => {
@@ -57,6 +59,10 @@ describe("identity synchronization", () => {
     await statusResponse
   })
 
+  interface CapturedIdentityGate {
+    ensureIdentity?: () => Promise<boolean>
+  }
+
   it("gates the first action after visibility resume on session validation", async () => {
     let resolveResume: (response: Response) => void = () => undefined
     const resumeResponse = new Promise<Response>((resolve) => {
@@ -74,9 +80,12 @@ describe("identity synchronization", () => {
       .mockReturnValueOnce(resumeResponse)
     vi.stubGlobal("fetch", fetchMock)
 
-    let ensureIdentity: (() => Promise<boolean>) | undefined
+    const captured: CapturedIdentityGate = {}
     const IdentityGateCapture = () => {
-      ensureIdentity = useEnsureSessionIdentity()
+      const ensureIdentity = useEnsureSessionIdentity()
+      useEffect(() => {
+        captured.ensureIdentity = ensureIdentity
+      }, [ensureIdentity])
       return null
     }
 
@@ -101,11 +110,11 @@ describe("identity synchronization", () => {
     document.dispatchEvent(new Event("visibilitychange"))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
-    expect(ensureIdentity).toBeDefined()
-    if (!ensureIdentity) {
+    expect(captured.ensureIdentity).toBeDefined()
+    if (!captured.ensureIdentity) {
       throw new Error("The identity gate was not provided")
     }
-    const validation = ensureIdentity()
+    const validation = captured.ensureIdentity()
     expect(fetchMock).toHaveBeenCalledTimes(2)
 
     resolveResume(

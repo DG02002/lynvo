@@ -1,24 +1,26 @@
-import { useEffect, useState } from "react"
+import { useCallback, useSyncExternalStore } from "react"
 
 export const useExpiryClock = (expiresAt: number | undefined) => {
-  const [hasExpired, setHasExpired] = useState(
-    () => expiresAt !== undefined && Date.now() >= expiresAt
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (expiresAt === undefined) {
+        return () => undefined
+      }
+      const remainingMs = expiresAt - Date.now()
+      if (remainingMs <= 0) {
+        return () => undefined
+      }
+      const timeoutId = window.setTimeout(onChange, remainingMs)
+      return () => window.clearTimeout(timeoutId)
+    },
+    [expiresAt]
   )
 
-  useEffect(() => {
-    if (expiresAt === undefined) {
-      setHasExpired(false)
-      return
-    }
-    const remainingMs = expiresAt - Date.now()
-    if (remainingMs <= 0) {
-      setHasExpired(true)
-      return
-    }
-    setHasExpired(false)
-    const timeoutId = window.setTimeout(() => setHasExpired(true), remainingMs)
-    return () => window.clearTimeout(timeoutId)
-  }, [expiresAt])
+  const hasExpired = useSyncExternalStore(
+    subscribe,
+    () => expiresAt !== undefined && Date.now() >= expiresAt,
+    () => false
+  )
 
   return hasExpired
 }

@@ -1,21 +1,24 @@
+import { Refresh01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
+
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Refresh01Icon } from "@hugeicons/core-free-icons"
-import { createDeviceCode } from "./device-code"
+import { useAsyncResource } from "~/hooks/use-async-resource"
+import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
+import { getBrowserDeviceName } from "~/lib/device-name"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import {
   claimDeviceExchange,
   finalizeDeviceExchangeOverHttp,
   readDeviceCodeStatus,
   type DeviceCodeStatus,
 } from "./device-auth-http"
-import { useExpiryClock } from "./use-expiry-clock"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { getBrowserDeviceName } from "~/lib/device-name"
-import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
-import { useAsyncResource } from "~/hooks/use-async-resource"
+import { createDeviceCode } from "./device-code"
+import { deviceAuthCopy } from "./device-copy"
 import { QrCode } from "./qr-code"
+import { useExpiryClock } from "./use-expiry-clock"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -63,6 +66,7 @@ const INITIAL_DEVICE_LOGIN_STATE: DeviceLoginState = {
   hasSignedIn: false,
 }
 
+// oxlint-disable-next-line typescript/consistent-return -- The switch is exhaustive over DeviceLoginAction; strictNullChecks (TS2366) proves the fall-through is unreachable, so no path implicitly returns undefined.
 const reduceDeviceLoginState = (
   state: DeviceLoginState,
   action: DeviceLoginAction
@@ -95,9 +99,7 @@ const reduceDeviceLoginState = (
       return {
         ...state,
         hasError: true,
-        errorMessage:
-          action.errorMessage ??
-          "The device couldn’t log in. Generate a new code, then try again.",
+        errorMessage: action.errorMessage ?? deviceAuthCopy.qrExchangeFailure,
         isGenerating: false,
         hasSignedIn: false,
       }
@@ -234,7 +236,7 @@ const useDeviceLoginCode = (): DeviceLoginCodeController => {
         handleExchangeFailure(
           getUserFacingErrorMessage(
             error,
-            "This device couldn’t log in. Retrying the approved code…"
+            deviceAuthCopy.retryApprovedCodeFailure
           )
         )
       }
@@ -325,8 +327,7 @@ export const DeviceLoginQr = () => {
         <p className="text-destructive">
           {phase === "expired"
             ? "Code expired. Generate a new code."
-            : (errorMessage ??
-              "The device couldn’t log in. Generate a new code, then try again.")}
+            : (errorMessage ?? deviceAuthCopy.qrExchangeFailure)}
         </p>
         <Button onClick={() => void fetchCode()} variant="outline" size="sm">
           <HugeiconsIcon icon={Refresh01Icon} className="mr-2 size-4" />
@@ -364,7 +365,7 @@ export const DeviceLoginQr = () => {
           Confirm that the same activation code appears on the other device.
         </p>
         <p
-          aria-label="Login verification code"
+          aria-label="Sign-in verification code"
           className="my-8 text-3xl font-normal tracking-[0.16em] text-foreground tabular-nums sm:text-4xl"
         >
           {code}

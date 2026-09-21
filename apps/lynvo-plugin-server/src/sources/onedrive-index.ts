@@ -1,34 +1,35 @@
-import { load } from "cheerio"
 import {
   ProtocolError,
+  runWithRetries,
   type MediaNode,
   type ExtractSuccessResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { load } from "cheerio"
+import { Result, Schema } from "effect"
+
 import {
   ONEDRIVE_FETCH_RETRIES,
   ONEDRIVE_FETCH_RETRY_DELAY_MS,
-  EXTRACTION_ELAPSED_TIME_LIMIT_MS,
-  EXTRACTION_NODE_LIMIT,
-  PAGINATION_PAGE_LIMIT,
 } from "../constants"
 import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
-} from "../plugin-catalog"
-import {
-  assertSafeUpstreamUrl,
-  decodeUrlComponent,
-  encodeUrlPathSegment,
-} from "../url-policy"
-import { isVideoFile } from "./video-file"
-import { formatFileSize } from "./file-size"
+} from "../plugin-adapter"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
   UpstreamPolicyError,
 } from "../upstream-response"
-import { Result, Schema } from "effect"
+import {
+  assertSafeUpstreamUrl,
+  decodeUrlComponent,
+  encodeUrlPathSegment,
+} from "../url-policy"
+import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
+import { paginateUpstream, type UpstreamPage } from "./pagination"
+import { isVideoFile } from "./video-file"
 
 export interface OneDriveItem {
   readonly name: string
@@ -120,37 +121,27 @@ export const sha256 = async (message: string): Promise<string> => {
     .join("")
 }
 
-const wait = (durationMs: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, durationMs))
-
 export const fetchOneDrive = async (
   targetUrl: string,
-  options: RequestInit,
-  attempt = 0
+  options: RequestInit
 ): Promise<Response> => {
   assertSafeUpstreamUrl(targetUrl)
-  try {
-    const response = await fetchValidatedUpstream(targetUrl, options)
-    if (
-      !response.ok &&
-      response.status !== 401 &&
-      (response.status === 429 || response.status >= 500) &&
-      attempt < ONEDRIVE_FETCH_RETRIES - 1
-    ) {
-      await wait(ONEDRIVE_FETCH_RETRY_DELAY_MS)
-      return fetchOneDrive(targetUrl, options, attempt + 1)
-    }
-    return response
-  } catch (error) {
-    if (error instanceof UpstreamPolicyError) {
-      throw error
-    }
-    if (attempt >= ONEDRIVE_FETCH_RETRIES - 1) {
-      throw error
-    }
-    await wait(ONEDRIVE_FETCH_RETRY_DELAY_MS)
-    return fetchOneDrive(targetUrl, options, attempt + 1)
-  }
+  return runWithRetries(() => fetchValidatedUpstream(targetUrl, options), {
+    maxRetries: ONEDRIVE_FETCH_RETRIES - 1,
+    decide: (outcome) => {
+      if (outcome._tag === "failure") {
+        return outcome.cause instanceof UpstreamPolicyError
+          ? { retry: false }
+          : { retry: true, delayMs: ONEDRIVE_FETCH_RETRY_DELAY_MS }
+      }
+      const { status } = outcome.value
+      return !outcome.value.ok &&
+        status !== 401 &&
+        (status === 429 || status >= 500)
+        ? { retry: true, delayMs: ONEDRIVE_FETCH_RETRY_DELAY_MS }
+        : { retry: false }
+    },
+  })
 }
 
 export const encodeOneDrivePath = (path: string): string =>
@@ -191,14 +182,12 @@ export const createOneDriveNodes = ({
     if (hashedPassword) {
       playableUrl.searchParams.set("odpt", hashedPassword)
     }
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 
@@ -295,48 +284,36 @@ const fetchOneDrivePage = async ({
   initialToken = "",
   startedAtMs = Date.now(),
 }: OneDrivePageOptions): Promise<MediaNode[]> => {
-  const nodes: MediaNode[] = []
-  const seenTokens = new Set<string>()
   const fetchPage = async (
-    nextToken: string,
-    pageCount: number
-  ): Promise<void> => {
-    if (
-      pageCount >= PAGINATION_PAGE_LIMIT ||
-      Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
-    ) {
-      throw new Error("OneDrive Index pagination exceeded its limit.")
-    }
-    if (nextToken && seenTokens.has(nextToken)) {
-      throw new Error("OneDrive Index repeated a continuation token.")
-    }
-    if (nextToken) {
-      seenTokens.add(nextToken)
-    }
+    nextToken: string
+  ): Promise<UpstreamPage<OneDriveApiResponse>> => {
     const result = await readOneDrivePage({
       origin,
       path,
       nextToken,
       headers,
     })
-    nodes.push(
-      ...createOneDriveResponseNodes({
+    return {
+      value: result,
+      nextToken: result.next,
+    }
+  }
+
+  return paginateUpstream(
+    fetchPage,
+    (result) =>
+      createOneDriveResponseNodes({
         result,
         path,
         origin,
         hashedPassword,
-      })
-    )
-    if (nodes.length > EXTRACTION_NODE_LIMIT) {
-      throw new Error("OneDrive Index returned too many nodes.")
+      }),
+    {
+      sourceName: "OneDrive Index",
+      initialToken,
+      startedAtMs,
     }
-    const continuationToken = result.next ?? ""
-    if (continuationToken) {
-      await fetchPage(continuationToken, pageCount + 1)
-    }
-  }
-  await fetchPage(initialToken, 0)
-  return nodes
+  )
 }
 
 const extractOneDriveInitialNodes = async ({

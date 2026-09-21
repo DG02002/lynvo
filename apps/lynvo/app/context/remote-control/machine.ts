@@ -1,8 +1,8 @@
-import { REMOTE_POLL_INTERVAL_MS } from "./constants"
 import {
   createRemoteCommandDelivery,
   parseRemoteCommandWirePayload,
 } from "./command-delivery"
+import { REMOTE_POLL_INTERVAL_MS } from "./constants"
 
 declare global {
   interface RemoteDevice {
@@ -379,7 +379,7 @@ export const createRemoteControlMachine = ({
     start: (shouldPoll: () => boolean = () => true) => {
       const poll = () => {
         if (!shouldPoll()) {
-          return
+          return undefined
         }
         return machine
           .poll()

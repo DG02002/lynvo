@@ -1,20 +1,21 @@
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
-import { LoadErrorRetry } from "~/components/load-error-retry"
-import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
-import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
+import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
+import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import type { LynvoPlugin } from "./plugin-settings-data"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SectionHeading,
   SettingsList,
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
-import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
@@ -180,88 +181,80 @@ export const UsageSettings = ({
 
   return (
     <div className="flex flex-col gap-7">
-      <>
+      <SettingsPanel className="gap-4">
+        <SectionHeading
+          title="Lynvo Plugin Server usage"
+          description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
+        />
+        <UsageSummary
+          label="Lynvo Plugin Server"
+          remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
+          resetsAt={snapshot.lynvo.resetsAt}
+        />
+        <SettingsList>
+          {snapshot.lynvo.entries.map((item) => (
+            <UsageItem
+              {...item}
+              key={item.key}
+              icon={item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon}
+              hideIcon={item.iconKind === "hidden"}
+              fallback="source"
+            />
+          ))}
+        </SettingsList>
+      </SettingsPanel>
+
+      {(snapshot.custom.groups.length > 0 ||
+        snapshot.custom.failures.length > 0) && (
         <SettingsPanel className="gap-4">
           <SectionHeading
-            title="Lynvo Plugin Server usage"
-            description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
+            title="Custom Plugin Server usage"
+            description="Each Custom Plugin Server keeps its own monthly usage."
           />
-          <UsageSummary
-            label="Lynvo Plugin Server"
-            remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
-            resetsAt={snapshot.lynvo.resetsAt}
-          />
-          <SettingsList>
-            {snapshot.lynvo.entries.map((item) => (
-              <UsageItem
-                {...item}
-                key={item.key}
-                icon={
-                  item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon
-                }
-                hideIcon={item.iconKind === "hidden"}
-                fallback="source"
-              />
-            ))}
-          </SettingsList>
-        </SettingsPanel>
-
-        {(snapshot.custom.groups.length > 0 ||
-          snapshot.custom.failures.length > 0) && (
-          <SettingsPanel className="gap-4">
-            <SectionHeading
-              title="Custom Plugin Server usage"
-              description="Each Custom Plugin Server keeps its own monthly usage."
-            />
-            {snapshot.custom.groups.map((group) => (
-              <div key={group.key} className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <PluginIcon
-                    iconUrl={group.iconUrl}
-                    fallback="plugin-server"
-                    className="size-10 shrink-0 text-foreground"
-                  />
-                  <span className="text-base font-normal text-foreground">
-                    {group.serverName}
-                  </span>
-                </div>
-                <UsageSummary
-                  label={group.serverName}
-                  remainingPercent={group.remainingPercent}
-                  resetsAt={group.resetsAt}
+          {snapshot.custom.groups.map((group) => (
+            <div key={group.key} className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <PluginIcon
+                  iconUrl={group.iconUrl}
+                  fallback="plugin-server"
+                  className="size-10 shrink-0 text-foreground"
                 />
-                <SettingsList>
-                  {group.entries.map((item) => (
-                    <UsageItem
-                      {...item}
-                      key={item.key}
-                      hideIcon={item.iconKind === "hidden"}
-                      fallback="source"
-                    />
-                  ))}
-                </SettingsList>
+                <span className="text-base font-normal text-foreground">
+                  {group.serverName}
+                </span>
               </div>
-            ))}
-            {snapshot.custom.failures.length > 0 && (
+              <UsageSummary
+                label={group.serverName}
+                remainingPercent={group.remainingPercent}
+                resetsAt={group.resetsAt}
+              />
               <SettingsList>
-                {snapshot.custom.failures.map((failure) => (
-                  <SettingsRow key={failure} className="py-2">
-                    <span className="text-sm text-destructive">{failure}</span>
-                  </SettingsRow>
+                {group.entries.map((item) => (
+                  <UsageItem
+                    {...item}
+                    key={item.key}
+                    hideIcon={item.iconKind === "hidden"}
+                    fallback="source"
+                  />
                 ))}
               </SettingsList>
-            )}
-          </SettingsPanel>
-        )}
+            </div>
+          ))}
+          {snapshot.custom.failures.length > 0 && (
+            <SettingsList>
+              {snapshot.custom.failures.map((failure) => (
+                <SettingsRow key={failure} className="py-2">
+                  <span className="text-sm text-destructive">{failure}</span>
+                </SettingsRow>
+              ))}
+            </SettingsList>
+          )}
+        </SettingsPanel>
+      )}
 
-        {error !== undefined && (
-          <UsageLoadError
-            error={error}
-            isRetrying={isLoading}
-            onRetry={retry}
-          />
-        )}
-      </>
+      {error !== undefined && (
+        <UsageLoadError error={error} isRetrying={isLoading} onRetry={retry} />
+      )}
     </div>
   )
 }

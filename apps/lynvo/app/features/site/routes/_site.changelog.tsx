@@ -4,9 +4,10 @@ import {
   ArrowRight02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { Result, Schema } from "effect"
 import { Fragment, useLayoutEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router"
-import type { Route } from "./+types/_site.changelog"
+
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
@@ -19,7 +20,8 @@ import {
 import { Separator } from "~/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { cn } from "~/lib/utils"
-import { Result, Schema } from "effect"
+
+import type { Route } from "./+types/_site.changelog"
 
 export interface ChangelogEntry {
   type: ChangelogType
@@ -43,6 +45,16 @@ const ENTRY_BATCH_SIZE = 5
 const changelogEntries: ChangelogEntry[] = [
   {
     type: "general",
+    date: "Sep 19, 2026",
+    dateTime: "2026-09-19",
+    title: "The library’s grouped presentation is now called Gallery",
+    category: "Product",
+    description: [
+      "The library’s grouped presentation is now called Gallery. Existing view preferences carry over automatically.",
+    ],
+  },
+  {
+    type: "general",
     date: "Sep 10, 2026",
     dateTime: "2026-09-10",
     title: "Proxy keys have their own settings tab",
@@ -55,17 +67,17 @@ const changelogEntries: ChangelogEntry[] = [
     type: "general",
     date: "Aug 31, 2026",
     dateTime: "2026-08-31",
-    title: "The Save page now has List and Hybrid views",
+    title: "The library now has List and Gallery views",
     category: "Product",
     description: [
-      "The Save page now has two views. List gives you row-by-row browsing. Hybrid groups movies and shows into artwork cards.",
-      "Shows are grouped by season, with posters, season artwork, and episode stills when available. In Hybrid view, a folder with one season opens straight into a full-screen season view.",
-      "Nested folders keep their own names, sidecar files do not create false media matches, and mixed folders do not borrow a show or episode name from their children. Folder paths, back buttons, and the Episode names control stay in sync.",
-      'Saving is easier to follow. You can turn off "Save all links automatically", save a single playable mirror directly, and see whether an extraction is queued, loading, or failed. Failed items show the returned error with Delete and Log actions.',
-      "You can search TMDB to change artwork, delete every link in a movie or show group, and browse the Save page comfortably on smaller screens.",
+      "The library now has two views. List gives you row-by-row browsing. Gallery view groups movies and shows into tiles with artwork.",
+      "Shows are grouped by season, with posters, season artwork, and episode stills when available. In Gallery view, a folder with one season opens straight into a full-screen season view.",
+      "Nested folders keep their own names. Sidecar files no longer create false media matches, and mixed folders no longer take a show's name from their contents. Folder paths, back buttons, and the Show episode names control stay in sync.",
+      'Saving is easier to follow. You can turn off "Save all links automatically", save a single playable link directly, and see whether an extraction is queued, loading, or failed. Failed items show the error with Delete and View log actions.',
+      "You can search TMDB to change artwork, delete every link in a movie or show group, and browse the library comfortably on smaller screens.",
       "Remote Play reconnects more reliably after stale connections. The device picker explains when it is searching, has no devices, or needs another try.",
-      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. Protocol 0.1.5 adds typed errors, deferred extraction, usage changes, and additive fields.",
-      "The docs now cover Android TV sign-in, Plugin Server setup, usage limits, and metadata providers.",
+      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. Plugin Server Protocol 0.1.5 adds typed errors, deferred extraction, per-extraction usage deltas, node extensions, and additive compatibility across wire version 1.x.",
+      "The docs now cover Android TV sign-in, Plugin Server setup, usage limits, and artwork metadata providers.",
     ],
   },
   {
@@ -82,7 +94,7 @@ const changelogEntries: ChangelogEntry[] = [
     type: "plugin-server",
     date: "Aug 8, 2026",
     dateTime: "2026-08-08",
-    title: "Lynvo Plugin Server",
+    title: "Plugin Server usage is easier to follow",
     category: "Plugin Server",
     description: [
       "Added Lynvo-managed support for Bhadoo Google Drive and OneDrive indexes, with usage shown separately for each Plugin.",
@@ -95,7 +107,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Product launch",
     category: "Product",
     description: [
-      "Launched link saving and folder browsing, URL handoff to Just (Video) Player, VLC for Android, MPV, and MX Player on Android TV, Android phones, and Android tablets, plus Remote Play between signed-in devices.",
+      "Launched link saving and folder browsing, opening links in Just (Video) Player, VLC for Android, MPV, and MX Player on Android TV, Android phones, and Android tablets, plus Remote Play between signed-in devices.",
     ],
   },
 ]
@@ -115,15 +127,22 @@ const ChangelogDescription = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const descriptionRef = useRef<HTMLDivElement>(null)
+  const paragraphOccurrences = new Map<string, number>()
+
+  const getParagraphKey = (paragraph: string): string => {
+    const occurrence = paragraphOccurrences.get(paragraph) ?? 0
+    paragraphOccurrences.set(paragraph, occurrence + 1)
+    return `${id}-${paragraph}-${occurrence}`
+  }
 
   useLayoutEffect(() => {
     if (isExpanded) {
-      return
+      return undefined
     }
 
     const element = descriptionRef.current
     if (!element) {
-      return
+      return undefined
     }
 
     const measureOverflow = () => {
@@ -133,14 +152,20 @@ const ChangelogDescription = ({
     measureOverflow()
 
     if (globalThis.ResizeObserver === undefined) {
-      return
+      return undefined
     }
 
     const resizeObserver = new ResizeObserver(measureOverflow)
     resizeObserver.observe(element)
 
     return () => resizeObserver.disconnect()
-  }, [description, isExpanded])
+  }, [
+    // Re-measure after the rendered paragraphs change, even though the effect
+    // only reads their layout through the DOM ref.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+    description,
+    isExpanded,
+  ])
 
   return (
     <div className="flex flex-col items-start gap-2">
@@ -152,8 +177,8 @@ const ChangelogDescription = ({
           !isExpanded && "line-clamp-3"
         )}
       >
-        {description.map((paragraph, index) => (
-          <p key={`${id}-${index}`}>{paragraph}</p>
+        {description.map((paragraph) => (
+          <p key={getParagraphKey(paragraph)}>{paragraph}</p>
         ))}
       </div>
       {isOverflowing ? (
@@ -201,9 +226,9 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
                 </time>
                 <Badge
                   className="ml-auto h-7 bg-lime-950 px-3 text-sm text-lime-200 md:ml-0"
-                  aria-label="General availability"
+                  aria-label="Stable"
                 >
-                  GA
+                  Stable
                 </Badge>
               </div>
               <div className="flex max-w-3xl flex-col gap-3">
@@ -243,8 +268,7 @@ export function meta(_: Route.MetaArgs) {
     { title: "Changelog | Lynvo" },
     {
       name: "description",
-      content:
-        "The latest Lynvo product updates and Plugin Server Protocol improvements.",
+      content: "The latest Lynvo product updates.",
     },
   ]
 }

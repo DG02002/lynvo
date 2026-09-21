@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import { useAnimationActivity } from "~/features/site/home/use-animation-activity"
 
 const setupIntersectionObserver = () => {
@@ -77,14 +78,14 @@ describe("useAnimationActivity", () => {
       configurable: true,
       value: "hidden",
     })
-    act(() => document.dispatchEvent(new Event("visibilitychange")))
+    void act(() => document.dispatchEvent(new Event("visibilitychange")))
     expect(screen.getByTestId("probe")).toHaveTextContent("paused")
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     })
-    act(() => document.dispatchEvent(new Event("visibilitychange")))
+    void act(() => document.dispatchEvent(new Event("visibilitychange")))
     expect(screen.getByTestId("probe")).toHaveTextContent("active")
   })
 })

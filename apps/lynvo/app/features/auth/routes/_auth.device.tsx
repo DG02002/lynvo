@@ -5,16 +5,14 @@ import {
   requireUserOrRedirect,
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
+
 import type { Route } from "./+types/_auth.device"
 
 export function meta(_: Route.MetaArgs) {
-  return [{ title: "Approve login | Lynvo" }]
+  return [{ title: "Approve sign-in | Lynvo" }]
 }
 
-export async function loader({
-  request,
-  context,
-}: Route.LoaderArgs): Promise<any> {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getServerEnv(context)
   const sessionResult = await getUserSession(request, env)
 

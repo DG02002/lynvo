@@ -1,20 +1,20 @@
-import { createOpaqueId } from "./ids"
 import {
   DAY_MS,
   DEFAULT_RETENTION_DAYS,
   STORAGE_RETENTION_DAY_OPTIONS,
 } from "../constants"
 import { executeOwnedWrite, getDataVersion } from "./data-version"
-import {
-  applyStorageMutation,
-  byteLength,
-  ensureStorageLedger,
-} from "./storage-ledger"
+import { createOpaqueId } from "./ids"
 import {
   profileStorageDocument,
   USER_COLUMNS,
   type ProfileUserRow,
 } from "./rows"
+import {
+  applyStorageMutation,
+  byteLength,
+  ensureStorageLedger,
+} from "./storage-ledger"
 
 export interface UserRecord {
   id: string
@@ -28,6 +28,15 @@ export interface UserRecord {
   rangeSupportedPlayerId: string | null
   rangeUnsupportedPlayerId: string | null
   createdAt: number
+}
+
+export interface GoogleUserInput {
+  readonly id?: string | undefined
+  readonly googleSubject: string
+  readonly email: string
+  readonly displayName?: string | undefined
+  readonly avatarUrl?: string | undefined
+  readonly now: number
 }
 
 interface UserRow {
@@ -58,7 +67,7 @@ const mapUserRow = (row: UserRow): UserRecord => ({
   createdAt: row.created_at,
 })
 
-export const findUserByGoogleSubject = async (
+const findUserByGoogleSubject = async (
   database: D1Database,
   googleSubject: string
 ): Promise<UserRecord | null> => {
@@ -82,16 +91,10 @@ export const getUserById = async (
 
 export const insertGoogleUser = async (
   database: D1Database,
-  input: {
-    readonly googleSubject: string
-    readonly email: string
-    readonly displayName?: string | undefined
-    readonly avatarUrl?: string | undefined
-    readonly now: number
-  }
+  input: GoogleUserInput
 ): Promise<UserRecord> => {
   const record: UserRecord = {
-    id: createOpaqueId(),
+    id: input.id ?? createOpaqueId(),
     googleSubject: input.googleSubject,
     email: input.email,
     displayName: input.displayName ?? null,
@@ -123,13 +126,7 @@ export const insertGoogleUser = async (
 
 export const getOrCreateGoogleUser = async (
   database: D1Database,
-  input: {
-    readonly googleSubject: string
-    readonly email: string
-    readonly displayName?: string | undefined
-    readonly avatarUrl?: string | undefined
-    readonly now: number
-  }
+  input: GoogleUserInput
 ): Promise<{ user: UserRecord; didCreate: boolean }> => {
   const existing = await findUserByGoogleSubject(database, input.googleSubject)
   if (existing) {
@@ -218,10 +215,10 @@ export interface PlayerPreferences {
   rangeUnsupportedPlayerId?: string | undefined
 }
 
-export const PLAYER_IDS = ["just", "vlc", "mpv", "mx"]
+const PLAYER_IDS = new Set(["just", "vlc", "mpv", "mx"])
 
 export const normalizePlayerId = (playerId: string): string => {
-  if (!PLAYER_IDS.includes(playerId)) {
+  if (!PLAYER_IDS.has(playerId)) {
     throw new Error(
       "Choose Just (Video) Player, VLC for Android, MPV, or MX Player"
     )

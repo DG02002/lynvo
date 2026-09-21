@@ -1,30 +1,22 @@
 import { Result, Schema } from "effect"
-import { SavedLinkCommandError } from "../saved-link-command-failure"
-import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
 import {
-  parseLinkMetadata,
+  SavedLinkListResponseSchema,
+  type SavedLinkApiRecord,
+  type SavedLinkListResponse,
+} from "~shared/api-contracts"
+
+import { parseLinkMetadata } from "~/features/links/link-metadata-normalization"
+import {
   toLinkViewItem,
   type SavedLink,
-} from "~/features/links/links.mapper"
+} from "~/features/links/link-view-models"
 import type { LinkExtractionStatus } from "~/features/links/types"
+import { requestSameOrigin, type RequestOptions } from "~/lib/api/client"
+import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
+
+import { SavedLinkCommandError } from "../saved-link-command-failure"
 
 declare global {
-  interface SavedLinkApiRecord {
-    id: string
-    url: string
-    title: string | null
-    metaJson: string
-    createdAt: number
-    updatedAt: number
-    extractionState?: LinkExtractionStatus["state"]
-    extractionError?: string | null
-  }
-
-  interface SavedLinkListResponse {
-    readonly links: readonly SavedLinkApiRecord[]
-    readonly dataVersion: number
-  }
-
   interface CreateOrUpdateSavedLinkResponse {
     id: string | null
     replayed: boolean
@@ -37,6 +29,11 @@ declare global {
     dataVersion: number
   }
 }
+
+export type SavedLinkResponseBody =
+  | Pick<SavedLinkListResponse, "links">
+  | CreateOrUpdateSavedLinkResponse
+  | SavedLinkMutationResponse
 
 const toSavedLink = (record: SavedLinkApiRecord): SavedLink => ({
   id: record.id,
@@ -64,23 +61,6 @@ export const savedLinkApiRecordToViewItem = (record: SavedLinkApiRecord) => {
     return undefined
   }
 }
-
-const savedLinkApiRecordSchema = Schema.Struct({
-  id: Schema.String,
-  url: Schema.String,
-  title: Schema.NullOr(Schema.String),
-  metaJson: Schema.String,
-  createdAt: Schema.Number,
-  updatedAt: Schema.Number,
-  extractionState: Schema.optional(
-    Schema.Literals(["queued", "running", "complete", "failed"])
-  ),
-  extractionError: Schema.optional(Schema.NullOr(Schema.String)),
-})
-
-const savedLinkListResponseSchema = Schema.Struct({
-  links: Schema.Array(savedLinkApiRecordSchema),
-})
 
 const failureBodySchema = Schema.Struct({
   failure: Schema.Struct({
@@ -152,20 +132,17 @@ const toCommandError = async (
 
 const DATA_API_TIMEOUT_MS = 15_000
 
-const sendDataRequest = async (
+const sendDataRequest = async <Payload = undefined>(
   path: string,
-  init?: RequestInit
+  options: RequestOptions<Payload> = {}
 ): Promise<globalThis.Response> => {
   let httpResponse: globalThis.Response
   try {
-    httpResponse = await fetch(path, {
-      credentials: "same-origin",
-      signal: AbortSignal.timeout?.(DATA_API_TIMEOUT_MS),
-      ...init,
-      headers: {
-        Accept: "application/json",
-        ...init?.headers,
-      },
+    httpResponse = await requestSameOrigin(path, {
+      ...options,
+      headers: { Accept: "application/json", ...options.headers },
+      includeSessionIdentityHeaders: false,
+      timeoutMs: DATA_API_TIMEOUT_MS,
     })
   } catch (cause) {
     throw new SavedLinkCommandError({
@@ -181,19 +158,13 @@ const sendDataRequest = async (
   return httpResponse
 }
 
-const requestDataJson = async <ResponseBody>(
+const requestDataJson = async <ResponseBody, Payload = undefined>(
   path: string,
-  init?: RequestInit
+  options?: RequestOptions<Payload>
 ): Promise<ResponseBody> => {
-  const httpResponse = await sendDataRequest(path, init)
+  const httpResponse = await sendDataRequest(path, options)
   return await httpResponse.json()
 }
-
-const mutationRequest = (path: string, payloadJson: string): RequestInit => ({
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: payloadJson,
-})
 
 export interface CreateOrUpdateSavedLinkInput {
   readonly operationId: string
@@ -247,7 +218,7 @@ export type SavedLinkApiMetadataOperation =
 export const linksDataApi = {
   listSavedLinks: async (): Promise<SavedLinkListResponse> => {
     const httpResponse = await sendDataRequest("/api/data/links")
-    const body = Schema.decodeUnknownSync(savedLinkListResponseSchema)(
+    const body = Schema.decodeUnknownSync(SavedLinkListResponseSchema)(
       await httpResponse.json()
     )
     return {
@@ -260,38 +231,32 @@ export const linksDataApi = {
   createOrUpdate: (
     input: CreateOrUpdateSavedLinkInput
   ): Promise<CreateOrUpdateSavedLinkResponse> =>
-    requestDataJson(
-      "/api/data/links/create-or-update",
-      mutationRequest("/api/data/links/create-or-update", JSON.stringify(input))
-    ),
+    requestDataJson("/api/data/links/create-or-update", {
+      method: "POST",
+      payload: input,
+    }),
   updateMeta: (
     input: UpdateSavedLinkMetaInput
   ): Promise<SavedLinkMutationResponse> =>
-    requestDataJson(
-      "/api/data/links/update-meta",
-      mutationRequest("/api/data/links/update-meta", JSON.stringify(input))
-    ),
+    requestDataJson("/api/data/links/update-meta", {
+      method: "POST",
+      payload: input,
+    }),
   applyMetadataOperation: (
     input: ApplyMetadataOperationInput
   ): Promise<SavedLinkMutationResponse> =>
-    requestDataJson(
-      "/api/data/links/apply-metadata-operation",
-      mutationRequest(
-        "/api/data/links/apply-metadata-operation",
-        JSON.stringify(input)
-      )
-    ),
+    requestDataJson("/api/data/links/apply-metadata-operation", {
+      method: "POST",
+      payload: input,
+    }),
   deleteById: (input: {
     readonly id: string
   }): Promise<SavedLinkMutationResponse> =>
-    requestDataJson(
-      "/api/data/links/delete",
-      mutationRequest(
-        "/api/data/links/delete",
-        JSON.stringify({
-          operationId: crypto.randomUUID(),
-          id: input.id,
-        })
-      )
-    ),
+    requestDataJson("/api/data/links/delete", {
+      method: "POST",
+      payload: {
+        operationId: crypto.randomUUID(),
+        id: input.id,
+      },
+    }),
 }

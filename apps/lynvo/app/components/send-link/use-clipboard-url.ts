@@ -1,8 +1,16 @@
 import * as React from "react"
+
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
 import { CLIPBOARD_WRITE_EVENT } from "~/lib/clipboard-events"
 
 const isHttpUrl = (value: string) =>
   value.startsWith("http://") || value.startsWith("https://")
+
+const subscribeToNothing = () => () => undefined
+const getClipboardApiSupported = () =>
+  globalThis.navigator !== undefined &&
+  Boolean(navigator.clipboard) &&
+  Boolean(navigator.permissions)
 
 export const useClipboardUrl = ({
   currentUrl,
@@ -14,7 +22,7 @@ export const useClipboardUrl = ({
   currentUrl: string
   savedUrls: ReadonlySet<string>
   setUrl: (url: string) => void
-  setError: (err: string | null) => void
+  setError: (error: SavedLinkInteractionError | null) => void
   onSave: (url?: string) => void
 }) => {
   const [clipboardUrl, setClipboardUrl] = React.useState<string | null>(null)
@@ -69,15 +77,15 @@ export const useClipboardUrl = ({
   }
 
   // react-doctor-disable-next-line react-doctor/effect-needs-cleanup -- the asynchronous listener is removed by this effect's teardown
-  React.useEffect(() => {
-    if (globalThis.navigator === undefined || !navigator.clipboard) {
-      setClipboardPermission("unsupported")
-      return
-    }
+  const clipboardApiSupported = React.useSyncExternalStore(
+    subscribeToNothing,
+    getClipboardApiSupported,
+    () => true
+  )
 
-    if (!navigator.permissions) {
-      setClipboardPermission("unsupported")
-      return
+  React.useEffect(() => {
+    if (!clipboardApiSupported) {
+      return undefined
     }
 
     let permissionStatus: PermissionStatus | undefined
@@ -108,11 +116,11 @@ export const useClipboardUrl = ({
         permissionStatus.removeEventListener("change", permissionChangeHandler)
       }
     }
-  }, [])
+  }, [clipboardApiSupported])
 
   React.useEffect(() => {
     if (clipboardPermission !== "granted") {
-      return
+      return undefined
     }
 
     if (skipNextGrantedRead.current) {
@@ -137,7 +145,9 @@ export const useClipboardUrl = ({
 
   return {
     clipboardUrl: availableClipboardUrl,
-    clipboardPermission,
+    clipboardPermission: clipboardApiSupported
+      ? clipboardPermission
+      : "unsupported",
     checkClipboard,
     requestClipboardAccess: async () => {
       skipNextGrantedRead.current = true

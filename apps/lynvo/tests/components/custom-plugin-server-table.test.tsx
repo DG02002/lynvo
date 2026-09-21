@@ -1,7 +1,8 @@
-import * as React from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
+import * as React from "react"
 import { MemoryRouter } from "react-router"
 import { describe, expect, it, vi } from "vitest"
+
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { CustomPluginServerTable } from "~/features/site/settings/custom-plugin-server-table"
 

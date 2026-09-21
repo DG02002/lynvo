@@ -3,9 +3,9 @@ import type { TmdbSearchResult } from "./tmdb-adapter"
 const normalizeTitle = (value: string): string =>
   value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replaceAll(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replaceAll(/[^a-z0-9]+/g, " ")
     .trim()
 
 const levenshteinWithin = (

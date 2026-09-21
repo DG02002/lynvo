@@ -1,5 +1,6 @@
 import { Logout05Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 
 export const LogoutDialog = ({
@@ -16,15 +17,15 @@ export const LogoutDialog = ({
   <ConfirmationAlertDialog
     open={open}
     onOpenChange={onOpenChange}
-    title="Log out of Lynvo?"
+    title="Sign out of Lynvo?"
     media={
       <HugeiconsIcon
         icon={Logout05Icon}
         className="mx-auto size-16 text-destructive"
       />
     }
-    description={<>Logged in as {email}.</>}
-    confirmLabel="Log out"
+    description={<>Signed in as {email}.</>}
+    confirmLabel="Sign out"
     confirmVariant="destructive"
     onConfirm={onLogout}
   />

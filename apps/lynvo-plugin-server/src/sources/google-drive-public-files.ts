@@ -1,26 +1,28 @@
-import { load } from "cheerio"
 import {
   ProtocolError,
   type MediaNode,
   type ExtractSuccessResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import {
-  createPluginResponseMetadata,
-  type PluginAdapterOptions,
-} from "../plugin-catalog"
+import { load } from "cheerio"
+import { Result, Schema } from "effect"
+
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES,
   GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS,
 } from "../constants"
 import {
+  createPluginResponseMetadata,
+  type PluginAdapterOptions,
+} from "../plugin-adapter"
+import {
   fetchValidatedUpstream,
   readBoundedUpstreamText,
 } from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
 import { isVideoFile } from "./video-file"
-import { Result, Schema } from "effect"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PATH_PATTERN = /^\/drive\/folders\/([^/]+)(?:\/|$)/
@@ -232,14 +234,12 @@ export const createGoogleDrivePublicFolderNodes = (
       return []
     }
     const size = formatFileSize(item.size)
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: createGoogleDriveDownloadUrl(item.id),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 
@@ -300,16 +300,12 @@ export const extractGoogleDrivePublicFile = async ({
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
-  const baseNode = {
-    kind: "playable" as const,
+  const node = createSourcePlayableNode({
     id: fileId,
     label: metadata.filename,
     url: downloadUrl,
-    status: "unknown" as const,
-  }
-  const node: MediaNode = metadata.size
-    ? { ...baseNode, size: metadata.size }
-    : baseNode
+    size: metadata.size,
+  })
   return {
     plugin: createPluginResponseMetadata(
       plugin,

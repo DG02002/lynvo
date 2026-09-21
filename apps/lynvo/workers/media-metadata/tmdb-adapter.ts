@@ -1,9 +1,15 @@
+import { runWithRetries, sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
+
+import {
+  createOutboundHttpTransport,
+  OutboundHttpError,
+} from "../../app/lib/outbound-http"
+import { parseRetryAfterMs } from "../../shared/retry"
 import {
   MEDIA_METADATA_REQUEST_ATTEMPTS,
   MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
   MEDIA_METADATA_REQUEST_TIMEOUT_MS,
-  SECOND_MS,
 } from "../constants"
 
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3"
@@ -69,12 +75,12 @@ export interface TmdbSearchResult {
   readonly overview?: string
 }
 
-export interface TmdbSeasonSummary {
+interface TmdbSeasonSummary {
   readonly seasonNumber: number
   readonly name: string
 }
 
-export interface TmdbMediaMetadata {
+interface TmdbMediaMetadata {
   readonly kind: "movie" | "tv" | "season" | "episode"
   readonly providerId: number
   readonly title: string
@@ -88,21 +94,11 @@ export interface TmdbMediaMetadata {
   readonly attribution: "TMDB"
 }
 
-export interface TmdbAdapterSuccess<Value> {
-  readonly kind: "success"
-  readonly value: Value
-}
-
-export interface TmdbAdapterFailure {
+interface TmdbAdapterFailure {
   readonly kind: "failure"
   readonly failureKind: "rate-limited" | "retryable" | "permanent"
   readonly message: string
   readonly retryAt?: number
-}
-
-export interface TmdbAdapterDisabled {
-  readonly kind: "disabled"
-  readonly message: string
 }
 
 export interface TmdbAdapterDependencies {
@@ -143,7 +139,7 @@ export interface TmdbAdapter {
   ) => Promise<TmdbAdapterResult<TmdbMediaMetadata>>
 }
 
-export interface TmdbEpisodeDetailsRequest {
+interface TmdbEpisodeDetailsRequest {
   readonly providerId: number
   readonly seasonNumber: number
   readonly episodeNumber: number
@@ -151,13 +147,16 @@ export interface TmdbEpisodeDetailsRequest {
   readonly episodeGroupNumber?: number
 }
 
-export interface TmdbAdapterResult<Value> {
-  readonly kind: "success" | "disabled" | "failure"
-  readonly value?: Value
-  readonly failureKind?: TmdbAdapterFailure["failureKind"]
-  readonly message?: string
-  readonly retryAt?: number
-}
+type TmdbAdapterResult<Value> =
+  | {
+      readonly kind: "success"
+      readonly value: Value
+    }
+  | {
+      readonly kind: "disabled"
+      readonly message: string
+    }
+  | TmdbAdapterFailure
 
 const searchPayloadSchema = Schema.Struct({
   results: Schema.optional(
@@ -251,22 +250,6 @@ const getErrorMessage = async (response: Response): Promise<string> => {
     : `TMDB request failed with status ${response.status}`
 }
 
-const getRetryAt = (
-  response: Response,
-  now: () => number
-): number | undefined => {
-  const retryAfter = response.headers.get("Retry-After")
-  if (!retryAfter) {
-    return undefined
-  }
-  const seconds = Number(retryAfter)
-  if (Number.isFinite(seconds)) {
-    return now() + Math.max(0, seconds) * SECOND_MS
-  }
-  const retryAt = Date.parse(retryAfter)
-  return Number.isNaN(retryAt) ? undefined : retryAt
-}
-
 const toSearchResult = (
   item: TmdbSearchPayloadItem
 ): TmdbSearchResult | undefined => {
@@ -317,41 +300,48 @@ const createDisabledResult = <Value>(): TmdbAdapterResult<Value> => ({
   message: "TMDB metadata is disabled",
 })
 
+const isPermanentTmdbFailure = (cause: unknown): boolean =>
+  cause instanceof OutboundHttpError && cause.code === "RESPONSE_TOO_LARGE"
+
 export const createTmdbAdapter = (
   dependencies: TmdbAdapterDependencies
 ): TmdbAdapter => {
   const now = dependencies.now ?? Date.now
   const timeoutMs = dependencies.timeoutMs ?? MEDIA_METADATA_REQUEST_TIMEOUT_MS
   const token = dependencies.token?.trim()
-  const sleep =
-    dependencies.sleep ??
-    ((delayMs: number) =>
-      new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
-
-  const requestTmdbEndpointWithRetries = async (
-    path: string,
-    attemptNumber: number
-  ): Promise<Response> => {
-    try {
-      return await dependencies.fetch(`${TMDB_API_BASE_URL}${path}`, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          "User-Agent": "Lynvo/1.0",
-        },
-        signal: AbortSignal.timeout?.(timeoutMs),
-      })
-    } catch (error) {
-      if (attemptNumber >= MEDIA_METADATA_REQUEST_ATTEMPTS) {
-        throw error
-      }
-      await sleep(MEDIA_METADATA_REQUEST_RETRY_DELAY_MS)
-      return requestTmdbEndpointWithRetries(path, attemptNumber + 1)
-    }
-  }
+  const sleepForRequest = dependencies.sleep ?? sleep
+  const outboundHttp = createOutboundHttpTransport({
+    fetch: dependencies.fetch,
+  })
 
   const fetchWithRetries = (path: string): Promise<Response> =>
-    requestTmdbEndpointWithRetries(path, 1)
+    runWithRetries(
+      () =>
+        outboundHttp.fetch(`${TMDB_API_BASE_URL}${path}`, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "User-Agent": "Lynvo/1.0",
+          },
+          timeoutMs,
+        }),
+      {
+        maxRetries: MEDIA_METADATA_REQUEST_ATTEMPTS - 1,
+        decide: (outcome) => {
+          if (outcome._tag === "success") {
+            return { retry: false }
+          }
+          if (isPermanentTmdbFailure(outcome.cause)) {
+            return { retry: false }
+          }
+          return {
+            retry: true,
+            delayMs: MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
+          }
+        },
+        sleep: sleepForRequest,
+      }
+    )
 
   const requestJson = async <Value>(
     path: string,
@@ -366,18 +356,24 @@ export const createTmdbAdapter = (
     } catch (error) {
       return {
         kind: "failure",
-        failureKind: "retryable",
+        failureKind: isPermanentTmdbFailure(error) ? "permanent" : "retryable",
         message: error instanceof Error ? error.message : "TMDB request failed",
       }
     }
     if (!response.ok) {
       const message = await getErrorMessage(response)
       if (response.status === 429) {
+        const nowMs = now()
+        const retryAfterMs = parseRetryAfterMs(
+          response.headers.get("Retry-After") ?? undefined,
+          nowMs
+        )
         return {
           kind: "failure",
           failureKind: "rate-limited",
           message,
-          retryAt: getRetryAt(response, now),
+          retryAt:
+            retryAfterMs === undefined ? undefined : nowMs + retryAfterMs,
         }
       }
       return {
@@ -417,23 +413,8 @@ export const createTmdbAdapter = (
       `/search/${endpoint}?${query.toString()}`,
       searchPayloadSchema
     )
-    if (response.kind === "disabled") {
-      return { kind: "disabled", message: response.message }
-    }
-    if (response.kind === "failure") {
-      return {
-        kind: "failure",
-        failureKind: response.failureKind,
-        message: response.message,
-        retryAt: response.retryAt,
-      }
-    }
-    if (!response.value) {
-      return {
-        kind: "failure",
-        failureKind: "permanent",
-        message: "TMDB returned an empty search response",
-      }
+    if (response.kind !== "success") {
+      return response
     }
     return {
       kind: "success",
@@ -453,23 +434,8 @@ export const createTmdbAdapter = (
       path,
       detailsPayloadSchema
     )
-    if (response.kind === "disabled") {
-      return { kind: "disabled", message: response.message }
-    }
-    if (response.kind === "failure") {
-      return {
-        kind: "failure",
-        failureKind: response.failureKind,
-        message: response.message,
-        retryAt: response.retryAt,
-      }
-    }
-    if (!response.value) {
-      return {
-        kind: "failure",
-        failureKind: "permanent",
-        message: "TMDB returned an empty details response",
-      }
+    if (response.kind !== "success") {
+      return response
     }
     const value = toMediaMetadata(response.value, kind, providerId)
     return value
@@ -496,27 +462,20 @@ export const createTmdbAdapter = (
       `/tv/${providerId}/episode_groups`,
       episodeGroupListPayloadSchema
     )
-    if (groupList.kind !== "success" || !groupList.value) {
-      return groupList.kind === "disabled"
-        ? { kind: "disabled", message: groupList.message }
-        : {
-            kind: "failure",
-            failureKind: groupList.failureKind ?? "permanent",
-            message: groupList.message ?? "TMDB episode groups are unavailable",
-            retryAt: groupList.retryAt,
-          }
+    if (groupList.kind !== "success") {
+      return groupList
     }
     const normalizedGroupName = episodeGroupName
       ?.normalize("NFKC")
       .toLocaleLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
       .trim()
     const namedSeasonSplitGroup = normalizedGroupName
       ? (groupList.value.results ?? []).find((group) => {
           const normalizedProviderGroupName = group.name
             ?.normalize("NFKC")
             .toLocaleLowerCase()
-            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
             .trim()
           return Boolean(
             group.id &&
@@ -540,16 +499,8 @@ export const createTmdbAdapter = (
       `/tv/episode_group/${episodeGroup.id}`,
       episodeGroupPayloadSchema
     )
-    if (episodeGroups.kind !== "success" || !episodeGroups.value) {
-      return episodeGroups.kind === "disabled"
-        ? { kind: "disabled", message: episodeGroups.message }
-        : {
-            kind: "failure",
-            failureKind: episodeGroups.failureKind ?? "permanent",
-            message:
-              episodeGroups.message ?? "TMDB episode group is unavailable",
-            retryAt: episodeGroups.retryAt,
-          }
+    if (episodeGroups.kind !== "success") {
+      return episodeGroups
     }
     const part = (episodeGroups.value.groups ?? []).find(
       (group) =>
@@ -617,23 +568,8 @@ export const createTmdbAdapter = (
         `/tv/${providerId}`,
         tvSeasonListPayloadSchema
       )
-      if (response.kind === "disabled") {
-        return { kind: "disabled", message: response.message }
-      }
-      if (response.kind === "failure") {
-        return {
-          kind: "failure",
-          failureKind: response.failureKind,
-          message: response.message,
-          retryAt: response.retryAt,
-        }
-      }
-      if (!response.value) {
-        return {
-          kind: "failure",
-          failureKind: "permanent",
-          message: "TMDB returned an empty season list response",
-        }
+      if (response.kind !== "success") {
+        return response
       }
       const seasons = (response.value.seasons ?? []).flatMap((season) => {
         const seasonNumber = season.season_number

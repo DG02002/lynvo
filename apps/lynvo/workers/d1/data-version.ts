@@ -44,7 +44,7 @@ interface DataVersionBumpRow {
 
 export interface OwnedWriteResult {
   dataVersion: number
-  statementResults: readonly D1Result<unknown>[]
+  statementResults: readonly D1Result[]
   changed: boolean
 }
 

@@ -1,6 +1,23 @@
-import type { LinkMetadata } from "./types"
-import { getMetadataPluginServerId } from "./link-metadata-accessors"
 import { Result, Schema } from "effect"
+
+import type { LinkMetadata, MetaData } from "./types"
+
+export const getMetadataPluginServerId = (
+  metadata: LinkMetadata | MetaData | undefined
+) => {
+  if (!metadata) {
+    return undefined
+  }
+
+  if ("source" in metadata) {
+    const pluginServerId = Schema.decodeUnknownResult(Schema.String)(
+      metadata.source.pluginServerId
+    )
+    return Result.isSuccess(pluginServerId) ? pluginServerId.success : undefined
+  }
+
+  return metadata.pluginServerId
+}
 
 export interface LinkSourceFields {
   filename?: string

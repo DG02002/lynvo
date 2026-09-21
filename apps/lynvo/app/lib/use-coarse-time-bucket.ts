@@ -1,9 +1,9 @@
 import * as React from "react"
-import { DAY_MS } from "../../shared/constants"
+import { DAY_MS } from "~shared/constants"
 
 export const MINUTE_MS = 60 * 1000
 
-export const getTimeBucket = (timestamp: number, intervalMs: number) =>
+const getTimeBucket = (timestamp: number, intervalMs: number) =>
   Math.floor(timestamp / intervalMs) * intervalMs
 
 const useCoarseTimeBucket = (intervalMs: number) => {
@@ -18,7 +18,12 @@ const useCoarseTimeBucket = (intervalMs: number) => {
       setTimeBucket(getTimeBucket(Date.now(), intervalMs))
     }, nextBoundary - now)
     return () => window.clearTimeout(timeout)
-  }, [intervalMs, timeBucket])
+  }, [
+    intervalMs,
+    // The bucket change schedules the next boundary after each tick.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+    timeBucket,
+  ])
 
   return timeBucket
 }
@@ -26,3 +31,8 @@ const useCoarseTimeBucket = (intervalMs: number) => {
 export const useDailyTimeBucket = () => useCoarseTimeBucket(DAY_MS)
 
 export const useMinuteTimeBucket = () => useCoarseTimeBucket(MINUTE_MS)
+
+export const useCurrentTimeMs = (currentTimeMs?: number): number => {
+  const minuteTimeBucket = useMinuteTimeBucket()
+  return currentTimeMs ?? minuteTimeBucket
+}

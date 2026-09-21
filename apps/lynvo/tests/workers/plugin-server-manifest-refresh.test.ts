@@ -1,5 +1,7 @@
+import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import { env } from "cloudflare:workers"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import { insertGoogleUser } from "../../workers/d1/users"
 import { refreshCustomPluginServerManifests } from "../../workers/plugin-server-manifest-refresh"
 
@@ -82,7 +84,7 @@ describe("plugin server manifest refresh", () => {
           userActiveRefreshes
         )
       )
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await sleep(10)
       activeRefreshes -= 1
       activeRefreshesByUser.set(userId, userActiveRefreshes - 1)
       return url.hostname.startsWith(FAILED_SERVER_ID)

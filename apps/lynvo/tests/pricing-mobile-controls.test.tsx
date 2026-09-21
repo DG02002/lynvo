@@ -1,8 +1,14 @@
 import { act, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import Pricing from "~/features/site/routes/_site.pricing"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
+
+const getFixedCreateAccountLink = () =>
+  screen
+    .getAllByRole("link", { name: /Create a free account/ })
+    .find((link) => link.parentElement?.classList.contains("fixed"))
 
 describe("Pricing mobile controls", () => {
   afterEach(() => {
@@ -55,9 +61,9 @@ describe("Pricing mobile controls", () => {
       )
     })
 
-    const fixedControls = screen.getByRole("link", {
-      name: /Get Free/,
-    }).parentElement
+    const fixedLink = getFixedCreateAccountLink()
+    expect(fixedLink).toBeDefined()
+    const fixedControls = fixedLink?.parentElement
 
     expect(fixedControls).toHaveClass("fixed")
     expect(fixedControls?.parentElement).toHaveStyle({
@@ -78,8 +84,6 @@ describe("Pricing mobile controls", () => {
       )
     })
 
-    expect(
-      screen.queryByRole("link", { name: /Get Free/ })
-    ).not.toBeInTheDocument()
+    expect(getFixedCreateAccountLink()).toBeUndefined()
   })
 })

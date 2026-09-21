@@ -1,5 +1,5 @@
 import { Result, Schema } from "effect"
-import { lynvoPluginCatalogSchema } from "./schemas.js"
+
 import {
   requireNodeIdentity,
   type ExtractRequest,
@@ -9,6 +9,7 @@ import {
   type PluginServerManifest,
   type PluginServerMatcher,
 } from "./models.js"
+import { lynvoPluginCatalogSchema } from "./schemas.js"
 
 const REGULAR_EXPRESSION_SPECIAL_CHARACTERS = new Set([
   "\\",

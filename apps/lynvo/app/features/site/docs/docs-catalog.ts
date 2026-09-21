@@ -1,13 +1,13 @@
-import { lazy } from "react"
 import { Result, Schema } from "effect"
+import { lazy } from "react"
 
-import pluginServerMeta from "./plugin-server/meta.json"
-import rootMeta from "./meta.json"
+import { createHeadingId } from "./docs-heading"
 import {
   assembleDocumentationMarkdown,
   extractDocumentationSection,
 } from "./docs-markdown"
-import { createHeadingId } from "./docs-heading"
+import rootMeta from "./meta.json"
+import pluginServerMeta from "./plugin-server/meta.json"
 
 const contentModules = import.meta.glob<DocumentationMdxModule>("./**/*.mdx")
 const contentFrontmatter = import.meta.glob<DocumentationFrontmatter>(
@@ -186,7 +186,7 @@ const getGroups = (
 const getContext = (slug: string): DocumentationPageContext | undefined => {
   const page = pagesBySlug.get(slug)
   if (!page) {
-    return
+    return undefined
   }
 
   const pageIndex = orderedPages.indexOf(page)
@@ -242,7 +242,7 @@ export const docsCatalog = {
   getMarkdown: (slug: string) => {
     const page = pagesBySlug.get(slug)
     if (!page) {
-      return
+      return undefined
     }
     if (slug !== "plugin-server") {
       return page.rawContent
@@ -299,7 +299,7 @@ export const docsCatalog = {
         {
           title: "Build a Plugin and return Media Nodes",
           content:
-            "A Plugin recognizes one Source and converts its data into 4 product-level node types: direct media, container, folder, and lazy folder.",
+            "A Plugin recognizes one Source and converts its data into four product-level node types: playable item, folder, group, and unresolved item.",
         },
         {
           level: 3,
@@ -307,7 +307,7 @@ export const docsCatalog = {
           content: getPageByFileName("plugins").rawContent,
         },
         {
-          title: "Choose among the 4 node types",
+          title: "Choose among the four node types",
           content: getPageByFileName("media-nodes").rawContent,
         },
         {

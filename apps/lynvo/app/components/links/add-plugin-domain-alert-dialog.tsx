@@ -1,6 +1,6 @@
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { PluginIcon } from "~/components/plugin-icon"
+import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 
 interface AddPluginDomainAlertDialogProps {
   suggestion: PluginDomainSuggestion | null
@@ -34,8 +34,9 @@ export function AddPluginDomainAlertDialog({
       description={
         <>
           Lynvo recognized <strong>{suggestion?.domain}</strong> as{" "}
-          {suggestion?.pluginName}. Add this Plugin Domain so Lynvo can load its
-          links faster next time.
+          {suggestion?.pluginName}. A Plugin Domain is the site address this
+          Plugin handles. Add it so Lynvo can use this Plugin for the site next
+          time.
         </>
       }
       confirmLabel="Add domain"

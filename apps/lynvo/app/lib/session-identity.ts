@@ -1,4 +1,4 @@
-interface SessionIdentity {
+export interface SessionIdentity {
   readonly userId: string
   readonly sessionId: string
 }
@@ -8,7 +8,7 @@ export const readIdentityMeta = (name: string) =>
     ? undefined
     : document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content
 
-export const readRenderedSessionIdentity = (): SessionIdentity | undefined => {
+const readRenderedSessionIdentity = (): SessionIdentity | undefined => {
   const userId = readIdentityMeta("lynvo-user-id")
   const sessionId = readIdentityMeta("lynvo-session-id")
   return userId && sessionId ? { userId, sessionId } : undefined

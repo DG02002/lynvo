@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { selectBestSearchResult } from "../../workers/media-metadata/search-result-selection"
 
 const result = (title: string, providerId: number, year?: number) => ({

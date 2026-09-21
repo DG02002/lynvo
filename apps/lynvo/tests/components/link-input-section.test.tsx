@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
+
 import { LinkInputSection } from "~/components/send-link/link-input-section"
+import { linkCopy } from "~/features/links/link-copy"
 
 describe("LinkInputSection", () => {
   it("presents an existing link as a warning", () => {
@@ -11,12 +13,12 @@ describe("LinkInputSection", () => {
         onSave={vi.fn()}
         isSaving={false}
         extractionPreview={null}
-        error="Link already exists on your account."
+        error={{ kind: "duplicate" }}
         setError={vi.fn()}
       />
     )
 
-    expect(screen.getByText("Link already saved")).toBeVisible()
+    expect(screen.getByText(linkCopy.errors.duplicate)).toBeVisible()
     expect(screen.getByLabelText("Link")).not.toHaveAttribute(
       "aria-invalid",
       "true"
@@ -24,6 +26,33 @@ describe("LinkInputSection", () => {
     expect(screen.getByLabelText("Link")).toHaveAttribute(
       "placeholder",
       "https://example.com/video"
+    )
+  })
+
+  it("labels a structured unsupported error", () => {
+    render(
+      <LinkInputSection
+        url="https://example.com/file"
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+        extractionPreview={null}
+        error={{ kind: "unsupported", message: "URL is not supported." }}
+        setError={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText("Link not supported")).toBeVisible()
+    expect(screen.getByText("URL is not supported.")).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveClass("text-destructive")
+    expect(screen.getByLabelText("Link")).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    )
+    const fieldError = screen.getByRole("alert")
+    expect(screen.getByLabelText("Link")).toHaveAttribute(
+      "aria-describedby",
+      fieldError.id
     )
   })
 
@@ -35,17 +64,16 @@ describe("LinkInputSection", () => {
       configurable: true,
       value: { readText },
     })
+    const queryPermissions = vi.fn(() =>
+      Promise.resolve({
+        state: "prompt",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })
+    )
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
-      value: {
-        query: vi.fn(() =>
-          Promise.resolve({
-            state: "prompt",
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-          })
-        ),
-      },
+      value: { query: queryPermissions },
     })
 
     render(
@@ -63,7 +91,7 @@ describe("LinkInputSection", () => {
     expect(
       screen.queryByLabelText("Enable clipboard suggestions")
     ).not.toBeInTheDocument()
-    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
+    await waitFor(() => expect(queryPermissions).toHaveBeenCalled())
     expect(readText).not.toHaveBeenCalled()
 
     fireEvent.focus(screen.getByLabelText("Link"))
@@ -88,11 +116,12 @@ describe("LinkInputSection", () => {
       configurable: true,
       value: { readText: vi.fn() },
     })
+    const queryPermissions = vi.fn(() =>
+      Promise.reject(new TypeError("Unsupported name"))
+    )
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
-      value: {
-        query: vi.fn(() => Promise.reject(new TypeError("Unsupported name"))),
-      },
+      value: { query: queryPermissions },
     })
 
     render(
@@ -107,7 +136,7 @@ describe("LinkInputSection", () => {
       />
     )
 
-    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
+    await waitFor(() => expect(queryPermissions).toHaveBeenCalled())
     expect(
       screen.queryByLabelText("Enable clipboard suggestions")
     ).not.toBeInTheDocument()
@@ -115,9 +144,10 @@ describe("LinkInputSection", () => {
 
   it("does not suggest a clipboard URL that is already saved", async () => {
     const savedUrl = "https://example.com/already-saved"
+    const readText = vi.fn(() => Promise.resolve(savedUrl))
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { readText: vi.fn(() => Promise.resolve(savedUrl)) },
+      value: { readText },
     })
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
@@ -145,7 +175,7 @@ describe("LinkInputSection", () => {
       />
     )
 
-    await waitFor(() => expect(navigator.clipboard.readText).toHaveBeenCalled())
+    await waitFor(() => expect(readText).toHaveBeenCalled())
     expect(screen.queryByText(savedUrl)).not.toBeInTheDocument()
   })
 

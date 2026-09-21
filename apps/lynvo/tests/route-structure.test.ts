@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import routes, { createRoutes } from "~/routes"
 
 type RouteEntry = ReturnType<typeof createRoutes>[number]
@@ -17,10 +18,7 @@ const flattenRouteEntries = (
 const flattenRoutePaths = (entries: readonly RouteEntry[]): string[] =>
   entries.flatMap((entry) => (entry.path === undefined ? [] : [entry.path]))
 
-const findRouteByFile = (
-  entries: readonly RouteEntry[],
-  suffix: string
-): RouteEntry | undefined =>
+const findRouteByFile = (entries: readonly RouteEntry[], suffix: string) =>
   flattenRouteEntries(entries).find((entry) => entry.file?.endsWith(suffix))
 
 describe("route structure", () => {

@@ -1,8 +1,8 @@
-import type { ExtractedLink } from "./types"
 import {
   getMediaNodeKey,
   getMediaNodeTargetOrUndefined,
 } from "./media-node-interaction"
+import type { ExtractedLink } from "./types"
 
 export const stripOpenedFlags = (
   links: ExtractedLink[] = []

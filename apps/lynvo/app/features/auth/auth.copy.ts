@@ -1,11 +1,11 @@
 export const authCopy = {
   signin: {
-    metaTitle: "Log in | Lynvo",
+    metaTitle: "Sign in | Lynvo",
     metaDescription:
-      "Log in to Lynvo with Google to save links and open them in Android players.",
+      "Sign in to Lynvo with Google to save links and open them in Android players.",
     pageHeading: "Welcome back",
     googleButton: "Continue with Google",
-    qrButton: "Use a QR Code",
+    qrButton: "Use a QR code",
     expiredError: "The sign-in attempt expired. Start again to continue.",
     exchangeError:
       "Google sign-in couldn’t be completed. Start again to retry.",
@@ -13,6 +13,6 @@ export const authCopy = {
     fallbackError: "The sign-in attempt was incomplete. Start again.",
   },
   nav: {
-    signIn: "Log in",
+    signIn: "Sign in",
   },
 }

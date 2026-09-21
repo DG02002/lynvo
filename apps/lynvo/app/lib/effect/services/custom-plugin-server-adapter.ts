@@ -1,4 +1,3 @@
-import { Effect } from "effect"
 import {
   getLynvoManifestExtension,
   getMatchedPlugin,
@@ -7,19 +6,24 @@ import {
   type HttpBasicAuth,
   type ProxyCredential,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
+import { Effect } from "effect"
+
 import { matchUrl } from "../../../lib/plugin-server-utils"
+import {
+  PluginServerClient,
+  HttpPluginServerTransport,
+} from "../../extraction/plugin-server-client"
+import {
+  isSupportedProxyProvider,
+  SCRAPE_DO_PROXY_PROVIDER,
+} from "../../plugin-server-proxy"
+import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import type { ExtractionError } from "../errors"
 import type {
   ExtractionResult,
   MetadataResult,
   RegisteredPluginServer,
 } from "./extraction-types"
-import { isPluginServerUsable } from "./plugin-server-verification-status"
-import {
-  PluginServerClient,
-  HttpPluginServerTransport,
-} from "../../extraction/plugin-server-client"
 import {
   extractPluginServerResponse,
   requestPluginServer,
@@ -28,14 +32,12 @@ import {
   getPluginServerMetadata,
   mapPluginServerExtractionResult,
 } from "./plugin-server-result-mapping"
-import {
-  isSupportedProxyProvider,
-  SCRAPE_DO_PROXY_PROVIDER,
-} from "../../plugin-server-proxy"
+import { isPluginServerUsable } from "./plugin-server-verification-status"
 
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- I/O boundary parser: input is the arbitrary manifest JSON stored in D1, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 const parseStoredPluginServerManifest = <Value>(value: Value) => {
   const parsed = parsePluginServerManifestContract(value)
   return parsed.ok ? parsed.value : undefined

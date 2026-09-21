@@ -1,0 +1,385 @@
+import { act, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { LinkListItem } from "~/features/links/types"
+import { CARD_MENU_LONG_PRESS_DURATION_MS } from "~/lib/constants"
+
+const createActions = (): LinkItemActions => ({
+  play: vi.fn().mockResolvedValue({ accepted: true }),
+  remove: vi.fn(),
+  showLinks: vi.fn(),
+  markOpened: vi.fn(),
+  expandFolder: vi.fn(),
+  softRefresh: vi.fn(),
+  hardRefresh: vi.fn(),
+  expandMirror: vi.fn().mockResolvedValue(null),
+})
+
+const createQueuedItem = (
+  extractionStatus?: LinkListItem["extractionStatus"]
+): LinkListItem => ({
+  kind: "saved",
+  id: "queued-item",
+  url: "https://media.example/queued-item",
+  timestamp: Date.now(),
+  title: "Queued item",
+  metadata: {
+    schemaVersion: 3,
+    source: {
+      pluginName: "Example Source",
+      pluginServerId: "ui-test-plugin-server",
+    },
+    extraction: { extractedLinks: [] },
+    playback: { openedUrls: [] },
+  },
+  extractionStatus,
+})
+
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+const renderQueuedGrid = (item: LinkListItem) =>
+  render(
+    <GallerySaveGrid
+      groups={[
+        {
+          key: "item:queued-item",
+          displayTitle: "Queued item",
+          artworkRequest: undefined,
+          lastAddedAt: Date.now(),
+          items: [item],
+        },
+      ]}
+      actions={createActions()}
+      extractingItems={new Set()}
+      isHydrating={false}
+      highlightedId={null}
+      onOpenItem={vi.fn()}
+      onOpenGroup={vi.fn()}
+    />
+  )
+
+describe("GallerySaveGrid", () => {
+  it("renders a queued item with a centered spinner and shimmering title only", () => {
+    renderQueuedGrid(createQueuedItem({ state: "queued" }))
+
+    const queuedItem = screen.getByTestId("gallery-save-item")
+    expect(queuedItem).toHaveAttribute("data-extraction-state", "queued")
+
+    const posterSpinner = queuedItem.querySelector('[data-slot="spinner"]')
+    expect(posterSpinner).toBeInTheDocument()
+    expect(posterSpinner?.closest(".aspect-2\\/3")).toBeInTheDocument()
+
+    const queuedTitle = screen.getByText("Waiting to load…")
+    expect(queuedTitle).toHaveClass("shimmer")
+    expect(queuedTitle.parentElement?.parentElement).toHaveClass(
+      "font-heading",
+      "text-base",
+      "font-normal"
+    )
+    expect(queuedItem.className).not.toContain("shimmer")
+  })
+
+  it("closes the loading state and restores the real title when extraction ends", () => {
+    const view = renderQueuedGrid(createQueuedItem({ state: "running" }))
+
+    view.rerender(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "item:queued-item",
+            displayTitle: "Queued item",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem(undefined)],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const settledItem = screen.getByTestId("gallery-save-item")
+    expect(
+      settledItem.querySelector('[data-slot="spinner"]')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("Waiting to load…")).not.toBeInTheDocument()
+
+    const settledHeading = screen.getByRole("heading", { name: "Queued item" })
+    expect(settledHeading).toBeVisible()
+  })
+
+  it("opens the group page for a single movie and uses mobile gallery polish", () => {
+    const onOpenGroup = vi.fn()
+    const movieItem: LinkListItem = {
+      kind: "saved",
+      id: "movie-item",
+      url: "https://media.example/movie",
+      timestamp: Date.now(),
+      title: "Sample Feature",
+      metadata: {
+        schemaVersion: 3,
+        source: {
+          pluginName: "Example Source",
+          pluginServerId: "ui-test-plugin-server",
+        },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "movie-file",
+              url: "https://media.example/movie/file.mkv",
+              label: "Sample.in.the.Feature.2017.mkv",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "movie:sample feature:2017",
+            displayTitle: "Sample Feature (2017)",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [movieItem],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={onOpenGroup}
+      />
+    )
+
+    const menuTrigger = screen.getByRole("button", {
+      name: "Open menu for Sample Feature",
+    })
+    expect(menuTrigger).toHaveAttribute("tabindex", "0")
+    menuTrigger.focus()
+    expect(menuTrigger).toHaveFocus()
+    act(() => {
+      fireEvent.keyDown(menuTrigger, { key: "Enter" })
+      // jsdom does not synthesize native button activation from Enter.
+      menuTrigger.click()
+    })
+    expect(screen.getByText("Copy Source link")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Sample Feature (2017)" })
+    )
+    expect(onOpenGroup).toHaveBeenCalledWith("movie:sample feature:2017")
+
+    const movieElement = screen.getByTestId("gallery-save-item")
+    expect(movieElement.querySelector(".aspect-2\\/3")).toHaveClass(
+      "rounded-2xl",
+      "sm:rounded-3xl"
+    )
+    expect(movieElement.closest(".grid")).toHaveClass(
+      "grid-cols-2",
+      "sm:grid-cols-3",
+      "md:grid-cols-5",
+      "lg:grid-cols-6"
+    )
+  })
+
+  it("opens the item menu after a touch long press", () => {
+    vi.useFakeTimers()
+    const movieItem: LinkListItem = {
+      ...createQueuedItem(undefined),
+      title: "Touch menu item",
+    }
+    renderQueuedGrid(movieItem)
+
+    const itemButton = screen.getByRole("button", {
+      name: "View Touch menu item",
+    })
+    Object.defineProperties(itemButton, {
+      setPointerCapture: { value: vi.fn() },
+      hasPointerCapture: { value: vi.fn(() => false) },
+    })
+
+    fireEvent.pointerDown(itemButton, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 20,
+    })
+    void act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
+
+    expect(screen.getByText("Copy Source link")).toBeInTheDocument()
+  })
+
+  it("shows a poster loading spinner while artwork is being looked up", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      // SAFETY: never-settling promise mimics an in-flight lookup; the assertion-free mock needs no Response body
+      () => new Promise(() => {}) as Promise<Response>
+    )
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "movie:sample feature:2017",
+            displayTitle: "Sample Feature (2017)",
+            artworkRequest: {
+              mediaKind: "movie",
+              title: "Sample Feature",
+              year: 2017,
+            },
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem(undefined)],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const movieItem = screen.getByTestId("gallery-save-item")
+    expect(screen.queryByText("No poster found")).not.toBeInTheDocument()
+    expect(movieItem.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+
+    vi.restoreAllMocks()
+  })
+
+  it("offers artwork selection when a single item has no poster", () => {
+    const actions = {
+      ...createActions(),
+      setArtwork: vi.fn(),
+    }
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "item:no-poster",
+            displayTitle: "No poster item",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem(undefined)],
+          },
+        ]}
+        actions={actions}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Change artwork" }))
+
+    expect(
+      screen.getByRole("heading", { name: "Change artwork" })
+    ).toBeVisible()
+  })
+
+  it("offers artwork selection for a group without a poster", () => {
+    const actions = {
+      ...createActions(),
+      setArtwork: vi.fn(),
+    }
+    const secondItem: LinkListItem = {
+      ...createQueuedItem(undefined),
+      id: "queued-item-2",
+      url: "https://media.example/queued-item-2",
+    }
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "movie:no-poster-group",
+            displayTitle: "No poster group",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem(undefined), secondItem],
+          },
+        ]}
+        actions={actions}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Change artwork" }))
+
+    expect(
+      screen.getByRole("heading", { name: "Change artwork" })
+    ).toBeVisible()
+  })
+
+  it("keeps a merged group openable while one episode is still extracting", () => {
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "tv:sample series::S01",
+            displayTitle: "Sample Series S01",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [
+              createQueuedItem({ state: "queued" }),
+              {
+                ...createQueuedItem(undefined),
+                id: "ready-episode",
+                url: "https://media.example/ready-episode",
+                title: "Sample.Series.S01E01.1080p.mkv",
+              },
+            ],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "complete")
+    expect(
+      groupItem.querySelector('[data-slot="spinner"]')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Open Sample Series S01" })
+    ).toBeInTheDocument()
+  })
+})

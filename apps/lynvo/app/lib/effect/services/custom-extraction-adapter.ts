@@ -1,5 +1,8 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect, Result } from "effect"
+
+import { getD1Database } from "../../../../workers/d1/db"
+import { recordPluginServerVerificationFailure } from "../../../../workers/d1/plugin-servers"
 import { ExtractionError, ValidationError } from "../errors"
 import {
   discoverCustomPlugin,
@@ -15,8 +18,6 @@ import type {
 } from "./extraction-types"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
-import { getD1Database } from "../../../../workers/d1/db"
-import { recordPluginServerVerificationFailure } from "../../../../workers/d1/plugin-servers"
 
 export interface CustomExtractionAdapterOptions {
   readonly environment: Env

@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
 import { Result, Schema } from "effect"
+import { describe, expect, it } from "vitest"
+
 import {
   createNodeExtractRequest,
   createSourceExtractRequest,
@@ -17,7 +18,7 @@ describe("Lynvo manifest source credentials", () => {
     expect(
       Schema.decodeUnknownSync(resolvableNodeSchema)({
         kind: "resolvable",
-        label: "Lazy folder",
+        label: "Unresolved item",
         nodeUrl: "https://example.com/folder/",
         resolutionKind: "folder",
       })

@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import {
   MEDIA_ARTWORK_CACHE_STORAGE_PREFIX,
+  MEDIA_ARTWORK_CACHE_VERSION,
   MEDIA_ARTWORK_FLUSH_DELAY_MS,
 } from "~/lib/constants"
+
+import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { createMemoryStorage } from "../memory-storage"
 
 const importMediaArtworkClient = async () => {
@@ -31,6 +35,59 @@ afterEach(() => {
 })
 
 describe("media artwork client cache", () => {
+  it("canonicalizes artwork titles consistently for cache keys", async () => {
+    const client = await importMediaArtworkClient()
+
+    expect(
+      client.getMediaArtworkKey({
+        ...artworkRequest,
+        title: "  ＳAMPLE FEATURE  ",
+      })
+    ).toBe(client.getMediaArtworkKey(artworkRequest))
+  })
+
+  it("does not reuse entries from the previous artwork cache namespace", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ results: [{ posterPath: "/current.jpg" }] }),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const client = await importMediaArtworkClient()
+    const currentArtworkKey = client.getMediaArtworkKey(artworkRequest)
+    const previousVersion = MEDIA_ARTWORK_CACHE_VERSION - 1
+    const previousArtworkKey = currentArtworkKey.replace(
+      `v${MEDIA_ARTWORK_CACHE_VERSION}|`,
+      `v${previousVersion}|`
+    )
+    expect(previousArtworkKey).not.toBe(currentArtworkKey)
+    const previousStoragePrefix = MEDIA_ARTWORK_CACHE_STORAGE_PREFIX.replace(
+      `v${MEDIA_ARTWORK_CACHE_VERSION}:`,
+      `v${previousVersion}:`
+    )
+    expect(previousStoragePrefix).not.toBe(MEDIA_ARTWORK_CACHE_STORAGE_PREFIX)
+    localStorage.setItem(
+      previousStoragePrefix + previousArtworkKey,
+      JSON.stringify({
+        value: { posterPath: "/previous.jpg" },
+        expiresAt: Date.now() + 60_000,
+      })
+    )
+
+    const artworkKey = client.getMediaArtworkKey(artworkRequest)
+    client.requestMediaArtwork(artworkKey, artworkRequest)
+    await flushArtworkRequests()
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(client.getMediaArtworkForKey(artworkKey)).toEqual({
+      posterPath: "/current.jpg",
+    })
+  })
+
   it("serves repeat lookups from local storage after a reload", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

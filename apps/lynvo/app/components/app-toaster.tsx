@@ -1,13 +1,13 @@
-import type { ReactNode } from "react"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Alert02Icon,
   CheckmarkCircle02Icon,
   InformationCircleIcon,
   MultiplicationSignCircleIcon,
 } from "@hugeicons/core-free-icons"
-import { cn } from "~/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import type { ReactNode } from "react"
+
 import {
   ToastAction,
   ToastClose,
@@ -20,6 +20,8 @@ import {
   toast,
   useToastManager,
 } from "~/components/ui/toast"
+import { TOAST_AUTO_DISMISS_TIMEOUT_MS } from "~/lib/constants"
+import { cn } from "~/lib/utils"
 
 const CenteredToast = ({ className, ...props }: ToastPrimitive.Root.Props) => {
   return (
@@ -126,7 +128,11 @@ const CenteredToastList = () => {
 
 export const AppToaster = ({ ...props }: ToastPrimitive.Provider.Props) => {
   return (
-    <ToastProvider toastManager={toast} {...props}>
+    <ToastProvider
+      toastManager={toast}
+      timeout={TOAST_AUTO_DISMISS_TIMEOUT_MS}
+      {...props}
+    >
       <ToastPortal>
         <ToastViewport className="top-4 bottom-auto sm:left-4 sm:right-4 sm:mx-auto">
           <CenteredToastList />

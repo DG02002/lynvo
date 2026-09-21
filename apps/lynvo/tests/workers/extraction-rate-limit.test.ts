@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { createTestRateLimiter } from "../support/rate-limiter"
 
 describe("public Extraction abuse control", () => {

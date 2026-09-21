@@ -1,6 +1,6 @@
+import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 import { Label } from "~/components/ui/label"
 import { Switch } from "~/components/ui/switch"
-import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 
 interface SaveListBackButtonProps {
   readonly onNavigateBack: () => void
@@ -35,7 +35,7 @@ export const FolderTitleDisplayToggleButton = ({
         checked={titleDisplay === "episode"}
         onCheckedChange={() => onToggle()}
       />
-      Episode names
+      Show episode names
     </Label>
   )
 }

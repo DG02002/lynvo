@@ -1,11 +1,13 @@
 import { Effect, Layer } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import {
   readScrapeDoAccountInfo,
   refreshCustomPluginServerProxyBalance,
   saveCustomPluginServerProxyKey,
 } from "~/lib/effect/services/custom-plugin-server-proxy-key"
+
 import { createFakeD1Database } from "./support/fake-d1"
 
 const accountResponse = (body: string, status = 200) =>

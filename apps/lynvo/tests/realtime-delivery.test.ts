@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { deliverRealtimeMessage } from "~/context/realtime/socket"
 
 describe("realtime delivery", () => {

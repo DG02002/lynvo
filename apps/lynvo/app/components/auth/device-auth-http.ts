@@ -1,5 +1,8 @@
-import { requestSameOrigin } from "~/lib/api/client"
 import { Result, Schema } from "effect"
+
+import { requestSameOrigin } from "~/lib/api/client"
+
+import { deviceAuthCopy } from "./device-copy"
 
 const authorizeErrorResponseSchema = Schema.Struct({ error: Schema.String })
 const DEVICE_JSON_HEADERS = { "Content-Type": "application/json" }
@@ -19,7 +22,7 @@ export const readDeviceCodeApproval = async (
     { headers: DEVICE_JSON_HEADERS }
   )
   if (!response.ok) {
-    throw new Error("The login code couldn’t be checked. Try again.")
+    throw new Error(deviceAuthCopy.codeCheckFailure)
   }
   return await response.json()
 }
@@ -37,7 +40,7 @@ export const authorizeDeviceCode = async (code: string): Promise<void> => {
     throw new Error(
       Result.isSuccess(payload)
         ? payload.success.error
-        : "The login couldn’t be approved. Check the code, then try again."
+        : deviceAuthCopy.approvalFailure
     )
   }
 }
@@ -109,8 +112,6 @@ export const finalizeDeviceExchangeOverHttp = async (input: {
     }
   )
   if (!response.ok) {
-    throw new Error(
-      "This device couldn’t log in. Generate a new code, then try again."
-    )
+    throw new Error(deviceAuthCopy.exchangeFailure)
   }
 }

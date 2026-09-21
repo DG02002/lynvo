@@ -1,11 +1,12 @@
 import { Suspense } from "react"
 import { data, isRouteErrorResponse, useParams } from "react-router"
 
-import type { Route } from "./+types/_site.docs"
+import { docsCatalog } from "~/features/site/docs/docs-catalog"
 import { docsComponents } from "~/features/site/docs/docs-components"
 import { DocsDocumentLayout } from "~/features/site/docs/docs-document-layout"
 import { DocsLanding } from "~/features/site/docs/docs-landing"
-import { docsCatalog } from "~/features/site/docs/docs-catalog"
+
+import type { Route } from "./+types/_site.docs"
 
 export const loader = ({ params }: Route.LoaderArgs) => {
   const requestedSlug = params["*"]

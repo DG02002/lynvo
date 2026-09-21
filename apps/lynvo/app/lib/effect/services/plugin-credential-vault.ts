@@ -1,14 +1,16 @@
 import { Context, Effect, Layer } from "effect"
-import { CredentialVaultError } from "../errors"
-import { CloudflareEnv } from "./cloudflare-env"
+
+import { SEALED_RECORD_KEY_VERSION } from "~/lib/security/constants"
 import {
   sealRecord,
   unsealRecord,
   type SealedRecord,
 } from "~/lib/security/sealed-record"
-import { SEALED_RECORD_KEY_VERSION } from "~/lib/security/constants"
 
-export interface EncryptedPluginCredential extends SealedRecord {}
+import { CredentialVaultError } from "../errors"
+import { CloudflareEnv } from "./cloudflare-env"
+
+interface EncryptedPluginCredential extends SealedRecord {}
 
 export interface PluginCredentialContext {
   readonly userId: string

@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, type RefObject } from "react"
+
 import {
   getFinderWheelGestureUpdate,
   RESET_FINDER_WHEEL_GESTURE_STATE,
@@ -8,7 +9,6 @@ import {
 interface UseFinderWheelNavigationOptions {
   contentRef: RefObject<HTMLDivElement | null>
   hasForwardFolderPaths: boolean
-  hasNoRootLinks: boolean
   navigateToParentFolder: () => void
   navigateToNextFolder: () => void
 }
@@ -16,7 +16,6 @@ interface UseFinderWheelNavigationOptions {
 export const useFinderWheelNavigation = ({
   contentRef,
   hasForwardFolderPaths,
-  hasNoRootLinks,
   navigateToParentFolder,
   navigateToNextFolder,
 }: UseFinderWheelNavigationOptions) => {
@@ -49,7 +48,7 @@ export const useFinderWheelNavigation = ({
   useEffect(() => {
     const contentElement = contentRef.current
     if (!contentElement) {
-      return
+      return undefined
     }
     const handleNativeWheel = (event: WheelEvent) => {
       handleContentWheel(event)
@@ -58,7 +57,7 @@ export const useFinderWheelNavigation = ({
       passive: false,
     })
     return () => contentElement.removeEventListener("wheel", handleNativeWheel)
-  }, [contentRef, hasNoRootLinks])
+  }, [contentRef])
 
   return { resetHorizontalGesture }
 }

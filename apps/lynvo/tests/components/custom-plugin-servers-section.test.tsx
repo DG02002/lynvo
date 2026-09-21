@@ -1,6 +1,7 @@
-import * as React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import * as React from "react"
 import { describe, expect, it, vi } from "vitest"
+
 import { CustomPluginServersSection } from "~/features/site/settings/plugins-settings"
 
 const CustomPluginServersHarness = ({
@@ -48,6 +49,10 @@ describe("CustomPluginServersSection", () => {
     )
 
     expect(await screen.findByText("Base URL is required.")).toBeVisible()
+    const serverUrlInput = screen.getByLabelText("Server URL")
+    const fieldError = screen.getByRole("alert")
+    expect(serverUrlInput).toHaveAttribute("aria-invalid", "true")
+    expect(serverUrlInput).toHaveAttribute("aria-describedby", fieldError.id)
     expect(onAddPluginServer).not.toHaveBeenCalled()
 
     fireEvent.change(screen.getByLabelText("Server URL"), {

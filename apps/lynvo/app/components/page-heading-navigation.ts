@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type SetStateAction,
 } from "react"
+
 import { DOCS_SCROLL_END_TOLERANCE_PX } from "~/lib/constants"
 
 export interface PageHeading {
@@ -18,23 +19,22 @@ export const useDocumentHeadings = (
   providedHeadings: readonly PageHeading[] | undefined,
   targetId: string | undefined
 ): readonly PageHeading[] => {
-  const [headings, setHeadings] = useState<readonly PageHeading[]>(
-    providedHeadings ?? []
-  )
+  const [discoveredHeadings, setDiscoveredHeadings] = useState<
+    readonly PageHeading[]
+  >([])
 
   useEffect(() => {
     if (providedHeadings) {
-      setHeadings(providedHeadings)
-      return
+      return undefined
     }
 
     const target = targetId ? document.getElementById(targetId) : null
     if (!target) {
-      return
+      return undefined
     }
 
     const discoverHeadings = () => {
-      const discoveredHeadings = Array.from(
+      const nextHeadings = Array.from(
         target.querySelectorAll<HTMLElement>("h2[id], h3[id]")
       ).map((heading) => ({
         id: heading.id,
@@ -42,7 +42,7 @@ export const useDocumentHeadings = (
         level: heading.tagName === "H3" ? (3 as const) : undefined,
       }))
 
-      setHeadings(discoveredHeadings)
+      setDiscoveredHeadings(nextHeadings)
     }
 
     discoverHeadings()
@@ -52,7 +52,7 @@ export const useDocumentHeadings = (
     return () => observer.disconnect()
   }, [providedHeadings, targetId])
 
-  return headings
+  return providedHeadings ?? discoveredHeadings
 }
 
 export const useActiveHeadingTracker = (
@@ -65,16 +65,8 @@ export const useActiveHeadingTracker = (
   const [activeHeadingId, setActiveHeadingId] = useState(headings[0]?.id ?? "")
 
   useEffect(() => {
-    setActiveHeadingId((currentId) =>
-      headings.some((heading) => heading.id === currentId)
-        ? currentId
-        : (headings[0]?.id ?? "")
-    )
-  }, [headings])
-
-  useEffect(() => {
     if (headings.length === 0) {
-      return
+      return undefined
     }
 
     let animationFrameId: number | undefined
@@ -132,7 +124,14 @@ export const useActiveHeadingTracker = (
     }
   }, [getScrollOffset, headings])
 
-  return [activeHeadingId, setActiveHeadingId]
+  // An id that no longer exists in the headings falls back to the first one.
+  const trackedActiveHeadingId = headings.some(
+    (heading) => heading.id === activeHeadingId
+  )
+    ? activeHeadingId
+    : (headings[0]?.id ?? "")
+
+  return [trackedActiveHeadingId, setActiveHeadingId]
 }
 
 export const useHeadingClickHandler = (

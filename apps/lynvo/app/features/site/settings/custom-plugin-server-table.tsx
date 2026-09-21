@@ -1,5 +1,3 @@
-import * as React from "react"
-import { Link } from "react-router"
 import {
   Alert01Icon,
   ArrowDown01Icon,
@@ -9,9 +7,12 @@ import {
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Badge } from "~/components/ui/badge"
+import * as React from "react"
+import { Link } from "react-router"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { PluginIcon } from "~/components/plugin-icon"
+import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
@@ -21,15 +22,16 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Switch } from "~/components/ui/switch"
-import { cn } from "~/lib/utils"
-import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
-import { sourceStatusVariant } from "~/lib/source-status-variant"
 import {
   isPluginServerUsable,
   PLUGIN_SERVER_VERIFICATION_STATUS,
 } from "~/lib/effect/services/plugin-server-verification-status"
-import { getPluginServerManifestView } from "./plugin-server-manifest"
+import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
+import { sourceStatusVariant } from "~/lib/source-status-variant"
+import { cn } from "~/lib/utils"
+
 import { PluginInfoTooltip } from "./plugin-info-tooltip"
+import { getPluginServerManifestView } from "./plugin-server-manifest"
 import type { CustomPluginServer } from "./plugin-settings-interaction"
 import { SettingsList, SettingsRow } from "./settings-layout"
 

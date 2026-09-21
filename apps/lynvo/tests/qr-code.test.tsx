@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react"
 import jsQR from "jsqr"
 import { describe, expect, it } from "vitest"
+
 import { QrCode } from "~/components/auth/qr-code"
 import { encodeQrCode } from "~/lib/qr-code"
 

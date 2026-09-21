@@ -1,20 +1,20 @@
-import type { ExtractedLink } from "~/features/links/types"
 import {
   getMediaNodeInteractionState,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
 
-export interface DirectSavePresentation {
+interface DirectSavePresentation {
   readonly kind: "directSave"
   readonly link: ExtractedLink
 }
 
-export interface SelectionDialogPresentation {
+interface SelectionDialogPresentation {
   readonly kind: "selectionDialog"
   readonly links: ExtractedLink[]
 }
 
-export interface ErrorPresentation {
+interface ErrorPresentation {
   readonly kind: "error"
   readonly message: string
 }

@@ -1,16 +1,24 @@
 import { useCallback, useMemo } from "react"
-import { showErrorToast } from "~/lib/toast-notifications"
+
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
+import {
+  getSavedLinkRefreshErrorMessage,
+  type SavedLinkInteractionReporter,
+} from "~/features/links/saved-link-interaction"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
+import { showErrorToast } from "~/lib/toast-notifications"
+
+import type {
+  OpenSelectionDialogOptions,
+  SoftRefreshOptions,
+} from "./action-types"
 import {
   expandFolderLink,
   expandMirrorLinks,
   hardRefreshLink,
   softRefreshLink,
 } from "./refresh-flow"
-import type { OpenSelectionDialogOptions } from "./action-types"
-import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
-import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 import { runAfterSessionIdentity } from "./session-gated-action"
 
 export const useRefreshActions = ({
@@ -47,7 +55,7 @@ export const useRefreshActions = ({
         } else if (outcome.kind === "error") {
           showErrorToast({
             title: "Couldn’t refresh the link",
-            description: outcome.message,
+            description: getSavedLinkRefreshErrorMessage(outcome.error),
           })
         }
       },
@@ -55,30 +63,27 @@ export const useRefreshActions = ({
     [openSelectionDialog, updateLinks]
   )
 
-  const handleSoftRefresh = useCallback(
-    async (itemUrl: string) => {
-      await runWithExtractingItem(itemUrl, () =>
+  const runRefresh = useCallback(
+    (
+      refresh: (options: SoftRefreshOptions) => Promise<void>,
+      itemUrl: string
+    ) =>
+      runWithExtractingItem(itemUrl, () =>
         runAfterSessionIdentity(ensureSessionIdentity, () =>
-          softRefreshLink({ itemUrl, links, reporter })
+          refresh({ itemUrl, links, reporter })
         )
-      )
-    },
+      ),
     [ensureSessionIdentity, links, reporter, runWithExtractingItem]
   )
 
+  const handleSoftRefresh = useCallback(
+    (itemUrl: string) => runRefresh(softRefreshLink, itemUrl),
+    [runRefresh]
+  )
+
   const handleHardRefresh = useCallback(
-    async (itemUrl: string) => {
-      await runWithExtractingItem(itemUrl, () =>
-        runAfterSessionIdentity(ensureSessionIdentity, () =>
-          hardRefreshLink({
-            itemUrl,
-            links,
-            reporter,
-          })
-        )
-      )
-    },
-    [ensureSessionIdentity, links, reporter, runWithExtractingItem]
+    (itemUrl: string) => runRefresh(hardRefreshLink, itemUrl),
+    [runRefresh]
   )
 
   const handleShowLinks = useCallback(

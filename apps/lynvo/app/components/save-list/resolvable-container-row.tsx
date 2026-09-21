@@ -1,13 +1,19 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   PackageIcon,
   PackageOpenIcon,
   PackageSearchIcon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+
 import { AnimatedStateIcon } from "~/components/animated-state-icon"
-import { getExtractionWaitStatusInput } from "~/components/save-list/extraction-status-utils"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
+import { getExtractionWaitStatusInput } from "~/components/save-list/extraction-status-utils"
+import {
+  EpisodeStillSlot,
+  FinderEpisodeStillDisplay,
+  useFinderEpisodeStill,
+} from "~/components/save-list/finder-episode-still"
 import {
   MediaListRow,
   MediaListRowMeta,
@@ -18,18 +24,14 @@ import {
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "~/components/save-list/media-list-row-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
-import {
-  EpisodeStillSlot,
-  FinderEpisodeStillDisplay,
-  useFinderEpisodeStill,
-} from "~/components/save-list/finder-episode-still"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { openInSpecificPlayerForHandoff } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
+
 import { getLinkKey, getResolvableSourceName } from "./save-list-browser-model"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 
@@ -187,7 +189,6 @@ export const ResolvableContainerRow = ({
       <HugeiconsIcon icon={containerIconDefinition} className="size-6" />
     </AnimatedStateIcon>
   )
-
   return (
     <div
       className={cn(
@@ -240,12 +241,10 @@ export const ResolvableContainerRow = ({
           ),
         }}
         meta={
-          <>
-            <MediaListRowMeta
-              sourceName={getResolvableSourceName(link, item)}
-              size={displaySize}
-            />
-          </>
+          <MediaListRowMeta
+            sourceName={getResolvableSourceName(link, item)}
+            size={displaySize}
+          />
         }
         newBadge={
           !link.opened

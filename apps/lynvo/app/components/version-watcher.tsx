@@ -1,5 +1,7 @@
-import * as React from "react"
 import { Result, Schema } from "effect"
+import * as React from "react"
+
+import { requestSameOrigin } from "~/lib/api/client"
 import { VERSION_WATCH_INTERVAL_MS } from "~/lib/constants"
 
 const versionResponseSchema = Schema.Struct({
@@ -19,7 +21,8 @@ export function VersionWatcher({ buildTime }: VersionWatcherProps) {
     let didCancel = false
     const checkVersion = async () => {
       try {
-        const response = await fetch("/api/version", {
+        const response = await requestSameOrigin("/api/version", {
+          includeSessionIdentityHeaders: false,
           headers: { Accept: "application/json" },
         })
         if (!response.ok) {

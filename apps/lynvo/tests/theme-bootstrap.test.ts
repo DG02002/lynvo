@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { getThemeFromCookieHeader, THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 
 const runThemeBootstrap = ({

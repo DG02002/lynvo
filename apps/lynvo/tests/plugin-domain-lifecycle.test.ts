@@ -1,20 +1,22 @@
-import { describe, expect, it } from "vitest"
 import { Effect, Layer } from "effect"
+import { describe, expect, it } from "vitest"
+
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
+import {
+  createPluginCredentialAdditionalData,
+  PluginCredentialVault,
+} from "~/lib/effect/services/plugin-credential-vault"
 import {
   normalizePluginDomain,
   parsePluginDomainInput,
   parsePluginDomainCandidate,
 } from "~/lib/plugin-domain"
 import {
-  createPluginCredentialAdditionalData,
-  PluginCredentialVault,
-} from "~/lib/effect/services/plugin-credential-vault"
-import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
-import { buildCredentialDocument } from "../workers/d1/plugin-domains"
-import {
   parseHttpBasicCredential,
   serializeHttpBasicCredential,
 } from "~/lib/plugins/http-basic-credential"
+
+import { buildCredentialDocument } from "../workers/d1/plugin-domains"
 
 describe("Plugin Domain lifecycle", () => {
   it("normalizes duplicate domain spellings to one identity", () => {
@@ -155,6 +157,7 @@ describe("Plugin Domain lifecycle", () => {
 
   it("decrypts only with the exact owning context", async () => {
     // SAFETY: The credential vault only reads the encryption-key binding supplied here.
+    // oxlint-disable-next-line typescript/no-unnecessary-type-assertion -- Test fallback cannot resolve the ambient Env type; the cast supplies the binding shape.
     const environmentLayer = Layer.succeed(CloudflareEnv, {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa(
         "0123456789abcdef0123456789abcdef"

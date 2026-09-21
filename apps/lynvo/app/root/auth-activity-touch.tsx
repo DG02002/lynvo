@@ -1,6 +1,7 @@
 import { useEffect } from "react"
-import { getBrowserDeviceName } from "~/lib/device-name"
+
 import { client } from "~/lib/api/client"
+import { getBrowserDeviceName } from "~/lib/device-name"
 
 export const AuthActivityTouch = ({
   isAuthenticated,

@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 
+import { sessionExpiredCopy } from "~/lib/session-copy"
+
 export const extractionCommandFailureSchema = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("session-expired") }),
   Schema.Struct({ kind: Schema.Literal("transient") }),
@@ -17,12 +19,13 @@ export class ExtractionCommandError extends Schema.TaggedError<ExtractionCommand
   { failure: extractionCommandFailureSchema }
 ) {}
 
+// oxlint-disable-next-line typescript/consistent-return -- The switch is exhaustive over ExtractionCommandFailure; strictNullChecks (TS2366) proves the fall-through is unreachable, so no path implicitly returns undefined.
 export const presentExtractionFailure = (
   failure: ExtractionCommandFailure
 ): string => {
   switch (failure.kind) {
     case "session-expired":
-      return "The session expired. Log in, then try again."
+      return sessionExpiredCopy.retry
     case "transient":
       return "Extraction is temporarily unavailable. Try again in a moment."
     case "rate-limited":

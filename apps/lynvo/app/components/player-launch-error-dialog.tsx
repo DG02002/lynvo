@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
 import { Result, Schema } from "effect"
-import { PluginIcon } from "~/components/plugin-icon"
+import { useEffect, useState } from "react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { PluginIcon } from "~/components/plugin-icon"
 import {
   PLAYER_LAUNCH_ERROR_EVENT,
   type PlayerLaunchErrorDetail,
@@ -47,7 +48,7 @@ export function PlayerLaunchErrorDialog() {
       }
       title={<>Couldn’t open {error?.playerName}</>}
       description="Make sure the player is installed on your Android device, then try again."
-      confirmLabel="OK"
+      confirmLabel="Close"
       cancelLabel={null}
       onConfirm={() => setOpen(false)}
     />

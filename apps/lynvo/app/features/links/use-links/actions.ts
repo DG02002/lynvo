@@ -1,3 +1,5 @@
+import type { MediaArtworkIdentity } from "~shared/api-contracts"
+
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 
 export interface LinksActions {

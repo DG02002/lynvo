@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { MEDIA_LIST_ROW_TITLE_CLASS } from "./media-list-row-constants"
-import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
-import type { ExtractionStatusInput } from "./extraction-status-utils"
+
 import {
   EXTRACTION_STATUS_MESSAGES,
   EXTRACTION_STATUS_ROTATION_INTERVAL_MS,
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
+
+import type { ExtractionStatusInput } from "./extraction-status-utils"
+import { MEDIA_LIST_ROW_TITLE_CLASS } from "./media-list-row-constants"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 
 interface ExtractionStatusTitleProps {
   readonly status: ExtractionStatusInput
@@ -83,7 +85,7 @@ const useExtractionStatusLifecycle = ({
 
   useEffect(() => {
     if (!isWaiting || prefersReducedMotion) {
-      return
+      return undefined
     }
 
     const intervalId = window.setInterval(() => {
@@ -164,7 +166,7 @@ const renderExtractionStatusChildren = (
       </div>
     )
   }
-  return <>{children}</>
+  return children
 }
 
 export const ExtractionStatusTitle = ({

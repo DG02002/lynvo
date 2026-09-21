@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { createTmdbAdapter } from "../../workers/media-metadata/tmdb-adapter"
 
 const createFetch = (response: Response) => vi.fn(async () => response)
@@ -53,15 +54,14 @@ describe("TMDB adapter", () => {
         overview: "A short description.",
       },
     ])
-    const [requestUrl, requestInit] = fetch.mock.calls[0] ?? []
-    expect(String(requestUrl)).toContain("/search/movie?")
-    expect(String(requestUrl)).toContain("query=Example+Movie")
-    expect(String(requestUrl)).toContain("year=2026")
-    expect(requestInit).toMatchObject({
-      headers: {
-        Authorization: "Bearer secret-token",
-      },
-    })
+    const [request] = fetch.mock.calls[0] ?? []
+    if (!(request instanceof Request)) {
+      throw new Error("TMDB transport did not receive a Request")
+    }
+    expect(request.url).toContain("/search/movie?")
+    expect(request.url).toContain("query=Example+Movie")
+    expect(request.url).toContain("year=2026")
+    expect(request.headers.get("Authorization")).toBe("Bearer secret-token")
   })
 
   it("honors Retry-After for rate limits", async () => {
@@ -83,6 +83,40 @@ describe("TMDB adapter", () => {
       kind: "failure",
       failureKind: "rate-limited",
       retryAt: 1_750_000_012_000,
+    })
+  })
+
+  it("supports HTTP-date and clamped Retry-After values", async () => {
+    const now = Date.parse("2025-06-15T12:00:00Z")
+    const fetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ status_message: "Slow down" }), {
+        status: 429,
+        headers: {
+          "Retry-After": new Date(now + 12_000).toUTCString(),
+        },
+      })
+    )
+    const adapter = createTmdbAdapter({
+      fetch,
+      token: "secret-token",
+      now: () => now,
+    })
+
+    await expect(adapter.getMovieDetails(42)).resolves.toMatchObject({
+      retryAt: now + 12_000,
+    })
+    const clampedAdapter = createTmdbAdapter({
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ status_message: "Slow down" }), {
+          status: 429,
+          headers: { "Retry-After": "-1" },
+        })
+      ),
+      token: "secret-token",
+      now: () => now,
+    })
+    await expect(clampedAdapter.getMovieDetails(42)).resolves.toMatchObject({
+      retryAt: now,
     })
   })
 
@@ -118,6 +152,24 @@ describe("TMDB adapter", () => {
     expect(result.kind).toBe("success")
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(sleep).toHaveBeenCalledTimes(2)
+  })
+
+  it("rejects responses that exceed the outbound byte limit", async () => {
+    const fetch = createFetch(
+      new Response("{}", {
+        status: 200,
+        headers: { "Content-Length": String(5 * 1024 * 1024 + 1) },
+      })
+    )
+    const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
+
+    const result = await adapter.getMovieDetails(42)
+
+    expect(result).toMatchObject({
+      kind: "failure",
+      failureKind: "permanent",
+      message: "Outbound response exceeded the byte limit",
+    })
   })
 
   it("classifies provider failures and malformed payloads without throwing", async () => {

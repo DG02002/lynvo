@@ -1,6 +1,8 @@
-import { useState } from "react"
 import { AirplayLineIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useState } from "react"
+
+import { Button } from "~/components/ui/button"
 import {
   Dialog,
   DialogClose,
@@ -10,8 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog"
-import { Button } from "~/components/ui/button"
 import { useRemoteControl } from "~/context/remote-control-context"
+
 import { RemotePlayStatusCard } from "./remote-play/remote-play-status-card"
 import { RemotePlayTrigger } from "./remote-play/remote-play-trigger"
 import { RemoteSessionList } from "./remote-play/remote-session-list"

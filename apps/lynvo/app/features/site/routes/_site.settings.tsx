@@ -1,4 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Activity03Icon,
   Globe02Icon,
@@ -10,12 +9,15 @@ import {
   Settings01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
   NavLink,
   Outlet,
   useLoaderData,
   type LoaderFunctionArgs,
 } from "react-router"
+
+import type { SettingsOutletContext } from "~/features/site/settings/settings-route"
 import {
   getUserSession,
   responseWithSession,
@@ -23,7 +25,6 @@ import {
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
 import { cn } from "~/lib/utils"
-import type { SettingsOutletContext } from "~/features/site/settings/settings-route"
 export function meta() {
   return [{ title: "Settings | Lynvo" }]
 }
@@ -50,7 +51,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 const settingsTabs = [
   { value: "general", label: "General", icon: Settings01Icon },
   { value: "account", label: "Account", icon: UserCircleIcon },
-  { value: "security", label: "Security and login", icon: Key01Icon },
+  { value: "security", label: "Security and sign-in", icon: Key01Icon },
   { value: "plugins", label: "Plugins", icon: Plug02Icon },
   { value: "proxy", label: "Proxy", icon: Globe02Icon },
   { value: "usage", label: "Usage", icon: Activity03Icon },

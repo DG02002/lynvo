@@ -4,17 +4,14 @@ import {
   useEffectEvent,
   useReducer,
   useRef,
+  type ReactNode,
 } from "react"
-import { Result, Schema } from "effect"
-import { TmdbImage } from "~/features/links/components/tmdb-image"
+import type {
+  MediaArtworkCandidate,
+  MediaArtworkIdentity,
+} from "~shared/api-contracts"
+
 import { Spinner } from "~/components/spinner"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,20 +24,36 @@ import {
 } from "~/components/ui/alert-dialog"
 import { Badge } from "~/components/ui/badge"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog"
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import { linkCopy } from "~/features/links/link-copy"
+import { fetchMediaArtwork } from "~/features/links/media-artwork"
+import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
-import { MEDIA_ARTWORK_API_TIMEOUT_MS } from "~/lib/constants"
 
-interface ChangeArtworkDialogProps {
+interface ArtworkDialogProps {
   readonly item: LinkViewItem | undefined
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
   readonly onSelect: (identity: MediaArtworkIdentity) => void
+}
+
+type ChangeArtworkDialogProps = Omit<ArtworkDialogProps, "onSelect"> & {
+  readonly setArtwork?: (
+    itemUrl: string,
+    identity: MediaArtworkIdentity
+  ) => void
 }
 
 interface ChangeArtworkDialogState {
@@ -114,6 +127,7 @@ const initialChangeArtworkDialogState: ChangeArtworkDialogState = {
   selectedCandidate: undefined,
 }
 
+// oxlint-disable-next-line typescript/consistent-return -- The switch is exhaustive over ChangeArtworkDialogAction; strictNullChecks (TS2366) proves the fall-through is unreachable, so no path implicitly returns undefined.
 const changeArtworkDialogReducer = (
   state: ChangeArtworkDialogState,
   action: ChangeArtworkDialogAction
@@ -149,24 +163,6 @@ const changeArtworkDialogReducer = (
       return { ...state, selectedCandidate: undefined }
   }
 }
-
-const candidatesSchema = Schema.Struct({
-  results: Schema.Array(
-    Schema.Struct({
-      candidates: Schema.optional(
-        Schema.Array(
-          Schema.Struct({
-            providerId: Schema.Number,
-            title: Schema.String,
-            year: Schema.optional(Schema.Number),
-            mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
-            posterPath: Schema.optional(Schema.String),
-          })
-        )
-      ),
-    })
-  ),
-})
 
 const getCandidateKey = (candidate: MediaArtworkCandidate): string =>
   `${candidate.mediaKind ?? "movie"}:${candidate.providerId}`
@@ -232,34 +228,14 @@ const fetchArtworkCandidates = async (
   query: string,
   signal: AbortSignal
 ): Promise<readonly MediaArtworkCandidate[]> => {
-  const response = await fetch("/api/data/media-artwork", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      requests: [
-        { title: query, mediaKind: "movie" },
-        { title: query, mediaKind: "tv" },
-      ],
-    }),
-    signal: AbortSignal.any([
-      signal,
-      AbortSignal.timeout(MEDIA_ARTWORK_API_TIMEOUT_MS),
-    ]),
-  })
-  if (!response.ok) {
-    throw new Error("Media artwork search failed.")
-  }
-  const parsed = Schema.decodeUnknownResult(candidatesSchema)(
-    await response.json()
+  const response = await fetchMediaArtwork(
+    [
+      { title: query, mediaKind: "movie" },
+      { title: query, mediaKind: "tv" },
+    ],
+    signal
   )
-  if (Result.isFailure(parsed)) {
-    throw new Error("Media artwork response was invalid.")
-  }
-  return getUniqueCandidates(parsed.success.results)
+  return getUniqueCandidates(response.results)
 }
 
 interface CandidateGridProps {
@@ -320,6 +296,14 @@ interface ArtworkSearchResultsProps {
   readonly onSelectCandidate: (candidate: MediaArtworkCandidate) => void
 }
 
+const ARTWORK_SEARCH_COPY = {
+  searching: "Searching for artwork…",
+  failed: "Search failed",
+  empty: "No matches found",
+  found: (count: number) =>
+    `Found ${count} artwork result${count === 1 ? "" : "s"}.`,
+} as const
+
 const ArtworkSearchResults = ({
   candidates,
   tvCandidates,
@@ -329,8 +313,20 @@ const ArtworkSearchResults = ({
   searchFailed,
   onSelectCandidate,
 }: ArtworkSearchResultsProps) => {
+  let searchStatus: string | undefined
+  if (isSearching) {
+    searchStatus = ARTWORK_SEARCH_COPY.searching
+  } else if (searchFailed) {
+    searchStatus = ARTWORK_SEARCH_COPY.failed
+  } else if (didSearch && candidates.length === 0) {
+    searchStatus = ARTWORK_SEARCH_COPY.empty
+  } else if (didSearch) {
+    searchStatus = ARTWORK_SEARCH_COPY.found(candidates.length)
+  }
+
+  let resultsContent: ReactNode = null
   if (candidates.length > 0) {
-    return (
+    resultsContent = (
       <Tabs defaultValue="tv" className="min-h-0 flex-1 gap-5 overflow-hidden">
         <TabsList className="w-full shrink-0">
           <TabsTrigger value="tv">
@@ -365,14 +361,14 @@ const ArtworkSearchResults = ({
         </div>
       </Tabs>
     )
-  }
-
-  if (!isSearching && didSearch) {
-    return (
+  } else if (!isSearching && didSearch) {
+    resultsContent = (
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
           <p className="font-medium">
-            {searchFailed ? "Search failed" : "No matches found"}
+            {searchFailed
+              ? ARTWORK_SEARCH_COPY.failed
+              : ARTWORK_SEARCH_COPY.empty}
           </p>
           <p className="max-w-md text-sm text-muted-foreground text-pretty">
             {searchFailed
@@ -384,15 +380,22 @@ const ArtworkSearchResults = ({
     )
   }
 
-  return null
+  return (
+    <>
+      <div className="sr-only" role="status">
+        {searchStatus}
+      </div>
+      {resultsContent}
+    </>
+  )
 }
 
-const ChangeArtworkDialog = ({
+const ArtworkDialog = ({
   item,
   open,
   onOpenChange,
   onSelect,
-}: ChangeArtworkDialogProps) => {
+}: ArtworkDialogProps) => {
   const [state, dispatch] = useReducer(
     changeArtworkDialogReducer,
     initialChangeArtworkDialogState
@@ -435,7 +438,7 @@ const ChangeArtworkDialog = ({
   useEffect(() => {
     if (!open || !item) {
       abortActiveSearch()
-      return
+      return undefined
     }
     dispatch({ type: "dialog-reset" })
     return () => abortActiveSearch()
@@ -450,11 +453,11 @@ const ChangeArtworkDialog = ({
         <DialogContent className="flex max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col gap-5 overflow-hidden p-5 sm:max-w-4xl sm:p-7">
           <DialogHeader className="w-full min-w-0 shrink-0 pr-10">
             <DialogTitle className="text-2xl font-medium text-balance">
-              Change artwork
+              {linkCopy.actions.changeArtwork}
             </DialogTitle>
             <DialogDescription>
-              Search TMDB and choose the movie or TV show that matches this
-              saved link.
+              Search TMDB (The Movie Database) and choose the movie or TV show
+              that matches this saved link.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -562,5 +565,23 @@ const ChangeArtworkDialog = ({
     </>
   )
 }
+
+const ChangeArtworkDialog = ({
+  item,
+  open,
+  onOpenChange,
+  setArtwork,
+}: ChangeArtworkDialogProps) => (
+  <ArtworkDialog
+    item={item}
+    open={open}
+    onOpenChange={onOpenChange}
+    onSelect={(identity) => {
+      if (item) {
+        setArtwork?.(item.url, identity)
+      }
+    }}
+  />
+)
 
 export { ChangeArtworkDialog }

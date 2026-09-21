@@ -1,5 +1,6 @@
-import type { ExtractedLink } from "~/features/links/types"
 import { getMediaNodeKey } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
+
 import { LinkSelectionTreeItem } from "./link-selection-tree-item"
 
 interface LinkSelectionTreeProps {
@@ -15,14 +16,21 @@ export const LinkSelectionTree = ({
   onToggleSelect,
   onExpandFolder,
 }: LinkSelectionTreeProps) => (
-  <div className="flex min-w-0 select-none flex-col gap-1">
-    {links.map((link) => (
+  <div
+    role="tree"
+    aria-label="Choose links to save"
+    className="flex min-w-0 select-none flex-col gap-1"
+  >
+    {links.map((link, index) => (
       <LinkSelectionTreeItem
         key={getMediaNodeKey(link)}
         link={link}
         selectedIds={selectedIds}
         onToggleSelect={onToggleSelect}
         onExpandFolder={onExpandFolder}
+        level={1}
+        positionInSet={index + 1}
+        setSize={links.length}
       />
     ))}
     {links.length === 0 && (
