@@ -89,8 +89,8 @@ jobs:
       - name: Set up pnpm 12 and Node.js
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
-          version: 12.3.4
-          runtime: node@26.8.1
+          version: 12.5.1
+          runtime: node@26.9.0
           cache: true
           install: false
       - name: Update pnpm
@@ -185,8 +185,8 @@ jobs:
       - name: Set up pnpm 12 and Node.js
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
-          version: 12.3.4
-          runtime: node@26.8.1
+          version: 12.5.1
+          runtime: node@26.9.0
           cache: true
           install: false
 

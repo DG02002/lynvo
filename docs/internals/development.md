@@ -3,7 +3,7 @@
 ## First checkout
 
 Use the Node.js version in [`.node-version`](../../.node-version), currently
-26.8.1, and pnpm 12. Update pnpm with:
+26.9.0, and pnpm 12. Update pnpm with:
 
 ```sh
 pnpm self-update
