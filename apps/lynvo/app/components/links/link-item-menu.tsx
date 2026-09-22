@@ -42,6 +42,18 @@ import { ChangeArtworkDialog } from "./change-artwork-dialog"
 import { LinkDebugLogDialog } from "./link-debug-log-dialog"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 
+const MENU_LABEL_MAX_LENGTH = 80
+
+const getMenuItemLabel = (item: LinkViewItem): string => {
+  if (item.title) {
+    return item.title
+  }
+  const label = item.url
+  return label.length > MENU_LABEL_MAX_LENGTH
+    ? `${label.slice(0, MENU_LABEL_MAX_LENGTH - 1)}…`
+    : label
+}
+
 interface LinkItemMenuProps {
   item: LinkViewItem
   actions: LinkItemActions
@@ -71,7 +83,7 @@ export const LinkItemMenu = ({
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
-  const itemLabel = item.title || item.url
+  const itemLabel = getMenuItemLabel(item)
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
     : "Refresh link choices"

@@ -1,10 +1,69 @@
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { LinkViewItem } from "~/features/links/types"
 import { useRefreshActions } from "~/features/links/use-link-actions/refresh-actions"
+import { extractionOrchestration } from "~/lib/extraction/orchestration"
 
-describe("resolved mirror cache", () => {
+describe("link refresh actions", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("records the next attempt when a saved link is refreshed", async () => {
+    const item: LinkViewItem = {
+      url: "https://source.example/show",
+      timestamp: 1,
+      metadata: {
+        schemaVersion: 3,
+        source: { pluginServerId: "plugin-server-one" },
+        extraction: { extractedLinks: [] },
+        playback: { openedUrls: [] },
+        debugLog: [
+          {
+            at: 1,
+            outcome: "failed",
+            attempt: 1,
+          },
+        ],
+      },
+    }
+    const updatedLinks = [
+      {
+        url: "https://cdn.example/show.mp4",
+        label: "Show",
+        type: "file" as const,
+        mediaNodeKind: "playable" as const,
+      },
+    ]
+    vi.spyOn(extractionOrchestration, "refreshSource").mockResolvedValue(
+      updatedLinks
+    )
+    const updateLinks = vi.fn()
+    const { result } = renderHook(() =>
+      useRefreshActions({
+        links: [{ ...item, kind: "saved" }],
+        updateLinks,
+        appendDebugLog: vi.fn(),
+        cacheResolvedMirrors: vi.fn(),
+        openSelectionDialog: vi.fn(),
+        extractingItems: new Set(),
+        runWithExtractingItem: async (_itemKey, task) => task(),
+        ensureSessionIdentity: async () => true,
+      })
+    )
+
+    await act(async () => {
+      await result.current.handleSoftRefresh(item.url)
+    })
+
+    expect(updateLinks).toHaveBeenCalledWith(
+      item.url,
+      updatedLinks,
+      expect.objectContaining({ outcome: "complete", attempt: 2 })
+    )
+  })
+
   it("returns persisted mirrors without repeating extraction", async () => {
     const lazyItemUrl = "https://resolver.example/playable-item-one"
     const mirrors = [
@@ -35,6 +94,7 @@ describe("resolved mirror cache", () => {
       useRefreshActions({
         links: [{ ...item, kind: "saved" }],
         updateLinks: vi.fn(),
+        appendDebugLog: vi.fn(),
         cacheResolvedMirrors,
         openSelectionDialog: vi.fn(),
         extractingItems: new Set(),
@@ -82,6 +142,7 @@ describe("resolved mirror cache", () => {
       useRefreshActions({
         links: [{ ...item, kind: "saved" }],
         updateLinks: vi.fn(),
+        appendDebugLog: vi.fn(),
         cacheResolvedMirrors: vi.fn(),
         openSelectionDialog: vi.fn(),
         extractingItems: new Set(),

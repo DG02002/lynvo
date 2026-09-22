@@ -8,7 +8,12 @@ import {
   getMediaNodeInteractionState,
   isMirrorResolvableMediaNode,
 } from "./media-node-interaction"
-import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkViewItem,
+  MetaData,
+} from "./types"
 
 export interface SavedLinkInteractionState {
   directLink?: ExtractedLink
@@ -65,6 +70,13 @@ interface SavedLinksUpdatedOutcome {
   kind: "links-updated"
   itemUrl: string
   links: ExtractedLink[]
+  debugLogEntry?: LinkDebugLogEntry
+}
+
+interface SavedLinkRefreshAttemptOutcome {
+  kind: "refresh-attempt"
+  itemUrl: string
+  debugLogEntry: LinkDebugLogEntry
 }
 
 interface SavedLinkRefreshSucceededOutcome {
@@ -81,6 +93,7 @@ type SavedLinkInteractionOutcome =
   | SavedLinkFocusedOutcome
   | SavedLinkViewResetOutcome
   | SavedLinksUpdatedOutcome
+  | SavedLinkRefreshAttemptOutcome
   | SavedLinkRefreshSucceededOutcome
 
 export interface SavedLinkSelection {

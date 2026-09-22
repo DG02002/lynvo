@@ -1,11 +1,13 @@
 import { Schema } from "effect"
 
+import { appendLinkDebugLog } from "~/features/links/link-metadata-normalization"
 import {
   mergeUnique,
   removeLinkFromTree,
 } from "~/features/links/link-tree-metadata"
 import {
   extractedLinkSchema,
+  linkDebugLogEntrySchema,
   parseCanonicalLinkMetadataJson,
 } from "~/features/links/storage-schemas"
 import type { ExtractedLink, LinkMetadata } from "~/features/links/types"
@@ -97,7 +99,9 @@ type SavedLinkMetadataOperation =
       kind: "replaceExtraction"
       expectedExtractionJson: string
       extractedLinksJson: string
+      debugLogEntryJson?: string
     }
+  | { kind: "appendDebugLog"; debugLogEntryJson: string }
   | {
       kind: "setArtwork"
       providerId: number
@@ -358,6 +362,9 @@ const parseExtractedLinks = (serializedLinks: string): ExtractedLink[] => [
   ),
 ]
 
+const parseDebugLogEntry = (serializedEntry: string) =>
+  Schema.decodeUnknownSync(linkDebugLogEntrySchema)(JSON.parse(serializedEntry))
+
 const applyMarkOpened = (
   metadata: LinkMetadata,
   operation: Extract<SavedLinkMetadataOperation, { kind: "markOpened" }>
@@ -442,6 +449,22 @@ const applyReplaceExtraction = (
     operation.extractedLinksJson
   )
   metadata.playback.resolvedMirrors = {}
+  if (operation.debugLogEntryJson) {
+    metadata.debugLog = appendLinkDebugLog(
+      metadata,
+      parseDebugLogEntry(operation.debugLogEntryJson)
+    )
+  }
+}
+
+const applyAppendDebugLog = (
+  metadata: LinkMetadata,
+  operation: Extract<SavedLinkMetadataOperation, { kind: "appendDebugLog" }>
+): void => {
+  metadata.debugLog = appendLinkDebugLog(
+    metadata,
+    parseDebugLogEntry(operation.debugLogEntryJson)
+  )
 }
 
 const applySavedLinkMetadataOperationToMetadata = (
@@ -460,6 +483,8 @@ const applySavedLinkMetadataOperationToMetadata = (
       return applyRemoveExtractedLink(metadata, operation)
     case "replaceExtraction":
       return applyReplaceExtraction(metadata, operation)
+    case "appendDebugLog":
+      return applyAppendDebugLog(metadata, operation)
   }
 }
 

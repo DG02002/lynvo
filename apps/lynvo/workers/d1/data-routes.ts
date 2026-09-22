@@ -359,6 +359,11 @@ const metadataOperationSchema = Schema.Union([
     kind: Schema.Literal("replaceExtraction"),
     expectedExtractionJson: Schema.String,
     extractedLinksJson: Schema.String,
+    debugLogEntryJson: Schema.optional(Schema.String),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("appendDebugLog"),
+    debugLogEntryJson: Schema.NonEmptyString,
   }),
   Schema.Struct({
     kind: Schema.Literal("setArtwork"),

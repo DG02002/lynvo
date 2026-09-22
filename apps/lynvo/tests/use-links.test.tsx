@@ -214,6 +214,7 @@ describe("useLinks", () => {
 
     act(() => {
       notify?.({ type: "data-changed", payload: { version: 6 } })
+      notify?.({ type: "data-changed", payload: { version: 6 } })
     })
     await waitFor(() => {
       expect(
@@ -371,6 +372,47 @@ describe("useLinks", () => {
       expect(result.current.links[0]?.metadata.playback.openedUrls).toContain(
         "https://cdn.example.com/native-file"
       )
+    })
+  })
+
+  it("writes a retry log with a successful extraction replacement", async () => {
+    const { result } = renderLinksHook()
+    await waitFor(() => expect(result.current.links).toHaveLength(1))
+
+    const retryLogEntry = {
+      at: 200,
+      outcome: "complete" as const,
+      attempt: 2,
+      nodeCount: 1,
+    }
+    const refreshedLink = {
+      nodeKey: "test:refreshed",
+      id: "refreshed",
+      url: "https://cdn.example.com/refreshed",
+      label: "Refreshed",
+      type: "file" as const,
+      mediaNodeKind: "playable" as const,
+    }
+
+    act(() => {
+      result.current.actions.updateLinks(
+        "https://example.com/link-native",
+        [refreshedLink],
+        retryLogEntry
+      )
+    })
+
+    await waitFor(() => {
+      const metadataRequest = fetchResponses.mock.calls.find(
+        ([path]) => String(path) === "/api/data/links/apply-metadata-operation"
+      )
+      if (!metadataRequest) {
+        throw new Error("Metadata operation request was not sent")
+      }
+      const [, requestInit] = metadataRequest
+      const { operation } = JSON.parse(String(requestInit.body))
+      expect(operation).toMatchObject({ kind: "replaceExtraction" })
+      expect(JSON.parse(operation.debugLogEntryJson)).toEqual(retryLogEntry)
     })
   })
 })

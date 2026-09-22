@@ -1713,6 +1713,7 @@ describe("SaveListBrowser", () => {
   })
 
   it("renders the root item menu as a full-height trailing cell", () => {
+    const longSourceUrl = `https://source.example/cell-menu?${"a".repeat(200)}`
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/cell-menu.mp4",
       label: "cell-menu.mp4",
@@ -1720,7 +1721,7 @@ describe("SaveListBrowser", () => {
       type: "file",
     }
     const item: LinkViewItem = {
-      url: "https://source.example/cell-menu",
+      url: longSourceUrl,
       timestamp: Date.now(),
       metadata: {
         schemaVersion: 3,
@@ -1743,7 +1744,7 @@ describe("SaveListBrowser", () => {
     )
 
     const menuTrigger = screen.getByRole("button", {
-      name: "Open menu for https://source.example/cell-menu",
+      name: `Open menu for ${longSourceUrl.slice(0, 79)}…`,
     })
     expect(menuTrigger).toHaveClass("size-full!", "rounded-none!")
     expect(menuTrigger.parentElement).toHaveClass("w-16", "text-foreground")

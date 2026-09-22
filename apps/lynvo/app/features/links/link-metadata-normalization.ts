@@ -81,8 +81,8 @@ export const createLinkMetadata = (input: {
       resolvedMirrors: {},
     },
   }
-  if (input.debugLog) {
-    metadata.debugLog = input.debugLog
+  if (input.debugLog ?? input.previous?.debugLog) {
+    metadata.debugLog = input.debugLog ?? input.previous?.debugLog
   }
   return metadata
 }

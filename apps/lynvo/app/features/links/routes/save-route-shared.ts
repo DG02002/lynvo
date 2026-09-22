@@ -6,7 +6,13 @@ import { SAVE_FOLDER_PATH_SEARCH_PARAM, savePaths } from "~/lib/paths"
 
 import type { Route } from "./+types/_site.save"
 
-export const saveRouteMeta = (_: Route.MetaArgs) => [{ title: "Save | Lynvo" }]
+export const saveRouteMeta = (_: Route.MetaArgs) => [
+  { title: "Save | Lynvo" },
+  {
+    name: "description",
+    content: "Save links to open them in your preferred Android player.",
+  },
+]
 
 export const toInitialSaveItems = (savedLinks: readonly SavedLinkApiRecord[]) =>
   savedLinks.flatMap((record) => {

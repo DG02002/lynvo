@@ -60,7 +60,7 @@ interface UseLinksRefreshOptions {
 
 interface UseLinksRefreshResult {
   isInitialLoadComplete: boolean
-  scheduleRefetch: () => void
+  scheduleRefetch: (expectedVersion?: number) => void
 }
 
 interface UseInitialLinksLoadOptions {
@@ -79,7 +79,7 @@ interface UseInitialServerSnapshotOptions {
 }
 
 interface UseRealtimeLinksRefreshOptions {
-  applyFetchedSnapshot: () => Promise<void>
+  scheduleRefetch: (expectedVersion?: number) => void
   realtime: RealtimeContextValue | undefined
   store: LinksSnapshotStore
   userId: string | undefined
@@ -93,10 +93,11 @@ interface UseOfflineLinksRefreshOptions {
 
 interface UseLinksRefetchTimerOptions {
   applyFetchedSnapshot: () => Promise<void>
+  store: LinksSnapshotStore
 }
 
 interface UseLinksMutationActionsOptions {
-  scheduleRefetch: () => void
+  scheduleRefetch: (expectedVersion?: number) => void
   store: LinksSnapshotStore
 }
 
@@ -210,7 +211,7 @@ const useInitialServerSnapshot = ({
 }
 
 const useRealtimeLinksRefresh = ({
-  applyFetchedSnapshot,
+  scheduleRefetch,
   realtime,
   store,
   userId,
@@ -222,10 +223,7 @@ const useRealtimeLinksRefresh = ({
     return realtime.subscribe((message) => {
       if (message.type === "data-changed") {
         if (message.payload.version > store.getVersion()) {
-          refreshLinksSafely(
-            applyFetchedSnapshot,
-            "Unable to refresh saved links"
-          )
+          scheduleRefetch(message.payload.version)
         }
         return
       }
@@ -234,13 +232,10 @@ const useRealtimeLinksRefresh = ({
         message.dataVersion !== undefined &&
         message.dataVersion > store.getVersion()
       ) {
-        refreshLinksSafely(
-          applyFetchedSnapshot,
-          "Unable to refresh saved links"
-        )
+        scheduleRefetch(message.dataVersion)
       }
     })
-  }, [applyFetchedSnapshot, realtime, store, userId])
+  }, [realtime, scheduleRefetch, store, userId])
 }
 
 const useOfflineLinksRefresh = ({
@@ -263,14 +258,67 @@ const useOfflineLinksRefresh = ({
 
 const useLinksRefetchTimer = ({
   applyFetchedSnapshot,
-}: UseLinksRefetchTimerOptions): (() => void) => {
+  store,
+}: UseLinksRefetchTimerOptions): ((expectedVersion?: number) => void) => {
   const refetchTimerRef = useRef<number | undefined>(undefined)
-  const scheduleRefetch = useCallback(() => {
-    window.clearTimeout(refetchTimerRef.current)
-    refetchTimerRef.current = window.setTimeout(() => {
-      refreshLinksSafely(applyFetchedSnapshot, "Unable to refresh saved links")
-    }, LINKS_REFETCH_DEBOUNCE_MS)
-  }, [applyFetchedSnapshot])
+  const inFlightRef = useRef(false)
+  const pendingRefetchRef = useRef(false)
+  const forceRefetchRef = useRef(false)
+  const expectedVersionRef = useRef(0)
+  const scheduleRefetch = useCallback(
+    function scheduleRefetch(expectedVersion?: number) {
+      const currentVersion = store.getVersion()
+      if (
+        expectedVersion !== undefined &&
+        expectedVersion <= currentVersion &&
+        !pendingRefetchRef.current
+      ) {
+        return
+      }
+      if (expectedVersion !== undefined) {
+        expectedVersionRef.current = Math.max(
+          expectedVersionRef.current,
+          expectedVersion
+        )
+      } else {
+        forceRefetchRef.current = true
+      }
+      pendingRefetchRef.current = true
+      if (inFlightRef.current) {
+        return
+      }
+      window.clearTimeout(refetchTimerRef.current)
+      refetchTimerRef.current = window.setTimeout(() => {
+        refetchTimerRef.current = undefined
+        if (inFlightRef.current || !pendingRefetchRef.current) {
+          return
+        }
+        const requestedVersion = expectedVersionRef.current
+        if (
+          !forceRefetchRef.current &&
+          requestedVersion > 0 &&
+          requestedVersion <= store.getVersion()
+        ) {
+          pendingRefetchRef.current = false
+          return
+        }
+        pendingRefetchRef.current = false
+        forceRefetchRef.current = false
+        inFlightRef.current = true
+        void applyFetchedSnapshot()
+          .catch((error) =>
+            console.error("Unable to refresh saved links", error)
+          )
+          .finally(() => {
+            inFlightRef.current = false
+            if (pendingRefetchRef.current) {
+              scheduleRefetch(expectedVersionRef.current || undefined)
+            }
+          })
+      }, LINKS_REFETCH_DEBOUNCE_MS)
+    },
+    [applyFetchedSnapshot, store]
+  )
   useEffect(
     () => () => {
       window.clearTimeout(refetchTimerRef.current)
@@ -303,7 +351,10 @@ const useLinksRefresh = ({
     })
     store.applyServerSnapshot(items, response.dataVersion)
   }, [store, userId])
-  const scheduleRefetch = useLinksRefetchTimer({ applyFetchedSnapshot })
+  const scheduleRefetch = useLinksRefetchTimer({
+    applyFetchedSnapshot,
+    store,
+  })
   const isInitialLoadComplete = useInitialLinksLoad({
     initialSnapshotMeta,
     userId,
@@ -312,7 +363,7 @@ const useLinksRefresh = ({
     applyFetchedSnapshot,
   })
   useRealtimeLinksRefresh({
-    applyFetchedSnapshot,
+    scheduleRefetch,
     realtime,
     store,
     userId,
@@ -352,6 +403,7 @@ const useLinksMutationActions = ({
     enqueue: mutations.enqueueLink,
     remove: mutations.remove,
     updateLinks: mutations.updateLinks,
+    appendDebugLog: mutations.appendDebugLog,
     markOpened: mutations.markLinkAsOpened,
     cacheResolvedMirrors: mutations.cacheResolvedMirrors,
     removeLink: mutations.removeLink,

@@ -7,6 +7,7 @@ import { removeLinkFromTree } from "~/features/links/link-tree-metadata"
 import { linkMetadataSchema } from "~/features/links/storage-schemas"
 import type {
   ExtractedLink,
+  LinkDebugLogEntry,
   LinkMetadata,
   LinkViewItem,
   MetaData,
@@ -21,6 +22,7 @@ import {
 } from "./link-add"
 import {
   createUpdatedItemFromMetadata,
+  createUpdatedItemWithDebugLog,
   createUpdatedItemWithLinks,
 } from "./link-items"
 import { createOpenedLinkItem } from "./link-playback"
@@ -63,12 +65,23 @@ const toApiOperation = (
         : undefined
     }
     case "replaceExtraction": {
-      const { extractedLinks } = operation
+      const { extractedLinks, debugLogEntry } = operation
       return extractedLinks && expectedExtraction
         ? {
             kind: "replaceExtraction",
             expectedExtractionJson: JSON.stringify(expectedExtraction),
             extractedLinksJson: JSON.stringify(extractedLinks),
+            debugLogEntryJson: debugLogEntry
+              ? JSON.stringify(debugLogEntry)
+              : undefined,
+          }
+        : undefined
+    }
+    case "appendDebugLog": {
+      return operation.debugLogEntry
+        ? {
+            kind: "appendDebugLog",
+            debugLogEntryJson: JSON.stringify(operation.debugLogEntry),
           }
         : undefined
     }
@@ -81,7 +94,7 @@ export interface LinksMutationTargets {
   readonly runExclusive: <Result>(
     operation: () => Promise<Result>
   ) => Promise<Result>
-  readonly onSettled: () => void
+  readonly onSettled: (dataVersion?: number) => void
 }
 
 export const createLinksMutations = ({
@@ -89,8 +102,8 @@ export const createLinksMutations = ({
   runExclusive,
   onSettled,
 }: LinksMutationTargets) => {
-  const settleAndRefetch = () => {
-    onSettled()
+  const settleAndRefetch = (dataVersion?: number) => {
+    onSettled(dataVersion)
   }
 
   const remove = async (
@@ -112,13 +125,13 @@ export const createLinksMutations = ({
           return
         }
         try {
-          await linksDataApi.deleteById({ id: item.id })
+          const result = await linksDataApi.deleteById({ id: item.id })
+          settleAndRefetch(result.dataVersion)
         } catch (error) {
           settleAndRefetch()
           throw error
         }
       })
-      settleAndRefetch()
     } catch {
       if (!silent) {
         showErrorToast({
@@ -151,7 +164,7 @@ export const createLinksMutations = ({
           if (result.id) {
             store.settleAdd(temporaryItem.id, result.id, result.dataVersion)
           }
-          settleAndRefetch()
+          settleAndRefetch(result.dataVersion)
           return result.id ?? undefined
         } catch (error) {
           store.discardPendingAdd(temporaryItem.id)
@@ -210,22 +223,39 @@ export const createLinksMutations = ({
         return
       }
       try {
-        await linksDataApi.applyMetadataOperation({
+        const result = await linksDataApi.applyMetadataOperation({
           operationId: crypto.randomUUID(),
           id: currentItem.id,
           operation: apiOperation,
         })
-      } finally {
+        settleAndRefetch(result.dataVersion)
+      } catch (error) {
         settleAndRefetch()
+        throw error
       }
     }).catch((error) => console.error(error))
   }
 
-  const updateLinks = (targetUrl: string, links: ExtractedLink[]): void => {
+  const updateLinks = (
+    targetUrl: string,
+    links: ExtractedLink[],
+    debugLogEntry?: LinkDebugLogEntry
+  ): void => {
     void runMetadataUpdate(
       targetUrl,
-      { kind: "replaceExtraction", extractedLinks: links },
-      (item) => createUpdatedItemWithLinks({ item, links })
+      { kind: "replaceExtraction", extractedLinks: links, debugLogEntry },
+      (item) => createUpdatedItemWithLinks({ item, links, debugLogEntry })
+    )
+  }
+
+  const appendDebugLog = (
+    targetUrl: string,
+    debugLogEntry: LinkDebugLogEntry
+  ): void => {
+    void runMetadataUpdate(
+      targetUrl,
+      { kind: "appendDebugLog", debugLogEntry },
+      (item) => createUpdatedItemWithDebugLog(item, debugLogEntry)
     )
   }
 
@@ -304,6 +334,7 @@ export const createLinksMutations = ({
     addLink,
     enqueueLink,
     updateLinks,
+    appendDebugLog,
     markLinkAsOpened,
     cacheResolvedMirrors,
     setArtwork,
