@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { ExtractedLink } from "../../app/features/links/types"
 import {
@@ -558,7 +558,65 @@ describe("d1 links", () => {
     expect(completeSnapshot.results[0]?.metaJson).toContain(playableLink.url)
   })
 
-  it("retains queued extraction credentials until extraction settles", async () => {
+  it("does not strand an extraction when a duplicate save races its claim", async () => {
+    const user = await createUser()
+    const url = "https://source.example/duplicate-race"
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:duplicate-race:initial",
+      url,
+      now: NOW,
+    })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE user_id = ?1 AND url = ?2",
+      rowId: user.id,
+      label: "Duplicate Saved link extraction",
+    })
+    const duplicatePromise = enqueueSavedLinkExtraction(
+      pause.database,
+      user.id,
+      {
+        meta: emptyMetadataJson(),
+        operationId: "extraction:duplicate-race:duplicate",
+        url,
+        now: NOW + 1_000,
+      }
+    )
+
+    await pause.waitForRead(duplicatePromise)
+    const claim = await claimNextSavedLinkExtraction(env.DB, {
+      now: NOW + 2_000,
+    })
+    pause.resume()
+    const duplicate = await duplicatePromise
+    const runningSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:duplicate-race:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "failed",
+      error: "Unable to load links.",
+      now: NOW + 3_000,
+    })
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 3_000
+    )
+
+    expect(duplicate.id).toBe(queued.id)
+    expect(claim?.id).toBe(queued.id)
+    expect(runningSnapshot.results[0]?.extractionState).toBe("running")
+    expect(settled.success).toBe(true)
+    expect(snapshot.results[0]?.extractionState).toBe("failed")
+  })
+
+  it("retains and refreshes extraction credentials until extraction settles", async () => {
     const user = await createUser()
     const targetUrl = "https://source.example/protected/"
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
@@ -590,6 +648,30 @@ describe("d1 links", () => {
     })
 
     const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const duplicate = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:credential:duplicate",
+      url: targetUrl,
+      now: NOW + 500,
+      extractionCredential: {
+        targetUrl,
+        record: {
+          ciphertext: "refreshed-ciphertext",
+          nonce: "refreshed-nonce",
+          algorithm: "AES-256-GCM",
+          keyVersion: 1,
+        },
+        now: NOW + 500,
+      },
+    })
+    expect(duplicate.id).toBe(queued.id)
+    await expect(
+      getSavedLinkExtractionCredential(env.DB, user.id, queued.id ?? "")
+    ).resolves.toMatchObject({
+      ciphertext: "refreshed-ciphertext",
+      nonce: "refreshed-nonce",
+    })
+
     await settleSavedLinkExtraction(env.DB, user.id, {
       operationId: "extraction:credential:settle",
       id: queued.id ?? "",
@@ -653,6 +735,9 @@ describe("d1 links", () => {
       now: NOW + 1_000,
     })
 
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
     const settled = await settleSavedLinkExtraction(env.DB, user.id, {
       operationId: "extraction:deleted:settle",
       id: queued.id ?? "",
@@ -661,11 +746,231 @@ describe("d1 links", () => {
       extractedLinks: [playableLink],
       now: NOW + 2_000,
     })
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
     expect(settled.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_settlement_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        operation: "saved_link_extraction_settlement_abandoned",
+        reason: "link_missing",
+      }),
+    ])
     expect(
       (await listSavedLinksWithDataVersion(env.DB, user.id, NOW + 2_000))
         .results
     ).toHaveLength(0)
+  })
+
+  it("logs when settlement loses its lease after preflight", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:settlement-race:queue",
+      url: "https://source.example/settlement-race",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: queued.id ?? "",
+      label: "Saved link settlement",
+    })
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+    const settlementPromise = settleSavedLinkExtraction(
+      pause.database,
+      user.id,
+      {
+        operationId: "extraction:settlement-race:settle",
+        id: queued.id ?? "",
+        leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+        state: "complete",
+        extractedLinks: [playableLink],
+        now: NOW + 2_000,
+      }
+    )
+
+    await pause.waitForRead(settlementPromise)
+    const requeued = await requeuePendingSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:settlement-race:requeue",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      retryAfterSeconds: 30,
+      now: NOW + 1_000,
+    })
+    pause.resume()
+    const settled = await settlementPromise
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
+    expect(requeued.success).toBe(true)
+    expect(settled.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_settlement_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        observedState: "running",
+        reason: "lease_lost_during_settlement",
+      }),
+    ])
+  })
+
+  it("logs abandoned extraction mutations after a lease changes", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:abandoned-lease:queue",
+      url: "https://source.example/abandoned-lease",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+
+    const requeued = await requeuePendingSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:abandoned-lease:requeue",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      retryAfterSeconds: 30,
+      now: NOW + 1_000,
+    })
+    const lateRequeue = await requeuePendingSavedLinkExtraction(
+      env.DB,
+      user.id,
+      {
+        operationId: "extraction:abandoned-lease:late-requeue",
+        id: queued.id ?? "",
+        leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+        retryAfterSeconds: 30,
+        now: NOW + 2_000,
+      }
+    )
+    const lateSettlement = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:abandoned-lease:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "complete",
+      extractedLinks: [playableLink],
+      now: NOW + 3_000,
+    })
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
+    expect(requeued.success).toBe(true)
+    expect(lateRequeue.success).toBe(false)
+    expect(lateSettlement.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_requeue_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        reason: "lease_no_longer_active",
+      }),
+    ])
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_settlement_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        reason: "lease_no_longer_active",
+      }),
+    ])
+  })
+
+  it("logs when requeue loses its lease after preflight", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:requeue-race:queue",
+      url: "https://source.example/requeue-race",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
+      rowId: user.id,
+      label: "Saved link requeue",
+    })
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+    const requeuePromise = requeuePendingSavedLinkExtraction(
+      pause.database,
+      user.id,
+      {
+        operationId: "extraction:requeue-race:requeue",
+        id: queued.id ?? "",
+        leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+        retryAfterSeconds: 30,
+        now: NOW + 2_000,
+      }
+    )
+
+    await pause.waitForRead(requeuePromise)
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:requeue-race:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "failed",
+      error: "Unable to load links.",
+      now: NOW + 1_000,
+    })
+    pause.resume()
+    const requeued = await requeuePromise
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
+    expect(settled.success).toBe(true)
+    expect(requeued.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_requeue_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        observedState: "failed",
+        reason: "lease_lost_during_requeue",
+      }),
+    ])
+  })
+
+  it("logs when a settlement loses link ownership", async () => {
+    const owner = await createUser()
+    const newOwner = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, owner.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:ownership:queue",
+      url: "https://source.example/ownership",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(queued.id, newOwner.id)
+      .run()
+
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+    const settled = await settleSavedLinkExtraction(env.DB, owner.id, {
+      operationId: "extraction:ownership:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "complete",
+      extractedLinks: [playableLink],
+      now: NOW + 1_000,
+    })
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
+    expect(settled.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_settlement_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        reason: "link_not_owned",
+      }),
+    ])
   })
 
   it("lists retained links newest first", async () => {

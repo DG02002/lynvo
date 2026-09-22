@@ -24,6 +24,7 @@ import {
 } from "./saved-link-extraction-credentials"
 import {
   createConditionalSavedLinkCommandOperationStatement,
+  createNullableColumnEqualityCondition,
   findCompletedSavedLinkOperation,
   findSavedLinkById,
   SAVED_LINK_COLUMNS,
@@ -48,6 +49,55 @@ interface SavedLinkExtractionJob {
 
 export interface SavedLinkExtractionClaim extends SavedLinkExtractionJob {
   dataVersion: number
+}
+
+type SavedLinkExtractionAbandonmentEvent =
+  | "saved_link_extraction_settlement_abandoned"
+  | "saved_link_extraction_requeue_abandoned"
+
+interface SavedLinkExtractionLeaseContext {
+  userId: string
+  operationId: string
+  linkId: string
+  leaseExpiresAt: number
+}
+
+interface SavedLinkExtractionAbandonmentInput {
+  event: SavedLinkExtractionAbandonmentEvent
+  context: SavedLinkExtractionLeaseContext
+  reason: string
+  existingRow: LinkRow | null
+}
+
+const logAbandonedSavedLinkExtractionMutation = ({
+  event,
+  context,
+  reason,
+  existingRow,
+}: SavedLinkExtractionAbandonmentInput): void => {
+  console.warn(event, {
+    operation: event,
+    userId: context.userId,
+    operationId: context.operationId,
+    linkId: context.linkId,
+    expectedLeaseExpiresAt: context.leaseExpiresAt,
+    observedState: existingRow?.extraction_state ?? null,
+    observedLeaseExpiresAt: existingRow?.extraction_lease_expires_at ?? null,
+    reason,
+  })
+}
+
+const getSavedLinkExtractionLeaseMismatchReason = (
+  userId: string,
+  existingRow: LinkRow | null
+): string => {
+  if (!existingRow) {
+    return "link_missing"
+  }
+  if (existingRow.user_id !== userId) {
+    return "link_not_owned"
+  }
+  return "lease_no_longer_active"
 }
 
 export const enqueueSavedLinkExtraction = (
@@ -126,7 +176,7 @@ const createConditionalLinkStorageStatement = (
              AND user_id = ?1
              AND extraction_state = ?6
              AND extraction_attempts = ?7
-             AND ((?8 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?8)
+             AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?8")}
          )`
     )
     .bind(
@@ -337,12 +387,24 @@ export const settleSavedLinkExtraction = async (
     }
   }
   const existingRow = await findSavedLinkById(database, input.id)
+  const settlementContext: SavedLinkExtractionLeaseContext = {
+    userId,
+    operationId: input.operationId,
+    linkId: input.id,
+    leaseExpiresAt: input.leaseExpiresAt,
+  }
   if (
     !existingRow ||
     existingRow.user_id !== userId ||
     existingRow.extraction_state !== "running" ||
     existingRow.extraction_lease_expires_at !== input.leaseExpiresAt
   ) {
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_settlement_abandoned",
+      context: settlementContext,
+      reason: getSavedLinkExtractionLeaseMismatchReason(userId, existingRow),
+      existingRow,
+    })
     return {
       success: false,
       replayed: false,
@@ -438,8 +500,17 @@ export const settleSavedLinkExtraction = async (
     },
   })
   const updateResult = statementResults[preparation.statements.length]
+  const settlementSucceeded = (updateResult?.meta.changes ?? 0) > 0
+  if (!settlementSucceeded) {
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_settlement_abandoned",
+      context: settlementContext,
+      reason: "lease_lost_during_settlement",
+      existingRow,
+    })
+  }
   return {
-    success: (updateResult?.meta.changes ?? 0) > 0,
+    success: settlementSucceeded,
     replayed: false,
     dataVersion,
   }
@@ -458,12 +529,24 @@ export const requeuePendingSavedLinkExtraction = async (
   }
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await findSavedLinkById(database, input.id)
+  const requeueContext: SavedLinkExtractionLeaseContext = {
+    userId,
+    operationId: input.operationId,
+    linkId: input.id,
+    leaseExpiresAt: input.leaseExpiresAt,
+  }
   if (
     !existingRow ||
     existingRow.user_id !== userId ||
     existingRow.extraction_state !== "running" ||
     existingRow.extraction_lease_expires_at !== input.leaseExpiresAt
   ) {
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_requeue_abandoned",
+      context: requeueContext,
+      reason: getSavedLinkExtractionLeaseMismatchReason(userId, existingRow),
+      existingRow,
+    })
     return {
       success: false,
       replayed: false,
@@ -554,6 +637,15 @@ export const requeuePendingSavedLinkExtraction = async (
       ],
     },
   })
+  if (!changed) {
+    const observedRow = await findSavedLinkById(database, input.id)
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_requeue_abandoned",
+      context: requeueContext,
+      reason: "lease_lost_during_requeue",
+      existingRow: observedRow,
+    })
+  }
   return { success: changed, replayed: false, dataVersion }
 }
 

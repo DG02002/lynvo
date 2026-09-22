@@ -10,6 +10,7 @@ import {
   unsealRecord,
   type SealedRecord,
 } from "../../app/lib/security/sealed-record"
+import { createNullableColumnEqualityCondition } from "./saved-link-storage"
 
 export interface EncryptedSavedLinkExtractionCredential extends SealedRecord {}
 
@@ -147,7 +148,7 @@ export const createUpsertSavedLinkExtractionCredentialStatement = (
            AND extraction_state = ?10
            AND extraction_attempts = ?11
            AND updated_at = ?12
-           AND ((?13 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?13)
+           AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?13")}
            AND meta_json IS ?14
            AND EXISTS (
              SELECT 1 FROM link_command_operations
@@ -188,11 +189,11 @@ export const createConditionalDeleteSavedLinkExtractionCredentialStatement = (
            SELECT 1 FROM links
            WHERE id = ?1
              AND user_id = ?2
-             AND url = ?3
-             AND extraction_state = ?4
-             AND extraction_attempts = ?5
-             AND updated_at = ?6
-           AND ((?7 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?7)
+           AND url = ?3
+           AND extraction_state = ?4
+           AND extraction_attempts = ?5
+           AND updated_at = ?6
+           AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?7")}
            AND meta_json IS ?8
            AND EXISTS (
              SELECT 1 FROM link_command_operations
