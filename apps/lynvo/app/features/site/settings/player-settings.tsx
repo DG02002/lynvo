@@ -109,7 +109,10 @@ export const PlayerSettings = ({
             value={rangeSupportedPlayerId}
             onValueChange={updateRangeSupportedPlayer}
           >
-            <SelectTrigger className={settingsSelectTriggerClass}>
+            <SelectTrigger
+              aria-label="Links with HTTP byte-range support"
+              className={settingsSelectTriggerClass}
+            >
               <SelectValue>
                 {selectedRangeSupported && (
                   <div className="flex items-center gap-2">
@@ -149,7 +152,10 @@ export const PlayerSettings = ({
             value={rangeUnsupportedPlayerId}
             onValueChange={updateRangeUnsupportedPlayer}
           >
-            <SelectTrigger className={settingsSelectTriggerClass}>
+            <SelectTrigger
+              aria-label="Links without HTTP byte-range support"
+              className={settingsSelectTriggerClass}
+            >
               <SelectValue>
                 {selectedRangeUnsupported && (
                   <div className="flex items-center gap-2">

@@ -55,7 +55,10 @@ export const GeneralSettings = () => {
         <SettingsRow>
           <SettingsRowInfo label="Appearance" />
           <Select value={theme} onValueChange={handleAppearanceChange}>
-            <SelectTrigger className={settingsSelectTriggerClass}>
+            <SelectTrigger
+              aria-label="Appearance"
+              className={settingsSelectTriggerClass}
+            >
               <SelectValue>{selectedOption?.label || "System"}</SelectValue>
             </SelectTrigger>
             <SelectContent align="end" className={settingsSelectContentClass}>

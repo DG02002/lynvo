@@ -193,7 +193,10 @@ export function StorageSettings({ userId }: { userId?: string }) {
               onValueChange={handleRetentionChange}
               disabled={isUpdatingRetention}
             >
-              <SelectTrigger className={settingsSelectTriggerClass}>
+              <SelectTrigger
+                aria-label="Delete saved links after"
+                className={settingsSelectTriggerClass}
+              >
                 <SelectValue>{usage.retentionDays} days</SelectValue>
               </SelectTrigger>
               <SelectContent align="end" className={settingsSelectContentClass}>

@@ -47,6 +47,9 @@ describe("Storage settings browser data", () => {
     render(<StorageSettings />)
 
     expect(await screen.findByText("1.00 KB of 3.00 MB used")).toBeVisible()
+    expect(
+      screen.getByRole("combobox", { name: "Delete saved links after" })
+    ).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Delete all" }))
     expect(
       screen.getByText(

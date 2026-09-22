@@ -5,11 +5,18 @@ import type { ComponentProps } from "react"
 import { SelectTrigger as UiSelectTrigger } from "~/components/ui/select"
 import { cn } from "~/lib/utils"
 
+type SelectTriggerProps = Omit<
+  ComponentProps<typeof UiSelectTrigger>,
+  "aria-label"
+> & {
+  "aria-label": string
+}
+
 export const SelectTrigger = ({
   children,
   className,
   ...props
-}: ComponentProps<typeof UiSelectTrigger>) => (
+}: SelectTriggerProps) => (
   <UiSelectTrigger
     className={cn("[&>svg:last-child]:hidden", className)}
     {...props}
