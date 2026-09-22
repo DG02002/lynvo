@@ -340,4 +340,18 @@ Playable links to an external Android player.
   to check the result instead of grinding.
 - When the developer asks for browser verification, drive the chrome-devtools
   MCP server (dedicated persistent profile) against `pnpm dev --no-auth`
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues; use the `gh` CLI for all operations. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the canonical labels `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout with root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
   instead of automating a personal browser session.
