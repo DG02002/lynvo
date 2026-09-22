@@ -50,10 +50,23 @@ const getRefreshFailureDetails = (
   }
 }
 
-const getNextRefreshAttempt = (item: LinkViewItem | undefined): number =>
+type RefreshDebugLogDetails = Pick<
+  LinkDebugLogEntry,
+  "errorCode" | "detail" | "httpStatus"
+>
+
+type RefreshDebugLogOptions = {
+  item: LinkViewItem
+  meta?: MetaData
+  outcome: LinkDebugLogEntry["outcome"]
+  startedAt: number
+  nodeCount?: number
+} & RefreshDebugLogDetails
+
+const getNextRefreshAttempt = (item: LinkViewItem): number =>
   Math.max(
     0,
-    ...(item?.metadata.debugLog ?? []).map((entry) => entry.attempt ?? 0)
+    ...(item.metadata.debugLog ?? []).map((entry) => entry.attempt ?? 0)
   ) + 1
 
 const createRefreshDebugLogEntry = ({
@@ -63,17 +76,8 @@ const createRefreshDebugLogEntry = ({
   startedAt,
   nodeCount,
   ...details
-}: {
-  item: LinkViewItem | undefined
-  meta?: MetaData
-  outcome: LinkDebugLogEntry["outcome"]
-  startedAt: number
-  nodeCount?: number
-} & Pick<
-  LinkDebugLogEntry,
-  "errorCode" | "detail" | "httpStatus"
->): LinkDebugLogEntry => {
-  const existingMeta = item ? getLinkViewItemFlatMeta(item) : undefined
+}: RefreshDebugLogOptions): LinkDebugLogEntry => {
+  const existingMeta = getLinkViewItemFlatMeta(item)
   return {
     at: Date.now(),
     pluginServerId: meta?.pluginServerId ?? existingMeta?.pluginServerId,
@@ -84,6 +88,75 @@ const createRefreshDebugLogEntry = ({
     nodeCount,
     ...details,
   }
+}
+
+type RefreshAttemptPublicationOptions = {
+  reporter: SoftRefreshOptions["reporter"]
+  itemUrl: string
+  item: LinkViewItem | undefined
+  meta?: MetaData
+  outcome: LinkDebugLogEntry["outcome"]
+  startedAt: number
+  nodeCount?: number
+} & RefreshDebugLogDetails
+
+const publishRefreshAttempt = ({
+  reporter,
+  itemUrl,
+  item,
+  meta,
+  outcome,
+  startedAt,
+  nodeCount,
+  ...details
+}: RefreshAttemptPublicationOptions): void => {
+  if (!item) {
+    return
+  }
+  reporter.publish({
+    kind: "refresh-attempt",
+    itemUrl,
+    debugLogEntry: createRefreshDebugLogEntry({
+      item,
+      meta,
+      outcome,
+      startedAt,
+      nodeCount,
+      ...details,
+    }),
+  })
+}
+
+const publishUpdatedLinks = ({
+  reporter,
+  itemUrl,
+  item,
+  links,
+  meta,
+  startedAt,
+}: {
+  reporter: SoftRefreshOptions["reporter"]
+  itemUrl: string
+  item: LinkViewItem | undefined
+  links: ExtractedLink[]
+  meta?: MetaData
+  startedAt: number
+}): void => {
+  if (!item) {
+    return
+  }
+  reporter.publish({
+    kind: "links-updated",
+    itemUrl,
+    links,
+    debugLogEntry: createRefreshDebugLogEntry({
+      item,
+      meta,
+      outcome: "complete",
+      startedAt,
+      nodeCount: links.length,
+    }),
+  })
 }
 
 const appendRefreshFailureLog = ({
@@ -101,19 +174,14 @@ const appendRefreshFailureLog = ({
   startedAt: number
   meta?: MetaData
 }): void => {
-  if (!item) {
-    return
-  }
-  reporter.publish({
-    kind: "refresh-attempt",
+  publishRefreshAttempt({
+    reporter,
     itemUrl,
-    debugLogEntry: createRefreshDebugLogEntry({
-      item,
-      meta,
-      outcome: "failed",
-      startedAt,
-      ...getRefreshFailureDetails(cause),
-    }),
+    item,
+    meta,
+    outcome: "failed",
+    startedAt,
+    ...getRefreshFailureDetails(cause),
   })
 }
 
@@ -128,16 +196,12 @@ export const softRefreshLink = async ({
     if (currentItem) {
       const refreshedLinks =
         await extractionOrchestration.refreshSource(currentItem)
-      reporter.publish({
-        kind: "links-updated",
+      publishUpdatedLinks({
+        reporter,
         itemUrl,
+        item: currentItem,
         links: refreshedLinks,
-        debugLogEntry: createRefreshDebugLogEntry({
-          item: currentItem,
-          outcome: "complete",
-          startedAt,
-          nodeCount: refreshedLinks.length,
-        }),
+        startedAt,
       })
     }
     reporter.publish({ kind: "refresh-succeeded" })
@@ -170,19 +234,15 @@ export const hardRefreshLink = async ({
       })
 
     if (presentation.kind === "selectionDialog") {
-      if (item) {
-        reporter.publish({
-          kind: "refresh-attempt",
-          itemUrl,
-          debugLogEntry: createRefreshDebugLogEntry({
-            item,
-            meta: mergedMeta,
-            outcome: "complete",
-            startedAt,
-            nodeCount: presentation.links.length,
-          }),
-        })
-      }
+      publishRefreshAttempt({
+        reporter,
+        itemUrl,
+        item,
+        meta: mergedMeta,
+        outcome: "pending",
+        startedAt,
+        nodeCount: presentation.links.length,
+      })
       reporter.publish({
         kind: "selection-required",
         selection: {
@@ -196,40 +256,30 @@ export const hardRefreshLink = async ({
     }
 
     if (presentation.kind === "directSave") {
-      if (item) {
-        reporter.publish({
-          kind: "links-updated",
-          itemUrl,
-          links: [presentation.link],
-          debugLogEntry: createRefreshDebugLogEntry({
-            item,
-            meta: mergedMeta,
-            outcome: "complete",
-            startedAt,
-            nodeCount: 1,
-          }),
-        })
-      }
+      publishUpdatedLinks({
+        reporter,
+        itemUrl,
+        item,
+        links: [presentation.link],
+        meta: mergedMeta,
+        startedAt,
+      })
       reporter.publish({ kind: "refresh-succeeded" })
       return
     }
 
     const message = "No playable links are available. Try another Source page."
-    if (item) {
-      reporter.publish({
-        kind: "refresh-attempt",
-        itemUrl,
-        debugLogEntry: createRefreshDebugLogEntry({
-          item,
-          meta: mergedMeta,
-          outcome: "failed",
-          startedAt,
-          nodeCount: 0,
-          errorCode: "EMPTY_RESULT",
-          detail: message,
-        }),
-      })
-    }
+    publishRefreshAttempt({
+      reporter,
+      itemUrl,
+      item,
+      meta: mergedMeta,
+      outcome: "failed",
+      startedAt,
+      nodeCount: 0,
+      errorCode: "EMPTY_RESULT",
+      detail: message,
+    })
     reportGenericSavedLinkError(reporter, message)
   } catch (error) {
     appendRefreshFailureLog({

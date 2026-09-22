@@ -64,6 +64,65 @@ describe("link refresh actions", () => {
     )
   })
 
+  it("records a pending attempt when refresh needs link selection", async () => {
+    const item: LinkViewItem = {
+      url: "https://source.example/show",
+      timestamp: 1,
+      metadata: {
+        schemaVersion: 3,
+        source: {
+          pluginServerId: "plugin-server-one",
+          pluginId: "source-one",
+        },
+        extraction: { extractedLinks: [] },
+        playback: { openedUrls: [] },
+      },
+    }
+    const selectableLink = {
+      url: "https://cdn.example/show-episode-one.mp4",
+      label: "Episode one",
+      type: "file" as const,
+      mediaNodeKind: "playable" as const,
+    }
+    vi.spyOn(extractionOrchestration, "prepareSource").mockResolvedValue({
+      metadata: {},
+      mergedMeta: {
+        pluginServerId: "plugin-server-one",
+        pluginId: "source-one",
+      },
+      presentation: {
+        kind: "selectionDialog",
+        links: [selectableLink],
+      },
+    })
+    const appendDebugLog = vi.fn()
+    const openSelectionDialog = vi.fn()
+    const { result } = renderHook(() =>
+      useRefreshActions({
+        links: [{ ...item, kind: "saved" }],
+        updateLinks: vi.fn(),
+        appendDebugLog,
+        cacheResolvedMirrors: vi.fn(),
+        openSelectionDialog,
+        extractingItems: new Set(),
+        runWithExtractingItem: async (_itemKey, task) => task(),
+        ensureSessionIdentity: async () => true,
+      })
+    )
+
+    await act(async () => {
+      await result.current.handleHardRefresh(item.url)
+    })
+
+    expect(appendDebugLog).toHaveBeenCalledWith(
+      item.url,
+      expect.objectContaining({ outcome: "pending", nodeCount: 1 })
+    )
+    expect(openSelectionDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ links: [selectableLink] })
+    )
+  })
+
   it("returns persisted mirrors without repeating extraction", async () => {
     const lazyItemUrl = "https://resolver.example/playable-item-one"
     const mirrors = [

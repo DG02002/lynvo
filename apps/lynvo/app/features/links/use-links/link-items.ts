@@ -1,11 +1,10 @@
+import { appendLinkDebugLog } from "~shared/link-debug-log"
+
 import {
   getLinkViewItemFlatMeta,
   getLinkViewItemMetadata,
 } from "~/features/links/link-metadata-accessors"
-import {
-  appendLinkDebugLog,
-  createLinkMetadata,
-} from "~/features/links/link-metadata-normalization"
+import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
 import type {
   ExtractedLink,
   LinkDebugLogEntry,
@@ -62,7 +61,7 @@ export const createUpdatedItemWithLinks = ({
     extractedLinks: links,
     previous,
     debugLog: debugLogEntry
-      ? appendLinkDebugLog(previous, debugLogEntry)
+      ? appendLinkDebugLog(previous.debugLog, debugLogEntry)
       : undefined,
   })
 
@@ -79,6 +78,6 @@ export const createUpdatedItemWithDebugLog = (
   const metadata = getLinkViewItemMetadata(item)
   return createUpdatedItemFromMetadata(item, {
     ...metadata,
-    debugLog: appendLinkDebugLog(metadata, entry),
+    debugLog: appendLinkDebugLog(metadata.debugLog, entry),
   })
 }

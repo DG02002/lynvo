@@ -48,14 +48,6 @@ export const mergeDefinedMeta = (
   ),
 })
 
-const LINK_DEBUG_LOG_ENTRY_LIMIT = 20
-
-export const appendLinkDebugLog = (
-  previous: LinkMetadata | undefined,
-  entry: LinkDebugLogEntry
-): LinkDebugLogEntry[] =>
-  [...(previous?.debugLog ?? []), entry].slice(-LINK_DEBUG_LOG_ENTRY_LIMIT)
-
 export const createLinkMetadata = (input: {
   meta?: MetaData
   extractedLinks?: ExtractedLink[]

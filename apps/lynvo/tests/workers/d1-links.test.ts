@@ -1900,11 +1900,19 @@ describe("d1 links", () => {
     expect(
       getSavedLinkQueueError({
         message: "UNSUPPORTED_URL",
-        detail: "The URL does not point at playable media.",
+        detail: "An upstream response that must stay diagnostic.",
         url: "https://source.example/video",
         status: 400,
       })
     ).toBe("The URL does not point at playable media.")
+    expect(
+      getSavedLinkQueueError({
+        message: "AUTH_REQUIRED",
+        detail: "The URL does not point at playable media.",
+        url: "https://source.example/video?token=source-page-token",
+        status: 403,
+      })
+    ).toBe("Set up this source to load the link.")
     expect(
       getSavedLinkQueueError({
         message: "UNSUPPORTED_URL",

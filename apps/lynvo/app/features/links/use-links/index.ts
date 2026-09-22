@@ -260,9 +260,14 @@ const useLinksRefetchTimer = ({
   applyFetchedSnapshot,
   store,
 }: UseLinksRefetchTimerOptions): ((expectedVersion?: number) => void) => {
+  // Realtime and mutation responses identify a newer snapshot but do not
+  // contain its contents. Keep one request in flight and coalesce duplicate
+  // notifications so each observed version is fetched once.
   const refetchTimerRef = useRef<number | undefined>(undefined)
   const inFlightRef = useRef(false)
   const pendingRefetchRef = useRef(false)
+  // A failed mutation has no trustworthy version to compare, so it requests
+  // an unconditional repair fetch instead of being hidden by a later event.
   const forceRefetchRef = useRef(false)
   const expectedVersionRef = useRef(0)
   const scheduleRefetch = useCallback(

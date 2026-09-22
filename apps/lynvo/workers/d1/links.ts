@@ -1,6 +1,6 @@
 import { Schema } from "effect"
+import { appendLinkDebugLog } from "~shared/link-debug-log"
 
-import { appendLinkDebugLog } from "~/features/links/link-metadata-normalization"
 import {
   mergeUnique,
   removeLinkFromTree,
@@ -435,6 +435,16 @@ const applyRemoveExtractedLink = (
   )
 }
 
+const appendDebugLogEntry = (
+  metadata: LinkMetadata,
+  debugLogEntryJson: string
+): void => {
+  metadata.debugLog = appendLinkDebugLog(
+    metadata.debugLog,
+    parseDebugLogEntry(debugLogEntryJson)
+  )
+}
+
 const applyReplaceExtraction = (
   metadata: LinkMetadata,
   operation: Extract<SavedLinkMetadataOperation, { kind: "replaceExtraction" }>
@@ -450,10 +460,7 @@ const applyReplaceExtraction = (
   )
   metadata.playback.resolvedMirrors = {}
   if (operation.debugLogEntryJson) {
-    metadata.debugLog = appendLinkDebugLog(
-      metadata,
-      parseDebugLogEntry(operation.debugLogEntryJson)
-    )
+    appendDebugLogEntry(metadata, operation.debugLogEntryJson)
   }
 }
 
@@ -461,10 +468,7 @@ const applyAppendDebugLog = (
   metadata: LinkMetadata,
   operation: Extract<SavedLinkMetadataOperation, { kind: "appendDebugLog" }>
 ): void => {
-  metadata.debugLog = appendLinkDebugLog(
-    metadata,
-    parseDebugLogEntry(operation.debugLogEntryJson)
-  )
+  appendDebugLogEntry(metadata, operation.debugLogEntryJson)
 }
 
 const applySavedLinkMetadataOperationToMetadata = (
