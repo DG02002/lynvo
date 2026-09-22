@@ -187,6 +187,28 @@ accounting.
 Public builds do not include the Development settings UI. A direct request to
 `/settings/development` redirects to `/settings/general` instead.
 
+## Preview the production bundle
+
+Build the workspace, then serve the app's generated Worker locally with Vite's
+preview server:
+
+```sh
+pnpm build
+pnpm --filter @lynvo/app exec vite preview --host 127.0.0.1 --port 4173
+```
+
+The app package also has a `preview` script that builds only the app before
+starting Vite. Keep the explicit commands above when the check needs the full
+workspace build.
+
+The preview uses local Worker bindings and `.dev.vars`. It does not deploy or
+connect to production. Production bundles do not enable the `--no-auth`
+development bypass, so use Google sign-in or an existing local session before
+opening authenticated routes. Use one hostname consistently because a cookie
+created for `localhost` is not sent to `127.0.0.1`, or vice versa. Use the
+Chrome DevTools MCP against `http://127.0.0.1:4173` when checking route
+transitions or hard reloads.
+
 ## Test without Google OAuth
 
 Start the app with a fixed local development account when you need to test
