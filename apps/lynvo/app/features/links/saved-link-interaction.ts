@@ -1,3 +1,5 @@
+import { Result, Schema } from "effect"
+
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
@@ -121,11 +123,63 @@ export interface PluginDomainIdentity {
   domain: string
 }
 
+const PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY =
+  "lynvo:plugin-domain-suggestion-dismissals"
+const pluginDomainSuggestionDismissalsSchema = Schema.Array(Schema.String)
+
+const getPluginDomainSuggestionKey = (
+  suggestion: PluginDomainIdentity
+): string =>
+  JSON.stringify([
+    suggestion.pluginServerId,
+    suggestion.pluginId,
+    suggestion.domain,
+  ])
+
+const readDismissedPluginDomainSuggestions = (): Set<string> => {
+  try {
+    const stored = globalThis.sessionStorage.getItem(
+      PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY
+    )
+    if (!stored) {
+      return new Set()
+    }
+    const parsed = Schema.decodeUnknownResult(
+      pluginDomainSuggestionDismissalsSchema
+    )(JSON.parse(stored))
+    return Result.isFailure(parsed) ? new Set() : new Set(parsed.success)
+  } catch {
+    // SAFETY: Private browsing and server rendering can make sessionStorage
+    // unavailable; an in-memory offer remains safe in those environments.
+    return new Set()
+  }
+}
+
+export const dismissPluginDomainSuggestion = (
+  suggestion: PluginDomainSuggestion
+): void => {
+  try {
+    const dismissed = readDismissedPluginDomainSuggestions()
+    dismissed.add(getPluginDomainSuggestionKey(suggestion))
+    globalThis.sessionStorage.setItem(
+      PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY,
+      JSON.stringify([...dismissed])
+    )
+  } catch {
+    // SAFETY: A storage failure should not turn a failed add into a UI error.
+  }
+}
+
 export const shouldOfferPluginDomainSuggestion = async (
   suggestion: PluginDomainSuggestion | undefined,
   listDomains: () => Promise<readonly PluginDomainIdentity[]>
 ) => {
-  if (!suggestion) {
+  if (
+    !suggestion ||
+    readDismissedPluginDomainSuggestions().has(
+      getPluginDomainSuggestionKey(suggestion)
+    )
+  ) {
     return undefined
   }
   const domains = await listDomains()

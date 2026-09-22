@@ -1,7 +1,6 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
-
-import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
+import { LYNVO_PLUGIN_SERVER_ID } from "~shared/constants"
 
 import {
   beginPluginDomainCredentialChange,
@@ -515,6 +514,46 @@ describe("d1 plugin registry", () => {
         hasCredential: true,
       },
     ])
+
+    const change = await beginPluginDomainCredentialChange(env.DB, user.id, {
+      domainId: created.id,
+      now: NOW + 1_000,
+    })
+    expect(change.pluginServerId).toBe(LYNVO_PLUGIN_SERVER_ID)
+    await finalizePluginDomainCredentialChange(env.DB, user.id, {
+      domainId: created.id,
+      generation: change.generation,
+      attemptId: change.attemptId,
+      credential: { ...credential(), keyVersion: 2 },
+      now: NOW + 2_000,
+    })
+    await deletePluginDomainCredential(env.DB, user.id, {
+      domainId: created.id,
+      now: NOW + 3_000,
+    })
+    await expect(listPluginDomains(env.DB, user.id)).resolves.toMatchObject([
+      {
+        id: created.id,
+        hasCredential: false,
+      },
+    ])
+  })
+
+  it("rejects Plugin Domains for a Custom Plugin Server that is not ready", async () => {
+    const user = await createUser()
+    const registration = await beginPluginServerRegistration(env.DB, user.id, {
+      baseUrl: "https://pending.example",
+      now: NOW,
+    })
+
+    await expect(
+      upsertPluginDomain(env.DB, user.id, {
+        domain: "pending.example",
+        pluginServerId: registration.id,
+        pluginId: "plugin-1",
+        now: NOW + 1_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
   })
 
   it("rejects invalid domains and wrong-user access", async () => {

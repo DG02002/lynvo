@@ -1,6 +1,6 @@
 import { Effect, Exit, Fiber, Layer, Logger } from "effect"
+import { LYNVO_PLUGIN_SERVER_ID } from "~shared/constants"
 
-import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import { ExtractionService } from "~/lib/effect/services/extraction-service"
 import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"

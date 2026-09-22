@@ -6,8 +6,8 @@ import {
   type HttpBasicAuth,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
+import { LYNVO_PLUGIN_SERVER_ID } from "~shared/constants"
 
-import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import {
   PluginServerClient,
   ServiceBindingPluginServerTransport,

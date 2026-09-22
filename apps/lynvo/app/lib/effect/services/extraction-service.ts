@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect"
+import { isLynvoPluginServerId } from "~shared/constants"
 
-import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import {
   BackendError,
   ValidationError,
@@ -83,7 +83,7 @@ export class ExtractionService extends Context.Service<
           }
           if (
             options.pluginServerId &&
-            options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
+            !isLynvoPluginServerId(options.pluginServerId)
           ) {
             return yield* new ValidationError({
               message: "The saved Plugin Server is unavailable.",
@@ -96,7 +96,7 @@ export class ExtractionService extends Context.Service<
           if (lynvoResult) {
             return lynvoResult
           }
-          if (options.pluginServerId === LYNVO_PLUGIN_SERVER_ID) {
+          if (isLynvoPluginServerId(options.pluginServerId)) {
             return yield* new ValidationError({
               message: "The saved Plugin Server is unavailable.",
             })
@@ -153,7 +153,7 @@ export class ExtractionService extends Context.Service<
           }
           if (
             options.pluginServerId &&
-            options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
+            !isLynvoPluginServerId(options.pluginServerId)
           ) {
             return yield* new ValidationError({
               message: "The saved Plugin Server is unavailable.",

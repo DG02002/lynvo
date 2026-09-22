@@ -11,6 +11,7 @@ import {
 import {
   reportGenericSavedLinkError,
   reportSavedLinkError,
+  dismissPluginDomainSuggestion,
   shouldOfferPluginDomainSuggestion,
   type SavedLinkInteractionError,
   type SavedLinkInteractionReporter,
@@ -308,7 +309,7 @@ export const useSaveActions = ({
     }
   }
 
-  const dismissPluginDomainSuggestion = () => {
+  const clearPluginDomainSuggestion = () => {
     setPluginDomainSuggestion(null)
   }
 
@@ -333,6 +334,7 @@ export const useSaveActions = ({
       })
       setPluginDomainSuggestion(null)
     } catch (error) {
+      dismissPluginDomainSuggestion(pluginDomainSuggestion)
       setPluginDomainSuggestion(null)
       showErrorToast({
         title: "Couldn’t add the plugin domain",
@@ -354,7 +356,7 @@ export const useSaveActions = ({
       suggestion: pluginDomainSuggestion,
       isAdding: isAddingPluginDomain,
       add: addSuggestedPluginDomain,
-      dismiss: dismissPluginDomainSuggestion,
+      dismiss: clearPluginDomainSuggestion,
     },
   }
 }

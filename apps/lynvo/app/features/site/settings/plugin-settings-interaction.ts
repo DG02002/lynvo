@@ -1,8 +1,11 @@
 import * as React from "react"
+import {
+  isLynvoPluginServerId,
+  LYNVO_PLUGIN_SERVER_ID,
+} from "~shared/constants"
 
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { client } from "~/lib/api/client"
-import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { isProxyTokenRemoval } from "~/lib/plugin-server-proxy"
 
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
@@ -173,8 +176,8 @@ export const usePluginSettingsInteraction = ({
   const pluginServers = loadData ? fetchedPluginServers : EMPTY_PLUGIN_SERVERS
   const domains = React.useMemo(
     () =>
-      allDomains.filter(
-        (domain) => domain.pluginServerId === LYNVO_PLUGIN_SERVER_ID
+      allDomains.filter((domain) =>
+        isLynvoPluginServerId(domain.pluginServerId)
       ),
     [allDomains]
   )
