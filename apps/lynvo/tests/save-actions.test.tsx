@@ -1,11 +1,20 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
+import {
+  dismissPluginDomainSuggestion,
+  shouldOfferPluginDomainSuggestion,
+} from "~/features/links/saved-link-interaction"
 import type { LinkViewItem } from "~/features/links/types"
 import { useSaveActions } from "~/features/links/use-link-actions/save-actions"
 import { client } from "~/lib/api/client"
 
 describe("useSaveActions", () => {
+  afterEach(() => {
+    sessionStorage.clear()
+    vi.restoreAllMocks()
+  })
+
   it("dismisses a Plugin Domain suggestion when adding it fails", async () => {
     const listDomains = vi
       .spyOn(client.pluginDomains, "list")
@@ -72,6 +81,81 @@ describe("useSaveActions", () => {
 
     expect(createDomain).toHaveBeenCalledOnce()
     expect(result.current.pluginDomainDialog.suggestion).toBeNull()
+
+    listDomains.mockRestore()
+    createDomain.mockRestore()
+  })
+
+  it("clears a dismissed Plugin Domain after adding it successfully", async () => {
+    const listDomains = vi
+      .spyOn(client.pluginDomains, "list")
+      .mockResolvedValue([])
+    const createDomain = vi
+      .spyOn(client.pluginDomains, "create")
+      .mockResolvedValue({ success: true, dataVersion: 1 })
+    const createActions = (links: LinkViewItem[]) =>
+      useSaveActions({
+        url: "https://index.example.com/0:/Movies/",
+        links,
+        addLink: vi.fn(async () => "link-2"),
+        enqueueLink: vi.fn(async () => "link-2"),
+        updateLinks: vi.fn(),
+        openSelectionDialog: vi.fn(),
+        setExtractionPreview: vi.fn(),
+        closeSelectionDialog: vi.fn(),
+        selectionDialogState: {
+          open: false,
+          links: [],
+          meta: {},
+          originalUrl: "",
+        },
+        setError: vi.fn(),
+        setCurrentUrl: vi.fn(),
+        setHighlightedId: vi.fn(),
+      })
+    const { result, rerender } = renderHook(
+      ({ links }: { links: LinkViewItem[] }) => createActions(links),
+      { initialProps: { links: [] } }
+    )
+
+    await act(async () => {
+      await result.current.handleSave()
+    })
+    const completedLink: LinkViewItem = {
+      id: "link-2",
+      url: "https://index.example.com/0:/Movies/",
+      timestamp: 1,
+      metadata: {
+        schemaVersion: 3,
+        source: {
+          pluginId: "example-drive-index",
+          pluginName: "Example Drive Index",
+          pluginServerId: "lynvo:dev.lynvo.plugin-server",
+          sourceCredentialKind: "domain-password",
+        },
+        extraction: { extractedLinks: [] },
+        playback: { openedUrls: [] },
+      },
+      extractionStatus: { state: "complete" },
+    }
+    rerender({ links: [completedLink] })
+    await waitFor(() =>
+      expect(result.current.pluginDomainDialog.suggestion).not.toBeNull()
+    )
+
+    const { suggestion } = result.current.pluginDomainDialog
+    if (!suggestion) {
+      throw new Error("expected a Plugin Domain suggestion")
+    }
+    dismissPluginDomainSuggestion(suggestion)
+    await act(async () => {
+      await result.current.pluginDomainDialog.add()
+    })
+
+    expect(createDomain).toHaveBeenCalledOnce()
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => [])
+    ).resolves.toEqual(suggestion)
 
     listDomains.mockRestore()
     createDomain.mockRestore()

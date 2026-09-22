@@ -155,27 +155,12 @@ const readDismissedPluginDomainSuggestions = (): Set<string> => {
   }
 }
 
-export const dismissPluginDomainSuggestion = (
-  suggestion: PluginDomainSuggestion
+const updateDismissedPluginDomainSuggestions = (
+  update: (dismissed: Set<string>) => boolean
 ): void => {
   try {
     const dismissed = readDismissedPluginDomainSuggestions()
-    dismissed.add(getPluginDomainSuggestionKey(suggestion))
-    globalThis.sessionStorage.setItem(
-      PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY,
-      JSON.stringify([...dismissed])
-    )
-  } catch {
-    // SAFETY: A storage failure should not turn a failed add into a UI error.
-  }
-}
-
-export const clearDismissedPluginDomainSuggestion = (
-  suggestion: PluginDomainSuggestion
-): void => {
-  try {
-    const dismissed = readDismissedPluginDomainSuggestions()
-    if (!dismissed.delete(getPluginDomainSuggestionKey(suggestion))) {
+    if (!update(dismissed)) {
       return
     }
     globalThis.sessionStorage.setItem(
@@ -183,9 +168,25 @@ export const clearDismissedPluginDomainSuggestion = (
       JSON.stringify([...dismissed])
     )
   } catch {
-    // SAFETY: A storage failure should not turn a successful add into a UI error.
+    // SAFETY: Session storage is best effort; dismissal state must not break the UI.
   }
 }
+
+export const dismissPluginDomainSuggestion = (
+  suggestion: PluginDomainSuggestion
+): void => {
+  updateDismissedPluginDomainSuggestions((dismissed) => {
+    dismissed.add(getPluginDomainSuggestionKey(suggestion))
+    return true
+  })
+}
+
+export const clearDismissedPluginDomainSuggestion = (
+  suggestion: PluginDomainIdentity
+): void =>
+  updateDismissedPluginDomainSuggestions((dismissed) =>
+    dismissed.delete(getPluginDomainSuggestionKey(suggestion))
+  )
 
 export const shouldOfferPluginDomainSuggestion = async (
   suggestion: PluginDomainSuggestion | undefined,

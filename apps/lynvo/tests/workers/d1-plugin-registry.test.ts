@@ -50,6 +50,17 @@ const credential = () => ({
   keyVersion: 1,
 })
 
+const setPluginServerCredentialStatus = async (
+  serverId: string,
+  status: "pending" | "ready"
+) => {
+  await env.DB.prepare(
+    "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
+  )
+    .bind(serverId, status)
+    .run()
+}
+
 const finalizeInput = (
   registration: { id: string; generation: number; attemptId: string },
   manifest: string,
@@ -577,11 +588,7 @@ describe("d1 plugin registry", () => {
       now: NOW,
     })
 
-    await env.DB.prepare(
-      "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
-    )
-      .bind(server.id, "pending")
-      .run()
+    await setPluginServerCredentialStatus(server.id, "pending")
 
     await expect(
       setPluginDomainCredential(env.DB, user.id, {
@@ -603,20 +610,12 @@ describe("d1 plugin registry", () => {
       })
     ).rejects.toThrow("Plugin server not found or no longer available")
 
-    await env.DB.prepare(
-      "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
-    )
-      .bind(server.id, "ready")
-      .run()
+    await setPluginServerCredentialStatus(server.id, "ready")
     const change = await beginPluginDomainCredentialChange(env.DB, user.id, {
       domainId: created.id,
       now: NOW + 4_000,
     })
-    await env.DB.prepare(
-      "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
-    )
-      .bind(server.id, "pending")
-      .run()
+    await setPluginServerCredentialStatus(server.id, "pending")
 
     await expect(
       finalizePluginDomainCredentialChange(env.DB, user.id, {

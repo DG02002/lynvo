@@ -4,8 +4,10 @@ import {
   LYNVO_PLUGIN_SERVER_ID,
 } from "~shared/constants"
 
+import { clearDismissedPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { client } from "~/lib/api/client"
+import { normalizePluginDomain } from "~/lib/plugin-domain"
 import { isProxyTokenRemoval } from "~/lib/plugin-server-proxy"
 
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
@@ -211,6 +213,11 @@ export const usePluginSettingsInteraction = ({
         },
       })
       if (didAdd) {
+        clearDismissedPluginDomainSuggestion({
+          domain: normalizePluginDomain(domain),
+          pluginId,
+          pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+        })
         clearDomainDraft(pluginId)
       }
       return didAdd
@@ -220,7 +227,8 @@ export const usePluginSettingsInteraction = ({
 
   const handleDeleteDomain = React.useCallback(
     async (domainId: string) => {
-      await run({
+      const domain = domains.find((item) => item.id === domainId)
+      const didDelete = await run({
         key: domainId,
         operation: () => commands.deleteDomain(domainId),
         messages: {
@@ -228,8 +236,11 @@ export const usePluginSettingsInteraction = ({
           failure: "The domain couldn’t be removed. Try again.",
         },
       })
+      if (didDelete && domain) {
+        clearDismissedPluginDomainSuggestion(domain)
+      }
     },
-    [commands, run]
+    [commands, domains, run]
   )
   const handleSetDomainCredential = React.useCallback(
     async (domainId: string, password: string, username?: string) =>
