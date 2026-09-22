@@ -1,6 +1,6 @@
 import { Alert01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import * as React from "react"
+import { useId, useState } from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { SelectTrigger } from "~/components/select-trigger"
@@ -60,6 +60,7 @@ const formatBytes = (bytes: number) => {
 
 export function StorageSettings({ userId }: { userId?: string }) {
   const timeBucket = useMinuteTimeBucket()
+  const retentionLabelId = useId()
   const { data: usage, reload } = useAsyncResource(
     () => readStorageSettings(),
     [timeBucket],
@@ -67,11 +68,10 @@ export function StorageSettings({ userId }: { userId?: string }) {
       cacheKey: userId ? getSettingsDataCacheKey("storage", userId) : undefined,
     }
   )
-  const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
-  const [isClearingLinks, setIsClearingLinks] = React.useState(false)
-  const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] =
-    React.useState(false)
-  const [pendingRetention, setPendingRetention] = React.useState<{
+  const [isUpdatingRetention, setIsUpdatingRetention] = useState(false)
+  const [isClearingLinks, setIsClearingLinks] = useState(false)
+  const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] = useState(false)
+  const [pendingRetention, setPendingRetention] = useState<{
     days: number
     expiredLinkCount: number
   } | null>(null)
@@ -91,6 +91,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
 
   const usagePercent = (usage.enforcedBytes / usage.storageLimitBytes) * 100
   const progressPercent = Math.min(usagePercent, 100)
+  const retentionValue = `${usage.retentionDays} days`
 
   const handleRetentionChange = async (value: string | null) => {
     if (!value) {
@@ -187,14 +188,20 @@ export function StorageSettings({ userId }: { userId?: string }) {
 
         <SettingsList>
           <SettingsRow>
-            <SettingsRowInfo label="Delete saved links after" />
+            <SettingsRowInfo
+              label="Delete saved links after"
+              labelId={retentionLabelId}
+            />
             <Select
               value={String(usage.retentionDays)}
               onValueChange={handleRetentionChange}
               disabled={isUpdatingRetention}
             >
-              <SelectTrigger className={settingsSelectTriggerClass}>
-                <SelectValue>{usage.retentionDays} days</SelectValue>
+              <SelectTrigger
+                aria-labelledby={retentionLabelId}
+                className={settingsSelectTriggerClass}
+              >
+                <SelectValue>{retentionValue}</SelectValue>
               </SelectTrigger>
               <SelectContent align="end" className={settingsSelectContentClass}>
                 <SelectGroup>

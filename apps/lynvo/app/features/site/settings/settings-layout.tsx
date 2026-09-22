@@ -10,6 +10,7 @@ import {
   settingsRowClass,
   settingsRowDescriptionClass,
   settingsRowLabelClass,
+  settingsWarningTextClass,
 } from "./settings-layout-classes"
 
 export function SettingsPanel({
@@ -103,12 +104,14 @@ export function SettingsActionRow(props: SettingsActionRowProps) {
 
 export function SettingsRowInfo({
   label,
+  labelId,
   description,
   note,
   destructive = false,
   className,
 }: {
   label: string
+  labelId?: string
   description?: string
   note?: string
   destructive?: boolean
@@ -122,6 +125,7 @@ export function SettingsRowInfo({
       )}
     >
       <span
+        id={labelId}
         className={cn(settingsRowLabelClass, destructive && "text-destructive")}
       >
         {label}
@@ -137,7 +141,9 @@ export function SettingsRowInfo({
         </span>
       )}
       {note && (
-        <span className="text-xs leading-normal text-yellow-600 dark:text-yellow-400">
+        <span
+          className={cn("text-xs leading-normal", settingsWarningTextClass)}
+        >
           {note}
         </span>
       )}

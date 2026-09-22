@@ -1,4 +1,5 @@
 import { useTheme } from "next-themes"
+import { useId } from "react"
 
 import { SelectTrigger } from "~/components/select-trigger"
 import {
@@ -37,6 +38,7 @@ export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const mediaView = useMediaView()
+  const appearanceLabelId = useId()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -48,15 +50,19 @@ export const GeneralSettings = () => {
   const selectedOption = appearanceOptions.find(
     (option) => option.value === theme
   )
+  const appearanceValue = selectedOption?.label || "System"
 
   return (
     <SettingsPanel>
       <SettingsList>
         <SettingsRow>
-          <SettingsRowInfo label="Appearance" />
+          <SettingsRowInfo label="Appearance" labelId={appearanceLabelId} />
           <Select value={theme} onValueChange={handleAppearanceChange}>
-            <SelectTrigger className={settingsSelectTriggerClass}>
-              <SelectValue>{selectedOption?.label || "System"}</SelectValue>
+            <SelectTrigger
+              aria-labelledby={appearanceLabelId}
+              className={settingsSelectTriggerClass}
+            >
+              <SelectValue>{appearanceValue}</SelectValue>
             </SelectTrigger>
             <SelectContent align="end" className={settingsSelectContentClass}>
               <SelectGroup>

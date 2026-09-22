@@ -1,5 +1,5 @@
 import { Result, Schema } from "effect"
-import * as React from "react"
+import { useCallback, useId } from "react"
 
 import { SelectTrigger } from "~/components/select-trigger"
 import {
@@ -55,7 +55,7 @@ export const PlayerSettings = ({
     }
   )
   const cloudPreferences = cloudPreferencesData
-  const updateCloudPreferences = React.useCallback(
+  const updateCloudPreferences = useCallback(
     async (preferences: {
       rangeSupportedPlayerId?: PlayerId
       rangeUnsupportedPlayerId?: PlayerId
@@ -84,6 +84,8 @@ export const PlayerSettings = ({
   const selectedRangeUnsupported = PLAYER_DEFINITIONS.find(
     (p) => p.id === rangeUnsupportedPlayerId
   )
+  const rangeSupportedLabelId = useId()
+  const rangeUnsupportedLabelId = useId()
   const updateRangeSupportedPlayer = (value: string | null) => {
     const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
@@ -103,13 +105,17 @@ export const PlayerSettings = ({
         <SettingsRow>
           <SettingsRowInfo
             label="Links with HTTP byte-range support"
+            labelId={rangeSupportedLabelId}
             description="Use for links that let the player jump forward or backward."
           />
           <Select
             value={rangeSupportedPlayerId}
             onValueChange={updateRangeSupportedPlayer}
           >
-            <SelectTrigger className={settingsSelectTriggerClass}>
+            <SelectTrigger
+              aria-labelledby={rangeSupportedLabelId}
+              className={settingsSelectTriggerClass}
+            >
               <SelectValue>
                 {selectedRangeSupported && (
                   <div className="flex items-center gap-2">
@@ -143,13 +149,17 @@ export const PlayerSettings = ({
         <SettingsRow>
           <SettingsRowInfo
             label="Links without HTTP byte-range support"
+            labelId={rangeUnsupportedLabelId}
             description="Use for links that may not let the player jump forward or backward."
           />
           <Select
             value={rangeUnsupportedPlayerId}
             onValueChange={updateRangeUnsupportedPlayer}
           >
-            <SelectTrigger className={settingsSelectTriggerClass}>
+            <SelectTrigger
+              aria-labelledby={rangeUnsupportedLabelId}
+              className={settingsSelectTriggerClass}
+            >
               <SelectValue>
                 {selectedRangeUnsupported && (
                   <div className="flex items-center gap-2">
