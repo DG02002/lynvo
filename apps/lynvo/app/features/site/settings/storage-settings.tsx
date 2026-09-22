@@ -60,6 +60,7 @@ const formatBytes = (bytes: number) => {
 
 export function StorageSettings({ userId }: { userId?: string }) {
   const timeBucket = useMinuteTimeBucket()
+  const retentionLabelId = React.useId()
   const { data: usage, reload } = useAsyncResource(
     () => readStorageSettings(),
     [timeBucket],
@@ -91,6 +92,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
 
   const usagePercent = (usage.enforcedBytes / usage.storageLimitBytes) * 100
   const progressPercent = Math.min(usagePercent, 100)
+  const retentionValue = `${usage.retentionDays} days`
 
   const handleRetentionChange = async (value: string | null) => {
     if (!value) {
@@ -187,17 +189,20 @@ export function StorageSettings({ userId }: { userId?: string }) {
 
         <SettingsList>
           <SettingsRow>
-            <SettingsRowInfo label="Delete saved links after" />
+            <SettingsRowInfo
+              label="Delete saved links after"
+              labelId={retentionLabelId}
+            />
             <Select
               value={String(usage.retentionDays)}
               onValueChange={handleRetentionChange}
               disabled={isUpdatingRetention}
             >
               <SelectTrigger
-                aria-label="Delete saved links after"
+                aria-labelledby={retentionLabelId}
                 className={settingsSelectTriggerClass}
               >
-                <SelectValue>{usage.retentionDays} days</SelectValue>
+                <SelectValue>{retentionValue}</SelectValue>
               </SelectTrigger>
               <SelectContent align="end" className={settingsSelectContentClass}>
                 <SelectGroup>

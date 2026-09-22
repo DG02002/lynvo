@@ -116,13 +116,18 @@ export const MediaViewSelector = ({
               {option.isBeta && (
                 <Badge
                   variant="outline"
-                  className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:border-yellow-400/30 dark:bg-yellow-400/10 dark:text-yellow-400"
+                  className="border-yellow-500/30 bg-yellow-500/10 text-yellow-800 dark:border-yellow-400/30 dark:bg-yellow-400/10 dark:text-yellow-200"
                 >
                   Beta
                 </Badge>
               )}
             </span>
-            <span className="text-xs leading-normal text-muted-foreground">
+            <span
+              className={cn(
+                "text-xs leading-normal",
+                isSelected ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
               {option.description}
             </span>
           </span>

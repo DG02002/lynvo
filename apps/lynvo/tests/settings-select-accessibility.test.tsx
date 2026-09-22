@@ -1,3 +1,4 @@
+import { within } from "@testing-library/react"
 import { ThemeProvider } from "next-themes"
 import { renderToString } from "react-dom/server"
 import { createMemoryRouter, RouterProvider } from "react-router"
@@ -6,12 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { GeneralSettings } from "~/features/site/settings/general-settings"
 import { PlayerSettings } from "~/features/site/settings/player-settings"
-
-const getComboboxes = (markup: string) => {
-  const container = document.createElement("div")
-  container.innerHTML = markup
-  return [...container.querySelectorAll('[role="combobox"]')]
-}
 
 const renderGeneralSettings = () => {
   const router = createMemoryRouter(
@@ -51,19 +46,19 @@ describe("settings select accessibility", () => {
   })
 
   it("gives the Appearance select an accessible name in SSR output", () => {
-    const [appearanceSelect] = getComboboxes(renderGeneralSettings())
+    document.body.innerHTML = renderGeneralSettings()
+    const appearanceSelect = within(document.body).getByRole("combobox")
 
     expect(appearanceSelect).toHaveAccessibleName("Appearance")
   })
 
   it("gives Player settings selects accessible names in SSR output", () => {
-    const playerSelects = getComboboxes(
-      renderToString(
-        <PlayerPreferenceProvider>
-          <PlayerSettings />
-        </PlayerPreferenceProvider>
-      )
+    document.body.innerHTML = renderToString(
+      <PlayerPreferenceProvider>
+        <PlayerSettings />
+      </PlayerPreferenceProvider>
     )
+    const playerSelects = within(document.body).getAllByRole("combobox")
 
     expect(playerSelects).toHaveLength(2)
     expect(playerSelects[0]).toHaveAccessibleName(

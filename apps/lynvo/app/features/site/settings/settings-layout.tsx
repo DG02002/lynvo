@@ -103,12 +103,14 @@ export function SettingsActionRow(props: SettingsActionRowProps) {
 
 export function SettingsRowInfo({
   label,
+  labelId,
   description,
   note,
   destructive = false,
   className,
 }: {
   label: string
+  labelId?: string
   description?: string
   note?: string
   destructive?: boolean
@@ -122,6 +124,7 @@ export function SettingsRowInfo({
       )}
     >
       <span
+        id={labelId}
         className={cn(settingsRowLabelClass, destructive && "text-destructive")}
       >
         {label}

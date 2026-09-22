@@ -84,6 +84,8 @@ export const PlayerSettings = ({
   const selectedRangeUnsupported = PLAYER_DEFINITIONS.find(
     (p) => p.id === rangeUnsupportedPlayerId
   )
+  const rangeSupportedLabelId = React.useId()
+  const rangeUnsupportedLabelId = React.useId()
   const updateRangeSupportedPlayer = (value: string | null) => {
     const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
@@ -103,6 +105,7 @@ export const PlayerSettings = ({
         <SettingsRow>
           <SettingsRowInfo
             label="Links with HTTP byte-range support"
+            labelId={rangeSupportedLabelId}
             description="Use for links that let the player jump forward or backward."
           />
           <Select
@@ -110,7 +113,7 @@ export const PlayerSettings = ({
             onValueChange={updateRangeSupportedPlayer}
           >
             <SelectTrigger
-              aria-label="Links with HTTP byte-range support"
+              aria-labelledby={rangeSupportedLabelId}
               className={settingsSelectTriggerClass}
             >
               <SelectValue>
@@ -146,6 +149,7 @@ export const PlayerSettings = ({
         <SettingsRow>
           <SettingsRowInfo
             label="Links without HTTP byte-range support"
+            labelId={rangeUnsupportedLabelId}
             description="Use for links that may not let the player jump forward or backward."
           />
           <Select
@@ -153,7 +157,7 @@ export const PlayerSettings = ({
             onValueChange={updateRangeUnsupportedPlayer}
           >
             <SelectTrigger
-              aria-label="Links without HTTP byte-range support"
+              aria-labelledby={rangeUnsupportedLabelId}
               className={settingsSelectTriggerClass}
             >
               <SelectValue>
