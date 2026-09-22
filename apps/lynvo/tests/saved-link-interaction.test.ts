@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 
 import {
+  clearDismissedPluginDomainSuggestion,
   dismissPluginDomainSuggestion,
   getSavedLinkInteractionState,
   shouldOfferPluginDomainSuggestion,
@@ -112,5 +113,22 @@ describe("saved link interaction", () => {
         throw new Error("a dismissed suggestion should not list domains")
       })
     ).resolves.toBeUndefined()
+  })
+
+  it("allows a dismissed Plugin Domain to be offered after it is cleared", async () => {
+    const suggestion = {
+      domain: "index.example.com",
+      pluginServerId: "server",
+      pluginId: "source",
+      pluginName: "Source",
+      sanitizedUrl: "https://index.example.com/Movies/",
+    }
+
+    dismissPluginDomainSuggestion(suggestion)
+    clearDismissedPluginDomainSuggestion(suggestion)
+
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => [])
+    ).resolves.toEqual(suggestion)
   })
 })

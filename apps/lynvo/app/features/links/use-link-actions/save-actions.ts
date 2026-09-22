@@ -9,6 +9,7 @@ import {
   type SaveIntentResult,
 } from "~/features/links/save-intent"
 import {
+  clearDismissedPluginDomainSuggestion,
   reportGenericSavedLinkError,
   reportSavedLinkError,
   dismissPluginDomainSuggestion,
@@ -332,6 +333,7 @@ export const useSaveActions = ({
       showSuccessToast({
         title: `${pluginDomainSuggestion.pluginName} domain added`,
       })
+      clearDismissedPluginDomainSuggestion(pluginDomainSuggestion)
       setPluginDomainSuggestion(null)
     } catch (error) {
       dismissPluginDomainSuggestion(pluginDomainSuggestion)

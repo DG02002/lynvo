@@ -170,6 +170,23 @@ export const dismissPluginDomainSuggestion = (
   }
 }
 
+export const clearDismissedPluginDomainSuggestion = (
+  suggestion: PluginDomainSuggestion
+): void => {
+  try {
+    const dismissed = readDismissedPluginDomainSuggestions()
+    if (!dismissed.delete(getPluginDomainSuggestionKey(suggestion))) {
+      return
+    }
+    globalThis.sessionStorage.setItem(
+      PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY,
+      JSON.stringify([...dismissed])
+    )
+  } catch {
+    // SAFETY: A storage failure should not turn a successful add into a UI error.
+  }
+}
+
 export const shouldOfferPluginDomainSuggestion = async (
   suggestion: PluginDomainSuggestion | undefined,
   listDomains: () => Promise<readonly PluginDomainIdentity[]>

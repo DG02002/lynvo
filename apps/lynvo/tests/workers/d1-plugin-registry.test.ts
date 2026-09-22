@@ -505,6 +505,13 @@ describe("d1 plugin registry", () => {
     })
 
     expect(created.id).toBeTruthy()
+    const updated = await upsertPluginDomain(env.DB, user.id, {
+      domain: "managed.example",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "bhadoo-google-drive-index",
+      now: NOW + 500,
+    })
+    expect(updated.id).toBe(created.id)
     await expect(listPluginDomains(env.DB, user.id)).resolves.toMatchObject([
       {
         id: created.id,
@@ -552,6 +559,72 @@ describe("d1 plugin registry", () => {
         pluginServerId: registration.id,
         pluginId: "plugin-1",
         now: NOW + 1_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+  })
+
+  it("rejects credential changes when a Custom Plugin Server is not ready", async () => {
+    const user = await createUser()
+    const server = await registerReadyServer(
+      user.id,
+      "https://credential-status.example"
+    )
+    const created = await upsertPluginDomain(env.DB, user.id, {
+      domain: "credential-status.example",
+      pluginServerId: server.id,
+      pluginId: "plugin-1",
+      credential: credential(),
+      now: NOW,
+    })
+
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, "pending")
+      .run()
+
+    await expect(
+      setPluginDomainCredential(env.DB, user.id, {
+        domainId: created.id,
+        credential: { ...credential(), ciphertext: "changed-ciphertext" },
+        now: NOW + 1_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+    await expect(
+      beginPluginDomainCredentialChange(env.DB, user.id, {
+        domainId: created.id,
+        now: NOW + 2_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+    await expect(
+      deletePluginDomainCredential(env.DB, user.id, {
+        domainId: created.id,
+        now: NOW + 3_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, "ready")
+      .run()
+    const change = await beginPluginDomainCredentialChange(env.DB, user.id, {
+      domainId: created.id,
+      now: NOW + 4_000,
+    })
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, "pending")
+      .run()
+
+    await expect(
+      finalizePluginDomainCredentialChange(env.DB, user.id, {
+        domainId: created.id,
+        generation: change.generation,
+        attemptId: change.attemptId,
+        credential: { ...credential(), keyVersion: 2 },
+        now: NOW + 5_000,
       })
     ).rejects.toThrow("Plugin server not found or no longer available")
   })
