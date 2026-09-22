@@ -20,6 +20,9 @@ export interface PluginDomainSuggestion extends PluginDomainCandidate {
   pluginServerId: string
 }
 
+const normalizePluginDomainHostname = (hostname: string): string =>
+  hostname.toLowerCase().replace(/\.$/, "")
+
 export const parsePluginDomainInput = (
   value: string
 ): ParsedPluginDomainInput => {
@@ -54,7 +57,7 @@ export const normalizePluginDomain = (value: string): string => {
     throw new Error("Enter a valid domain")
   }
 
-  return parsedUrl.hostname.toLowerCase().replace(/\.$/, "")
+  return normalizePluginDomainHostname(parsedUrl.hostname)
 }
 
 export const parsePluginDomainCandidate = (
@@ -66,7 +69,7 @@ export const parsePluginDomainCandidate = (
       return undefined
     }
     const candidate: PluginDomainCandidate = {
-      domain: extracted.url.hostname.toLowerCase().replace(/\.$/, ""),
+      domain: normalizePluginDomainHostname(extracted.url.hostname),
       sanitizedUrl: extracted.url.toString(),
     }
     if (extracted.username) {

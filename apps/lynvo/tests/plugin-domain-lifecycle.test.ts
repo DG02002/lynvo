@@ -63,6 +63,11 @@ describe("Plugin Domain lifecycle", () => {
       sanitizedUrl: "https://example.com/movies/",
     })
     expect(
+      parsePluginDomainCandidate("https://Example.COM./movies/")
+    ).toMatchObject({
+      domain: "example.com",
+    })
+    expect(
       parsePluginDomainCandidate("http://example.com/0:/Movies/")
     ).toBeUndefined()
   })
