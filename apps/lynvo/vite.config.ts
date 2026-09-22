@@ -118,18 +118,23 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  // Lazy route modules introduce these dependencies after the initial scan.
-  // Pre-bundle them up front so Vite does not reload with a second React copy
-  // while the first visit is hydrating.
+  // Lazy routes, always-mounted providers, and deferred UI reach these packages
+  // through separate entry paths. Pre-bundle them up front so Vite does not
+  // change the module graph mid-session or duplicate React during hydration.
   optimizeDeps: {
     include: [
       "@base-ui/react/*",
       "@hugeicons/core-free-icons",
       "@hugeicons/react",
+      "@shikijs/langs/json",
+      "@shikijs/themes/github-dark",
+      "@shikijs/themes/github-light-default",
       "@tanstack/react-form",
       "class-variance-authority",
       "effect",
       "lucide-react",
+      "shiki/core",
+      "shiki/engine/javascript",
     ],
   },
   plugins: [
