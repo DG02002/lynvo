@@ -333,6 +333,7 @@ export const useSaveActions = ({
       })
       setPluginDomainSuggestion(null)
     } catch (error) {
+      setPluginDomainSuggestion(null)
       showErrorToast({
         title: "Couldn’t add the plugin domain",
         description: getUserFacingErrorMessage(

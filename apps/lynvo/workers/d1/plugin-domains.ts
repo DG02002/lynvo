@@ -1,3 +1,4 @@
+import { LYNVO_PLUGIN_SERVER_ID } from "../../app/lib/constants"
 import { normalizePluginDomain } from "../../app/lib/plugin-domain"
 import {
   createChangedWriteGuard,
@@ -139,11 +140,11 @@ const createPluginDomainCredentialInsertPlaceholders = (
   credentialFinalizedAttemptId: `?${stateBindingStart + 2}`,
 })
 
-const createReadyPluginServerExistsSql = (
+const createAvailablePluginServerExistsSql = (
   pluginServerId: string,
   userId: string
 ): string =>
-  `EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ${pluginServerId} AND user_id = ${userId} AND credential_status = 'ready')`
+  `(${pluginServerId} = '${LYNVO_PLUGIN_SERVER_ID}' OR EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ${pluginServerId} AND user_id = ${userId} AND credential_status = 'ready'))`
 
 const createPluginDomainStateWhereSql = ({
   id,
@@ -155,7 +156,20 @@ const createPluginDomainStateWhereSql = ({
   credentialAttemptId,
   credentialFinalizedAttemptId,
 }: PluginDomainStatePredicatePlaceholders): string =>
-  `id = ${id} AND user_id = ${userId} AND plugin_server_id = ${pluginServerId} AND domain = ${domain} AND plugin_id = ${pluginId} AND credential_generation IS ${credentialGeneration} AND credential_attempt_id IS ${credentialAttemptId} AND credential_finalized_attempt_id IS ${credentialFinalizedAttemptId} AND ${createReadyPluginServerExistsSql(pluginServerId, userId)}`
+  `id = ${id} AND user_id = ${userId} AND plugin_server_id = ${pluginServerId} AND domain = ${domain} AND plugin_id = ${pluginId} AND credential_generation IS ${credentialGeneration} AND credential_attempt_id IS ${credentialAttemptId} AND credential_finalized_attempt_id IS ${credentialFinalizedAttemptId} AND ${createAvailablePluginServerExistsSql(pluginServerId, userId)}`
+
+const requireAvailablePluginServer = async (
+  database: D1Database,
+  userId: string,
+  pluginServerId: string
+): Promise<void> => {
+  // The Lynvo Plugin Server is reached through an environment service binding,
+  // so it intentionally has no user_plugin_servers row.
+  if (pluginServerId === LYNVO_PLUGIN_SERVER_ID) {
+    return
+  }
+  await requireReadyPluginServerRow(database, userId, pluginServerId)
+}
 
 const createPluginDomainStatePredicate = ({
   id,
@@ -263,7 +277,7 @@ const raisePluginDomainWriteConflict = async (
   if (!domain || domain.user_id !== userId) {
     throw new PluginDomainNotFoundError()
   }
-  await requireReadyPluginServerRow(database, userId, domain.plugin_server_id)
+  await requireAvailablePluginServer(database, userId, domain.plugin_server_id)
   throw new PluginCredentialChangeSupersededError()
 }
 
@@ -557,7 +571,7 @@ const insertNewPluginDomain = async ({
     ...preparation.statements,
     database
       .prepare(
-        `INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id, credential_generation, credential_attempt_id, credential_finalized_attempt_id) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 WHERE ${createReadyPluginServerExistsSql("?3", "?2")}`
+        `INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id, credential_generation, credential_attempt_id, credential_finalized_attempt_id) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 WHERE ${createAvailablePluginServerExistsSql("?3", "?2")}`
       )
       .bind(
         domainRow.id,
@@ -644,7 +658,7 @@ const updateExistingPluginDomain = async ({
     ...preparation.statements,
     database
       .prepare(
-        `UPDATE user_plugin_domains SET plugin_id = ?4, domain = ?5, credential_generation = ?6, credential_attempt_id = ?7, credential_finalized_attempt_id = ?8 WHERE id = ?1 AND user_id = ?2 AND plugin_server_id = ?3 AND ${createReadyPluginServerExistsSql("?3", "?2")}`
+        `UPDATE user_plugin_domains SET plugin_id = ?4, domain = ?5, credential_generation = ?6, credential_attempt_id = ?7, credential_finalized_attempt_id = ?8 WHERE id = ?1 AND user_id = ?2 AND plugin_server_id = ?3 AND ${createAvailablePluginServerExistsSql("?3", "?2")}`
       )
       .bind(
         existingDomainRow.id,
@@ -703,17 +717,13 @@ const upsertPluginDomainOnce = async (
   userId: string,
   input: PluginDomainUpsertInput
 ): Promise<UpsertPluginDomainResult> => {
-  const pluginServer = await requireReadyPluginServerRow(
-    database,
-    userId,
-    input.pluginServerId
-  )
+  await requireAvailablePluginServer(database, userId, input.pluginServerId)
   const domain = normalizePluginDomain(input.domain)
   const existingDomainRow = await database
     .prepare(
       `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3`
     )
-    .bind(userId, pluginServer.id, domain)
+    .bind(userId, input.pluginServerId, domain)
     .first<PluginDomainRow>()
 
   if (!existingDomainRow) {
@@ -855,7 +865,7 @@ export const beginPluginDomainCredentialChange = async (
     userId,
     input.domainId
   )
-  await requireReadyPluginServerRow(
+  await requireAvailablePluginServer(
     database,
     userId,
     domainRow.plugin_server_id
@@ -977,7 +987,7 @@ export const finalizePluginDomainCredentialChange = async (
       ...finalizationLedgerMutation.statements,
       database
         .prepare(
-          `UPDATE user_plugin_domains SET credential_finalized_attempt_id = ?3 WHERE id = ?1 AND user_id = ?2 AND credential_generation = ?4 AND credential_attempt_id = ?5 AND credential_finalized_attempt_id IS NULL AND ${createReadyPluginServerExistsSql("?6", "?2")}`
+          `UPDATE user_plugin_domains SET credential_finalized_attempt_id = ?3 WHERE id = ?1 AND user_id = ?2 AND credential_generation = ?4 AND credential_attempt_id = ?5 AND credential_finalized_attempt_id IS NULL AND ${createAvailablePluginServerExistsSql("?6", "?2")}`
         )
         .bind(
           domainRow.id,
@@ -1006,7 +1016,7 @@ export const deletePluginDomainCredential = async (
     userId,
     input.domainId
   )
-  await requireReadyPluginServerRow(
+  await requireAvailablePluginServer(
     database,
     userId,
     domainRow.plugin_server_id

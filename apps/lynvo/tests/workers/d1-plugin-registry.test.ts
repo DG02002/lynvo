@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 
+import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
+
 import {
   beginPluginDomainCredentialChange,
   deletePluginDomainById,
@@ -491,6 +493,28 @@ describe("d1 plugin registry", () => {
     const remaining = await listPluginDomains(env.DB, user.id)
     expect(remaining).toHaveLength(0)
     await expectLedgerMatchesInventory(user.id)
+  })
+
+  it("supports Plugin Domains for the Lynvo Plugin Server", async () => {
+    const user = await createUser()
+    const created = await upsertPluginDomain(env.DB, user.id, {
+      domain: "managed.example",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "bhadoo-google-drive-index",
+      credential: credential(),
+      now: NOW,
+    })
+
+    expect(created.id).toBeTruthy()
+    await expect(listPluginDomains(env.DB, user.id)).resolves.toMatchObject([
+      {
+        id: created.id,
+        pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+        pluginId: "bhadoo-google-drive-index",
+        domain: "managed.example",
+        hasCredential: true,
+      },
+    ])
   })
 
   it("rejects invalid domains and wrong-user access", async () => {
