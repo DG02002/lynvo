@@ -1,3 +1,5 @@
+import { Result, Schema } from "effect"
+
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
@@ -121,11 +123,81 @@ export interface PluginDomainIdentity {
   domain: string
 }
 
+const PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY =
+  "lynvo:plugin-domain-suggestion-dismissals"
+const pluginDomainSuggestionDismissalsSchema = Schema.Array(Schema.String)
+
+const getPluginDomainSuggestionKey = (
+  suggestion: PluginDomainIdentity
+): string =>
+  JSON.stringify([
+    suggestion.pluginServerId,
+    suggestion.pluginId,
+    suggestion.domain,
+  ])
+
+const readDismissedPluginDomainSuggestions = (): Set<string> => {
+  try {
+    const stored = globalThis.sessionStorage.getItem(
+      PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY
+    )
+    if (!stored) {
+      return new Set()
+    }
+    const parsed = Schema.decodeUnknownResult(
+      pluginDomainSuggestionDismissalsSchema
+    )(JSON.parse(stored))
+    return Result.isFailure(parsed) ? new Set() : new Set(parsed.success)
+  } catch {
+    // SAFETY: Private browsing and server rendering can make sessionStorage
+    // unavailable; an in-memory offer remains safe in those environments.
+    return new Set()
+  }
+}
+
+const updateDismissedPluginDomainSuggestions = (
+  update: (dismissed: Set<string>) => boolean
+): void => {
+  try {
+    const dismissed = readDismissedPluginDomainSuggestions()
+    if (!update(dismissed)) {
+      return
+    }
+    globalThis.sessionStorage.setItem(
+      PLUGIN_DOMAIN_SUGGESTION_DISMISSALS_STORAGE_KEY,
+      JSON.stringify([...dismissed])
+    )
+  } catch {
+    // SAFETY: Session storage is best effort; dismissal state must not break the UI.
+  }
+}
+
+export const dismissPluginDomainSuggestion = (
+  suggestion: PluginDomainSuggestion
+): void => {
+  updateDismissedPluginDomainSuggestions((dismissed) => {
+    dismissed.add(getPluginDomainSuggestionKey(suggestion))
+    return true
+  })
+}
+
+export const clearDismissedPluginDomainSuggestion = (
+  suggestion: PluginDomainIdentity
+): void =>
+  updateDismissedPluginDomainSuggestions((dismissed) =>
+    dismissed.delete(getPluginDomainSuggestionKey(suggestion))
+  )
+
 export const shouldOfferPluginDomainSuggestion = async (
   suggestion: PluginDomainSuggestion | undefined,
   listDomains: () => Promise<readonly PluginDomainIdentity[]>
 ) => {
-  if (!suggestion) {
+  if (
+    !suggestion ||
+    readDismissedPluginDomainSuggestions().has(
+      getPluginDomainSuggestionKey(suggestion)
+    )
+  ) {
     return undefined
   }
   const domains = await listDomains()

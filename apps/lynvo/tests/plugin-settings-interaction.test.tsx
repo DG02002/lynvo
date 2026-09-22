@@ -1,11 +1,23 @@
-import { act, renderHook } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { LYNVO_PLUGIN_SERVER_ID } from "~shared/constants"
 
+import {
+  dismissPluginDomainSuggestion,
+  shouldOfferPluginDomainSuggestion,
+} from "~/features/links/saved-link-interaction"
 import {
   usePluginSettingsInteraction,
   type PluginSettingsCommands,
 } from "~/features/site/settings/plugin-settings-interaction"
+import { client } from "~/lib/api/client"
 
 describe("Plugin settings interaction", () => {
+  afterEach(() => {
+    sessionStorage.clear()
+    vi.restoreAllMocks()
+  })
+
   it("clears a Plugin Domain draft only after confirmed success", async () => {
     const submitted: unknown[] = []
     const commands: Partial<PluginSettingsCommands> = {
@@ -49,6 +61,66 @@ describe("Plugin settings interaction", () => {
     expect(result.current.domainOperations.protected).toEqual({
       status: "success",
     })
+  })
+
+  it("clears a dismissed Plugin Domain after adding it from settings", async () => {
+    const suggestion = {
+      domain: "protected.example",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "protected",
+      pluginName: "Protected Source",
+      sanitizedUrl: "https://protected.example/",
+    }
+    dismissPluginDomainSuggestion(suggestion)
+    const { result } = renderHook(() =>
+      usePluginSettingsInteraction({
+        commands: { createDomain: async () => ({ success: true }) },
+        loadData: false,
+      })
+    )
+
+    act(() => {
+      result.current.updateDomainDraft("protected", {
+        domain: " Protected.Example ",
+      })
+    })
+    await act(async () => {
+      expect(await result.current.addDomain("protected")).toBe(true)
+    })
+
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => [])
+    ).resolves.toEqual(suggestion)
+  })
+
+  it("clears a dismissed Plugin Domain after deleting it from settings", async () => {
+    const domain = {
+      id: "domain-1",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "protected",
+      domain: "protected.example",
+      hasCredential: false,
+    }
+    vi.spyOn(client.pluginDomains, "list").mockResolvedValue([domain])
+    vi.spyOn(client.pluginServers, "list").mockResolvedValue([])
+    const deleteDomain = vi
+      .fn<PluginSettingsCommands["deleteDomain"]>()
+      .mockResolvedValue({ success: true })
+    const { result } = renderHook(() =>
+      usePluginSettingsInteraction({
+        commands: { deleteDomain },
+      })
+    )
+
+    await waitFor(() => expect(result.current.domains).toEqual([domain]))
+    dismissPluginDomainSuggestion(domain)
+    await act(async () => {
+      await result.current.handleDeleteDomain(domain.id)
+    })
+
+    await expect(
+      shouldOfferPluginDomainSuggestion(domain, async () => [])
+    ).resolves.toEqual(domain)
   })
 
   it("keeps a failed draft and supports retrying the same Plugin", async () => {

@@ -9,8 +9,10 @@ import {
   type SaveIntentResult,
 } from "~/features/links/save-intent"
 import {
+  clearDismissedPluginDomainSuggestion,
   reportGenericSavedLinkError,
   reportSavedLinkError,
+  dismissPluginDomainSuggestion,
   shouldOfferPluginDomainSuggestion,
   type SavedLinkInteractionError,
   type SavedLinkInteractionReporter,
@@ -308,7 +310,7 @@ export const useSaveActions = ({
     }
   }
 
-  const dismissPluginDomainSuggestion = () => {
+  const clearPluginDomainSuggestion = () => {
     setPluginDomainSuggestion(null)
   }
 
@@ -331,8 +333,11 @@ export const useSaveActions = ({
       showSuccessToast({
         title: `${pluginDomainSuggestion.pluginName} domain added`,
       })
+      clearDismissedPluginDomainSuggestion(pluginDomainSuggestion)
       setPluginDomainSuggestion(null)
     } catch (error) {
+      dismissPluginDomainSuggestion(pluginDomainSuggestion)
+      setPluginDomainSuggestion(null)
       showErrorToast({
         title: "Couldn’t add the plugin domain",
         description: getUserFacingErrorMessage(
@@ -353,7 +358,7 @@ export const useSaveActions = ({
       suggestion: pluginDomainSuggestion,
       isAdding: isAddingPluginDomain,
       add: addSuggestedPluginDomain,
-      dismiss: dismissPluginDomainSuggestion,
+      dismiss: clearPluginDomainSuggestion,
     },
   }
 }

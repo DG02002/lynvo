@@ -4,6 +4,10 @@ import type {
   PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { DateTime, Effect, Exit } from "effect"
+import {
+  isLynvoPluginServerId,
+  LYNVO_PLUGIN_SERVER_ID,
+} from "~shared/constants"
 
 import { getD1Database } from "../../../../workers/d1/db"
 import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
@@ -14,7 +18,6 @@ import {
   UsageLimitExhaustedError,
   type ManagedPluginId,
 } from "../../../../workers/d1/usage"
-import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import {
   ExtractionError,
   getErrorMessage,
@@ -63,7 +66,7 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
   > {
     if (
       options.pluginServerId &&
-      options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
+      !isLynvoPluginServerId(options.pluginServerId)
     ) {
       return undefined
     }

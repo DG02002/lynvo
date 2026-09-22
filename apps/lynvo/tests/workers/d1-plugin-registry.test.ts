@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
+import { LYNVO_PLUGIN_SERVER_ID } from "~shared/constants"
 
 import {
   beginPluginDomainCredentialChange,
@@ -48,6 +49,17 @@ const credential = () => ({
   algorithm: "AES-256-GCM" as const,
   keyVersion: 1,
 })
+
+const setPluginServerCredentialStatus = async (
+  serverId: string,
+  status: "pending" | "ready"
+) => {
+  await env.DB.prepare(
+    "UPDATE user_plugin_servers SET credential_status = ?2 WHERE id = ?1"
+  )
+    .bind(serverId, status)
+    .run()
+}
 
 const finalizeInput = (
   registration: { id: string; generation: number; attemptId: string },
@@ -491,6 +503,129 @@ describe("d1 plugin registry", () => {
     const remaining = await listPluginDomains(env.DB, user.id)
     expect(remaining).toHaveLength(0)
     await expectLedgerMatchesInventory(user.id)
+  })
+
+  it("supports Plugin Domains for the Lynvo Plugin Server", async () => {
+    const user = await createUser()
+    const created = await upsertPluginDomain(env.DB, user.id, {
+      domain: "managed.example",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "bhadoo-google-drive-index",
+      credential: credential(),
+      now: NOW,
+    })
+
+    expect(created.id).toBeTruthy()
+    const updated = await upsertPluginDomain(env.DB, user.id, {
+      domain: "managed.example",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "bhadoo-google-drive-index",
+      now: NOW + 500,
+    })
+    expect(updated.id).toBe(created.id)
+    await expect(listPluginDomains(env.DB, user.id)).resolves.toMatchObject([
+      {
+        id: created.id,
+        pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+        pluginId: "bhadoo-google-drive-index",
+        domain: "managed.example",
+        hasCredential: true,
+      },
+    ])
+
+    const change = await beginPluginDomainCredentialChange(env.DB, user.id, {
+      domainId: created.id,
+      now: NOW + 1_000,
+    })
+    expect(change.pluginServerId).toBe(LYNVO_PLUGIN_SERVER_ID)
+    await finalizePluginDomainCredentialChange(env.DB, user.id, {
+      domainId: created.id,
+      generation: change.generation,
+      attemptId: change.attemptId,
+      credential: { ...credential(), keyVersion: 2 },
+      now: NOW + 2_000,
+    })
+    await deletePluginDomainCredential(env.DB, user.id, {
+      domainId: created.id,
+      now: NOW + 3_000,
+    })
+    await expect(listPluginDomains(env.DB, user.id)).resolves.toMatchObject([
+      {
+        id: created.id,
+        hasCredential: false,
+      },
+    ])
+  })
+
+  it("rejects Plugin Domains for a Custom Plugin Server that is not ready", async () => {
+    const user = await createUser()
+    const registration = await beginPluginServerRegistration(env.DB, user.id, {
+      baseUrl: "https://pending.example",
+      now: NOW,
+    })
+
+    await expect(
+      upsertPluginDomain(env.DB, user.id, {
+        domain: "pending.example",
+        pluginServerId: registration.id,
+        pluginId: "plugin-1",
+        now: NOW + 1_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+  })
+
+  it("rejects credential changes when a Custom Plugin Server is not ready", async () => {
+    const user = await createUser()
+    const server = await registerReadyServer(
+      user.id,
+      "https://credential-status.example"
+    )
+    const created = await upsertPluginDomain(env.DB, user.id, {
+      domain: "credential-status.example",
+      pluginServerId: server.id,
+      pluginId: "plugin-1",
+      credential: credential(),
+      now: NOW,
+    })
+
+    await setPluginServerCredentialStatus(server.id, "pending")
+
+    await expect(
+      setPluginDomainCredential(env.DB, user.id, {
+        domainId: created.id,
+        credential: { ...credential(), ciphertext: "changed-ciphertext" },
+        now: NOW + 1_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+    await expect(
+      beginPluginDomainCredentialChange(env.DB, user.id, {
+        domainId: created.id,
+        now: NOW + 2_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+    await expect(
+      deletePluginDomainCredential(env.DB, user.id, {
+        domainId: created.id,
+        now: NOW + 3_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+
+    await setPluginServerCredentialStatus(server.id, "ready")
+    const change = await beginPluginDomainCredentialChange(env.DB, user.id, {
+      domainId: created.id,
+      now: NOW + 4_000,
+    })
+    await setPluginServerCredentialStatus(server.id, "pending")
+
+    await expect(
+      finalizePluginDomainCredentialChange(env.DB, user.id, {
+        domainId: created.id,
+        generation: change.generation,
+        attemptId: change.attemptId,
+        credential: { ...credential(), keyVersion: 2 },
+        now: NOW + 5_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
   })
 
   it("rejects invalid domains and wrong-user access", async () => {

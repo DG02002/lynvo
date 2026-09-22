@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 
 import {
+  clearDismissedPluginDomainSuggestion,
+  dismissPluginDomainSuggestion,
   getSavedLinkInteractionState,
   shouldOfferPluginDomainSuggestion,
 } from "~/features/links/saved-link-interaction"
@@ -19,6 +21,10 @@ const createItem = (overrides: Partial<LinkViewItem> = {}): LinkViewItem => ({
 })
 
 describe("saved link interaction", () => {
+  afterEach(() => {
+    sessionStorage.clear()
+  })
+
   it("calculates direct-play eligibility from an explicit clock", () => {
     const item = createItem({
       metadata: {
@@ -89,5 +95,40 @@ describe("saved link interaction", () => {
     await expect(
       shouldOfferPluginDomainSuggestion(suggestion, async () => [suggestion])
     ).resolves.toBeUndefined()
+  })
+
+  it("does not re-offer a dismissed Plugin Domain in the same session", async () => {
+    const suggestion = {
+      domain: "index.example.com",
+      pluginServerId: "server",
+      pluginId: "source",
+      pluginName: "Source",
+      sanitizedUrl: "https://index.example.com/Movies/",
+    }
+
+    dismissPluginDomainSuggestion(suggestion)
+
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => {
+        throw new Error("a dismissed suggestion should not list domains")
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  it("allows a dismissed Plugin Domain to be offered after it is cleared", async () => {
+    const suggestion = {
+      domain: "index.example.com",
+      pluginServerId: "server",
+      pluginId: "source",
+      pluginName: "Source",
+      sanitizedUrl: "https://index.example.com/Movies/",
+    }
+
+    dismissPluginDomainSuggestion(suggestion)
+    clearDismissedPluginDomainSuggestion(suggestion)
+
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => [])
+    ).resolves.toEqual(suggestion)
   })
 })

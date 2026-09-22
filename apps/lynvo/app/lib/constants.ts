@@ -8,7 +8,6 @@ export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
 export const OUTBOUND_HTTP_MAX_REDIRECTS = 3
 export const OUTBOUND_HTTP_MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 export const OUTBOUND_HTTP_TIMEOUT_MS = 15_000
-export const LYNVO_PLUGIN_SERVER_ID = "lynvo:dev.lynvo.plugin-server"
 export const DOCS_SCROLL_OFFSET_PX = 112
 export const DOCS_SCROLL_END_TOLERANCE_PX = 2
 export const DEVICE_AUTH_STATUS_POLL_INTERVAL_MS = 2_000
