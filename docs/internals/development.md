@@ -184,6 +184,22 @@ per-account daily and monthly usage counters for that browser; global capacity
 and Plugin Server limits still apply. Turn it off when you need to test usage
 accounting.
 
+## Preview the production bundle
+
+Build the workspace, then serve the app's generated Worker locally with Vite's
+preview server:
+
+```sh
+pnpm build
+pnpm --filter @lynvo/app exec vite preview --host 127.0.0.1 --port 4173
+```
+
+The preview uses local Worker bindings and `.dev.vars`. It does not deploy or
+connect to production. Production bundles do not enable the `--no-auth`
+development bypass, so use Google sign-in or an existing local session before
+opening authenticated routes. Use the Chrome DevTools MCP against
+`http://127.0.0.1:4173` when checking route transitions or hard reloads.
+
 Public builds do not include the Development settings UI. A direct request to
 `/settings/development` redirects to `/settings/general` instead.
 
