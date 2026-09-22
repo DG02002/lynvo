@@ -5,21 +5,12 @@ import type { ComponentProps } from "react"
 import { SelectTrigger as UiSelectTrigger } from "~/components/ui/select"
 import { cn } from "~/lib/utils"
 
-type AccessibleNameProps =
-  | {
-      "aria-label": string
-      "aria-labelledby"?: never
-    }
-  | {
-      "aria-label"?: never
-      "aria-labelledby": string
-    }
-
 type SelectTriggerProps = Omit<
   ComponentProps<typeof UiSelectTrigger>,
   "aria-label" | "aria-labelledby"
-> &
-  AccessibleNameProps
+> & {
+  "aria-labelledby": string
+}
 
 export const SelectTrigger = ({
   children,

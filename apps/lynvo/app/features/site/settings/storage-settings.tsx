@@ -1,6 +1,6 @@
 import { Alert01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import * as React from "react"
+import { useId, useState } from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { SelectTrigger } from "~/components/select-trigger"
@@ -60,7 +60,7 @@ const formatBytes = (bytes: number) => {
 
 export function StorageSettings({ userId }: { userId?: string }) {
   const timeBucket = useMinuteTimeBucket()
-  const retentionLabelId = React.useId()
+  const retentionLabelId = useId()
   const { data: usage, reload } = useAsyncResource(
     () => readStorageSettings(),
     [timeBucket],
@@ -68,11 +68,10 @@ export function StorageSettings({ userId }: { userId?: string }) {
       cacheKey: userId ? getSettingsDataCacheKey("storage", userId) : undefined,
     }
   )
-  const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
-  const [isClearingLinks, setIsClearingLinks] = React.useState(false)
-  const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] =
-    React.useState(false)
-  const [pendingRetention, setPendingRetention] = React.useState<{
+  const [isUpdatingRetention, setIsUpdatingRetention] = useState(false)
+  const [isClearingLinks, setIsClearingLinks] = useState(false)
+  const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] = useState(false)
+  const [pendingRetention, setPendingRetention] = useState<{
     days: number
     expiredLinkCount: number
   } | null>(null)

@@ -1,5 +1,5 @@
 import { Result, Schema } from "effect"
-import * as React from "react"
+import { useCallback, useId } from "react"
 
 import { SelectTrigger } from "~/components/select-trigger"
 import {
@@ -55,7 +55,7 @@ export const PlayerSettings = ({
     }
   )
   const cloudPreferences = cloudPreferencesData
-  const updateCloudPreferences = React.useCallback(
+  const updateCloudPreferences = useCallback(
     async (preferences: {
       rangeSupportedPlayerId?: PlayerId
       rangeUnsupportedPlayerId?: PlayerId
@@ -84,8 +84,8 @@ export const PlayerSettings = ({
   const selectedRangeUnsupported = PLAYER_DEFINITIONS.find(
     (p) => p.id === rangeUnsupportedPlayerId
   )
-  const rangeSupportedLabelId = React.useId()
-  const rangeUnsupportedLabelId = React.useId()
+  const rangeSupportedLabelId = useId()
+  const rangeUnsupportedLabelId = useId()
   const updateRangeSupportedPlayer = (value: string | null) => {
     const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
