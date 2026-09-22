@@ -50,6 +50,62 @@ export interface SavedLinkExtractionClaim extends SavedLinkExtractionJob {
   dataVersion: number
 }
 
+const logAbandonedSavedLinkExtractionSettlement = (input: {
+  userId: string
+  operationId: string
+  id: string
+  leaseExpiresAt: number
+  reason: string
+  existingRow: LinkRow | null
+}): void => {
+  console.warn("Saved link extraction settlement abandoned", {
+    operation: "saved_link_extraction_settlement_abandoned",
+    userId: input.userId,
+    operationId: input.operationId,
+    linkId: input.id,
+    expectedLeaseExpiresAt: input.leaseExpiresAt,
+    observedState: input.existingRow?.extraction_state ?? null,
+    observedLeaseExpiresAt:
+      input.existingRow?.extraction_lease_expires_at ?? null,
+    reason: input.reason,
+  })
+}
+
+const getSavedLinkExtractionSettlementMismatchReason = (
+  userId: string,
+  existingRow: LinkRow | null
+): string => {
+  if (!existingRow) {
+    return "link_missing"
+  }
+  if (existingRow.user_id !== userId) {
+    return "link_not_owned"
+  }
+  return "lease_no_longer_active"
+}
+
+const didSettleSavedLinkExtraction = (input: {
+  changes: number
+  userId: string
+  operationId: string
+  id: string
+  leaseExpiresAt: number
+  existingRow: LinkRow
+}): boolean => {
+  const success = input.changes > 0
+  if (!success) {
+    logAbandonedSavedLinkExtractionSettlement({
+      userId: input.userId,
+      operationId: input.operationId,
+      id: input.id,
+      leaseExpiresAt: input.leaseExpiresAt,
+      reason: "lease_lost_during_settlement",
+      existingRow: input.existingRow,
+    })
+  }
+  return success
+}
+
 export const enqueueSavedLinkExtraction = (
   database: D1Database,
   userId: string,
@@ -343,6 +399,17 @@ export const settleSavedLinkExtraction = async (
     existingRow.extraction_state !== "running" ||
     existingRow.extraction_lease_expires_at !== input.leaseExpiresAt
   ) {
+    logAbandonedSavedLinkExtractionSettlement({
+      userId,
+      operationId: input.operationId,
+      id: input.id,
+      leaseExpiresAt: input.leaseExpiresAt,
+      reason: getSavedLinkExtractionSettlementMismatchReason(
+        userId,
+        existingRow
+      ),
+      existingRow,
+    })
     return {
       success: false,
       replayed: false,
@@ -439,7 +506,14 @@ export const settleSavedLinkExtraction = async (
   })
   const updateResult = statementResults[preparation.statements.length]
   return {
-    success: (updateResult?.meta.changes ?? 0) > 0,
+    success: didSettleSavedLinkExtraction({
+      changes: updateResult?.meta.changes ?? 0,
+      userId,
+      operationId: input.operationId,
+      id: input.id,
+      leaseExpiresAt: input.leaseExpiresAt,
+      existingRow,
+    }),
     replayed: false,
     dataVersion,
   }

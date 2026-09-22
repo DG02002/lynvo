@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { ExtractedLink } from "../../app/features/links/types"
 import {
@@ -558,6 +558,64 @@ describe("d1 links", () => {
     expect(completeSnapshot.results[0]?.metaJson).toContain(playableLink.url)
   })
 
+  it("does not strand an extraction when a duplicate save races its claim", async () => {
+    const user = await createUser()
+    const url = "https://source.example/duplicate-race"
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:duplicate-race:initial",
+      url,
+      now: NOW,
+    })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE user_id = ?1 AND url = ?2",
+      rowId: user.id,
+      label: "Duplicate Saved link extraction",
+    })
+    const duplicatePromise = enqueueSavedLinkExtraction(
+      pause.database,
+      user.id,
+      {
+        meta: emptyMetadataJson(),
+        operationId: "extraction:duplicate-race:duplicate",
+        url,
+        now: NOW + 1_000,
+      }
+    )
+
+    await pause.waitForRead(duplicatePromise)
+    const claim = await claimNextSavedLinkExtraction(env.DB, {
+      now: NOW + 2_000,
+    })
+    pause.resume()
+    const duplicate = await duplicatePromise
+    const runningSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:duplicate-race:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "failed",
+      error: "Unable to load links.",
+      now: NOW + 3_000,
+    })
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 3_000
+    )
+
+    expect(duplicate.id).toBe(queued.id)
+    expect(claim?.id).toBe(queued.id)
+    expect(runningSnapshot.results[0]?.extractionState).toBe("running")
+    expect(settled.success).toBe(true)
+    expect(snapshot.results[0]?.extractionState).toBe("failed")
+  })
+
   it("retains queued extraction credentials until extraction settles", async () => {
     const user = await createUser()
     const targetUrl = "https://source.example/protected/"
@@ -653,6 +711,9 @@ describe("d1 links", () => {
       now: NOW + 1_000,
     })
 
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
     const settled = await settleSavedLinkExtraction(env.DB, user.id, {
       operationId: "extraction:deleted:settle",
       id: queued.id ?? "",
@@ -661,7 +722,18 @@ describe("d1 links", () => {
       extractedLinks: [playableLink],
       now: NOW + 2_000,
     })
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
     expect(settled.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "Saved link extraction settlement abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        operation: "saved_link_extraction_settlement_abandoned",
+        reason: "link_missing",
+      }),
+    ])
     expect(
       (await listSavedLinksWithDataVersion(env.DB, user.id, NOW + 2_000))
         .results

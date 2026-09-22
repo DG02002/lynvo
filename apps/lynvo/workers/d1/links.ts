@@ -931,21 +931,37 @@ const updateExistingSavedLink = async ({
   extractionState,
   retentionDays,
 }: UpdateExistingSavedLinkInput): Promise<CreateOrUpdateSavedLinkAttemptResult> => {
+  const preservesActiveExtraction =
+    extractionState === "queued" && existingRow.extraction_state === "running"
+  const nextExtractionState = preservesActiveExtraction
+    ? existingRow.extraction_state
+    : extractionState
+  let nextExtractionAttempts = existingRow.extraction_attempts
+  let nextExtractionAvailableAt = existingRow.extraction_available_at
+  if (!preservesActiveExtraction) {
+    nextExtractionAttempts =
+      extractionState === "queued" ? 0 : existingRow.extraction_attempts
+    nextExtractionAvailableAt = extractionState === "queued" ? input.now : null
+  }
   const nextRow: LinkRow = {
     ...existingRow,
     title: input.title ?? existingRow.title,
     meta_json: metadataJson,
     updated_at: input.now,
     expires_at: input.now + retentionDays * DAY_MS,
-    extraction_state: extractionState,
-    extraction_error: null,
-    extraction_attempts:
-      extractionState === "queued" ? 0 : existingRow.extraction_attempts,
-    extraction_available_at: extractionState === "queued" ? input.now : null,
-    extraction_lease_expires_at: null,
+    extraction_state: nextExtractionState,
+    extraction_error: preservesActiveExtraction
+      ? existingRow.extraction_error
+      : null,
+    extraction_attempts: nextExtractionAttempts,
+    extraction_available_at: nextExtractionAvailableAt,
+    extraction_lease_expires_at: preservesActiveExtraction
+      ? existingRow.extraction_lease_expires_at
+      : null,
   }
-  const extractionCredentialStatement =
-    extractionState === "queued" && input.extractionCredential
+  let extractionCredentialStatement: D1PreparedStatement | undefined
+  if (!preservesActiveExtraction && extractionState === "queued") {
+    extractionCredentialStatement = input.extractionCredential
       ? createUpsertSavedLinkExtractionCredentialStatement({
           database,
           userId,
@@ -963,6 +979,7 @@ const updateExistingSavedLink = async ({
           targetUrl: nextRow.url,
           expectedLink: toSavedLinkExtractionCredentialLinkState(nextRow),
         })
+  }
   const { dataVersion, changed } = await executeGuardedSavedLinkMetaWrite({
     database,
     userId,
@@ -971,7 +988,7 @@ const updateExistingSavedLink = async ({
     nextRow,
     updateStatement: database
       .prepare(
-        "UPDATE links SET title = ?3, meta_json = ?4, updated_at = ?5, expires_at = ?6, extraction_state = ?7, extraction_error = ?8, extraction_attempts = ?9, extraction_available_at = ?10, extraction_lease_expires_at = ?11 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?12"
+        "UPDATE links SET title = ?3, meta_json = ?4, updated_at = ?5, expires_at = ?6, extraction_state = ?7, extraction_error = ?8, extraction_attempts = ?9, extraction_available_at = ?10, extraction_lease_expires_at = ?11 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?12 AND extraction_state = ?13 AND extraction_attempts = ?14 AND ((?15 IS NULL AND extraction_available_at IS NULL) OR extraction_available_at = ?15) AND ((?16 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?16)"
       )
       .bind(
         existingRow.id,
@@ -985,7 +1002,11 @@ const updateExistingSavedLink = async ({
         nextRow.extraction_attempts,
         nextRow.extraction_available_at,
         nextRow.extraction_lease_expires_at,
-        existingRow.meta_json
+        existingRow.meta_json,
+        existingRow.extraction_state,
+        existingRow.extraction_attempts,
+        existingRow.extraction_available_at,
+        existingRow.extraction_lease_expires_at
       ),
     trailingStatement: extractionCredentialStatement,
   })
