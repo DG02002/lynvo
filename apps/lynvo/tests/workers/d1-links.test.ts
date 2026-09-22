@@ -764,6 +764,61 @@ describe("d1 links", () => {
     ).toHaveLength(0)
   })
 
+  it("logs when settlement loses its lease after preflight", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:settlement-race:queue",
+      url: "https://source.example/settlement-race",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: queued.id ?? "",
+      label: "Saved link settlement",
+    })
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+    const settlementPromise = settleSavedLinkExtraction(
+      pause.database,
+      user.id,
+      {
+        operationId: "extraction:settlement-race:settle",
+        id: queued.id ?? "",
+        leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+        state: "complete",
+        extractedLinks: [playableLink],
+        now: NOW + 2_000,
+      }
+    )
+
+    await pause.waitForRead(settlementPromise)
+    const requeued = await requeuePendingSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:settlement-race:requeue",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      retryAfterSeconds: 30,
+      now: NOW + 1_000,
+    })
+    pause.resume()
+    const settled = await settlementPromise
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
+    expect(requeued.success).toBe(true)
+    expect(settled.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_settlement_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        observedState: "running",
+        reason: "lease_lost_during_settlement",
+      }),
+    ])
+  })
+
   it("logs abandoned extraction mutations after a lease changes", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
@@ -821,6 +876,61 @@ describe("d1 links", () => {
       expect.objectContaining({
         linkId: queued.id,
         reason: "lease_no_longer_active",
+      }),
+    ])
+  })
+
+  it("logs when requeue loses its lease after preflight", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:requeue-race:queue",
+      url: "https://source.example/requeue-race",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
+      rowId: user.id,
+      label: "Saved link requeue",
+    })
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+    const requeuePromise = requeuePendingSavedLinkExtraction(
+      pause.database,
+      user.id,
+      {
+        operationId: "extraction:requeue-race:requeue",
+        id: queued.id ?? "",
+        leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+        retryAfterSeconds: 30,
+        now: NOW + 2_000,
+      }
+    )
+
+    await pause.waitForRead(requeuePromise)
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:requeue-race:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "failed",
+      error: "Unable to load links.",
+      now: NOW + 1_000,
+    })
+    pause.resume()
+    const requeued = await requeuePromise
+    const warningCalls = warning.mock.calls
+    warning.mockRestore()
+
+    expect(settled.success).toBe(true)
+    expect(requeued.success).toBe(false)
+    expect(warningCalls).toContainEqual([
+      "saved_link_extraction_requeue_abandoned",
+      expect.objectContaining({
+        linkId: queued.id,
+        observedState: "failed",
+        reason: "lease_lost_during_requeue",
       }),
     ])
   })

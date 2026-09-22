@@ -100,23 +100,6 @@ const getSavedLinkExtractionLeaseMismatchReason = (
   return "lease_no_longer_active"
 }
 
-const logAbandonedSavedLinkExtractionSettlementIfNeeded = (input: {
-  changes: number
-  context: SavedLinkExtractionLeaseContext
-  existingRow: LinkRow
-}): boolean => {
-  const success = input.changes > 0
-  if (!success) {
-    logAbandonedSavedLinkExtractionMutation({
-      event: "saved_link_extraction_settlement_abandoned",
-      context: input.context,
-      reason: "lease_lost_during_settlement",
-      existingRow: input.existingRow,
-    })
-  }
-  return success
-}
-
 export const enqueueSavedLinkExtraction = (
   database: D1Database,
   userId: string,
@@ -517,12 +500,17 @@ export const settleSavedLinkExtraction = async (
     },
   })
   const updateResult = statementResults[preparation.statements.length]
-  return {
-    success: logAbandonedSavedLinkExtractionSettlementIfNeeded({
-      changes: updateResult?.meta.changes ?? 0,
+  const settlementSucceeded = (updateResult?.meta.changes ?? 0) > 0
+  if (!settlementSucceeded) {
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_settlement_abandoned",
       context: settlementContext,
+      reason: "lease_lost_during_settlement",
       existingRow,
-    }),
+    })
+  }
+  return {
+    success: settlementSucceeded,
     replayed: false,
     dataVersion,
   }
@@ -654,7 +642,7 @@ export const requeuePendingSavedLinkExtraction = async (
     logAbandonedSavedLinkExtractionMutation({
       event: "saved_link_extraction_requeue_abandoned",
       context: requeueContext,
-      reason: getSavedLinkExtractionLeaseMismatchReason(userId, observedRow),
+      reason: "lease_lost_during_requeue",
       existingRow: observedRow,
     })
   }
