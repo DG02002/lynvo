@@ -1,19 +1,20 @@
-import { reactRouter } from "@react-router/dev/vite"
-import { cloudflare } from "@cloudflare/vite-plugin"
-import mdx from "@mdx-js/rollup"
-import rehypeShikiFromHighlighter from "@shikijs/rehype/core"
-import { transformerMetaHighlight } from "@shikijs/transformers"
-import tailwindcss from "@tailwindcss/vite"
-import remarkGfm from "remark-gfm"
-import remarkFrontmatter from "remark-frontmatter"
-import remarkMdxFrontmatter from "remark-mdx-frontmatter"
-import { createHighlighterCore } from "shiki/core"
-import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
-import { defineConfig, type Plugin, type ViteDevServer } from "vite"
 import { exec, execFileSync } from "node:child_process"
 import { statSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
+
+import { cloudflare } from "@cloudflare/vite-plugin"
+import mdx from "@mdx-js/rollup"
+import { reactRouter } from "@react-router/dev/vite"
+import rehypeShikiFromHighlighter from "@shikijs/rehype/core"
+import { transformerMetaHighlight } from "@shikijs/transformers"
+import tailwindcss from "@tailwindcss/vite"
+import remarkFrontmatter from "remark-frontmatter"
+import remarkGfm from "remark-gfm"
+import remarkMdxFrontmatter from "remark-mdx-frontmatter"
+import { createHighlighterCore } from "shiki/core"
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
+import { defineConfig, type Plugin, type ViteDevServer } from "vite"
 
 // Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
 const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
@@ -38,14 +39,14 @@ const docsRaw = (): Plugin => ({
   enforce: "pre" as const,
   resolveId(source: string, importer: string | undefined) {
     if (!importer) {
-      return
+      return undefined
     }
 
     const query = ["?docs-raw", "?docs-last-modified"].find((candidate) =>
       source.endsWith(candidate)
     )
     if (!query) {
-      return
+      return undefined
     }
 
     const sourcePath = source.slice(0, -query.length)
@@ -82,7 +83,7 @@ const docsRaw = (): Plugin => ({
     }
 
     if (!id.startsWith("\0docs-raw:")) {
-      return
+      return undefined
     }
 
     const filePath = id.slice("\0docs-raw:".length)
@@ -116,6 +117,25 @@ function wranglerTypesWatcher() {
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
+  },
+  // Lazy routes, always-mounted providers, and deferred UI reach these packages
+  // through separate entry paths. Pre-bundle them up front so Vite does not
+  // change the module graph mid-session or duplicate React during hydration.
+  optimizeDeps: {
+    include: [
+      "@base-ui/react/*",
+      "@hugeicons/core-free-icons",
+      "@hugeicons/react",
+      "@shikijs/langs/json",
+      "@shikijs/themes/github-dark",
+      "@shikijs/themes/github-light-default",
+      "@tanstack/react-form",
+      "class-variance-authority",
+      "effect",
+      "lucide-react",
+      "shiki/core",
+      "shiki/engine/javascript",
+    ],
   },
   plugins: [
     docsRaw(),
