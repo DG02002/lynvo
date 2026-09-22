@@ -122,7 +122,15 @@ export default defineConfig({
   // Pre-bundle them up front so Vite does not reload with a second React copy
   // while the first visit is hydrating.
   optimizeDeps: {
-    include: ["@base-ui/react/*", "@tanstack/react-form"],
+    include: [
+      "@base-ui/react/*",
+      "@hugeicons/core-free-icons",
+      "@hugeicons/react",
+      "@tanstack/react-form",
+      "class-variance-authority",
+      "effect",
+      "lucide-react",
+    ],
   },
   plugins: [
     docsRaw(),
