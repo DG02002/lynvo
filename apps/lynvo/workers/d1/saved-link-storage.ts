@@ -19,6 +19,12 @@ const NO_SAVED_LINKS_CONDITION =
 export const SAVED_LINK_COLUMNS =
   "id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at"
 
+export const createNullableColumnEqualityCondition = (
+  column: string,
+  parameter: string
+): string =>
+  `((${parameter} IS NULL AND ${column} IS NULL) OR ${column} = ${parameter})`
+
 export interface CompletedSavedLinkOperation {
   linkId: string | null
 }
@@ -220,7 +226,7 @@ export const createConditionalSavedLinkCommandOperationStatement = (
            AND user_id = ?1
            AND extraction_state = ?7
            AND extraction_attempts = ?8
-           AND ((?9 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?9)
+           AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?9")}
        )`
     )
     .bind(

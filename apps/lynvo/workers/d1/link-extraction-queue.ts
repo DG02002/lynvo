@@ -24,6 +24,7 @@ import {
 } from "./saved-link-extraction-credentials"
 import {
   createConditionalSavedLinkCommandOperationStatement,
+  createNullableColumnEqualityCondition,
   findCompletedSavedLinkOperation,
   findSavedLinkById,
   SAVED_LINK_COLUMNS,
@@ -50,28 +51,43 @@ export interface SavedLinkExtractionClaim extends SavedLinkExtractionJob {
   dataVersion: number
 }
 
-const logAbandonedSavedLinkExtractionSettlement = (input: {
+type SavedLinkExtractionAbandonmentEvent =
+  | "saved_link_extraction_settlement_abandoned"
+  | "saved_link_extraction_requeue_abandoned"
+
+interface SavedLinkExtractionLeaseContext {
   userId: string
   operationId: string
-  id: string
+  linkId: string
   leaseExpiresAt: number
+}
+
+interface SavedLinkExtractionAbandonmentInput {
+  event: SavedLinkExtractionAbandonmentEvent
+  context: SavedLinkExtractionLeaseContext
   reason: string
   existingRow: LinkRow | null
-}): void => {
-  console.warn("Saved link extraction settlement abandoned", {
-    operation: "saved_link_extraction_settlement_abandoned",
-    userId: input.userId,
-    operationId: input.operationId,
-    linkId: input.id,
-    expectedLeaseExpiresAt: input.leaseExpiresAt,
-    observedState: input.existingRow?.extraction_state ?? null,
-    observedLeaseExpiresAt:
-      input.existingRow?.extraction_lease_expires_at ?? null,
-    reason: input.reason,
+}
+
+const logAbandonedSavedLinkExtractionMutation = ({
+  event,
+  context,
+  reason,
+  existingRow,
+}: SavedLinkExtractionAbandonmentInput): void => {
+  console.warn(event, {
+    operation: event,
+    userId: context.userId,
+    operationId: context.operationId,
+    linkId: context.linkId,
+    expectedLeaseExpiresAt: context.leaseExpiresAt,
+    observedState: existingRow?.extraction_state ?? null,
+    observedLeaseExpiresAt: existingRow?.extraction_lease_expires_at ?? null,
+    reason,
   })
 }
 
-const getSavedLinkExtractionSettlementMismatchReason = (
+const getSavedLinkExtractionLeaseMismatchReason = (
   userId: string,
   existingRow: LinkRow | null
 ): string => {
@@ -84,21 +100,16 @@ const getSavedLinkExtractionSettlementMismatchReason = (
   return "lease_no_longer_active"
 }
 
-const didSettleSavedLinkExtraction = (input: {
+const logAbandonedSavedLinkExtractionSettlementIfNeeded = (input: {
   changes: number
-  userId: string
-  operationId: string
-  id: string
-  leaseExpiresAt: number
+  context: SavedLinkExtractionLeaseContext
   existingRow: LinkRow
 }): boolean => {
   const success = input.changes > 0
   if (!success) {
-    logAbandonedSavedLinkExtractionSettlement({
-      userId: input.userId,
-      operationId: input.operationId,
-      id: input.id,
-      leaseExpiresAt: input.leaseExpiresAt,
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_settlement_abandoned",
+      context: input.context,
       reason: "lease_lost_during_settlement",
       existingRow: input.existingRow,
     })
@@ -182,7 +193,7 @@ const createConditionalLinkStorageStatement = (
              AND user_id = ?1
              AND extraction_state = ?6
              AND extraction_attempts = ?7
-             AND ((?8 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?8)
+             AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?8")}
          )`
     )
     .bind(
@@ -393,21 +404,22 @@ export const settleSavedLinkExtraction = async (
     }
   }
   const existingRow = await findSavedLinkById(database, input.id)
+  const settlementContext: SavedLinkExtractionLeaseContext = {
+    userId,
+    operationId: input.operationId,
+    linkId: input.id,
+    leaseExpiresAt: input.leaseExpiresAt,
+  }
   if (
     !existingRow ||
     existingRow.user_id !== userId ||
     existingRow.extraction_state !== "running" ||
     existingRow.extraction_lease_expires_at !== input.leaseExpiresAt
   ) {
-    logAbandonedSavedLinkExtractionSettlement({
-      userId,
-      operationId: input.operationId,
-      id: input.id,
-      leaseExpiresAt: input.leaseExpiresAt,
-      reason: getSavedLinkExtractionSettlementMismatchReason(
-        userId,
-        existingRow
-      ),
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_settlement_abandoned",
+      context: settlementContext,
+      reason: getSavedLinkExtractionLeaseMismatchReason(userId, existingRow),
       existingRow,
     })
     return {
@@ -506,12 +518,9 @@ export const settleSavedLinkExtraction = async (
   })
   const updateResult = statementResults[preparation.statements.length]
   return {
-    success: didSettleSavedLinkExtraction({
+    success: logAbandonedSavedLinkExtractionSettlementIfNeeded({
       changes: updateResult?.meta.changes ?? 0,
-      userId,
-      operationId: input.operationId,
-      id: input.id,
-      leaseExpiresAt: input.leaseExpiresAt,
+      context: settlementContext,
       existingRow,
     }),
     replayed: false,
@@ -532,12 +541,24 @@ export const requeuePendingSavedLinkExtraction = async (
   }
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await findSavedLinkById(database, input.id)
+  const requeueContext: SavedLinkExtractionLeaseContext = {
+    userId,
+    operationId: input.operationId,
+    linkId: input.id,
+    leaseExpiresAt: input.leaseExpiresAt,
+  }
   if (
     !existingRow ||
     existingRow.user_id !== userId ||
     existingRow.extraction_state !== "running" ||
     existingRow.extraction_lease_expires_at !== input.leaseExpiresAt
   ) {
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_requeue_abandoned",
+      context: requeueContext,
+      reason: getSavedLinkExtractionLeaseMismatchReason(userId, existingRow),
+      existingRow,
+    })
     return {
       success: false,
       replayed: false,
@@ -628,6 +649,15 @@ export const requeuePendingSavedLinkExtraction = async (
       ],
     },
   })
+  if (!changed) {
+    const observedRow = await findSavedLinkById(database, input.id)
+    logAbandonedSavedLinkExtractionMutation({
+      event: "saved_link_extraction_requeue_abandoned",
+      context: requeueContext,
+      reason: getSavedLinkExtractionLeaseMismatchReason(userId, observedRow),
+      existingRow: observedRow,
+    })
+  }
   return { success: changed, replayed: false, dataVersion }
 }
 

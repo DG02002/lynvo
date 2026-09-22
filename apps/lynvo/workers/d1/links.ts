@@ -45,6 +45,7 @@ import {
   createSavedLinkDeleteLedgerCondition,
   createReservedSavedLinkOperationLinkStatement,
   createSavedLinkOperationCompletionStatement,
+  createNullableColumnEqualityCondition,
   findCompletedSavedLinkOperation,
   releaseReservedSavedLinkCommandOperation,
   requireOwnedSavedLink,
@@ -931,6 +932,9 @@ const updateExistingSavedLink = async ({
   extractionState,
   retentionDays,
 }: UpdateExistingSavedLinkInput): Promise<CreateOrUpdateSavedLinkAttemptResult> => {
+  // A duplicate save may arrive after the worker claims the link but before it
+  // reads its credential. Preserve that live lease and let a new credential
+  // replace the old one without resetting the worker's extraction ownership.
   const preservesActiveExtraction =
     extractionState === "queued" && existingRow.extraction_state === "running"
   const nextExtractionState = preservesActiveExtraction
@@ -960,9 +964,10 @@ const updateExistingSavedLink = async ({
       : null,
   }
   let extractionCredentialStatement: D1PreparedStatement | undefined
-  if (!preservesActiveExtraction && extractionState === "queued") {
-    extractionCredentialStatement = input.extractionCredential
-      ? createUpsertSavedLinkExtractionCredentialStatement({
+  if (extractionState === "queued") {
+    if (input.extractionCredential) {
+      extractionCredentialStatement =
+        createUpsertSavedLinkExtractionCredentialStatement({
           database,
           userId,
           linkId: existingRow.id,
@@ -971,7 +976,9 @@ const updateExistingSavedLink = async ({
           credential: input.extractionCredential,
           expectedLink: toSavedLinkExtractionCredentialLinkState(nextRow),
         })
-      : createConditionalDeleteSavedLinkExtractionCredentialStatement({
+    } else if (!preservesActiveExtraction) {
+      extractionCredentialStatement =
+        createConditionalDeleteSavedLinkExtractionCredentialStatement({
           database,
           userId,
           linkId: existingRow.id,
@@ -979,6 +986,7 @@ const updateExistingSavedLink = async ({
           targetUrl: nextRow.url,
           expectedLink: toSavedLinkExtractionCredentialLinkState(nextRow),
         })
+    }
   }
   const { dataVersion, changed } = await executeGuardedSavedLinkMetaWrite({
     database,
@@ -988,7 +996,7 @@ const updateExistingSavedLink = async ({
     nextRow,
     updateStatement: database
       .prepare(
-        "UPDATE links SET title = ?3, meta_json = ?4, updated_at = ?5, expires_at = ?6, extraction_state = ?7, extraction_error = ?8, extraction_attempts = ?9, extraction_available_at = ?10, extraction_lease_expires_at = ?11 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?12 AND extraction_state = ?13 AND extraction_attempts = ?14 AND ((?15 IS NULL AND extraction_available_at IS NULL) OR extraction_available_at = ?15) AND ((?16 IS NULL AND extraction_lease_expires_at IS NULL) OR extraction_lease_expires_at = ?16)"
+        `UPDATE links SET title = ?3, meta_json = ?4, updated_at = ?5, expires_at = ?6, extraction_state = ?7, extraction_error = ?8, extraction_attempts = ?9, extraction_available_at = ?10, extraction_lease_expires_at = ?11 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?12 AND extraction_state = ?13 AND extraction_attempts = ?14 AND ${createNullableColumnEqualityCondition("extraction_available_at", "?15")} AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?16")}`
       )
       .bind(
         existingRow.id,
