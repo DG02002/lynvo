@@ -10,6 +10,7 @@ import {
   settingsRowClass,
   settingsRowDescriptionClass,
   settingsRowLabelClass,
+  settingsWarningTextClass,
 } from "./settings-layout-classes"
 
 export function SettingsPanel({
@@ -140,7 +141,9 @@ export function SettingsRowInfo({
         </span>
       )}
       {note && (
-        <span className="text-xs leading-normal text-yellow-600 dark:text-yellow-400">
+        <span
+          className={cn("text-xs leading-normal", settingsWarningTextClass)}
+        >
           {note}
         </span>
       )}

@@ -5,6 +5,7 @@ import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 
 import type { MediaView } from "./media-view-preference"
+import { settingsWarningTextClass } from "./settings-layout-classes"
 
 interface MediaViewOption {
   value: MediaView
@@ -116,7 +117,10 @@ export const MediaViewSelector = ({
               {option.isBeta && (
                 <Badge
                   variant="outline"
-                  className="border-yellow-500/30 bg-yellow-500/10 text-yellow-800 dark:border-yellow-400/30 dark:bg-yellow-400/10 dark:text-yellow-200"
+                  className={cn(
+                    "border-yellow-500/30 bg-yellow-500/10 dark:border-yellow-400/30 dark:bg-yellow-400/10",
+                    settingsWarningTextClass
+                  )}
                 >
                   Beta
                 </Badge>

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { GeneralSettings } from "~/features/site/settings/general-settings"
 import { PlayerSettings } from "~/features/site/settings/player-settings"
+import { StorageSettings } from "~/features/site/settings/storage-settings"
 
 const renderGeneralSettings = () => {
   const router = createMemoryRouter(
@@ -67,5 +68,13 @@ describe("settings select accessibility", () => {
     expect(playerSelects[1]).toHaveAccessibleName(
       "Links without HTTP byte-range support"
     )
+  })
+
+  it("keeps Storage settings client-gated in SSR output", () => {
+    document.body.innerHTML = renderToString(<StorageSettings />)
+    const body = within(document.body)
+
+    expect(body.getByText("Loading storage usage…")).toBeVisible()
+    expect(body.queryByRole("combobox")).not.toBeInTheDocument()
   })
 })

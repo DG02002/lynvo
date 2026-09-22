@@ -7,6 +7,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip"
+import { cn } from "~/lib/utils"
+
+import { settingsWarningTextClass } from "./settings-layout-classes"
 
 interface PluginInfoTooltipProps {
   pluginName: string
@@ -50,11 +53,15 @@ export function PluginInfoTooltip({
           <button
             type="button"
             aria-label={`${pluginName} info`}
-            className={
+            className={cn(
+              "inline-flex shrink-0 items-center justify-center transition-colors focus-visible:outline-none",
               hasUsageHint
-                ? "inline-flex shrink-0 items-center justify-center text-yellow-500 transition-colors hover:text-yellow-600 focus-visible:outline-none dark:text-yellow-400 dark:hover:text-yellow-300"
-                : "inline-flex shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none"
-            }
+                ? cn(
+                    settingsWarningTextClass,
+                    "hover:text-yellow-900 dark:hover:text-yellow-100"
+                  )
+                : "text-muted-foreground hover:text-foreground"
+            )}
           />
         }
       >
