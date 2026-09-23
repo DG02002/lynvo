@@ -3,16 +3,21 @@
 This guide captures the writing and structure of Linear's product
 documentation (linear.app/docs), sampled across 41 pages in September 2026
 covering start guides, feature pages, settings pages, integrations, security,
-API, and concept pages. It adapts that style to Lynvo's in-app MDX docs.
+API, and concept pages, plus its developer site. It adapts that style to any
+product's user documentation.
 
 Treat the Linear pages as evidence of a house style, not as content to copy.
 Do not carry Linear's product names, screenshots, settings paths, pricing, or
-feature claims into Lynvo docs. Replace their substance with verified Lynvo
-behavior.
+feature claims into another product's docs. Replace their substance with the
+verified behavior of the product being documented.
 
-This is a user-documentation guide. Formal policies follow the
-product-policy-writing skill instead. Architecture and maintainer procedures
-belong in `docs/internals/` and `docs/operations/`, not in these pages.
+This is a user-documentation guide, and it is project-agnostic: the
+project's own mechanics — MDX components, frontmatter contract, navigation
+configuration, link validation, product terminology — are discovered from
+the repository being documented, following the project adaptation rules at
+the end of this guide. Formal policies follow the product-policy-writing
+skill instead. Architecture and maintainer procedures belong wherever the
+project keeps its internal documentation, not in user docs.
 
 ## The sample-derived docs style
 
@@ -56,11 +61,11 @@ feature to a fixed length.
 
 Write as the product talking to one user. Rules, with corpus examples:
 
-- Use "you" for the reader and their actions. Use "Lynvo" or "we" for what
-  the system does. Never "the user" in body text.
+- Use "you" for the reader and their actions. Use the product name or "we"
+  for what the system does. Never "the user" in body text.
   - "You can always edit cycle configurations in the future."
   - "Linear automatically creates upcoming cycles for your team."
-- Prefer the system as the actor for automatic behavior: "Lynvo stores the
+- Prefer the system as the actor for automatic behavior: "Linear stores the
   key encrypted and does not send it to the browser."
 - Use "You can…" to introduce a capability list, then bullets.
 - State why, in the same breath as what:
@@ -100,44 +105,31 @@ patterns, strongest first:
 - Scale statement for core actions: "Creating issues is the most common
   action taken in Linear."
 
-Pick one pattern; never stack two. The Lynvo `description` frontmatter field
-carries the same sentence or a tightened version of it.
+Pick one pattern; never stack two. If the project's frontmatter carries a
+page description, put the same sentence or a tightened version of it there.
 
 ## Page anatomy
 
 The canonical skeleton, in order. Omit sections that do not apply; do not
 invent new top-level sections when a task heading fits inside Basics.
 
-```mdx
----
-title: Feature name
-description: One-sentence lede.
-navLabel: Feature name
-contentType: How-to
----
+```markdown
+# Feature name
 
-<DocSection id="overview">
-
-## Overview
+One-sentence lede.
 
 ![Descriptive alt text](screenshot)
+
+## Overview
 
 One to three short paragraphs: what the feature is, what it is for, and
 when to use it. Optionally a "You can:" bullet list of capabilities.
 Links to settings and related pages on first mention.
 
-</DocSection>
-
-<DocSection id="configure">
-
 ## Configure
 
 Where the setting lives and who can change it. Numbered steps for
 multi-step setup. Permission or prerequisite statements.
-
-</DocSection>
-
-<DocSection id="basics">
 
 ## Basics
 
@@ -145,16 +137,15 @@ multi-step setup. Permission or prerequisite statements.
 
 Steps or a short explanation.
 
-</DocSection>
-
-<DocSection id="faq">
-
 ## FAQ
 
 One block per real question.
-
-</DocSection>
 ```
+
+Add whatever frontmatter the project's docs pipeline requires; the
+adaptation rules cover finding that contract. If the pipeline wraps
+sections in components or requires stable section identifiers for anchors,
+apply them to every H2 topic.
 
 Rules per section:
 
@@ -168,7 +159,8 @@ Rules per section:
   prerequisites before the steps.
 - **Basics** holds one H3 per task. Order tasks: open/create, then edit,
   then share, then niche. Headings start with a verb and name the object:
-  "Add a Proxy key", "Open a Saved link on your TV", "Remove a Plugin".
+  "Add a proxy key", "Open a saved item on your TV", "Remove a
+  connection".
 - **FAQ** holds real questions in the user's words. Direct answer in the
   first sentence, then context and the fix. Include the questions support
   actually receives: error messages, limits, "why don't X and Y match",
@@ -179,22 +171,22 @@ Rules per section:
 When a task has keyboard, pointer, and menu paths, Linear gives each its own
 H3 under Basics and lists them as parallel shortcuts:
 
-```mdx
+```markdown
 ### Keyboard
 
-`/` to search all issues in the workspace by title, description, comments
+`/` to search all items in the workspace by title, description, comments
 
 ### Mouse
 
-* Select the magnifying-glass button next to the _New Issue_ button
+* Select the magnifying-glass button next to the _New Item_ button
 
 ### Command menu
 
-`open issue` to launch quick issue search
+`open item` to launch quick item search
 ```
 
-Apply this to Lynvo surfaces that have more than one input path (TV remote
-versus phone versus browser). Skip it where only one path exists.
+Apply this to surfaces that have more than one input path (for example TV
+remote versus phone versus browser). Skip it where only one path exists.
 
 ## Formatting conventions
 
@@ -202,13 +194,13 @@ versus phone versus browser). Skip it where only one path exists.
   `Open [**Settings > Proxy**](/settings/proxy)`. Capitalize as the app's
   navigation renders it. Never write a settings path in prose without bold.
 - **Buttons, toggles, and menu items in bold** on first use:
-  **Add Custom Plugin Server**, **Enable cycles**. Deep menu items may be
+  **Add integration**, **Enable cycles**. Deep menu items may be
   italic with an ellipsis as the UI shows: _Edit view…_, _Make recurring…_.
 - **Keyboard shortcuts in backticks**, platform-prefixed:
   `Cmd/Ctrl` + `K`, `Option/Alt` + `C`, `O` then `F`.
 - **Notes** for caveats, limits, and availability — one to three sentences,
-  set off from body text. In Lynvo, use `<DocsNote title="Note">` (see the
-  adaptation rules below). Typical uses:
+  set off from body text through the project's note or callout component.
+  Typical uses:
   - a limit with a number: "Drafts are stored for 6 months before being
     deleted automatically."
   - irreversibility: "Once you change the start date you cannot revert this
@@ -223,29 +215,28 @@ versus phone versus browser). Skip it where only one path exists.
 - **Bullets** for options and enumerations; keep each bullet to one line or
   two. Bullet lists may be lowercase fragments when they complete a lead-in
   sentence ("A team can define:").
-- **Tables** for parameters, permissions, and comparisons — for example a
-  Custom Plugin Server manifest field table or a player support matrix.
-  Give every column a short header.
+- **Tables** for parameters, permissions, and comparisons. Give every
+  column a short header.
 - **Code** only for literal commands, file contents, and HTTP exchanges, in
-  a labeled `CodeBlock`. Never use code formatting for emphasis or UI
-  labels.
-- **Images**: every page that describes visible UI gets a screenshot of that
-  UI. Alt text describes what the screenshot shows, including state:
-  "Settings > Proxy showing a saved Scrape.do key and the per-server usage
+  the project's labeled code figure if it has one. Never use code
+  formatting for emphasis or UI labels.
+- **Images**: every page that describes visible UI gets a screenshot of
+  that UI. Alt text describes what the screenshot shows, including state:
+  "Settings > Proxy showing a saved provider key and the per-server usage
   toggle." Where the screenshot needs interpretation, add an italic caption
-  line under it: "*At Risk projects*". Annotate screenshots sparingly; prefer
-  a crop that needs no annotation.
+  line under it: "*At-risk projects*". Annotate screenshots sparingly;
+  prefer a crop that needs no annotation.
 - **Videos**: embed a short clip only when a flow is hard to follow from
   stills, and keep the surrounding text self-sufficient.
 
 ## Cross-linking
 
 - Link the first meaningful mention of any feature or settings page, using
-  its real route. The docs catalog fails the build on broken `/docs/...`
-  links and heading anchors, so verify every link.
+  its real route. Many docs pipelines validate internal links and anchors
+  at build time; verify every link either way.
 - End concept sections with a "Read more on [topic](url)." sentence.
-- Link out to player documentation, Scrape.do, or Cloudflare docs when the
-  user must act there; never duplicate their full instructions.
+- Link out to external documentation when the user must act there; never
+  duplicate their full instructions.
 - When two pages could answer a question, pick one home for the answer and
   link from the other. Do not maintain two copies.
 
@@ -253,55 +244,52 @@ versus phone versus browser). Skip it where only one path exists.
 
 ### Feature how-to page
 
-The canonical skeleton above. This is the default for Lynvo user surfaces:
-saving links, player selection, proxy keys, settings pages, Remote Play as
-its own page. Include screenshots for every Configure and Basics step that
-involves visible UI.
+The canonical skeleton above. This is the default for user surfaces:
+creating and managing the core object, settings pages, playback or viewing
+flows, companion-device features. Include screenshots for every Configure
+and Basics step that involves visible UI.
 
 ### Concept page
 
-For "what is X" pages (what is a Plugin Server, what is a Source). Pattern
-from Linear's Concepts page: definition paragraph, then one H2 per concept
-with a short definition, a "can:" or "might:" bullet list of concrete
-situations, and "Read more on [page]" at the end. Close multi-concept pages
-with a "How these fit together" section of one-line summaries:
+For "what is X" pages. Pattern from Linear's Concepts page: definition
+paragraph, then one H2 per concept with a short definition, a "can:" or
+"might:" bullet list of concrete situations, and "Read more on [page]" at
+the end. Close multi-concept pages with a "How these fit together" section
+of one-line summaries:
 
-```mdx
-- Saved links hold the URLs you choose
-- Plugin Servers resolve them into Media Nodes
-- players receive the Playable link you select
+```markdown
+- Saved items hold the URLs you choose
+- Connectors resolve them into playable entries
+- players receive the link you select
 ```
 
 ### Integration or setup page
 
-For connecting something external: Custom Plugin Servers, proxy keys,
-generating a standalone Plugin Server project. Pattern from Linear's Slack
-and GitHub pages: lede states the pairing's benefit, brand or architecture
-image, Overview with a capability table or bullets, Configure with
-permissions and numbered steps, then one H2 per capability the connection
-gives you, then FAQ. State trust and data-flow facts explicitly (where the
-API key lives, what the server can and cannot reach).
+For connecting something external: third-party services, self-hosted
+companions, generated projects. Pattern from Linear's Slack and GitHub
+pages: lede states the pairing's benefit, brand or architecture image,
+Overview with a capability table or bullets, Configure with permissions and
+numbered steps, then one H2 per capability the connection gives you, then
+FAQ. State trust and data-flow facts explicitly (where credentials live,
+what the connected service can and cannot reach).
 
 ### Reference page
 
-For contracts users implement against: the Plugin Server Protocol pages,
-which follow Linear's developer-docs shape rather than the feature
-skeleton. Keep Lynvo's existing Reference style — precise, fielded, tables
-and labeled code blocks, structured errors — and apply Linear's developer
-conventions: organize sections by concern ("Endpoint", "Authentication",
-"Error handling"), show a working request sample for every endpoint
-(HTTP first, SDK second), state recommendations inline ("we recommend"),
-and link deep external references (Effect, Cloudflare Workers, Hono)
-instead of duplicating them. Add a one-paragraph Overview at the top and
-cross-links to the surrounding tutorial pages; reference pages otherwise
-stay terse, with no screenshots.
+For contracts users implement against: APIs, protocols, webhooks —
+Linear's developer-docs shape rather than the feature skeleton. Organize
+sections by concern ("Endpoint", "Authentication", "Error handling"), show
+a working request sample for every endpoint (HTTP first, SDK second), state
+recommendations inline ("we recommend"), and link deep external references
+instead of duplicating them. Keep pages terse and fielded — tables, labeled
+code blocks, structured errors. Add a one-paragraph Overview at the top and
+cross-links to surrounding tutorial pages; no screenshots.
 
 ### Start guide
 
-One page that takes a new user from zero to a working flow: what Lynvo is
-for in two sentences, the recommended path as numbered steps, links into
-the feature pages for depth, and a short FAQ. Do not duplicate feature-page
-detail here.
+One page that takes a new user from zero to a working flow: what the
+product is for in two sentences, the recommended path as numbered steps,
+links into the feature pages for depth, and a short FAQ. Do not duplicate
+feature-page detail here.
 
 ## Information architecture and organization
 
@@ -372,107 +360,96 @@ the Overview → Configure → Basics skeleton:
   (changelog).
 - No screenshots; diagrams only when the flow needs one.
 
-### Lynvo section plan
+### Planning a product's sections
 
-Map Lynvo onto the same two-shape structure (Learn has no Lynvo equivalent
-yet):
+Derive the structure from the product's surfaces with the same recipe:
 
-- **User docs** — ordered by the reader journey:
-  - *Getting started*: Start guide, Concepts (Saved links, Sources, Media
-    Nodes, players), Android TV setup.
-  - *Link library*: Saving links, link selection and Playable links,
-    players and player selection, Remote Play.
-  - *Sources and Plugins*: What is a Source, managed Plugins, connecting a
-    Custom Plugin Server from Settings, Proxy keys.
-  - *Settings and account*: Settings surfaces, sign-in and sessions.
-- **Developers** — the current Plugin Server pages, grouped by what you
-  build with (Getting started, Build a Plugin Server, Protocol reference,
-  Test and deploy, Build with an agent).
+1. Split user docs from developer docs. User docs hold everything a person
+   using the product needs, including the user-facing how-to for connecting
+   a developer artifact ("add your self-hosted server in Settings"); the
+   developer section holds only what an implementer needs, grouped by the
+   thing they build with.
+2. Order user groups as a reader journey: getting started (start guide,
+   concepts, install), personal setup, the core object and its lifecycle,
+   surrounding objects in increasing scope, power navigation, incoming or
+   external work, connections and integrations, analysis, administration,
+   migration last.
+3. Name groups as short noun phrases after the object or area; lead each
+   object group with a same-named overview page.
+4. Give both sections one shell and one sidebar footer with cross-links.
+5. Curate the landing page: description sentence plus card rows of title
+   and one-line description.
 
-Placement rules:
+## Project adaptation rules
 
-- A user-facing how-to for a developer artifact ("add your Custom Plugin
-  Server in Settings") lives in user docs and links into the developer
-  section; the developer section holds only what an implementer needs.
-- Both sections share the docs shell, sidebar footer cross-links, and
-  prev/next order.
-- Link out to deep external references (Effect, Cloudflare Workers,
-  Hono, Scrape.do) rather than duplicating them; mark them as external.
+The Linear patterns above are rendering-agnostic. Before writing, learn the
+target project's mechanics and map every pattern onto them.
 
-## Lynvo adaptation rules
+### Discover the docs pipeline
 
-### Components and pipeline
+Find and read, in the repository being documented:
 
-Lynvo's MDX pipeline differs from Linear's Markdown. Map every Linear
-pattern:
+- The docs directory and its pages, plus the navigation or sidebar
+  configuration (a catalog module, meta JSON, or frontmatter-driven nav)
+  that defines groups, ordering, and prev/next.
+- The MDX or Markdown pipeline in the build configuration: which plugins
+  run, which frontmatter fields are required or validated, and how raw
+  markdown is exported if the project supports it.
+- The docs component set: section wrappers and anchor helpers, note or
+  callout components, code figure components, and how links, tables, and
+  headings are customized. Docs component tests usually demonstrate usage.
+- The link and anchor validation the project runs, and when it runs
+  (build-time module load, a docs test, or CI).
 
-- `> [!NOTE]` callouts become `<DocsNote title="Note">` with the same
-  content rules. Lynvo has no warning/tip variants; if a page needs a
-  destructive-action warning, use `<DocsNote title="Warning">` with a title
-  that names the risk.
-- Linear's collapsible `<details><summary>` FAQ blocks have no Lynvo
-  component yet. Until one exists, render each FAQ as a bold question
-  line followed by the answer paragraph, inside one `## FAQ` DocSection.
-  Flag to the developer that a collapsible component is part of the target
-  style.
-- Every H2 topic sits inside `<DocSection id="...">` with a stable,
-  lowercase-hyphen id; heading anchors and cross-page `#anchor` links must
-  match it.
-- Code, terminal output, and HTTP exchanges go in `<CodeBlock label="...">`
-  figures, never bare fences.
-- Markdown links to internal `/` routes render as in-app links
-  automatically; write plain Markdown links and let `DocsLink` handle them.
+Follow the project's existing conventions exactly; do not introduce new
+components or frontmatter fields without flagging it.
 
-### Frontmatter
+### Map the corpus patterns
 
-All four fields are required and validated: `title` (short, follows the
-title formulas), `description` (the lede or its tightened form),
-`navLabel` (sidebar label, usually identical to title), and `contentType`
-of `Tutorial`, `How-to`, `Reference`, or `Conceptual`. Feature pages are
-`How-to`; "what is" pages are `Conceptual`; step-by-step operator guides
-are `Tutorial`; contract pages are `Reference`.
+- `> [!NOTE]` callouts become the project's note component with the same
+  content rules. If the project has no note component, use its closest
+  equivalent and flag the gap.
+- Collapsible FAQ blocks: use the project's collapsible or details
+  component if it has one; otherwise render each FAQ as a bold question
+  line followed by the answer paragraph, and flag that a collapsible
+  component is part of the target style.
+- Section wrappers and stable section identifiers: apply the project's
+  component and id conventions to every H2 topic; cross-page anchor links
+  must match them.
+- Code, terminal output, and HTTP exchanges go in the project's labeled
+  code figure; never bare fences if a figure component exists.
 
-### Navigation
+### Use the project's language
 
-Sidebar structure lives in the `meta.json` files (one per docs section)
-whose `groups[].pages` arrays define both the sidebar order and the
-prev/next sequence. The catalog enforces that every page appears exactly
-once in navigation — Linear instead cross-lists one page in several groups
-where readers would look for it from different directions. Until the
-catalog grows cross-listing support, achieve the same discoverability with
-a "Read more on" link in the related group's pages, and raise cross-listing
-with the developer when a page genuinely serves two audiences.
+- Use the project's product terms exactly as its glossary or agent
+  instructions define them. Do not invent synonyms and do not generalize a
+  term when a specific one exists.
+- Settings paths use the app's real navigation labels and routes, verified
+  against the running app or source. A renamed setting with an old path is
+  a broken doc.
 
-### Product terms
+### Honor the project's invariants
 
-Use the product terms from `CONTEXT.md` exactly: Saved link, Source,
-Plugin, managed Plugin Server, Custom Plugin Server, Plugin Server
-Protocol, Media Node, Playable link, Remote Play. Players are Just (Video)
-Player, VLC for Android, MPV, MX Player. Do not invent synonyms ("item",
-"media entry", "addon") and do not generalize a term when a specific one
-exists.
-
-### Settings paths
-
-Real routes, rendered as the app shows them: **Settings > Proxy**
-(`/settings/proxy`), **Settings > Plugins** (`/settings/plugins`),
-**Settings > Player** (`/settings/player`). Verify the navigation label and
-the route before writing either; a renamed setting with an old path is a
-broken doc.
-
-### Coverage
-
-Before calling a docs change done, walk the entry-point list from
-`AGENTS.md` and make a per-surface decision: Save, settings, Plugin
-configuration, link selection, Remote Play, in-app docs. Changes that touch
-link resolution need a decision per Source adapter. Reverse states (retry,
-refresh, reconnect, reopen, remove, cancel, sign out) get a step or an FAQ
-entry on the page that owns the forward state.
+- Navigation: place the page in the navigation configuration as the
+  project requires. Some catalogs enforce that a page appears exactly once;
+  others allow cross-listing one page in several groups. Where
+  once-only is enforced, achieve cross-listing's discoverability with a
+  "Read more on" link from the related group's pages, and raise
+  cross-listing with the maintainer when a page genuinely serves two
+  audiences.
+- Coverage: walk the project's agent-instruction entry-point list if one
+  exists; otherwise derive the surface list from the primary workflows.
+  Reverse states (retry, refresh, reconnect, reopen, remove, cancel, sign
+  out) get a step or an FAQ entry on the page that owns the forward state.
+- Screenshots: use the project's image pipeline. If the pipeline has no
+  image support, flag that adding screenshots requires pipeline work rather
+  than silently omitting them.
 
 ## Review checklist
 
 - Title is one to three words and follows a corpus formula.
-- Lede is one sentence and states the benefit; `description` matches it.
+- Lede is one sentence and states the benefit; the page description field,
+  if any, matches it.
 - A screenshot follows the lede, and every step with visible UI has one.
 - Sections follow Overview → Configure → Basics → FAQ; task headings are
   verb-first and ordered open/create → edit → share → niche.
@@ -480,7 +457,10 @@ entry on the page that owns the forward state.
 - Every limit, number, and irreversible behavior is stated in a note or the
   relevant step, not discovered later.
 - FAQ questions are real user questions with direct first sentences.
-- Every cross-link resolves; the page appears exactly once in its
-  `meta.json` navigation group.
-- Product terms match `CONTEXT.md`; no Linear terminology leaked in.
+- Every cross-link resolves under the project's validation; the page is
+  placed in the navigation configuration as the project requires.
+- Product terms match the project's glossary; no Linear terminology leaked
+  in.
+- The project's components, frontmatter, and formatting conventions are
+  followed; gaps are flagged, not improvised.
 - No marketing voice, no hedging, no stacked lede patterns.
