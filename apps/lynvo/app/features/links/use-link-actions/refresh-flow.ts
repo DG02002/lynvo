@@ -90,15 +90,11 @@ const createRefreshDebugLogEntry = ({
   }
 }
 
-type RefreshAttemptPublicationOptions = {
+type RefreshAttemptPublicationOptions = Omit<RefreshDebugLogOptions, "item"> & {
   reporter: SoftRefreshOptions["reporter"]
   itemUrl: string
   item: LinkViewItem | undefined
-  meta?: MetaData
-  outcome: LinkDebugLogEntry["outcome"]
-  startedAt: number
-  nodeCount?: number
-} & RefreshDebugLogDetails
+}
 
 const publishRefreshAttempt = ({
   reporter,
