@@ -1,0 +1,147 @@
+---
+title: Saving links
+description: Save a Source URL to your Library and choose how Lynvo handles the links it finds.
+navLabel: Saving links
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="saving-links-input"
+  alt="Lynvo Save page with the Link field and Save link action visible"
+>
+  Save a Source URL
+</DocsScreenshot>
+
+<DocSection id="overview">
+
+## Overview
+
+Save a Source URL to create a Saved link. Lynvo runs Extraction for the URL, stores the returned Media Nodes, and keeps the Saved link in your Library.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Open [**Settings > General**](/settings/general) and choose whether Lynvo saves every playable choice automatically or asks you to select links. You can change this preference later; see [General settings](/docs/general).
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Save a URL
+
+1. Open [Save](/save).
+2. Paste or type the Source URL into **Link**.
+3. Choose **Save link** or press Enter.
+
+Lynvo may offer a copied URL above the field. Choose **Enable clipboard suggestions**, then **Allow clipboard access**, if you want Lynvo to read the clipboard and offer a copied link. Nothing is saved until you choose to save it.
+
+<DocsScreenshot
+  name="saving-links-clipboard-permission"
+  alt="Paste links faster dialog explaining clipboard access, with Allow clipboard access and Not now actions"
+>
+  Allow a copied link suggestion
+</DocsScreenshot>
+
+If the URL is already in your Library, Lynvo shows **Link already saved**. Open the existing Saved link instead of adding a duplicate.
+
+### Choose links to save
+
+When automatic saving is off, Lynvo keeps the Save intent in your Library while Extraction runs. When links are ready, choose **Choose links**, select the Playable links you want, then choose **Save**. **Select all** toggles every selectable link. **Cancel** closes the dialog without confirming a new selection; reopen **Choose links** to continue.
+
+<DocsScreenshot
+  name="saving-links-choose-links"
+  alt="Choose links dialog showing a tree of extracted items, Select all, Cancel, and Save"
+>
+  Select the links that belong in the Saved link
+</DocsScreenshot>
+
+### Follow Extraction status
+
+A Saved link can show **Waiting to load…** while Extraction is queued, then **Loading links…** while it runs. If it fails, Lynvo shows the returned error and offers **Delete** and **View log**. Open the item menu and choose **Refresh** to try Extraction again. The log helps distinguish a Source response problem from a link-selection problem.
+
+<DocsScreenshot
+  name="saving-links-extraction-failed"
+  alt="Saved link with a failed Extraction message and Delete and View log actions"
+>
+  Retry or inspect a failed Extraction
+</DocsScreenshot>
+
+### Read Source status
+
+During save, a Source status can explain why results are delayed or incomplete:
+
+- **Maintenance** means the Source is undergoing maintenance and some links may be unavailable.
+- **Degraded** means the Source is responding slowly and some links may be unavailable.
+- **Unavailable** means the Source is temporarily unavailable; try again later.
+
+<DocsScreenshot
+  name="saving-links-source-maintenance"
+  alt="Save page showing a Source marked Maintenance with its maintenance message"
+>
+  Read a Source maintenance notice
+</DocsScreenshot>
+
+<DocsScreenshot
+  name="saving-links-source-degraded"
+  alt="Save page showing a Source marked Degraded with its slow-response message"
+>
+  Read a Source degraded notice
+</DocsScreenshot>
+
+<DocsScreenshot
+  name="saving-links-source-unavailable"
+  alt="Save page showing a Source marked Unavailable with its retry-later message"
+>
+  Read a Source unavailable notice
+</DocsScreenshot>
+
+### Add a Plugin Domain suggestion
+
+After Lynvo recognizes a domain handled by a Plugin, it may ask **Add this domain for faster loading?** Choose **Add domain** to use that Plugin for the site next time, or **Not now** to dismiss the suggestion. You can manage Plugin Domains later in [**Settings > Plugins**](/settings/plugins).
+
+<DocsScreenshot
+  name="saving-links-domain-suggestion"
+  alt="Add this domain for faster loading dialog with Add domain and Not now actions"
+>
+  Save a recognized domain for future links
+</DocsScreenshot>
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Why does Lynvo say the URL is not supported?">
+  Lynvo could not match the URL to a supported Source or validate it as a Direct
+  Media link. It shows **Link not supported** with “The link is not supported.”
+  Check that the URL is complete and try again.
+</DocsFaq>
+
+<DocsFaq question="Which save errors can appear?">
+An empty field shows “Enter a URL.” A malformed address shows “Enter a valid URL.” An empty selection shows “Select at least one link.” A duplicate shows **Link already saved**. An unsupported URL shows **Link not supported** with “The link is not supported.” A general save failure shows **Link couldn’t be opened** with “The link couldn’t be opened. Check the link, then try again.”
+
+A failed Extraction can show “Links couldn’t be loaded from this address. Check the link, then try again.”, “The session expired. Sign in, then save the link again.”, “The session expired. Sign in, then try again.”, “Extraction is temporarily unavailable. Try again in a moment.”, “Extraction is rate-limited. Wait a moment, then try again.”, or “The Plugin Server is unavailable. Try again later or choose another Plugin Server.” Sign in again, wait, or choose another Plugin Server as the message directs, then refresh the Saved link.
+
+When Lynvo cannot store a Saved link, it can show “Unable to save link. Try again.”, “Unable to save selected links. Try again.”, “Unable to save the selected links. Try again.”, “Account storage is full. Remove a saved link, then try again.”, “This saved link is too large. Remove some extracted items, then try again.”, “The signed-in account changed. Try again from the current account.”, “The security session expired. Refresh the page, then try again.”, or “The link couldn’t be saved right now. Try again.” Follow the message, then retry the save or selection.
+
+</DocsFaq>
+
+<DocsFaq question="Can I close Choose links and return later?">
+  Yes. **Cancel** closes the selection dialog without confirming the selection.
+  The Saved link remains in your Library, and you can reopen **Choose links**
+  when you are ready.
+</DocsFaq>
+
+<DocsFaq question="What should I do when Extraction fails?">
+  Read the error shown on the Saved link, use **View log** for details, then
+  choose **Refresh** to retry. You can remove the Saved link with **Delete** if
+  you no longer want it.
+</DocsFaq>
+
+</DocSection>

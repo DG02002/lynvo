@@ -1,0 +1,82 @@
+---
+title: Opening links
+description: Browse a Saved link and send a Playable link to an Android player.
+navLabel: Opening links
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="opening-links-folder-browser"
+  alt="Lynvo folder browser showing a breadcrumb path, a Back control, folders, and a Playable link"
+>
+  Browse a Saved link
+</DocsScreenshot>
+
+<DocSection id="overview">
+
+## Overview
+
+Open a Playable link from a Saved link to send its final URL to Just (Video) Player, VLC, mpv, or MX Player on Android. Lynvo does not stream the media.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Choose the default players for links with and without HTTP byte-range support in [**Settings > Player**](/settings/player). Install the selected player on your Android device before opening a link.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Open a direct media link
+
+When a URL already points to media and passes Lynvo's Direct Media validation, Lynvo can save and open it without browsing a Source page. For a Source page, choose a Playable link from the Media Nodes that its Plugin returns.
+
+### Browse a Folder
+
+Choose a Folder to see its child Media Nodes. If a Folder needs another Extraction, Lynvo resolves it when you open it. Use the breadcrumb or **Back** control to return to a parent Folder. Browser Back and Forward restore folder navigation where available. Press Escape to move to the parent Folder.
+
+<DocsScreenshot
+  name="opening-links-resolving-folder"
+  alt="Lynvo folder browser loading the children of a Folder after opening a Resolvable link"
+>
+  Resolve nested contents when you open them
+</DocsScreenshot>
+
+### Open a Playable link
+
+Choose a Playable link to open its final URL in the configured Android player. Open an item's menu and choose **Open in** to select a different player for one open. After Lynvo hands the link to a player, it records an opened marker when the handoff is accepted.
+
+### Mark an item as watched
+
+On small screens, Lynvo can ask **Mark as watched?** after you open a link. Choose **Mark as watched** if you watched it, or **Not yet** to leave it unmarked. This changes the opened marker only; it does not set a playback position.
+
+<DocsScreenshot
+  name="opening-links-watched-confirmation"
+  alt="Mark as watched dialog with Mark as watched and Not yet actions"
+>
+  Confirm an opened marker on a small screen
+</DocsScreenshot>
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Why does a Folder take time to open?">
+  Some Folders need another Extraction before Lynvo can show their children.
+  Keep the Library open while Lynvo resolves the Folder. If the request fails,
+  check the Saved link's status and View log, then refresh it.
+</DocsFaq>
+
+<DocsFaq question="Can Lynvo resume a video where I stopped?">
+  No. Lynvo records whether the Playable link was opened. The external player
+  owns playback and any playback position.
+</DocsFaq>
+
+</DocSection>

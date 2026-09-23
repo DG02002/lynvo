@@ -85,6 +85,8 @@ declare global {
   interface DocumentationPageContext {
     page: DocumentationPage
     groups: readonly DocumentationChapterGroup[]
+    group: string
+    section: "user" | "developer"
     previous?: DocumentationPage
     next?: DocumentationPage
   }

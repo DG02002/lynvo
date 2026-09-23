@@ -3,40 +3,44 @@
     {
       "title": "Getting started",
       "pages": [
-        "plugin-server",
-        "what-is-a-plugin-server",
-        "what-is-a-plugin",
-        "prerequisites",
-        "create-plugin-server"
+        "plugin-server/plugin-server",
+        "plugin-server/what-is-a-plugin-server",
+        "plugin-server/what-is-a-plugin",
+        "plugin-server/prerequisites",
+        "plugin-server/create-plugin-server"
       ]
-    },
-    {
-      "title": "Build with an agent",
-      "pages": ["agent-prompt"]
     },
     {
       "title": "Build a Plugin Server",
       "pages": [
-        "protocol-overview",
-        "authentication",
-        "manifest",
-        "plugins",
-        "hono-routes"
+        "plugin-server/protocol-overview",
+        "plugin-server/authentication",
+        "plugin-server/manifest",
+        "plugin-server/plugins",
+        "plugin-server/hono-routes"
       ]
     },
     {
       "title": "Protocol reference",
       "pages": [
-        "extraction-requests",
-        "media-nodes",
-        "success-responses",
-        "usage-limits",
-        "errors"
+        "plugin-server/extraction-requests",
+        "plugin-server/media-nodes",
+        "plugin-server/success-responses",
+        "plugin-server/usage-limits",
+        "plugin-server/errors"
       ]
     },
     {
       "title": "Test and deploy",
-      "pages": ["testing", "deployment", "connect"]
+      "pages": [
+        "plugin-server/testing",
+        "plugin-server/deployment",
+        "plugin-server/connect"
+      ]
+    },
+    {
+      "title": "Build with an agent",
+      "pages": ["plugin-server/agent-prompt"]
     }
   ]
 }

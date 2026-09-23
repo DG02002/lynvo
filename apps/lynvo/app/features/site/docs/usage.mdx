@@ -1,0 +1,83 @@
+---
+title: Usage
+description: Track managed and Custom Plugin Server Extraction usage within service limits.
+navLabel: Usage
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="settings-usage"
+  alt="Settings > Usage showing the Lynvo Plugin Server monthly usage limit, percentage remaining, reset date, and per-Plugin rows"
+>
+  Review Extraction usage
+</DocsScreenshot>
+
+<DocSection id="overview">
+
+## Overview
+
+Usage shows how many managed and Custom Plugin Server Extractions are reported against their service limits, so you can see remaining allowance and reset timing.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Open [**Settings > Usage**](/settings/usage). The page reads usage from the Lynvo Plugin Server and from connected Custom Plugin Servers that report usage.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Read Lynvo Plugin Server usage
+
+**Lynvo Plugin Server usage** shows one monthly allowance shared across Lynvo Plugins, a separate daily extraction limit, and per-Plugin usage rows. **Monthly usage limit** shows the percentage remaining and reset date. Plugin rows show the usage count and its reported limit. The allowance values come from the service response and can change; this page does not use a fixed number in its instructions.
+
+### Read Custom Plugin Server usage
+
+Each reporting Custom Plugin Server has its own usage group, monthly summary, reset date, and per-Plugin rows. Its limits are separate from the Lynvo Plugin Server allowance. A server that does not report usage cannot show a usage total here.
+
+<DocsScreenshot
+  name="settings-usage-custom"
+  alt="Settings > Usage showing a Custom Plugin Server monthly usage summary, reset date, and per-Plugin usage counts"
+>
+  Review a server's reported usage
+</DocsScreenshot>
+
+### Retry a failed usage read
+
+While usage loads, Lynvo shows a loading state. If the usage snapshot cannot load, the page shows an error and a retry action. Choose it after checking your connection. If one Custom Plugin Server does not return usage, its failure appears with the other server usage; retry the usage read to check again.
+
+<DocsScreenshot
+  name="settings-usage-retry"
+  alt="Settings > Usage showing an unavailable usage summary with a retry action"
+>
+  Retry a failed usage check
+</DocsScreenshot>
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Why do Lynvo Plugins share a monthly allowance?">
+  The Lynvo Plugin Server reports one monthly allowance across its Lynvo
+  Plugins. A separate daily limit also applies. The usage rows show how each
+  Plugin contributes to the reported usage.
+</DocsFaq>
+
+<DocsFaq question="Why don’t Custom Plugin Server counts match Lynvo Plugin Server usage?">
+  Each Custom Plugin Server reports its own usage and limits. Those totals are
+  separate from the managed Lynvo Plugin Server allowance.
+</DocsFaq>
+
+<DocsFaq question="What does a reset date mean?">
+  It is the next reset reported with that monthly usage allowance. Each Custom
+  Plugin Server can report a different date.
+</DocsFaq>
+
+</DocSection>

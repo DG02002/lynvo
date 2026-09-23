@@ -1,0 +1,100 @@
+---
+title: Remote Play
+description: Send a Playable link from one signed-in Lynvo session to another connected session.
+navLabel: Remote Play
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="remote-play-device-picker"
+  alt="Connect Remote Play dialog showing connected devices and Search again"
+>
+  Choose a receiver
+</DocsScreenshot>
+
+<DocSection id="overview">
+
+## Overview
+
+Remote Play sends a Playable link from the current browser session to another connected Lynvo session. The receiving session opens it in its external Android player.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Open Lynvo and sign in on both devices with the same account. On the device that will receive the link, keep Lynvo open in its browser and make sure an Android player is installed.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Connect to a device
+
+1. On the sending device, choose **Remote Play**.
+2. In **Connect Remote Play**, choose the receiving device from the device list.
+3. If it is missing, keep Lynvo open on the receiver and choose **Search again**.
+
+The sending session shows **Connected to** and the receiver shows **Controlled by** with the other device's name. **Cancel** closes the device picker.
+
+<DocsScreenshot
+  name="remote-play-connected-to"
+  alt="Remote Play on the sending session showing the Connected to device name and a disconnect action"
+>
+  See which device will receive links
+</DocsScreenshot>
+
+<DocsScreenshot
+  name="remote-play-controlled-by"
+  alt="Lynvo on the receiving device showing the Controlled by device name"
+>
+  See which session controls the receiver
+</DocsScreenshot>
+
+### Send a Playable link
+
+On the sending device, browse a Saved link and choose a Playable link. Lynvo sends its URL to the connected session, which opens it in the configured player. The receiving session displays a Remote Play overlay while it handles the command.
+
+<DocsScreenshot
+  name="remote-play-receiver-overlay"
+  alt="Android TV Lynvo session showing the Remote Play receiver overlay while opening a sent Playable link"
+>
+  The receiving session opens the link
+</DocsScreenshot>
+
+### Disconnect and reconnect
+
+Disconnect Remote Play from the connected session when you are done. If a connection drops, open **Remote Play** again and choose the device. Keep Lynvo open on the receiving session so it can be found again.
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Why isn’t my device in the list?">
+  Both devices must be signed in to the same account, and Lynvo must remain open
+  on the receiver. If the list is empty or could not load, choose **Search
+  again**.
+</DocsFaq>
+
+<DocsFaq question="What errors can Remote Play show?">
+  The device list can say **Device list couldn’t be loaded** or **No Remote Play
+  devices found**. Connection and delivery errors appear as **Remote Play
+  couldn’t connect**, **Remote Play couldn’t disconnect**, **Couldn’t send the
+  Remote Play command**, **Remote Play connection issue**, or **Remote Play
+  request couldn’t be understood**. The receiver can show **Remote Play couldn’t
+  open this link**. Check the connection, keep Lynvo open on both devices,
+  reconnect, then try again. If the receiver cannot open the link, check that an
+  Android player is installed and that the Playable link is still valid.
+</DocsFaq>
+
+<DocsFaq question="Does Remote Play stream video to my phone?">
+  No. Remote Play sends the Playable link to another Lynvo session. The
+  receiving device opens it in its external Android player.
+</DocsFaq>
+
+</DocSection>

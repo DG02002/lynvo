@@ -1,0 +1,111 @@
+---
+title: Concepts
+description: Learn how Lynvo connects the links you choose to the Android player you use.
+navLabel: Concepts
+contentType: Conceptual
+---
+
+<DocSection id="overview">
+
+## Overview
+
+Lynvo starts with a URL you choose. The terms below describe how a Source becomes a Playable link that an Android player can open.
+
+</DocSection>
+
+<DocSection id="saved-link">
+
+## Saved link
+
+A Saved link is a Source URL with its extracted Media Nodes, metadata, and opened markers. It stays in your Library and syncs across signed-in sessions. An opened marker records that you opened a link; it is not playback position.
+
+Read more about [saving links](/docs/saving-links) and [Library views](/docs/library-views).
+
+</DocSection>
+
+<DocSection id="source">
+
+## Source
+
+A Source is a website, service, or URL pattern supported by a Plugin. You choose the Source URL to save. Lynvo does not supply a catalogue of Sources or decide what belongs in your Library.
+
+Read more about [Plugins in Lynvo](/docs/plugins).
+
+</DocSection>
+
+<DocSection id="plugin">
+
+## Plugin
+
+A Plugin is a Source-specific implementation hosted by a Plugin Server. It recognizes supported URLs and turns them into Media Nodes.
+
+Read more about [connecting a Custom Plugin Server](/docs/plugins).
+
+</DocSection>
+
+<DocSection id="plugin-server">
+
+## Plugin Server
+
+A Plugin Server runs one or more Plugins and follows the Plugin Server Protocol. The managed Plugin Server runs Lynvo Plugins. A Custom Plugin Server is a server you connect and manage in Lynvo.
+
+Read more about [Lynvo and Custom Plugin Servers](/docs/plugins) or [building a Plugin Server](/docs/plugin-server).
+
+</DocSection>
+
+<DocSection id="media-node">
+
+## Media Node
+
+A Media Node is a normalized playable item, Folder, Group, or unresolved item returned by a Plugin Server. A Folder contains child Media Nodes. A Group only organizes child nodes. An unresolved item needs another Extraction before Lynvo can show its next result.
+
+Read more about [opening links](/docs/opening-links) and [Media Nodes in the Plugin Server Protocol](/docs/plugin-server/media-nodes).
+
+</DocSection>
+
+<DocSection id="playable-link">
+
+## Playable link
+
+A Playable link is the final URL Lynvo sends to an Android player. A Resolvable link needs another Extraction before Lynvo can send its final URL.
+
+Read more about [choosing and opening links](/docs/opening-links).
+
+</DocSection>
+
+<DocSection id="players">
+
+## Players
+
+Lynvo hands Playable links to Just (Video) Player, VLC, mpv, or MX Player on Android. The player opens the media; Lynvo does not stream it or own its playback position.
+
+Read more about [choosing a player](/docs/player).
+
+</DocSection>
+
+<DocSection id="how-these-fit-together">
+
+## How these fit together
+
+- You choose a Source URL and save it as a Saved link.
+- A Plugin recognizes the Source and returns Media Nodes through a Plugin Server.
+- You select a Playable link, or Lynvo resolves a Resolvable link first.
+- An Android player opens the final URL.
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Is Lynvo a media catalogue or a player?">
+  No. Lynvo stores URLs you choose and hands selected Playable links to an
+  Android player. It does not provide media or stream it.
+</DocsFaq>
+
+<DocsFaq question="What does an opened marker mean?">
+  It means the link was opened. It does not mean Lynvo saved a playback position
+  or can resume the video.
+</DocsFaq>
+
+</DocSection>

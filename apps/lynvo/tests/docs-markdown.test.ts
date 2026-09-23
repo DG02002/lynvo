@@ -47,4 +47,24 @@ Trust the server response.
 </DocsNote>`)
     ).toBe("> **Usage is authoritative**\n>\n> Trust the server response.")
   })
+
+  it("exports collapsible FAQs as a bold question and answer", () => {
+    expect(
+      cleanDocumentationMarkdown(
+        '<DocsFaq question="Why is this link still loading?">Try refreshing the Saved link.</DocsFaq>'
+      )
+    ).toBe(
+      "**Why is this link still loading?**\n\nTry refreshing the Saved link."
+    )
+  })
+
+  it("exports screenshot alt text and the expected image path", () => {
+    expect(
+      cleanDocumentationMarkdown(
+        '<DocsScreenshot name="settings-player" alt="Settings > Player showing VLC selected">Player settings</DocsScreenshot>'
+      )
+    ).toBe(
+      "![Settings > Player showing VLC selected](images/settings-player.png)\n\n*Player settings*"
+    )
+  })
 })

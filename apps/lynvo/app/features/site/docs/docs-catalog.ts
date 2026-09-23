@@ -52,8 +52,8 @@ const getRawContent = (path: string) => {
   return content.success
 }
 
-const getContentFileName = (path: string) =>
-  path.slice(path.lastIndexOf("/") + 1, -".mdx".length)
+const getContentPathKey = (path: string) =>
+  path.slice("./".length, -".mdx".length)
 
 const getContentSlug = (path: string) => {
   const relativePath = path.slice("./".length, -".mdx".length)
@@ -96,14 +96,14 @@ const validateFrontmatter = (
   }
 }
 
-const pagesByFileName = new Map<string, DocumentationPage>()
+const pagesByContentPath = new Map<string, DocumentationPage>()
 const pagesBySlug = new Map<string, DocumentationPage>()
 const sourcePathBySlug = new Map<string, string>()
 
-const getPageByFileName = (fileName: string) => {
-  const page = pagesByFileName.get(fileName)
+const getPageByContentPath = (contentPathKey: string) => {
+  const page = pagesByContentPath.get(contentPathKey)
   if (!page) {
-    throw new Error(`Documentation page is missing: ${fileName}`)
+    throw new Error(`Documentation page is missing: ${contentPathKey}`)
   }
   return page
 }
@@ -145,7 +145,7 @@ for (const [path, loadContent] of Object.entries(contentModules)) {
   }
 
   pagesBySlug.set(slug, page)
-  pagesByFileName.set(getContentFileName(path), page)
+  pagesByContentPath.set(getContentPathKey(path), page)
   sourcePathBySlug.set(slug, path)
 }
 
@@ -154,11 +154,11 @@ const createGroups = (
 ): readonly DocumentationChapterGroup[] =>
   groups.map((group) => ({
     group: group.title,
-    pages: group.pages.map((pageName) => {
-      const page = pagesByFileName.get(pageName)
+    pages: group.pages.map((contentPathKey) => {
+      const page = pagesByContentPath.get(contentPathKey)
       if (!page) {
         throw new Error(
-          `Documentation navigation references a missing page: ${pageName}`
+          `Documentation navigation references a missing page: ${contentPathKey}`
         )
       }
       return page
@@ -168,20 +168,45 @@ const createGroups = (
 const rootGroups = createGroups(rootMeta.groups)
 const pluginServerGroups = createGroups(pluginServerMeta.groups)
 const orderedPages = [
-  ...rootGroups[0].pages,
+  ...rootGroups.flatMap((group) => group.pages),
   ...pluginServerGroups.flatMap((group) => group.pages),
 ]
+const navigationContextBySlug = new Map<
+  string,
+  { group: string; section: "user" | "developer" }
+>()
 
-if (orderedPages.length !== pagesBySlug.size) {
-  throw new Error("Every documentation page must appear once in navigation")
+for (const [groups, section] of [
+  [rootGroups, "user"],
+  [pluginServerGroups, "developer"],
+] as const) {
+  for (const group of groups) {
+    for (const page of group.pages) {
+      if (navigationContextBySlug.has(page.slug)) {
+        throw new Error(
+          `Documentation page appears more than once in navigation: ${page.slug}`
+        )
+      }
+      navigationContextBySlug.set(page.slug, { group: group.group, section })
+    }
+  }
+}
+
+if (
+  orderedPages.length !== pagesBySlug.size ||
+  new Set(orderedPages.map((page) => page.slug)).size !== orderedPages.length
+) {
+  throw new Error(
+    "Every documentation page must appear exactly once in navigation"
+  )
 }
 
 const getGroups = (
   page: DocumentationPage
 ): readonly DocumentationChapterGroup[] =>
-  rootGroups.some((group) => group.pages.includes(page))
-    ? rootGroups
-    : pluginServerGroups
+  navigationContextBySlug.get(page.slug)?.section === "developer"
+    ? pluginServerGroups
+    : rootGroups
 
 const getContext = (slug: string): DocumentationPageContext | undefined => {
   const page = pagesBySlug.get(slug)
@@ -190,10 +215,19 @@ const getContext = (slug: string): DocumentationPageContext | undefined => {
   }
 
   const pageIndex = orderedPages.indexOf(page)
+  const navigationContext = navigationContextBySlug.get(page.slug)
+
+  if (!navigationContext) {
+    throw new Error(
+      `Documentation page is missing from navigation: ${page.slug}`
+    )
+  }
 
   return {
     page,
     groups: getGroups(page),
+    group: navigationContext.group,
+    section: navigationContext.section,
     previous: pageIndex > 0 ? orderedPages[pageIndex - 1] : undefined,
     next:
       pageIndex < orderedPages.length - 1
@@ -255,16 +289,19 @@ export const docsCatalog = {
       sections: [
         {
           title: "What is a Custom Plugin Server?",
-          content: getPageByFileName("what-is-a-plugin-server").rawContent,
+          content: getPageByContentPath("plugin-server/what-is-a-plugin-server")
+            .rawContent,
         },
         {
           level: 3,
           title: "What is a Plugin?",
-          content: getPageByFileName("what-is-a-plugin").rawContent,
+          content: getPageByContentPath("plugin-server/what-is-a-plugin")
+            .rawContent,
         },
         {
           title: "Create a Plugin Server with an agent",
-          content: getPageByFileName("agent-prompt").rawContent,
+          content: getPageByContentPath("plugin-server/agent-prompt")
+            .rawContent,
         },
         {
           title: "Create a Plugin Server manually",
@@ -274,27 +311,30 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Prepare your development environment",
-          content: getPageByFileName("prerequisites").rawContent,
+          content: getPageByContentPath("plugin-server/prerequisites")
+            .rawContent,
         },
         {
           level: 3,
           title: "Generate the project",
-          content: getPageByFileName("create-plugin-server").rawContent,
+          content: getPageByContentPath("plugin-server/create-plugin-server")
+            .rawContent,
         },
         {
           level: 3,
           title: "Understand protocol version 1.0",
-          content: getPageByFileName("protocol-overview").rawContent,
+          content: getPageByContentPath("plugin-server/protocol-overview")
+            .rawContent,
         },
         {
           level: 3,
           title: "Configure the manifest",
-          content: getPageByFileName("manifest").rawContent,
+          content: getPageByContentPath("plugin-server/manifest").rawContent,
         },
         {
           level: 3,
           title: "Wire the shared routes",
-          content: getPageByFileName("hono-routes").rawContent,
+          content: getPageByContentPath("plugin-server/hono-routes").rawContent,
         },
         {
           title: "Build a Plugin and return Media Nodes",
@@ -304,11 +344,11 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Add a Source Plugin",
-          content: getPageByFileName("plugins").rawContent,
+          content: getPageByContentPath("plugin-server/plugins").rawContent,
         },
         {
           title: "Choose among the four node types",
-          content: getPageByFileName("media-nodes").rawContent,
+          content: getPageByContentPath("plugin-server/media-nodes").rawContent,
         },
         {
           title: "Configure security and usage limits",
@@ -318,12 +358,14 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Create the Plugin Server API key",
-          content: getPageByFileName("authentication").rawContent,
+          content: getPageByContentPath("plugin-server/authentication")
+            .rawContent,
         },
         {
           level: 3,
           title: "Define and enforce usage limits",
-          content: getPageByFileName("usage-limits").rawContent,
+          content: getPageByContentPath("plugin-server/usage-limits")
+            .rawContent,
         },
         {
           title: "Handle protocol requests and responses",
@@ -333,17 +375,19 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Validate Extraction requests",
-          content: getPageByFileName("extraction-requests").rawContent,
+          content: getPageByContentPath("plugin-server/extraction-requests")
+            .rawContent,
         },
         {
           level: 3,
           title: "Return successful responses",
-          content: getPageByFileName("success-responses").rawContent,
+          content: getPageByContentPath("plugin-server/success-responses")
+            .rawContent,
         },
         {
           level: 3,
           title: "Return structured errors",
-          content: getPageByFileName("errors").rawContent,
+          content: getPageByContentPath("plugin-server/errors").rawContent,
         },
         {
           title: "Test, deploy, and connect",
@@ -353,17 +397,17 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Test the protocol contract",
-          content: getPageByFileName("testing").rawContent,
+          content: getPageByContentPath("plugin-server/testing").rawContent,
         },
         {
           level: 3,
           title: "Deploy the Plugin Server",
-          content: getPageByFileName("deployment").rawContent,
+          content: getPageByContentPath("plugin-server/deployment").rawContent,
         },
         {
           level: 3,
           title: "Connect the Plugin Server to Lynvo",
-          content: getPageByFileName("connect").rawContent,
+          content: getPageByContentPath("plugin-server/connect").rawContent,
         },
       ],
     })

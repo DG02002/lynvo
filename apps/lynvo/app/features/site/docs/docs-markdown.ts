@@ -21,10 +21,38 @@ const convertNotes = (content: string) =>
       ].join("\n")
   )
 
+const convertFaqs = (content: string) =>
+  content.replaceAll(
+    /<DocsFaq question="([^"]+)">\s*([\s\S]*?)\s*<\/DocsFaq>/g,
+    (_, question: string, answer: string) =>
+      `**${question}**\n\n${answer.trim()}`
+  )
+
+const convertScreenshots = (content: string) =>
+  content.replaceAll(
+    /<DocsScreenshot\s+name="[^"]+"\s+alt="[^"]+"\s*>([\s\S]*?)<\/DocsScreenshot>/g,
+    (component: string) => {
+      const screenshot =
+        /^<DocsScreenshot\s+name="([^"]+)"\s+alt="([^"]+)"\s*>([\s\S]*?)<\/DocsScreenshot>$/.exec(
+          component
+        )
+
+      if (!screenshot) {
+        return component
+      }
+
+      const [, name, alt, caption] = screenshot
+      const image = `![${alt}](images/${name}.png)`
+      const trimmedCaption = caption.trim()
+      return trimmedCaption ? `${image}\n\n*${trimmedCaption}*` : image
+    }
+  )
+
 export const cleanDocumentationMarkdown = (content: string) =>
-  convertNotes(removeFrontmatter(content))
+  convertScreenshots(convertFaqs(convertNotes(removeFrontmatter(content))))
     .replaceAll(/^<\/?DocSection(?:\s[^>]*)?>\s*$/gm, "")
     .replaceAll(/^<\/?CodeBlock(?:\s[^>]*)?>\s*$/gm, "")
+    .replaceAll(/^<\/?(?:DocsFaq|DocsScreenshot)(?:\s[^>]*)?>\s*$/gm, "")
     .replaceAll(/\n{3,}/g, "\n\n")
     .trim()
 

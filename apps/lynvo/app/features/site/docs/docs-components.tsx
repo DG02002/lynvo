@@ -168,6 +168,74 @@ function DocSection({ id, children }: { id: string; children: ReactNode }) {
   )
 }
 
+export function DocsFaq({
+  question,
+  children,
+}: {
+  question: string
+  children: ReactNode
+}) {
+  return (
+    <details className="not-typeset my-3 rounded-xl border border-border px-4 py-3">
+      <summary className="cursor-pointer text-sm font-medium leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        {question}
+      </summary>
+      <div className="mt-3 text-sm leading-6 text-muted-foreground">
+        {children}
+      </div>
+    </details>
+  )
+}
+
+const documentationImageModules = import.meta.glob<string>(
+  "./images/*.{png,webp}",
+  { eager: true, import: "default", query: "?url" }
+)
+
+export function DocsScreenshot({
+  name,
+  alt,
+  children,
+}: {
+  name: string
+  alt: string
+  children?: ReactNode
+}) {
+  const imageSource =
+    documentationImageModules[`./images/${name}.png`] ??
+    documentationImageModules[`./images/${name}.webp`]
+
+  return (
+    <figure className="not-typeset my-6 overflow-hidden rounded-xl border border-border">
+      {imageSource ? (
+        <img
+          src={imageSource}
+          alt={alt}
+          loading="lazy"
+          className="h-auto w-full object-cover"
+        />
+      ) : (
+        <div
+          role="img"
+          aria-label={`${alt}. Expected image: ${name}.png`}
+          className="flex min-h-36 flex-col justify-center gap-2 border-b border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
+        >
+          <span className="font-medium text-foreground">Screenshot needed</span>
+          <span className="font-mono text-muted-foreground">
+            images/{name}.png
+          </span>
+          <span className="text-muted-foreground">{alt}</span>
+        </div>
+      )}
+      {children && (
+        <figcaption className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+          {children}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
 function CodeBlock({
   label,
   children,
@@ -400,6 +468,8 @@ export const docsComponents: MDXComponents = {
   DocSection,
   CodeBlock,
   DocsNote,
+  DocsFaq,
+  DocsScreenshot,
   h2: ({ children, id, ...props }) => {
     const headingId = id ?? createHeadingId(children)
 
