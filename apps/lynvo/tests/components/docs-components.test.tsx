@@ -36,9 +36,13 @@ describe("DocsScreenshot", () => {
     )
 
     expect(screen.getByRole("img")).toHaveAccessibleName(
-      "Settings > Player with Just (Video) Player selected. Expected image: settings-player.png"
+      "Settings > Player with Just (Video) Player selected. Expected image: images/settings-player.png or images/settings-player.webp"
     )
-    expect(screen.getByText("images/settings-player.png")).toBeVisible()
+    expect(
+      screen.getByText(
+        "images/settings-player.png or images/settings-player.webp"
+      )
+    ).toBeVisible()
     expect(screen.getByText("Player defaults")).toBeVisible()
   })
 })

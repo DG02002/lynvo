@@ -61,8 +61,8 @@ export const DocsLanding = () => {
 
   return (
     <div className="w-full px-6 py-12 md:px-8 md:py-20 lg:px-10 xl:px-14">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12">
-        <header className="flex flex-col gap-3">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-12">
+        <header className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
           <p className="text-sm text-muted-foreground">Documentation</p>
           <h1 className="text-4xl font-normal tracking-tight text-balance md:text-6xl">
             Lynvo documentation
@@ -75,19 +75,19 @@ export const DocsLanding = () => {
         {documentationCardRows.map((row) => (
           <section key={row.title} className="flex flex-col gap-4">
             <h2 className="text-xl font-normal tracking-tight">{row.title}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               {row.cards.map((card) => (
                 <Link
                   key={card.to}
                   to={card.to}
                   prefetch="intent"
                   viewTransition={viewTransition}
-                  className="group flex min-h-48 flex-col justify-between gap-8 rounded-2xl bg-muted/35 p-6 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07),0_8px_24px_-16px_rgba(0,0,0,0.2)] transition-[background-color,box-shadow,scale] duration-200 hover:bg-muted/60 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1),0_18px_40px_-20px_rgba(0,0,0,0.3)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring active:scale-[0.98] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+                  className="group flex min-h-56 flex-col justify-between gap-8 rounded-2xl bg-muted/35 p-6 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07),0_8px_24px_-16px_rgba(0,0,0,0.2)] transition-[background-color,box-shadow,scale] duration-200 hover:bg-muted/60 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1),0_18px_40px_-20px_rgba(0,0,0,0.3)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring active:scale-[0.96] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                 >
                   <HugeiconsIcon
                     icon={card.icon}
                     aria-hidden="true"
-                    className="size-7"
+                    className="size-8"
                     strokeWidth={1.5}
                   />
                   <span className="flex items-end justify-between gap-4">

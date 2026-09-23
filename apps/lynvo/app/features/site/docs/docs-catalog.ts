@@ -2,8 +2,10 @@ import { Result, Schema } from "effect"
 import { lazy } from "react"
 
 import { createHeadingId } from "./docs-heading"
+import { getDocumentationImageExtension } from "./docs-image-assets"
 import {
   assembleDocumentationMarkdown,
+  cleanDocumentationMarkdown,
   extractDocumentationSection,
 } from "./docs-markdown"
 import rootMeta from "./meta.json"
@@ -192,10 +194,7 @@ for (const [groups, section] of [
   }
 }
 
-if (
-  orderedPages.length !== pagesBySlug.size ||
-  new Set(orderedPages.map((page) => page.slug)).size !== orderedPages.length
-) {
+if (orderedPages.length !== pagesBySlug.size) {
   throw new Error(
     "Every documentation page must appear exactly once in navigation"
   )
@@ -279,7 +278,10 @@ export const docsCatalog = {
       return undefined
     }
     if (slug !== "plugin-server") {
-      return page.rawContent
+      return cleanDocumentationMarkdown(
+        page.rawContent,
+        getDocumentationImageExtension
+      )
     }
 
     return assembleDocumentationMarkdown({

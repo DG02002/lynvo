@@ -26,6 +26,8 @@ import { Link } from "react-router"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
 
+import { getDocumentationImageAsset } from "./docs-image-assets"
+
 const copyWithTextArea = (code: string) => {
   const textArea = document.createElement("textarea")
   textArea.value = code
@@ -187,11 +189,6 @@ export function DocsFaq({
   )
 }
 
-const documentationImageModules = import.meta.glob<string>(
-  "./images/*.{png,webp}",
-  { eager: true, import: "default", query: "?url" }
-)
-
 export function DocsScreenshot({
   name,
   alt,
@@ -201,15 +198,14 @@ export function DocsScreenshot({
   alt: string
   children?: ReactNode
 }) {
-  const imageSource =
-    documentationImageModules[`./images/${name}.png`] ??
-    documentationImageModules[`./images/${name}.webp`]
+  const image = getDocumentationImageAsset(name)
+  const expectedImagePaths = `images/${name}.png or images/${name}.webp`
 
   return (
     <figure className="not-typeset my-6 overflow-hidden rounded-xl border border-border">
-      {imageSource ? (
+      {image ? (
         <img
-          src={imageSource}
+          src={image.source}
           alt={alt}
           loading="lazy"
           className="h-auto w-full object-cover"
@@ -217,12 +213,12 @@ export function DocsScreenshot({
       ) : (
         <div
           role="img"
-          aria-label={`${alt}. Expected image: ${name}.png`}
+          aria-label={`${alt}. Expected image: ${expectedImagePaths}`}
           className="flex min-h-36 flex-col justify-center gap-2 border-b border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
         >
           <span className="font-medium text-foreground">Screenshot needed</span>
           <span className="font-mono text-muted-foreground">
-            images/{name}.png
+            {expectedImagePaths}
           </span>
           <span className="text-muted-foreground">{alt}</span>
         </div>

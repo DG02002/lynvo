@@ -55,7 +55,7 @@ When automatic saving is off, Lynvo keeps the Save intent in your Library while 
 
 <DocsScreenshot
   name="saving-links-choose-links"
-  alt="Choose links dialog showing a tree of extracted items, Select all, Cancel, and Save"
+  alt="Choose links dialog showing Media Nodes, Select all, Cancel, and Save"
 >
   Select the links that belong in the Saved link
 </DocsScreenshot>
@@ -111,26 +111,46 @@ After Lynvo recognizes a domain handled by a Plugin, it may ask **Add this domai
   Save a recognized domain for future links
 </DocsScreenshot>
 
+### Resolve URL and selection errors
+
+| Message                                                                                     | What to do                                                                            |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Enter a URL.**                                                                            | Enter a Source URL.                                                                   |
+| **Enter a valid URL.**                                                                      | Check the address, then try again.                                                    |
+| **Select at least one link.**                                                               | Select a Playable link before saving.                                                 |
+| **Link already saved**                                                                      | Open the existing Saved link.                                                         |
+| **Link not supported**: “The link is not supported.”                                        | Check that the URL is complete and points to a supported Source or Direct Media link. |
+| **Link couldn’t be opened**: “The link couldn’t be opened. Check the link, then try again.” | Check the URL and try again.                                                          |
+
+### Recover from Extraction errors
+
+| Message                                                                              | What to do                                          |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| “Links couldn’t be loaded from this address. Check the link, then try again.”        | Check the Source URL.                               |
+| “The session expired. Sign in, then save the link again.”                            | Sign in and save the link again.                    |
+| “The session expired. Sign in, then try again.”                                      | Sign in and retry.                                  |
+| “Extraction is temporarily unavailable. Try again in a moment.”                      | Wait, then refresh the Saved link.                  |
+| “Extraction is rate-limited. Wait a moment, then try again.”                         | Wait, then refresh the Saved link.                  |
+| “The Plugin Server is unavailable. Try again later or choose another Plugin Server.” | Wait or choose another Plugin Server, then refresh. |
+
+### Retry failed saves
+
+| Message                                                                      | What to do                                   |
+| ---------------------------------------------------------------------------- | -------------------------------------------- |
+| “Unable to save link. Try again.”                                            | Retry the save.                              |
+| “Unable to save selected links. Try again.”                                  | Reopen the dialog and retry the selection.   |
+| “Unable to save the selected links. Try again.”                              | Reopen the dialog and retry the selection.   |
+| “Account storage is full. Remove a saved link, then try again.”              | Remove a Saved link, then retry.             |
+| “This saved link is too large. Remove some extracted items, then try again.” | Choose fewer items, then retry.              |
+| “The signed-in account changed. Try again from the current account.”         | Continue with the current account and retry. |
+| “The security session expired. Refresh the page, then try again.”            | Refresh the page, then retry.                |
+| “The link couldn’t be saved right now. Try again.”                           | Retry the save.                              |
+
 </DocSection>
 
 <DocSection id="faq">
 
 ## FAQ
-
-<DocsFaq question="Why does Lynvo say the URL is not supported?">
-  Lynvo could not match the URL to a supported Source or validate it as a Direct
-  Media link. It shows **Link not supported** with “The link is not supported.”
-  Check that the URL is complete and try again.
-</DocsFaq>
-
-<DocsFaq question="Which save errors can appear?">
-An empty field shows “Enter a URL.” A malformed address shows “Enter a valid URL.” An empty selection shows “Select at least one link.” A duplicate shows **Link already saved**. An unsupported URL shows **Link not supported** with “The link is not supported.” A general save failure shows **Link couldn’t be opened** with “The link couldn’t be opened. Check the link, then try again.”
-
-A failed Extraction can show “Links couldn’t be loaded from this address. Check the link, then try again.”, “The session expired. Sign in, then save the link again.”, “The session expired. Sign in, then try again.”, “Extraction is temporarily unavailable. Try again in a moment.”, “Extraction is rate-limited. Wait a moment, then try again.”, or “The Plugin Server is unavailable. Try again later or choose another Plugin Server.” Sign in again, wait, or choose another Plugin Server as the message directs, then refresh the Saved link.
-
-When Lynvo cannot store a Saved link, it can show “Unable to save link. Try again.”, “Unable to save selected links. Try again.”, “Unable to save the selected links. Try again.”, “Account storage is full. Remove a saved link, then try again.”, “This saved link is too large. Remove some extracted items, then try again.”, “The signed-in account changed. Try again from the current account.”, “The security session expired. Refresh the page, then try again.”, or “The link couldn’t be saved right now. Try again.” Follow the message, then retry the save or selection.
-
-</DocsFaq>
 
 <DocsFaq question="Can I close Choose links and return later?">
   Yes. **Cancel** closes the selection dialog without confirming the selection.
@@ -139,9 +159,10 @@ When Lynvo cannot store a Saved link, it can show “Unable to save link. Try ag
 </DocsFaq>
 
 <DocsFaq question="What should I do when Extraction fails?">
-  Read the error shown on the Saved link, use **View log** for details, then
-  choose **Refresh** to retry. You can remove the Saved link with **Delete** if
-  you no longer want it.
+  Match the message under [Recover from Extraction
+  errors](#recover-from-extraction-errors), use **View log** for details, then
+  choose **Refresh** to retry. Choose **Delete** if you no longer want the Saved
+  link.
 </DocsFaq>
 
 </DocSection>

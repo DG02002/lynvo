@@ -15,6 +15,11 @@ const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 })
 
+const getNavigationLinkStateClassName = (isCurrentPage: boolean) =>
+  isCurrentPage
+    ? "bg-muted font-medium text-foreground"
+    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+
 const DocsSidebarContents = ({
   context,
 }: {
@@ -41,11 +46,7 @@ const DocsSidebarContents = ({
                     to={page.url}
                     prefetch="intent"
                     aria-current={isCurrentPage ? "page" : undefined}
-                    className={`block rounded-md px-3 py-2 text-sm leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                      isCurrentPage
-                        ? "bg-muted font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                    }`}
+                    className={`block rounded-md px-3 py-2 text-sm leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${getNavigationLinkStateClassName(isCurrentPage)}`}
                   >
                     {page.navLabel}
                   </Link>
@@ -65,11 +66,7 @@ const DocsSidebarContents = ({
         to="/docs"
         prefetch="intent"
         aria-current={context.section === "user" ? "page" : undefined}
-        className={`rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-          context.section === "user"
-            ? "bg-muted font-medium text-foreground"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-        }`}
+        className={`rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${getNavigationLinkStateClassName(context.section === "user")}`}
       >
         Using Lynvo
       </Link>
@@ -77,11 +74,7 @@ const DocsSidebarContents = ({
         to="/docs/plugin-server"
         prefetch="intent"
         aria-current={context.section === "developer" ? "page" : undefined}
-        className={`rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-          context.section === "developer"
-            ? "bg-muted font-medium text-foreground"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-        }`}
+        className={`rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${getNavigationLinkStateClassName(context.section === "developer")}`}
       >
         Developers
       </Link>
