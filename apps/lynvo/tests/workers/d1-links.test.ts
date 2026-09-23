@@ -13,6 +13,7 @@ import {
 import {
   claimNextSavedLinkExtraction,
   enqueueSavedLinkExtraction,
+  getSavedLinkQueueError,
   requeuePendingSavedLinkExtraction,
   settleSavedLinkExtraction,
 } from "../../workers/d1/link-extraction-queue"
@@ -1867,6 +1868,59 @@ describe("d1 links", () => {
         detail: "TEMPORARY_FAILURE",
       },
     ])
+
+    const appended = await applySavedLinkMetadataOperation(env.DB, user.id, {
+      operationId: "log:manual-retry",
+      id: queued.id ?? "",
+      operation: {
+        kind: "appendDebugLog",
+        debugLogEntryJson: JSON.stringify({
+          at: NOW + 2_000,
+          pluginServerId: "lynvo-plugin-server",
+          pluginId: "direct-media",
+          outcome: "complete",
+          attempt: 2,
+          nodeCount: 1,
+        }),
+      },
+      now: NOW + 2_000,
+    })
+    expect(appended.success).toBe(true)
+    const appendedSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+    expect(
+      JSON.parse(appendedSnapshot.results[0]?.metaJson ?? "").debugLog
+    ).toHaveLength(2)
+  })
+
+  it("surfaces specific extraction failures and signed-link expiry hints", () => {
+    expect(
+      getSavedLinkQueueError({
+        message: "UNSUPPORTED_URL",
+        detail: "An upstream response that must stay diagnostic.",
+        url: "https://source.example/video",
+        status: 400,
+      })
+    ).toBe("The URL does not point at playable media.")
+    expect(
+      getSavedLinkQueueError({
+        message: "AUTH_REQUIRED",
+        detail: "The URL does not point at playable media.",
+        url: "https://source.example/video?token=source-page-token",
+        status: 403,
+      })
+    ).toBe("Set up this source to load the link.")
+    expect(
+      getSavedLinkQueueError({
+        message: "UNSUPPORTED_URL",
+        detail: "The URL does not point at playable media.",
+        url: "https://cdn.example/video.mp4?X-Amz-Signature=token",
+        status: 400,
+      })
+    ).toBe("This link may have expired. Save it again from the source.")
   })
 
   it("reads items and data_version atomically", async () => {

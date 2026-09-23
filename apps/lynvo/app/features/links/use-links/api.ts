@@ -202,6 +202,11 @@ export interface ApplyMetadataOperationInput {
         readonly kind: "replaceExtraction"
         readonly expectedExtractionJson: string
         readonly extractedLinksJson: string
+        readonly debugLogEntryJson?: string
+      }
+    | {
+        readonly kind: "appendDebugLog"
+        readonly debugLogEntryJson: string
       }
     | {
         readonly kind: "setArtwork"

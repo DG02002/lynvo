@@ -1,7 +1,6 @@
-import {
-  appendLinkDebugLog,
-  createLinkMetadata,
-} from "~/features/links/link-metadata-normalization"
+import { appendLinkDebugLog } from "~shared/link-debug-log"
+
+import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
 import { getLinkTitle } from "~/features/links/link-title"
 import { parseCanonicalLinkMetadataJson } from "~/features/links/storage-schemas"
 import type {
@@ -318,7 +317,7 @@ const createSettledLinkRow = ({
 }: CreateSettledLinkRowInput): LinkRow => {
   if (input.state === "complete") {
     const debugLog = input.debugLogEntry
-      ? appendLinkDebugLog(previousMetadata, input.debugLogEntry)
+      ? appendLinkDebugLog(previousMetadata.debugLog, input.debugLogEntry)
       : undefined
     const metadata = createLinkMetadata({
       meta: input.meta ?? {},
@@ -344,7 +343,7 @@ const createSettledLinkRow = ({
   }
   if (input.debugLogEntry) {
     failedMetadata.debugLog = appendLinkDebugLog(
-      previousMetadata,
+      previousMetadata.debugLog,
       input.debugLogEntry
     )
   }
@@ -564,7 +563,7 @@ export const requeuePendingSavedLinkExtraction = async (
   }
   if (input.debugLogEntry) {
     metadata.debugLog = appendLinkDebugLog(
-      previousMetadata,
+      previousMetadata.debugLog,
       input.debugLogEntry
     )
   }
@@ -649,15 +648,73 @@ export const requeuePendingSavedLinkExtraction = async (
   return { success: changed, replayed: false, dataVersion }
 }
 
-export const getSavedLinkQueueError = (error: Error): string => {
+interface SavedLinkExtractionFailure {
+  readonly message: string
+  readonly url?: string
+  readonly detail?: string
+  readonly status?: number
+}
+
+const EXPIRED_LINK_HINT =
+  "This link may have expired. Save it again from the source."
+const UNSUPPORTED_URL_MESSAGE = "The URL does not point at playable media."
+
+// Direct-media presigned links use provider-specific signatures or generic
+// token names. Only use this heuristic for upstream 400/403 responses, after
+// explicit source-auth errors have been classified.
+const SIGNED_URL_PARAMETERS = [
+  "Expires",
+  "X-Amz-Expires",
+  "X-Amz-Signature",
+  "X-Goog-Expires",
+  "X-Goog-Signature",
+  "authkey",
+  "se",
+  "sig",
+  "token",
+] as const
+
+const isSignedUrl = (url: string | undefined): boolean => {
+  if (!url) {
+    return false
+  }
+  try {
+    const { searchParams } = new URL(url)
+    return SIGNED_URL_PARAMETERS.some((parameter) =>
+      searchParams.has(parameter)
+    )
+  } catch {
+    return false
+  }
+}
+
+export const getSavedLinkQueueError = (
+  error: SavedLinkExtractionFailure
+): string => {
   const errorMessage = error.message.toLowerCase()
   if (
+    [
+      "AUTH_REQUIRED",
+      "AUTH_INVALID",
+      "PASSWORD_REQUIRED",
+      "INVALID_PASSWORD",
+    ].includes(error.message) ||
     errorMessage.includes("credential") ||
     errorMessage.includes("plugin") ||
     errorMessage.includes("configuration") ||
     errorMessage.includes("sign in")
   ) {
     return "Set up this source to load the link."
+  }
+  if (
+    error.message === "NODE_EXPIRED" ||
+    error.status === 410 ||
+    ((error.status === 400 || error.status === 403) && isSignedUrl(error.url))
+  ) {
+    return EXPIRED_LINK_HINT
+  }
+  if (error.message === "UNSUPPORTED_URL") {
+    return UNSUPPORTED_URL_MESSAGE
   }
   return "Unable to load links."
 }

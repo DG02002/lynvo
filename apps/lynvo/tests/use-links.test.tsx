@@ -63,6 +63,11 @@ const serverRecord = (
 
 const fetchResponses = vi.fn()
 
+const countListRequests = (): number =>
+  fetchResponses.mock.calls.filter(
+    ([path]) => String(path) === "/api/data/links"
+  ).length
+
 vi.stubGlobal("fetch", vi.fn(fetchResponses))
 
 const respondJson = (
@@ -214,6 +219,7 @@ describe("useLinks", () => {
 
     act(() => {
       notify?.({ type: "data-changed", payload: { version: 6 } })
+      notify?.({ type: "data-changed", payload: { version: 6 } })
     })
     await waitFor(() => {
       expect(
@@ -337,6 +343,43 @@ describe("useLinks", () => {
       expect(visibleIds).toContain("link-native")
       expect(visibleIds).not.toContain(expect.stringMatching(/^temp:/))
     })
+    await waitFor(() => expect(countListRequests()).toBe(2))
+    expect(countListRequests()).toBe(2)
+  })
+
+  it("coalesces a save response with duplicate realtime notifications", async () => {
+    let notify: ((message: RealtimeMessage) => void) | undefined
+    const realtimeWithListener: RealtimeContextValue = {
+      ...realtime,
+      subscribe: vi.fn((listener) => {
+        notify = listener
+        return () => {
+          if (notify === listener) {
+            notify = undefined
+          }
+        }
+      }),
+    }
+
+    const { result } = renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [],
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+        },
+        { user: { sub: "save-refetch-user" }, realtime: realtimeWithListener }
+      )
+    )
+
+    await waitFor(() => expect(notify).toBeTypeOf("function"))
+    await act(async () => {
+      await result.current.actions.add("https://example.com/save-refetch")
+      notify?.({ type: "data-changed", payload: { version: 6 } })
+      notify?.({ type: "data-changed", payload: { version: 6 } })
+    })
+
+    await waitFor(() => expect(countListRequests()).toBe(1))
+    expect(countListRequests()).toBe(1)
   })
 
   it("marks links opened through the metadata operation endpoint", async () => {
@@ -371,6 +414,47 @@ describe("useLinks", () => {
       expect(result.current.links[0]?.metadata.playback.openedUrls).toContain(
         "https://cdn.example.com/native-file"
       )
+    })
+  })
+
+  it("writes a retry log with a successful extraction replacement", async () => {
+    const { result } = renderLinksHook()
+    await waitFor(() => expect(result.current.links).toHaveLength(1))
+
+    const retryLogEntry = {
+      at: 200,
+      outcome: "complete" as const,
+      attempt: 2,
+      nodeCount: 1,
+    }
+    const refreshedLink = {
+      nodeKey: "test:refreshed",
+      id: "refreshed",
+      url: "https://cdn.example.com/refreshed",
+      label: "Refreshed",
+      type: "file" as const,
+      mediaNodeKind: "playable" as const,
+    }
+
+    act(() => {
+      result.current.actions.updateLinks(
+        "https://example.com/link-native",
+        [refreshedLink],
+        retryLogEntry
+      )
+    })
+
+    await waitFor(() => {
+      const metadataRequest = fetchResponses.mock.calls.find(
+        ([path]) => String(path) === "/api/data/links/apply-metadata-operation"
+      )
+      if (!metadataRequest) {
+        throw new Error("Metadata operation request was not sent")
+      }
+      const [, requestInit] = metadataRequest
+      const { operation } = JSON.parse(String(requestInit.body))
+      expect(operation).toMatchObject({ kind: "replaceExtraction" })
+      expect(JSON.parse(operation.debugLogEntryJson)).toEqual(retryLogEntry)
     })
   })
 })

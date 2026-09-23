@@ -66,6 +66,7 @@ export function useLinkActions({
   } = useRefreshActions({
     links: savedLinks,
     updateLinks: linkActions.updateLinks,
+    appendDebugLog: linkActions.appendDebugLog,
     cacheResolvedMirrors: linkActions.cacheResolvedMirrors,
     openSelectionDialog,
     extractingItems,

@@ -26,7 +26,13 @@ import {
 import { getServerEnv } from "~/lib/env.server"
 import { cn } from "~/lib/utils"
 export function meta() {
-  return [{ title: "Settings | Lynvo" }]
+  return [
+    { title: "Settings | Lynvo" },
+    {
+      name: "description",
+      content: "Manage your Lynvo account, sources, and playback settings.",
+    },
+  ]
 }
 
 export async function loader({ request, context }: LoaderFunctionArgs) {

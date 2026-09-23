@@ -1,4 +1,8 @@
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkViewItem,
+} from "~/features/links/types"
 
 export interface LinksSnapshotStore {
   getSnapshot: () => LinkViewItem[]
@@ -29,6 +33,7 @@ declare global {
       | "cacheMirrors"
       | "removeExtractedLink"
       | "replaceExtraction"
+      | "appendDebugLog"
       | "setArtwork"
     linkUrl?: string
     linkKey?: string
@@ -36,6 +41,7 @@ declare global {
     mirrors?: ExtractedLink[]
     expectedExtraction?: ExtractedLink[]
     extractedLinks?: ExtractedLink[]
+    debugLogEntry?: LinkDebugLogEntry
     providerId?: number
     title?: string
     year?: number

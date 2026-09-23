@@ -94,6 +94,8 @@ export const SeasonArtworkPanel = ({
             <img
               src={TMDB_LOGO_SHORT_SRC}
               alt="The Movie Database (TMDB)"
+              width={123}
+              height={16}
               className="h-4 w-auto"
             />
           </a>

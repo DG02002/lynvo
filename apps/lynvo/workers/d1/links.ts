@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { appendLinkDebugLog } from "~shared/link-debug-log"
 
 import {
   mergeUnique,
@@ -6,6 +7,7 @@ import {
 } from "~/features/links/link-tree-metadata"
 import {
   extractedLinkSchema,
+  linkDebugLogEntrySchema,
   parseCanonicalLinkMetadataJson,
 } from "~/features/links/storage-schemas"
 import type { ExtractedLink, LinkMetadata } from "~/features/links/types"
@@ -97,7 +99,9 @@ type SavedLinkMetadataOperation =
       kind: "replaceExtraction"
       expectedExtractionJson: string
       extractedLinksJson: string
+      debugLogEntryJson?: string
     }
+  | { kind: "appendDebugLog"; debugLogEntryJson: string }
   | {
       kind: "setArtwork"
       providerId: number
@@ -358,6 +362,9 @@ const parseExtractedLinks = (serializedLinks: string): ExtractedLink[] => [
   ),
 ]
 
+const parseDebugLogEntry = (serializedEntry: string) =>
+  Schema.decodeUnknownSync(linkDebugLogEntrySchema)(JSON.parse(serializedEntry))
+
 const applyMarkOpened = (
   metadata: LinkMetadata,
   operation: Extract<SavedLinkMetadataOperation, { kind: "markOpened" }>
@@ -428,6 +435,16 @@ const applyRemoveExtractedLink = (
   )
 }
 
+const appendDebugLogEntry = (
+  metadata: LinkMetadata,
+  debugLogEntryJson: string
+): void => {
+  metadata.debugLog = appendLinkDebugLog(
+    metadata.debugLog,
+    parseDebugLogEntry(debugLogEntryJson)
+  )
+}
+
 const applyReplaceExtraction = (
   metadata: LinkMetadata,
   operation: Extract<SavedLinkMetadataOperation, { kind: "replaceExtraction" }>
@@ -442,6 +459,16 @@ const applyReplaceExtraction = (
     operation.extractedLinksJson
   )
   metadata.playback.resolvedMirrors = {}
+  if (operation.debugLogEntryJson) {
+    appendDebugLogEntry(metadata, operation.debugLogEntryJson)
+  }
+}
+
+const applyAppendDebugLog = (
+  metadata: LinkMetadata,
+  operation: Extract<SavedLinkMetadataOperation, { kind: "appendDebugLog" }>
+): void => {
+  appendDebugLogEntry(metadata, operation.debugLogEntryJson)
 }
 
 const applySavedLinkMetadataOperationToMetadata = (
@@ -460,6 +487,8 @@ const applySavedLinkMetadataOperationToMetadata = (
       return applyRemoveExtractedLink(metadata, operation)
     case "replaceExtraction":
       return applyReplaceExtraction(metadata, operation)
+    case "appendDebugLog":
+      return applyAppendDebugLog(metadata, operation)
   }
 }
 

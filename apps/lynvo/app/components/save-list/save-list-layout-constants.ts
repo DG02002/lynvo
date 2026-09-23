@@ -14,7 +14,7 @@ export const GALLERY_GROUP_CONTENT_CLASS =
   "flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain md:grid md:grid-cols-[18rem_minmax(0,1fr)] md:grid-rows-1 md:overflow-visible lg:grid-cols-[22rem_minmax(0,1fr)]"
 
 export const GALLERY_GROUP_ARTWORK_SIZES =
-  "(min-width: 1024px) 19rem, (min-width: 768px) 15rem, 18rem"
+  "(orientation: landscape) and (max-height: 36rem) calc(66.6667svh - 5.75rem), (min-width: 1024px) 19rem, (min-width: 768px) 15rem, 18rem"
 
 export const GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS = "block shrink-0"
 

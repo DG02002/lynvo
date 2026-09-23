@@ -6,7 +6,11 @@ import {
   getSavedLinkRefreshErrorMessage,
   type SavedLinkInteractionReporter,
 } from "~/features/links/saved-link-interaction"
-import type { ExtractedLink, LinkListItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkListItem,
+} from "~/features/links/types"
 import { showErrorToast } from "~/lib/toast-notifications"
 
 import type {
@@ -24,6 +28,7 @@ import { runAfterSessionIdentity } from "./session-gated-action"
 export const useRefreshActions = ({
   links,
   updateLinks,
+  appendDebugLog,
   cacheResolvedMirrors,
   openSelectionDialog,
   extractingItems,
@@ -31,7 +36,12 @@ export const useRefreshActions = ({
   ensureSessionIdentity,
 }: {
   links: LinkListItem[]
-  updateLinks: (url: string, links: ExtractedLink[]) => void
+  updateLinks: (
+    url: string,
+    links: ExtractedLink[],
+    debugLogEntry?: LinkDebugLogEntry
+  ) => void
+  appendDebugLog: (url: string, debugLogEntry: LinkDebugLogEntry) => void
   cacheResolvedMirrors: (
     itemUrl: string,
     lazyItemUrl: string,
@@ -51,7 +61,9 @@ export const useRefreshActions = ({
         if (outcome.kind === "selection-required") {
           openSelectionDialog(outcome.selection)
         } else if (outcome.kind === "links-updated") {
-          updateLinks(outcome.itemUrl, outcome.links)
+          updateLinks(outcome.itemUrl, outcome.links, outcome.debugLogEntry)
+        } else if (outcome.kind === "refresh-attempt") {
+          appendDebugLog(outcome.itemUrl, outcome.debugLogEntry)
         } else if (outcome.kind === "error") {
           showErrorToast({
             title: "Couldn’t refresh the link",
@@ -60,7 +72,7 @@ export const useRefreshActions = ({
         }
       },
     }),
-    [openSelectionDialog, updateLinks]
+    [appendDebugLog, openSelectionDialog, updateLinks]
   )
 
   const runRefresh = useCallback(
