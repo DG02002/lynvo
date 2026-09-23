@@ -1,16 +1,16 @@
 ---
 name: product-docs-writing
 description: >-
-  Draft or review product documentation pages in the Linear-style product
-  docs voice: task-first page anatomy, plain confident sentences, verified
+  Draft or review product documentation pages in the task-first product
+  docs voice: plain confident sentences, fixed page anatomy, verified
   settings paths, screenshots for UI features, and FAQ blocks. Project
   mechanics are derived from the repository being documented.
 ---
 
 # Product docs writing
 
-Create or review product documentation in the house style derived from
-Linear's product docs. This skill organizes the work. The reference holds
+Create or review product documentation in the docs house style captured in
+this skill's reference. This skill organizes the work. The reference holds
 the detailed, sample-derived style guidance. Project mechanics — MDX
 components, frontmatter, navigation, product terms — come from the
 repository being documented, not from this skill. This skill does not
@@ -63,11 +63,11 @@ decide what features exist; it documents verified product behavior.
 
 4. Produce the requested work.
 
-   Draft in the Linear-derived voice: one-sentence lede, Overview first,
-   Configure before Basics, verb-first task headings, honest limits in
-   notes, FAQ for real edge cases. Use the project's own components and
-   product terms as the adaptation rules direct. Every cross-link must
-   resolve under the project's validation.
+   Draft in the house voice: one-sentence lede, Overview first, Configure
+   before Basics, verb-first task headings, honest limits in notes, FAQ
+   for real edge cases. Use the project's own components and product
+   terms as the adaptation rules direct. Every cross-link must resolve
+   under the project's validation.
 
    Completion criterion: the draft reads in the house voice with verified
    substance and passing links.

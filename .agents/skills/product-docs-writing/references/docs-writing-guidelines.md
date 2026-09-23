@@ -1,15 +1,16 @@
 # Docs writing guidelines
 
-This guide captures the writing and structure of Linear's product
-documentation (linear.app/docs), sampled across 41 pages in September 2026
-covering start guides, feature pages, settings pages, integrations, security,
-API, and concept pages, plus its developer site. It adapts that style to any
-product's user documentation.
+This guide captures the product documentation house style. Its patterns
+come from a corpus of 41 pages sampled in September 2026 from a benchmark
+product's user documentation — start guides, feature pages, settings
+pages, integrations, security, API, and concept pages — plus its developer
+site. The corpus established the shape; this guide states it as the style
+to write in.
 
-Treat the Linear pages as evidence of a house style, not as content to copy.
-Do not carry Linear's product names, screenshots, settings paths, pricing, or
-feature claims into another product's docs. Replace their substance with the
-verified behavior of the product being documented.
+Treat the sample examples in this guide as evidence of the style, not as
+content to copy. Do not carry their product names, screenshots, settings
+paths, or feature claims into the product being documented. Replace their
+substance with the verified behavior of the product being documented.
 
 This is a user-documentation guide, and it is project-agnostic: the
 project's own mechanics — MDX components, frontmatter contract, navigation
@@ -19,10 +20,10 @@ the end of this guide. Formal policies follow the product-policy-writing
 skill instead. Architecture and maintainer procedures belong wherever the
 project keeps its internal documentation, not in user docs.
 
-## The sample-derived docs style
+## The docs style
 
-Linear documents one feature per page, ordered from "what is this" to "how do
-I do each task with it" to "what goes wrong". Across the corpus, recurring
+Document one feature per page, ordered from "what is this" to "how do I do
+each task with it" to "what goes wrong". Across the corpus, recurring
 characteristics include:
 
 - A short title of one to three words: a feature noun ("Cycles", "Search",
@@ -64,9 +65,9 @@ Write as the product talking to one user. Rules, with corpus examples:
 - Use "you" for the reader and their actions. Use the product name or "we"
   for what the system does. Never "the user" in body text.
   - "You can always edit cycle configurations in the future."
-  - "Linear automatically creates upcoming cycles for your team."
-- Prefer the system as the actor for automatic behavior: "Linear stores the
-  key encrypted and does not send it to the browser."
+  - "The app automatically creates upcoming cycles for your team."
+- Prefer the system as the actor for automatic behavior: "The app stores
+  the key encrypted and does not send it to the browser."
 - Use "You can…" to introduce a capability list, then bullets.
 - State why, in the same breath as what:
   - "The goal of cycles having repeated intervals is to help you avoid the
@@ -76,14 +77,15 @@ Write as the product talking to one user. Rules, with corpus examples:
   - "There is no way to keep unfinished issues in a closed cycle."
   - "This setting isn't self-serve to change later."
   - "Past cycle dates cannot be changed."
-- Prefer "must" for requirements ("You must be a Linear admin to complete
-  this step") and "can" for capabilities. Avoid "should" for system rules.
+- Prefer "must" for requirements ("You must be a workspace admin to
+  complete this step") and "can" for capabilities. Avoid "should" for
+  system rules.
 - No marketing voice. The strongest promotional move the corpus makes is a
   concrete benefit in the lede. Ban "powerful", "seamless", "simply",
   "easily", "revolutionary", and exclamation marks.
 - Contractions are welcome ("you'll", "doesn't", "can't"). Em dashes appear
-  in enumerations ("You can favorite many items in Linear — including
-  issues, projects, views … — to keep them easy to access from the
+  in enumerations ("You can favorite many items — including issues,
+  projects, views, and documents — to keep them easy to access from the
   sidebar").
 - Define a term in the lede or Overview the first time a page uses it, in
   one sentence, then use that term unchanged.
@@ -97,13 +99,13 @@ patterns, strongest first:
   team's momentum, similar to commonly used agile-flavored sprints."
 - Imperative benefit: "Automate SLAs for issues that should be completed
   within a certain amount of time."
-- "You can" enumeration: "You can favorite many items in Linear — including
-  issues, projects, views, documents … — to keep them easy to access from
-  the sidebar."
+- "You can" enumeration: "You can favorite many items — including issues,
+  projects, views, and documents — to keep them easy to access from the
+  sidebar."
 - Capability summary: "Quickly find issues, projects and documents with
   Search."
 - Scale statement for core actions: "Creating issues is the most common
-  action taken in Linear."
+  action taken in the app."
 
 Pick one pattern; never stack two. If the project's frontmatter carries a
 page description, put the same sentence or a tightened version of it there.
@@ -168,8 +170,8 @@ Rules per section:
 
 ### Interaction-mode subsections
 
-When a task has keyboard, pointer, and menu paths, Linear gives each its own
-H3 under Basics and lists them as parallel shortcuts:
+When a task has keyboard, pointer, and menu paths, give each its own
+H3 under Basics and list them as parallel shortcuts:
 
 ```markdown
 ### Keyboard
@@ -251,7 +253,7 @@ and Basics step that involves visible UI.
 
 ### Concept page
 
-For "what is X" pages. Pattern from Linear's Concepts page: definition
+For "what is X" pages. Pattern from the corpus's Concepts page: definition
 paragraph, then one H2 per concept with a short definition, a "can:" or
 "might:" bullet list of concrete situations, and "Read more on [page]" at
 the end. Close multi-concept pages with a "How these fit together" section
@@ -266,7 +268,7 @@ of one-line summaries:
 ### Integration or setup page
 
 For connecting something external: third-party services, self-hosted
-companions, generated projects. Pattern from Linear's Slack and GitHub
+companions, generated projects. Pattern from the corpus's integration
 pages: lede states the pairing's benefit, brand or architecture image,
 Overview with a capability table or bullets, Configure with permissions and
 numbered steps, then one H2 per capability the connection gives you, then
@@ -275,10 +277,10 @@ what the connected service can and cannot reach).
 
 ### Reference page
 
-For contracts users implement against: APIs, protocols, webhooks —
-Linear's developer-docs shape rather than the feature skeleton. Organize
-sections by concern ("Endpoint", "Authentication", "Error handling"), show
-a working request sample for every endpoint (HTTP first, SDK second), state
+For contracts users implement against: APIs, protocols, webhooks — the
+developer-docs shape rather than the feature skeleton. Organize sections
+by concern ("Endpoint", "Authentication", "Error handling"), show a
+working request sample for every endpoint (HTTP first, SDK second), state
 recommendations inline ("we recommend"), and link deep external references
 instead of duplicating them. Keep pages terse and fielded — tables, labeled
 code blocks, structured errors. Add a one-paragraph Overview at the top and
@@ -293,36 +295,37 @@ feature-page detail here.
 
 ## Information architecture and organization
 
-Linear's documentation is three surfaces sharing one layout shell and one
-sidebar footer:
+Organize documentation as surfaces sharing one layout shell and one sidebar
+footer. The corpus uses three:
 
-- **User docs** (`linear.app/docs`) — one page per product feature for
-  people using Linear.
-- **Developer docs** (`linear.app/developers`) — organized by the thing you
-  build with: GraphQL API, Authentication, Agents, TypeScript SDK, Guides.
-- **Learn** (`linear.app/learn`) — a course library ("Intro to Linear",
-  "Daily workflows"), not reference material.
+- **User docs** — one page per product feature for people using the
+  product.
+- **Developer docs** — organized by the thing you build with: the API,
+  authentication, agents, SDKs, and guides.
+- **Learn** — a course library ("Intro", "Daily workflows"), not reference
+  material.
 
-The sidebar footer cross-links all three plus Contact support from every
-page, so a reader can hop between using, building, and learning without a
-global nav.
+The sidebar footer cross-links all surfaces plus Contact support from
+every page, so a reader can hop between using, building, and learning
+without a global nav.
 
 ### User docs sidebar organization
 
-The user docs sidebar is grouped and ordered as: Getting started, Account,
-AI, Your sidebar, Teams, Issues, Issue properties, Projects, Initiatives,
-Cycles, Views, Find and filter, Linear Asks, Integrations, Analytics,
+The corpus's user docs sidebar is grouped and ordered as: Getting started,
+Account, AI, Your sidebar, Teams, Issues, Issue properties, Projects,
+Initiatives, Cycles, Views, Find and filter, Asks, Integrations, Analytics,
 Administration, Importers. The ordering encodes a reader journey, not an
 architecture diagram:
 
-1. Onboarding first (Start Guide, Concepts, Download).
-2. Personal setup (Account, your sidebar experience).
-3. Core work objects in increasing scope (issues → projects → initiatives),
-   each with its properties and variations as adjacent groups.
-4. Navigation and power use (Views, Find and filter).
-5. Incoming work from outside (Asks).
-6. Connections to other tools (Integrations).
-7. Analysis (Analytics), then administration, then migration last.
+1. Onboarding first (start guide, concepts, download).
+2. Personal setup (account, personal navigation).
+3. Core work objects in increasing scope (issues → projects →
+   initiatives), each with its properties and variations as adjacent
+   groups.
+4. Navigation and power use (views, find and filter).
+5. Incoming work from outside (requests).
+6. Connections to other tools (integrations).
+7. Analysis, then administration, then migration last.
 
 Group rules:
 
@@ -333,12 +336,12 @@ Group rules:
   ("Teams" group → "Teams" page), followed by sub-topics, then adjacent
   pages.
 - A page may appear in multiple groups where readers would reach it from
-  different directions: "MCP server" sits under AI, Integrations, and
-  Linear Asks; "Triage" sits under Teams and Views. Cross-listing is a
-  deliberate discovery aid, not duplication — there is still one page.
+  different directions: an automation page can sit under both AI and
+  Integrations; a triage page under both Teams and Views. Cross-listing is
+  a deliberate discovery aid, not duplication — there is still one page.
 - Landing pages are curated, not exhaustive: a one-line site description,
-  a "Popular" card row, and a "Linear basics" card row, each card carrying
-  a title and a one-sentence description.
+  a "Popular" card row, and a "Basics" card row, each card carrying a
+  title and a one-sentence description.
 - Breadcrumbs above the page title name the group ("Issues → Create
   issues"), and prev/next pagination follows the sidebar order.
 
@@ -347,17 +350,16 @@ Group rules:
 Developer pages keep the same voice but organize by build concern, not by
 the Overview → Configure → Basics skeleton:
 
-- Sidebar groups name the capability you build with: GraphQL API,
-  Authentication, Agents, TypeScript SDK, Guides.
+- Sidebar groups name the capability you build with: the API,
+  authentication, agent integration, SDKs, and guides.
 - Pages are reference-shaped with concern sections ("Endpoint",
   "Authentication", "Error handling") and working code samples for every
-  request shown — curl first, SDK second.
+  request shown — HTTP first, SDK second.
 - Recommendations are inline and opinionated: "If you're building an
-  application for others to use, we recommend you use OAuth2."
-- Deep references link out with an external marker (the GraphQL schema on
-  Apollo Studio, the SDK on GitHub) instead of being duplicated. The
-  developer landing page uses the same card pattern plus a Resources strip
-  (changelog).
+  application for others to use, we recommend OAuth2."
+- Deep references (the API schema, SDK source) link out with an external
+  marker instead of being duplicated. The developer landing page uses the
+  same card pattern plus a Resources strip (changelog).
 - No screenshots; diagrams only when the flow needs one.
 
 ### Planning a product's sections
@@ -382,7 +384,7 @@ Derive the structure from the product's surfaces with the same recipe:
 
 ## Project adaptation rules
 
-The Linear patterns above are rendering-agnostic. Before writing, learn the
+The patterns above are rendering-agnostic. Before writing, learn the
 target project's mechanics and map every pattern onto them.
 
 ### Discover the docs pipeline
@@ -459,7 +461,7 @@ components or frontmatter fields without flagging it.
 - FAQ questions are real user questions with direct first sentences.
 - Every cross-link resolves under the project's validation; the page is
   placed in the navigation configuration as the project requires.
-- Product terms match the project's glossary; no Linear terminology leaked
+- Product terms match the project's glossary; no corpus terminology leaked
   in.
 - The project's components, frontmatter, and formatting conventions are
   followed; gaps are flagged, not improvised.
