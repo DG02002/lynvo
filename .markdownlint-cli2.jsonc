@@ -12,6 +12,7 @@
   ],
   "ignores": [
     "**/node_modules/**",
+    ".plans/**",
     ".agents/**",
     ".repos/**",
     ".claude/**",
