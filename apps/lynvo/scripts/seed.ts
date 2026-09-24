@@ -10,6 +10,7 @@ import { Result, Schema } from "effect"
 
 import type { ExtractedLink } from "../app/features/links/types"
 import {
+  DOCS_SEED_ARTWORK_POLICY,
   DOCS_SEED_PROXY_BALANCE,
   DOCS_SEED_PROXY_KEY,
   DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
@@ -647,7 +648,7 @@ const linkMetadata = (
 ) => {
   const metadata = {
     schemaVersion: 3,
-    artworkPolicy: "lynvo-generic" as const,
+    artworkPolicy: DOCS_SEED_ARTWORK_POLICY,
     source: {
       pluginId: fixture.pluginId,
       pluginName: fixture.pluginName,
@@ -1165,6 +1166,18 @@ const isSeedScenarioName = (
 ): scenarioName is keyof typeof seedScenarios =>
   Object.hasOwn(seedScenarios, scenarioName)
 
+const formatSeedError = (error: Error): string => {
+  const errorStack = error.stack ?? error.message
+  if (error.cause === undefined) {
+    return errorStack
+  }
+  const formattedCause =
+    error.cause instanceof Error
+      ? formatSeedError(error.cause)
+      : getCauseMessage(error.cause)
+  return `${errorStack}\nCaused by: ${formattedCause}`
+}
+
 const run = async (): Promise<void> => {
   const [scenarioName, ...unexpectedArguments] = process.argv.slice(2)
   const registeredScenarioName =
@@ -1190,7 +1203,7 @@ const run = async (): Promise<void> => {
 const [invokedFile] = process.argv.slice(1)
 if (invokedFile && fileURLToPath(import.meta.url) === invokedFile) {
   run().catch((error: Error) => {
-    process.stderr.write(`${error.message}\n`)
+    process.stderr.write(`${formatSeedError(error)}\n`)
     process.exitCode = 1
   })
 }

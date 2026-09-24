@@ -267,8 +267,18 @@ describe("d1 data routes", () => {
 
     const firstSeed = await app.fetch(seedUsage(), developmentEnvironment)
     expect(firstSeed.status).toBe(200)
+    const firstSeedBody = await readJsonBody<{ dataVersion: number }>(firstSeed)
+    expect(firstSeed.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
+      String(firstSeedBody.dataVersion)
+    )
     const secondSeed = await app.fetch(seedUsage(), developmentEnvironment)
     expect(secondSeed.status).toBe(200)
+    const secondSeedBody = await readJsonBody<{ dataVersion: number }>(
+      secondSeed
+    )
+    expect(secondSeed.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
+      String(secondSeedBody.dataVersion)
+    )
 
     const usageResponse = await app.fetch(
       new Request("https://lynvo.test/api/data/usage"),

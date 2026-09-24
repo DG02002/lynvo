@@ -14,6 +14,7 @@ import type {
 import { getSaveDateGroupLabel } from "../../app/lib/save-date-groups"
 import { SeedApiClient, seedDocsLinks } from "../../scripts/seed"
 import { MediaArtworkResponseSchema } from "../../shared/api-contracts"
+import { DOCS_SEED_ARTWORK_POLICY } from "../../shared/docs-seed-constants"
 import app from "../../workers/app"
 
 const SEED_TIME = Date.now()
@@ -187,7 +188,7 @@ describe("docs seed CLI Saved link fixtures", () => {
     const libraryMetadata = library && readMetadata(library)
     expect(libraryMetadata?.playback.openedUrls).toEqual([])
     expect(libraryMetadata?.artwork).toBeUndefined()
-    expect(libraryMetadata?.artworkPolicy).toBe("lynvo-generic")
+    expect(libraryMetadata?.artworkPolicy).toBe(DOCS_SEED_ARTWORK_POLICY)
     const libraryNodes = libraryMetadata?.extraction.extractedLinks
     const tvShows = findMediaNode(libraryNodes, "TV Shows")
     const severanceFolder = findMediaNode(tvShows?.children, "Severance")

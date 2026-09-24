@@ -209,6 +209,74 @@ describe("refreshCustomPluginServerProxyBalance", () => {
 })
 
 describe("saveCustomPluginServerProxyKey", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("uses the docs fixture balance in no-auth development mode", async () => {
+    const serverRow = createProxyServerRow()
+    let keyUpdateArgs: unknown[] | undefined
+    const database = createFakeD1Database((sql, args) => {
+      if (sql.includes("FROM user_plugin_servers")) {
+        return { row: serverRow, rows: [serverRow] }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers SET proxy_token_ciphertext")
+      ) {
+        keyUpdateArgs = args
+      }
+      return undefined
+    })
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    // SAFETY: This test enables only the development bypass and mocks the database and credential vault.
+    const environment = {
+      DB: database,
+      ENVIRONMENT: "development",
+      LYNVO_NO_AUTH: "true",
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () =>
+            Response.json({
+              ciphertext: "encrypted-proxy-token",
+              nonce: "proxy-nonce",
+              algorithm: "AES-256-GCM",
+              keyVersion: 1,
+            }),
+        }),
+      },
+    } as Env
+
+    const result = await Effect.runPromise(
+      saveCustomPluginServerProxyKey({
+        pluginServerId: "plugin-server-1",
+        token: "lynvo-docs-demo-proxy-key",
+        user: { id: "user-1" },
+      }).pipe(
+        Effect.provide(
+          Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+        )
+      )
+    )
+
+    expect(result).toEqual({
+      remaining: 4_210,
+      limit: 5_000,
+      dataVersion: 2,
+    })
+    expect(keyUpdateArgs?.slice(0, 8)).toEqual([
+      "plugin-server-1",
+      "encrypted-proxy-token",
+      "proxy-nonce",
+      "AES-256-GCM",
+      1,
+      4_210,
+      5_000,
+      expect.any(Number),
+    ])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("clears the saved key when given an empty token", async () => {
     const serverRow = createProxyServerRow()
     let keyUpdateArgs: unknown[] | undefined

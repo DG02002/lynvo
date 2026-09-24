@@ -3,7 +3,10 @@ import { Hono, type Context as HonoContext } from "hono"
 
 import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
 import { MediaArtworkRequestSchema } from "../../shared/api-contracts"
-import { DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX } from "../../shared/docs-seed-constants"
+import {
+  DOCS_SEED_ARTWORK_POLICY,
+  DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
+} from "../../shared/docs-seed-constants"
 import {
   DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,
@@ -23,6 +26,7 @@ import {
 import { isSameOriginRequest } from "../same-origin"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { getD1Database } from "./db"
+import { resetDocsSeedManagedUsage } from "./docs-seed-usage"
 import {
   LinkNotFoundError,
   LinkTooLargeError,
@@ -55,7 +59,6 @@ import {
 } from "./storage-ledger"
 import {
   getUsage,
-  resetDevelopmentManagedUsage,
   reserveManagedExtraction,
   settleManagedExtraction,
 } from "./usage"
@@ -465,9 +468,9 @@ dataApp.post("/media-artwork", async (context) => {
     isDevelopmentAuthBypassEnabled(context.env) &&
     (await preparation.database
       .prepare(
-        "SELECT 1 AS found FROM links WHERE user_id = ?1 AND json_extract(meta_json, '$.artworkPolicy') = 'lynvo-generic' LIMIT 1"
+        "SELECT 1 AS found FROM links WHERE user_id = ?1 AND json_extract(meta_json, '$.artworkPolicy') = ?2 LIMIT 1"
       )
-      .bind(preparation.session.userId)
+      .bind(preparation.session.userId, DOCS_SEED_ARTWORK_POLICY)
       .first<{ found: number }>())
   ) {
     return context.json({ results: body.body.requests.map(() => ({})) })
@@ -732,7 +735,7 @@ dataApp.post("/usage/docs-seed", async (context) => {
     return await respondInvalidBody(context)
   }
 
-  await resetDevelopmentManagedUsage(
+  await resetDocsSeedManagedUsage(
     preparation.database,
     preparation.session.userId,
     requestBody.body.operationId
@@ -760,7 +763,15 @@ dataApp.post("/usage/docs-seed", async (context) => {
     preparation.session.userId,
     settlement.dataVersion
   )
-  return context.json({ success: true, dataVersion: settlement.dataVersion })
+  const response = context.json({
+    success: true,
+    dataVersion: settlement.dataVersion,
+  })
+  response.headers.set(
+    DATA_VERSION_RESPONSE_HEADER,
+    String(settlement.dataVersion)
+  )
+  return response
 })
 
 export const registerD1DataRoutes = (
