@@ -1,4 +1,7 @@
-import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  getLynvoManifestExtension,
+  readBoundedResponseText,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect, Result, Schema } from "effect"
 
 import {
@@ -59,6 +62,7 @@ interface ProxyAccountInfo {
 }
 
 const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
+const SCRAPE_DO_INFO_MAX_RESPONSE_BYTES = 16 * 1024
 
 /**
  * Validates a Scrape.do token against the free account-info endpoint. The
@@ -85,7 +89,10 @@ export const readScrapeDoAccountInfo = Effect.fn(
     )
   }
   const text = yield* Effect.tryPromise({
-    try: () => response.text(),
+    try: () =>
+      readBoundedResponseText(response, {
+        maximumResponseBytes: SCRAPE_DO_INFO_MAX_RESPONSE_BYTES,
+      }),
     catch: () =>
       new Error("Scrape.do account information is unavailable. Try again."),
   })

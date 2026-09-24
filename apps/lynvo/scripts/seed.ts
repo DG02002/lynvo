@@ -232,7 +232,11 @@ const getCauseMessage = (cause: unknown): string => {
   if (cause instanceof Error) {
     return cause.message
   }
-  return JSON.stringify(cause) ?? "Unknown error"
+  try {
+    return JSON.stringify(cause) ?? "Unknown error"
+  } catch {
+    return "Unknown error"
+  }
 }
 
 interface ParsedResponseBody {
@@ -1202,7 +1206,9 @@ const run = async (): Promise<void> => {
 
 const [invokedFile] = process.argv.slice(1)
 if (invokedFile && fileURLToPath(import.meta.url) === invokedFile) {
-  run().catch((error: Error) => {
+  run().catch((cause: unknown) => {
+    const error =
+      cause instanceof Error ? cause : new Error(getCauseMessage(cause))
     process.stderr.write(`${formatSeedError(error)}\n`)
     process.exitCode = 1
   })
