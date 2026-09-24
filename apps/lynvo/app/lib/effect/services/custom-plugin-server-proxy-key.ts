@@ -2,10 +2,18 @@ import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol
 import { Effect, Result, Schema } from "effect"
 
 import {
+  DOCS_SEED_PROXY_BALANCE,
+  DOCS_SEED_PROXY_KEY,
+} from "../../../../shared/docs-seed-constants"
+import {
   findOwnedPluginServerById,
   updatePluginServerProxyBalance,
   updatePluginServerProxyKey,
 } from "../../../../workers/d1/plugin-servers"
+import {
+  isDevelopmentAuthBypassEnabled,
+  type DevelopmentAuthEnvironment,
+} from "../../../../workers/d1/sessions"
 import {
   isProxyTokenRemoval,
   isSupportedProxyProvider,
@@ -44,6 +52,11 @@ const ScrapeDoAccountInfo = Schema.Struct({
   RemainingMonthlyRequest: Schema.Number,
   MaxMonthlyRequest: Schema.Number,
 })
+
+interface ProxyAccountInfo {
+  readonly remaining: number
+  readonly limit: number
+}
 
 const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
 
@@ -97,6 +110,22 @@ export const readScrapeDoAccountInfo = Effect.fn(
     limit: parsed.success.MaxMonthlyRequest,
   }
 })
+
+const readProxyAccountInfo = (
+  environment: DevelopmentAuthEnvironment,
+  token: string
+): Effect.Effect<ProxyAccountInfo, Error> => {
+  if (
+    isDevelopmentAuthBypassEnabled(environment) &&
+    token === DOCS_SEED_PROXY_KEY
+  ) {
+    return Effect.succeed<ProxyAccountInfo>({
+      remaining: DOCS_SEED_PROXY_BALANCE.remaining,
+      limit: DOCS_SEED_PROXY_BALANCE.limit,
+    })
+  }
+  return readScrapeDoAccountInfo(token)
+}
 
 export const saveCustomPluginServerProxyKey = Effect.fn(
   "CustomPluginServerProxyKey.save"
@@ -155,7 +184,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   }
 
   const token = input.token.trim()
-  const balance = yield* readScrapeDoAccountInfo(token).pipe(
+  const balance = yield* readProxyAccountInfo(environment, token).pipe(
     Effect.mapError(
       (cause) =>
         new PluginServerRegistrationError({
@@ -264,7 +293,7 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
     })
   }
 
-  const balance = yield* readScrapeDoAccountInfo(proxyToken).pipe(
+  const balance = yield* readProxyAccountInfo(environment, proxyToken).pipe(
     Effect.mapError(
       (cause) =>
         new PluginServerRegistrationError({

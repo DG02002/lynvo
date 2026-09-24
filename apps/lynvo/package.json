@@ -8,6 +8,7 @@
     "clean": "rm -rf build .react-router",
     "dev": "pnpm run prepare:protocol && node scripts/start-local-dev.mjs",
     "preview": "pnpm run build && vite preview",
+    "seed": "tsx scripts/seed.ts",
     "test": "pnpm run prepare:protocol && vitest",
     "test:workers": "vitest -c vitest.workers.config.ts --run",
     "lint": "oxlint app workers scripts tests",

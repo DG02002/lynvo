@@ -13,6 +13,7 @@
     "lint": "oxlint scripts && pnpm run lint:markdown && pnpm -r --if-present run lint",
     "lint:markdown": "markdownlint-cli2",
     "prepare": "husky",
+    "seed": "pnpm --filter @lynvo/app seed",
     "sync:repos": "tsx scripts/sync-repos.ts",
     "knip": "knip",
     "fmt": "oxfmt package.json knip.json lint-staged.config.mjs .oxlintrc.json .oxfmtrc.json",

@@ -107,6 +107,7 @@ describe("d1 device auth state machine", () => {
       NOW + 4_000
     )
     expect(session?.userId).toBe(user.id)
+    expect(session?.deviceName).toBe("Living room TV")
 
     const status = await getDeviceCodeStatus(env.DB, {
       code: created.code,

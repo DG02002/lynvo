@@ -126,12 +126,16 @@ interface ResolvedMirrorsByUrl {
   [lazyItemUrl: string]: ExtractedLink[]
 }
 
+type SavedLinkExtractionState = "queued" | "complete" | "failed"
+
 interface CreateOrUpdateSavedLinkInput {
   operationId: string
   url: string
   title?: string | undefined
   meta: string
-  extractionState?: "queued" | undefined
+  extractionState?: "queued" | "failed" | undefined
+  extractionError?: string | undefined
+  createdAt?: number | undefined
   extractionCredential?: SavedLinkExtractionCredentialWrite | null
   now: number
 }
@@ -141,7 +145,7 @@ interface CreateOrUpdateSavedLinkAttemptInput {
   userId: string
   input: CreateOrUpdateSavedLinkInput
   metadataJson: string
-  extractionState: "queued" | "complete"
+  extractionState: SavedLinkExtractionState
   retentionDays: number
 }
 
@@ -172,7 +176,7 @@ interface UpdateExistingSavedLinkInput {
   input: CreateOrUpdateSavedLinkInput
   existingRow: LinkRow
   metadataJson: string
-  extractionState: "queued" | "complete"
+  extractionState: SavedLinkExtractionState
   retentionDays: number
 }
 
@@ -181,7 +185,7 @@ interface InsertNewSavedLinkInput {
   userId: string
   input: CreateOrUpdateSavedLinkInput
   metadataJson: string
-  extractionState: "queued" | "complete"
+  extractionState: SavedLinkExtractionState
   retentionDays: number
 }
 
@@ -189,7 +193,7 @@ interface CreateNewSavedLinkRowInput {
   userId: string
   input: CreateOrUpdateSavedLinkInput
   metadataJson: string
-  extractionState: "queued" | "complete"
+  extractionState: SavedLinkExtractionState
   retentionDays: number
 }
 
@@ -976,18 +980,27 @@ const updateExistingSavedLink = async ({
       extractionState === "queued" ? 0 : existingRow.extraction_attempts
     nextExtractionAvailableAt = extractionState === "queued" ? input.now : null
   }
+  let nextExtractionError = null
+  if (preservesActiveExtraction) {
+    nextExtractionError = existingRow.extraction_error
+  } else if (extractionState === "failed") {
+    nextExtractionError = input.extractionError ?? "Extraction failed"
+  }
   const nextRow: LinkRow = {
     ...existingRow,
     title: input.title ?? existingRow.title,
     meta_json: metadataJson,
+    created_at: input.createdAt ?? existingRow.created_at,
     updated_at: input.now,
     expires_at: input.now + retentionDays * DAY_MS,
     extraction_state: nextExtractionState,
-    extraction_error: preservesActiveExtraction
-      ? existingRow.extraction_error
-      : null,
-    extraction_attempts: nextExtractionAttempts,
-    extraction_available_at: nextExtractionAvailableAt,
+    extraction_error: nextExtractionError,
+    extraction_attempts:
+      !preservesActiveExtraction && extractionState === "failed"
+        ? Math.max(1, existingRow.extraction_attempts)
+        : nextExtractionAttempts,
+    extraction_available_at:
+      extractionState === "failed" ? null : nextExtractionAvailableAt,
     extraction_lease_expires_at: preservesActiveExtraction
       ? existingRow.extraction_lease_expires_at
       : null,
@@ -1025,13 +1038,14 @@ const updateExistingSavedLink = async ({
     nextRow,
     updateStatement: database
       .prepare(
-        `UPDATE links SET title = ?3, meta_json = ?4, updated_at = ?5, expires_at = ?6, extraction_state = ?7, extraction_error = ?8, extraction_attempts = ?9, extraction_available_at = ?10, extraction_lease_expires_at = ?11 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?12 AND extraction_state = ?13 AND extraction_attempts = ?14 AND ${createNullableColumnEqualityCondition("extraction_available_at", "?15")} AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?16")}`
+        `UPDATE links SET title = ?3, meta_json = ?4, created_at = ?5, updated_at = ?6, expires_at = ?7, extraction_state = ?8, extraction_error = ?9, extraction_attempts = ?10, extraction_available_at = ?11, extraction_lease_expires_at = ?12 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?13 AND extraction_state = ?14 AND extraction_attempts = ?15 AND ${createNullableColumnEqualityCondition("extraction_available_at", "?16")} AND ${createNullableColumnEqualityCondition("extraction_lease_expires_at", "?17")} AND created_at = ?18`
       )
       .bind(
         existingRow.id,
         userId,
         nextRow.title,
         metadataJson,
+        nextRow.created_at,
         input.now,
         nextRow.expires_at,
         nextRow.extraction_state,
@@ -1043,7 +1057,8 @@ const updateExistingSavedLink = async ({
         existingRow.extraction_state,
         existingRow.extraction_attempts,
         existingRow.extraction_available_at,
-        existingRow.extraction_lease_expires_at
+        existingRow.extraction_lease_expires_at,
+        existingRow.created_at
       ),
     trailingStatement: extractionCredentialStatement,
   })
@@ -1081,12 +1096,15 @@ const createNewSavedLinkRow = ({
   title: input.title ?? null,
   meta_json: metadataJson,
   opened_at: null,
-  created_at: input.now,
+  created_at: input.createdAt ?? input.now,
   updated_at: input.now,
   expires_at: input.now + retentionDays * DAY_MS,
   extraction_state: extractionState,
-  extraction_error: null,
-  extraction_attempts: 0,
+  extraction_error:
+    extractionState === "failed"
+      ? (input.extractionError ?? "Extraction failed")
+      : null,
+  extraction_attempts: extractionState === "failed" ? 1 : 0,
   extraction_available_at: extractionState === "queued" ? input.now : null,
   extraction_lease_expires_at: null,
 })

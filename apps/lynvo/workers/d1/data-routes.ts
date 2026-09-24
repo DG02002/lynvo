@@ -43,7 +43,11 @@ import {
   encryptSavedLinkExtractionCredential,
   type SavedLinkExtractionCredentialWrite,
 } from "./saved-link-extraction-credentials"
-import { resolveD1Session, type SessionRecord } from "./sessions"
+import {
+  isDevelopmentAuthBypassEnabled,
+  resolveD1Session,
+  type SessionRecord,
+} from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
@@ -257,6 +261,12 @@ const createOrUpdateSchema = Schema.Struct({
   title: Schema.optional(Schema.String),
   meta: Schema.NonEmptyString,
   extractionState: Schema.optional(Schema.Literal("queued")),
+  seedFixture: Schema.optional(
+    Schema.Struct({
+      createdAt: Schema.optional(Schema.Number),
+      extractionFailure: Schema.optional(Schema.NonEmptyString),
+    })
+  ),
 })
 
 interface CreateOrUpdateLinkOptions {
@@ -271,6 +281,17 @@ const createOrUpdateLink = async ({
   body,
 }: CreateOrUpdateLinkOptions): Promise<Response> => {
   const now = Date.now()
+  if (
+    body.seedFixture &&
+    (!isDevelopmentAuthBypassEnabled(context.env) ||
+      (body.seedFixture.createdAt !== undefined &&
+        (!Number.isFinite(body.seedFixture.createdAt) ||
+          body.seedFixture.createdAt > now)) ||
+      (body.seedFixture.extractionFailure !== undefined &&
+        body.extractionState === "queued"))
+  ) {
+    return await respondInvalidBody(context)
+  }
   let sourceInput: ReturnType<typeof extractHttpBasicCredential>
   try {
     sourceInput = extractHttpBasicCredential(body.url)
@@ -294,10 +315,18 @@ const createOrUpdateLink = async ({
       now,
     }
   }
+  const { seedFixture, ...linkBody } = body
+  const extractionState: "queued" | "failed" | undefined =
+    seedFixture?.extractionFailure === undefined
+      ? body.extractionState
+      : "failed"
   const normalizedInput = {
-    ...body,
+    ...linkBody,
     url: sourceInput.url,
     now,
+    createdAt: seedFixture?.createdAt,
+    extractionState,
+    extractionError: seedFixture?.extractionFailure,
   }
   const result =
     body.extractionState === "queued"

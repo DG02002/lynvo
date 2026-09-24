@@ -174,6 +174,78 @@ describe("d1 data routes", () => {
     )
   })
 
+  it("accepts seeded timestamps and failed extraction only in no-auth development mode", async () => {
+    const fixtureNow = Date.now() - 2 * 24 * 60 * 60 * 1_000
+    // SAFETY: The Cloudflare test environment supplies the generated Env bindings; only the two local development flags are overridden.
+    const developmentEnvironment = {
+      ...env,
+      ENVIRONMENT: "development",
+      LYNVO_NO_AUTH: "true",
+    } as Env
+    const response = await app.fetch(
+      new Request("https://lynvo.test/api/data/links/create-or-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://lynvo.test",
+        },
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          url: "https://drive.example.invalid/failed-fixture",
+          title: "Failed fixture",
+          meta: emptyMetadataJson(),
+          seedFixture: {
+            createdAt: fixtureNow,
+            extractionFailure: "The Plugin could not resolve this Source URL.",
+          },
+        }),
+      }),
+      developmentEnvironment
+    )
+
+    expect(response.status).toBe(200)
+    const created = await readJsonBody<{ id: string }>(response)
+    const snapshot = await app.fetch(
+      new Request("https://lynvo.test/api/data/links"),
+      developmentEnvironment
+    )
+    const body = await readJsonBody<{
+      links: {
+        id: string
+        createdAt: number
+        extractionState: string
+        extractionError: string | null
+      }[]
+    }>(snapshot)
+    expect(body.links).toEqual([
+      expect.objectContaining({
+        id: created.id,
+        createdAt: fixtureNow,
+        extractionState: "failed",
+        extractionError: "The Plugin could not resolve this Source URL.",
+      }),
+    ])
+  })
+
+  it("rejects seeded fixture overrides outside no-auth development mode", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+    const response = await app.fetch(
+      dataApiRequest("/api/data/links/create-or-update", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          url: "https://drive.example.invalid/forbidden-fixture",
+          meta: emptyMetadataJson(),
+          seedFixture: { createdAt: Date.now() - 86_400_000 },
+        }),
+      }),
+      env
+    )
+
+    expect(response.status).toBe(400)
+  })
+
   it("sanitizes queued source URLs and encrypts their transient credentials", async () => {
     const user = await createUser()
     const session = await createSessionFor(user.id)

@@ -40,7 +40,10 @@ initLogger({
 
 const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   manifest: ({ env }) =>
-    createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN),
+    createLynvoPluginServerManifest(
+      env.PUBLIC_ASSET_ORIGIN,
+      env.ENVIRONMENT === "development"
+    ),
   auth: {
     validate: ({ request, env }) => {
       const apiKey = env.PLUGIN_SERVER_AUTH_KEY

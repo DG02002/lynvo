@@ -372,13 +372,14 @@ export const claimAuthorizedCode = async (
   const [_insertResult, updateResult] = await database.batch([
     database
       .prepare(
-        "INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent) VALUES (?1, ?2, ?3, ?3, ?4, NULL, NULL)"
+        "INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name) VALUES (?1, ?2, ?3, ?3, ?4, NULL, NULL, ?5)"
       )
       .bind(
         mintedSessionId,
         record.userId,
         input.now,
-        input.now + D1_SESSION_TOTAL_DURATION_MS
+        input.now + D1_SESSION_TOTAL_DURATION_MS,
+        record.deviceName
       ),
     database
       .prepare(

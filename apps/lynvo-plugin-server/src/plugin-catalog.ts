@@ -122,59 +122,68 @@ export const findLynvoPlugin = (
       ) ?? LYNVO_PLUGIN_CATALOG.find((plugin) => isProbePlugin(plugin)))
 
 export const createLynvoPluginServerManifest = (
-  publicAssetOrigin?: string
-): PluginServerManifest => ({
-  protocolVersion: "1.0",
-  pluginServerId: PLUGIN_SERVER_ID,
-  displayName: PLUGIN_SERVER_NAME,
-  hasIcon: false,
-  homepage: "https://lynvo.dg02002.workers.dev",
-  auth: { type: "bearer" },
-  usage: { endpoint: "/usage" },
-  matchers: LYNVO_PLUGIN_CATALOG.filter(
-    (plugin) => !isProbePlugin(plugin)
-  ).flatMap((plugin) => plugin.matchers ?? []),
-  features: {
-    password: true,
-    lazyNodes: true,
-    basicAuth: true,
-    discovery: true,
-  },
-  extensions: {
-    lynvo: {
-      plugins: LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
-        const publishedMatchers = isProbePlugin(plugin)
-          ? undefined
-          : plugin.matchers
-        const base = {
-          id: plugin.id,
-          displayName: plugin.displayName,
-          description: plugin.description,
-          homepage: plugin.homepage,
-          hasIcon: Boolean(publicAssetOrigin && plugin.iconPath),
-          status: plugin.status,
-          version: plugin.version,
-          matchStrategy: plugin.matchStrategy ?? "static",
-          hosts: publishedMatchers?.flatMap((matcher) => matcher.hosts) ?? [],
+  publicAssetOrigin?: string,
+  developmentProxyFixture = false
+): PluginServerManifest => {
+  const plugins = LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
+    const publishedMatchers = isProbePlugin(plugin)
+      ? undefined
+      : plugin.matchers
+    const base = {
+      id: plugin.id,
+      displayName: plugin.displayName,
+      description: plugin.description,
+      homepage: plugin.homepage,
+      hasIcon: Boolean(publicAssetOrigin && plugin.iconPath),
+      status: plugin.status,
+      version: plugin.version,
+      matchStrategy: plugin.matchStrategy ?? "static",
+      hosts: publishedMatchers?.flatMap((matcher) => matcher.hosts) ?? [],
+    }
+    const withMatchers = publishedMatchers
+      ? { ...base, matchers: publishedMatchers }
+      : base
+    const withIconUrl =
+      publicAssetOrigin && plugin.iconPath
+        ? {
+            ...withMatchers,
+            iconUrl: `${publicAssetOrigin}${plugin.iconPath}`,
+          }
+        : withMatchers
+    const withCredential = plugin.credential
+      ? { ...withIconUrl, credential: plugin.credential }
+      : withIconUrl
+    return developmentProxyFixture
+      ? {
+          ...withCredential,
+          proxyCreditUsage: "Demo estimate: 2 credits per Extraction.",
         }
-        const withMatchers = publishedMatchers
-          ? { ...base, matchers: publishedMatchers }
-          : base
-        const withIconUrl =
-          publicAssetOrigin && plugin.iconPath
-            ? {
-                ...withMatchers,
-                iconUrl: `${publicAssetOrigin}${plugin.iconPath}`,
-              }
-            : withMatchers
-        const withCredential = plugin.credential
-          ? { ...withIconUrl, credential: plugin.credential }
-          : withIconUrl
-        return withCredential
-      }),
+      : withCredential
+  })
+  const lynvoExtension = developmentProxyFixture
+    ? { plugins, proxyProvider: "scrape-do" as const }
+    : { plugins }
+
+  return {
+    protocolVersion: "1.0",
+    pluginServerId: PLUGIN_SERVER_ID,
+    displayName: PLUGIN_SERVER_NAME,
+    hasIcon: false,
+    homepage: "https://lynvo.dg02002.workers.dev",
+    auth: { type: "bearer" },
+    usage: { endpoint: "/usage" },
+    matchers: LYNVO_PLUGIN_CATALOG.filter(
+      (plugin) => !isProbePlugin(plugin)
+    ).flatMap((plugin) => plugin.matchers ?? []),
+    features: {
+      password: true,
+      lazyNodes: true,
+      basicAuth: true,
+      discovery: true,
     },
-  },
-})
+    extensions: { lynvo: lynvoExtension },
+  }
+}
 
 export const discoverLynvoPlugin = async (
   targetUrl: string
