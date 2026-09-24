@@ -76,7 +76,7 @@ describe("createPluginServerRuntime", () => {
   it("rejects a structurally valid manifest that fails semantic contract validation", async () => {
     const { usage: _omittedUsage, ...manifestWithoutUsage } = manifest
     // SAFETY: This test intentionally removes a required manifest field to exercise runtime validation.
-    const invalidManifest = manifestWithoutUsage as PluginServerManifest
+    const invalidManifest = manifestWithoutUsage
     const runtime = createRuntime(
       () => ({
         plugin: {

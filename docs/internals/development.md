@@ -161,6 +161,20 @@ the library and report console errors and failed network requests" or "run a
 Lighthouse audit of the sign-in page". Combine the browser's device emulation
 with the `TV Bro/1.0` user-agent prefix to exercise the TV layout.
 
+## Seed the docs scenario
+
+Start the app with `pnpm dev --no-auth`. The docs seed also registers a Custom
+Plugin Server at `http://localhost:8788`. The Vite auxiliary Plugin Server is
+available through a service binding, so start its local HTTP listener in a
+second terminal while seeding:
+
+```sh
+pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed
+```
+
+Then run `pnpm seed docs` from the repository root. Stop the standalone Worker
+with Ctrl-C when the seed finishes.
+
 The MCP server launches Chrome with a dedicated persistent profile, separate
 from your personal Chrome profile. State in that profile persists between runs,
 and it never attaches to a personal browser session.

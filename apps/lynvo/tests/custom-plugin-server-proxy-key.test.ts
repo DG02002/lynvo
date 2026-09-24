@@ -8,6 +8,7 @@ import {
   saveCustomPluginServerProxyKey,
 } from "~/lib/effect/services/custom-plugin-server-proxy-key"
 
+import { DOCS_SEED_PROXY_KEY } from "../shared/docs-seed-constants"
 import { createFakeD1Database } from "./support/fake-d1"
 
 const accountResponse = (body: string, status = 200) =>
@@ -127,6 +128,18 @@ describe("readScrapeDoAccountInfo", () => {
       )
     ).rejects.toThrow("unrecognized response")
   })
+
+  it("rejects responses over the account-info byte limit", async () => {
+    await expect(
+      Effect.runPromise(
+        readScrapeDoAccountInfo("user-token", () =>
+          accountResponse("x".repeat(16 * 1024 + 1))
+        )
+      )
+    ).rejects.toThrow(
+      "Scrape.do account information is unavailable. Try again."
+    )
+  })
 })
 
 describe("refreshCustomPluginServerProxyBalance", () => {
@@ -209,6 +222,149 @@ describe("refreshCustomPluginServerProxyBalance", () => {
 })
 
 describe("saveCustomPluginServerProxyKey", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("uses the docs fixture balance in no-auth development mode", async () => {
+    const serverRow = createProxyServerRow()
+    let keyUpdateArgs: unknown[] | undefined
+    const database = createFakeD1Database((sql, args) => {
+      if (sql.includes("FROM user_plugin_servers")) {
+        return { row: serverRow, rows: [serverRow] }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers SET proxy_token_ciphertext")
+      ) {
+        keyUpdateArgs = args
+      }
+      return undefined
+    })
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    // SAFETY: This test enables only the development bypass and mocks the database and credential vault.
+    const environment = {
+      DB: database,
+      ENVIRONMENT: "development",
+      LYNVO_NO_AUTH: "true",
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () =>
+            Response.json({
+              ciphertext: "encrypted-proxy-token",
+              nonce: "proxy-nonce",
+              algorithm: "AES-256-GCM",
+              keyVersion: 1,
+            }),
+        }),
+      },
+    } as Env
+
+    const result = await Effect.runPromise(
+      saveCustomPluginServerProxyKey({
+        pluginServerId: "plugin-server-1",
+        token: DOCS_SEED_PROXY_KEY,
+        user: { id: "user-1" },
+      }).pipe(
+        Effect.provide(
+          Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+        )
+      )
+    )
+
+    expect(result).toEqual({
+      remaining: 4_210,
+      limit: 5_000,
+      dataVersion: 2,
+    })
+    expect(keyUpdateArgs?.slice(0, 8)).toEqual([
+      "plugin-server-1",
+      "encrypted-proxy-token",
+      "proxy-nonce",
+      "AES-256-GCM",
+      1,
+      4_210,
+      5_000,
+      expect.any(Number),
+    ])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("validates other tokens against Scrape.do in no-auth development mode", async () => {
+    const serverRow = createProxyServerRow()
+    let keyUpdateArgs: unknown[] | undefined
+    const database = createFakeD1Database((sql, args) => {
+      if (sql.includes("FROM user_plugin_servers")) {
+        return { row: serverRow, rows: [serverRow] }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers SET proxy_token_ciphertext")
+      ) {
+        keyUpdateArgs = args
+      }
+      return undefined
+    })
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        IsActive: true,
+        RemainingMonthlyRequest: 901,
+        MaxMonthlyRequest: 1_000,
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    // SAFETY: This test enables only the development bypass and mocks the database and credential vault.
+    const environment = {
+      DB: database,
+      ENVIRONMENT: "development",
+      LYNVO_NO_AUTH: "true",
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () =>
+            Response.json({
+              ciphertext: "encrypted-proxy-token",
+              nonce: "proxy-nonce",
+              algorithm: "AES-256-GCM",
+              keyVersion: 1,
+            }),
+        }),
+      },
+    } as Env
+
+    const result = await Effect.runPromise(
+      saveCustomPluginServerProxyKey({
+        pluginServerId: "plugin-server-1",
+        token: "user-scrape-token",
+        user: { id: "user-1" },
+      }).pipe(
+        Effect.provide(
+          Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+        )
+      )
+    )
+
+    expect(result).toEqual({
+      remaining: 901,
+      limit: 1_000,
+      dataVersion: 2,
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.scrape.do/info?token=user-scrape-token",
+      expect.objectContaining({
+        headers: { Accept: "application/json" },
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(keyUpdateArgs?.slice(0, 7)).toEqual([
+      "plugin-server-1",
+      "encrypted-proxy-token",
+      "proxy-nonce",
+      "AES-256-GCM",
+      1,
+      901,
+      1_000,
+    ])
+  })
+
   it("clears the saved key when given an empty token", async () => {
     const serverRow = createProxyServerRow()
     let keyUpdateArgs: unknown[] | undefined

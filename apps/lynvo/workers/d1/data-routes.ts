@@ -4,6 +4,10 @@ import { Hono, type Context as HonoContext } from "hono"
 import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
 import { MediaArtworkRequestSchema } from "../../shared/api-contracts"
 import {
+  DOCS_SEED_ARTWORK_POLICY,
+  DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
+} from "../../shared/docs-seed-constants"
+import {
   DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,
   MAX_RETENTION_DAYS,
@@ -22,6 +26,7 @@ import {
 import { isSameOriginRequest } from "../same-origin"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { getD1Database } from "./db"
+import { resetDocsSeedManagedUsage } from "./docs-seed-usage"
 import {
   LinkNotFoundError,
   LinkTooLargeError,
@@ -43,12 +48,20 @@ import {
   encryptSavedLinkExtractionCredential,
   type SavedLinkExtractionCredentialWrite,
 } from "./saved-link-extraction-credentials"
-import { resolveD1Session, type SessionRecord } from "./sessions"
+import {
+  isDevelopmentAuthBypassEnabled,
+  resolveD1Session,
+  type SessionRecord,
+} from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "./storage-ledger"
-import { getUsage } from "./usage"
+import {
+  getUsage,
+  reserveManagedExtraction,
+  settleManagedExtraction,
+} from "./usage"
 import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
@@ -257,6 +270,12 @@ const createOrUpdateSchema = Schema.Struct({
   title: Schema.optional(Schema.String),
   meta: Schema.NonEmptyString,
   extractionState: Schema.optional(Schema.Literal("queued")),
+  seedFixture: Schema.optional(
+    Schema.Struct({
+      createdAt: Schema.optional(Schema.Number),
+      extractionFailure: Schema.optional(Schema.NonEmptyString),
+    })
+  ),
 })
 
 interface CreateOrUpdateLinkOptions {
@@ -271,6 +290,17 @@ const createOrUpdateLink = async ({
   body,
 }: CreateOrUpdateLinkOptions): Promise<Response> => {
   const now = Date.now()
+  if (
+    body.seedFixture &&
+    (!isDevelopmentAuthBypassEnabled(context.env) ||
+      (body.seedFixture.createdAt !== undefined &&
+        (!Number.isFinite(body.seedFixture.createdAt) ||
+          body.seedFixture.createdAt > now)) ||
+      (body.seedFixture.extractionFailure !== undefined &&
+        body.extractionState === "queued"))
+  ) {
+    return await respondInvalidBody(context)
+  }
   let sourceInput: ReturnType<typeof extractHttpBasicCredential>
   try {
     sourceInput = extractHttpBasicCredential(body.url)
@@ -294,10 +324,18 @@ const createOrUpdateLink = async ({
       now,
     }
   }
+  const { seedFixture, ...linkBody } = body
+  const extractionState: "queued" | "failed" | undefined =
+    seedFixture?.extractionFailure === undefined
+      ? body.extractionState
+      : "failed"
   const normalizedInput = {
-    ...body,
+    ...linkBody,
     url: sourceInput.url,
     now,
+    createdAt: seedFixture?.createdAt,
+    extractionState,
+    extractionError: seedFixture?.extractionFailure,
   }
   const result =
     body.extractionState === "queued"
@@ -425,6 +463,17 @@ dataApp.post("/media-artwork", async (context) => {
       kind: "validation",
       message: "Too many artwork requests",
     })
+  }
+  if (
+    isDevelopmentAuthBypassEnabled(context.env) &&
+    (await preparation.database
+      .prepare(
+        "SELECT 1 AS found FROM links WHERE user_id = ?1 AND json_extract(meta_json, '$.artworkPolicy') = ?2 LIMIT 1"
+      )
+      .bind(preparation.session.userId, DOCS_SEED_ARTWORK_POLICY)
+      .first<{ found: number }>())
+  ) {
+    return context.json({ results: body.body.requests.map(() => ({})) })
   }
   const results = await lookupMediaArtworkCached(
     context.env,
@@ -655,6 +704,74 @@ dataApp.get("/usage", async (context) => {
     Date.now()
   )
   return context.json(usage)
+})
+
+dataApp.post("/usage/docs-seed", async (context) => {
+  addRequestContext(context, { operation: "data_docs_seed_usage" })
+  const preparation = await beginDataRequest(context, { mutating: true })
+  if (!isReadyDataRequest(preparation)) {
+    return preparation.response
+  }
+  if (!isDevelopmentAuthBypassEnabled(context.env)) {
+    return await respondDataFailure({
+      context,
+      status: 404,
+      kind: "not_found",
+      message: "Usage fixture is available only in no-auth development mode.",
+    })
+  }
+  const requestBody = await readDataJsonBody(
+    context,
+    Schema.Struct({ operationId: Schema.NonEmptyString })
+  )
+  if (requestBody.kind === "invalid") {
+    return requestBody.response
+  }
+  if (
+    !requestBody.body.operationId.startsWith(
+      DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX
+    )
+  ) {
+    return await respondInvalidBody(context)
+  }
+
+  await resetDocsSeedManagedUsage(
+    preparation.database,
+    preparation.session.userId,
+    requestBody.body.operationId
+  )
+  await reserveManagedExtraction(
+    preparation.database,
+    preparation.session.userId,
+    {
+      operationId: requestBody.body.operationId,
+      pluginId: "direct-media",
+      now: Date.now(),
+    }
+  )
+  const settlement = await settleManagedExtraction(
+    preparation.database,
+    preparation.session.userId,
+    {
+      operationId: requestBody.body.operationId,
+      outcome: "consumed",
+      now: Date.now(),
+    }
+  )
+  await notifyAccountDataChanged(
+    context.env,
+    preparation.session.userId,
+    settlement.dataVersion
+  )
+  const response = context.json({
+    success: true,
+    dataVersion: settlement.dataVersion,
+  })
+  response.headers.set(
+    DATA_VERSION_RESPONSE_HEADER,
+    String(settlement.dataVersion)
+  )
+  return response
 })
 
 export const registerD1DataRoutes = (

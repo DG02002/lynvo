@@ -38,9 +38,20 @@ initLogger({
   },
 })
 
+// Wrangler's generated type keeps the configured "false" literal, while dev:docs-seed overrides it with --var.
+const isDocsSeedProxyFixtureEnabled = (
+  environment: string,
+  fixtureFlag: string | undefined
+): boolean => environment === "development" && fixtureFlag === "true"
+
 const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   manifest: ({ env }) =>
-    createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN),
+    createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN, {
+      docsSeedProxyFixture: isDocsSeedProxyFixtureEnabled(
+        env.ENVIRONMENT,
+        env.DOCS_SEED_PROXY_FIXTURE
+      ),
+    }),
   auth: {
     validate: ({ request, env }) => {
       const apiKey = env.PLUGIN_SERVER_AUTH_KEY
