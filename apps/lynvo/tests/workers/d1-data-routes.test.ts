@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 
+import { DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX } from "../../shared/docs-seed-constants"
 import app from "../../workers/app"
 import {
   DATA_VERSION_RESPONSE_HEADER,
@@ -244,6 +245,68 @@ describe("d1 data routes", () => {
     )
 
     expect(response.status).toBe(400)
+  })
+
+  it("seeds one managed usage row through the no-auth public data API", async () => {
+    // SAFETY: The Cloudflare test environment supplies the generated Env bindings; only the two local development flags are overridden.
+    const developmentEnvironment = {
+      ...env,
+      ENVIRONMENT: "development",
+      LYNVO_NO_AUTH: "true",
+    } as Env
+    const operationId = `${DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX}2025-06-01`
+    const seedUsage = () =>
+      new Request("https://lynvo.test/api/data/usage/docs-seed", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://lynvo.test",
+        },
+        body: JSON.stringify({ operationId }),
+      })
+
+    const firstSeed = await app.fetch(seedUsage(), developmentEnvironment)
+    expect(firstSeed.status).toBe(200)
+    const secondSeed = await app.fetch(seedUsage(), developmentEnvironment)
+    expect(secondSeed.status).toBe(200)
+
+    const usageResponse = await app.fetch(
+      new Request("https://lynvo.test/api/data/usage"),
+      developmentEnvironment
+    )
+    const usage = await readJsonBody<{
+      metrics: { id: string; used: number }[]
+    }>(usageResponse)
+    expect(usage.metrics).toEqual([
+      expect.objectContaining({
+        id: "lynvo-plugin-server-operations",
+        used: 1,
+      }),
+      expect.objectContaining({
+        id: "lynvo-plugin-server-extractions",
+        used: 1,
+      }),
+    ])
+  })
+
+  it("rejects the managed usage fixture outside no-auth development mode", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+    const response = await app.fetch(
+      dataApiRequest("/api/data/usage/docs-seed", session, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://lynvo.test",
+        },
+        body: JSON.stringify({
+          operationId: `${DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX}2025-06-01`,
+        }),
+      }),
+      env
+    )
+
+    expect(response.status).toBe(404)
   })
 
   it("sanitizes queued source URLs and encrypts their transient credentials", async () => {

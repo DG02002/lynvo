@@ -55,6 +55,7 @@ export interface LinkDebugLogEntry {
 
 export interface LinkMetadata {
   schemaVersion: 3
+  artworkPolicy?: "lynvo-generic"
   source: Record<string, JsonValue>
   extraction: {
     extractedLinks: ExtractedLink[]

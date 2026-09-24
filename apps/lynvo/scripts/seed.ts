@@ -4,10 +4,16 @@ import { fileURLToPath } from "node:url"
 import {
   getLynvoManifestExtension,
   parsePluginServerManifestContract,
+  readBoundedResponseText,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
-import { DOCS_SEED_PROXY_KEY } from "../shared/docs-seed-constants"
+import type { ExtractedLink } from "../app/features/links/types"
+import {
+  DOCS_SEED_PROXY_BALANCE,
+  DOCS_SEED_PROXY_KEY,
+  DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
+} from "../shared/docs-seed-constants"
 import {
   LynvoUsageSnapshotSchema,
   PluginServerUsageSchema,
@@ -56,77 +62,13 @@ interface ApiRequestOptions<ResponseBody> {
   retryWithOperationId?: boolean
 }
 
-const joinChunks = (chunks: readonly Uint8Array[], totalBytes: number) => {
-  const bytes = new Uint8Array(totalBytes)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return bytes
-}
-
-const readBoundedStream = async (
-  stream: ReadableStream<Uint8Array>
-): Promise<Uint8Array> => {
-  const reader = stream.getReader()
-  const chunks: Uint8Array[] = []
-  let totalBytes = 0
-  try {
-    while (true) {
-      // SAFETY: Response streams expose chunks sequentially; awaiting each read is required to preserve byte order and enforce the size bound.
-      // oxlint-disable-next-line eslint/no-await-in-loop
-      const { done, value } = await reader.read()
-      if (done) {
-        break
-      }
-      totalBytes += value.byteLength
-      if (totalBytes > API_RESPONSE_LIMIT_BYTES) {
-        // SAFETY: Cancel the oversized API response before releasing the reader so the local connection does not keep streaming unused bytes.
-        // oxlint-disable-next-line eslint/no-await-in-loop
-        await reader.cancel()
-        throw new Error(
-          "The Lynvo API response exceeded the seed CLI size limit."
-        )
-      }
-      chunks.push(value)
-    }
-  } finally {
-    reader.releaseLock()
-  }
-
-  return joinChunks(chunks, totalBytes)
-}
-
-const readBoundedBytes = async (
-  response: Response
-): Promise<Uint8Array | undefined> => {
-  const contentLength = Number(response.headers.get("Content-Length"))
-  if (
-    Number.isFinite(contentLength) &&
-    contentLength > API_RESPONSE_LIMIT_BYTES
-  ) {
-    await response.body?.cancel()
-    throw new Error("The Lynvo API response exceeded the seed CLI size limit.")
-  }
-  if (!response.body) {
-    return undefined
-  }
-  return await readBoundedStream(response.body)
-}
-
 const readBoundedText = async (
   response: Response
 ): Promise<string | undefined> => {
-  const bytes = await readBoundedBytes(response)
-  if (!bytes) {
-    return undefined
-  }
-  const body = new TextDecoder().decode(bytes)
-  if (!body) {
-    return undefined
-  }
-  return body
+  const body = await readBoundedResponseText(response, {
+    maximumResponseBytes: API_RESPONSE_LIMIT_BYTES,
+  })
+  return body || undefined
 }
 
 interface CsrfCredential {
@@ -285,6 +227,90 @@ type ApiErrorResponse = typeof ApiErrorResponseSchema.Type
 const getApiErrorMessage = (response: ApiErrorResponse): string | undefined =>
   response.failure?.message ?? response.error ?? response.message
 
+const getCauseMessage = (cause: unknown): string => {
+  if (cause instanceof Error) {
+    return cause.message
+  }
+  return JSON.stringify(cause) ?? "Unknown error"
+}
+
+interface ParsedResponseBody {
+  readonly value: unknown
+  readonly error: Error | undefined
+}
+
+const parseResponseBody = (
+  responseText: string | undefined
+): ParsedResponseBody => {
+  if (responseText === undefined) {
+    return { value: undefined, error: undefined }
+  }
+  try {
+    return { value: JSON.parse(responseText), error: undefined }
+  } catch (error) {
+    return {
+      value: undefined,
+      error: error instanceof Error ? error : new Error(getCauseMessage(error)),
+    }
+  }
+}
+
+interface ApiResponseFailureInput {
+  readonly response: Response
+  readonly options: Pick<ApiRequestOptions<unknown>, "method" | "path">
+  readonly parsedBody: ParsedResponseBody
+}
+
+const throwApiResponseFailure = ({
+  response,
+  options,
+  parsedBody,
+}: ApiResponseFailureInput): never => {
+  if (parsedBody.error) {
+    const detail = parsedBody.error.message
+    throw new Error(
+      `${options.method} ${options.path} failed with ${response.status}; the response was not valid JSON: ${detail}`,
+      { cause: parsedBody.error }
+    )
+  }
+
+  const parsedError = Schema.decodeUnknownResult(ApiErrorResponseSchema)(
+    parsedBody.value
+  )
+  const message = Result.isSuccess(parsedError)
+    ? getApiErrorMessage(parsedError.success)
+    : undefined
+  throw new Error(
+    `${options.method} ${options.path} failed with ${response.status}${message ? `: ${message}` : "."}`
+  )
+}
+
+const decodeApiResponse = async <ResponseBody>(
+  response: Response,
+  options: ApiRequestOptions<ResponseBody>
+): Promise<ResponseBody> => {
+  const responseText = await readBoundedText(response)
+  const parsedBody = parseResponseBody(responseText)
+  if (!response.ok) {
+    throwApiResponseFailure({ response, options, parsedBody })
+  }
+  if (parsedBody.error) {
+    throw new Error(
+      `${options.method} ${options.path} returned invalid JSON: ${parsedBody.error.message}`,
+      { cause: parsedBody.error }
+    )
+  }
+  const parsedResponse = Schema.decodeUnknownResult(options.responseSchema)(
+    parsedBody.value
+  )
+  if (Result.isFailure(parsedResponse)) {
+    throw new Error(
+      `${options.method} ${options.path} returned an unexpected response.`
+    )
+  }
+  return parsedResponse.success
+}
+
 export class SeedApiClient {
   readonly origin: URL
   readonly fetchFunction: FetchFunction
@@ -320,35 +346,16 @@ export class SeedApiClient {
   }
 
   async mutate(options: ApiMutationOptions): Promise<void> {
-    const requestOptions: ApiRequestOptions<
-      typeof EmptyMutationResponseSchema.Type
-    > = {
-      method: options.method,
-      path: options.path,
+    await this.request({
+      ...options,
       responseSchema: EmptyMutationResponseSchema,
-    }
-    if (options.body !== undefined) {
-      requestOptions.body = options.body
-    }
-    if (options.retryWithOperationId !== undefined) {
-      requestOptions.retryWithOperationId = options.retryWithOperationId
-    }
-    await this.request(requestOptions)
+    })
   }
 
   async mutateForResponse<ResponseBody>(
     options: ApiMutationResponseOptions<ResponseBody>
   ): Promise<ResponseBody> {
-    const requestOptions: ApiRequestOptions<ResponseBody> = {
-      method: options.method,
-      path: options.path,
-      body: options.body,
-      responseSchema: options.responseSchema,
-    }
-    if (options.retryWithOperationId !== undefined) {
-      requestOptions.retryWithOperationId = options.retryWithOperationId
-    }
-    return await this.request(requestOptions)
+    return await this.request(options)
   }
 
   private async fetchResponse<ResponseBody>(
@@ -390,53 +397,11 @@ export class SeedApiClient {
     options: ApiRequestOptions<ResponseBody>
   ): Promise<ResponseBody> {
     const response = await this.fetchResponse(options)
-    const responseText = await readBoundedText(response)
-    let responseBody: unknown
-    if (responseText !== undefined) {
-      try {
-        responseBody = JSON.parse(responseText)
-      } catch {
-        responseBody = undefined
-      }
-    }
-    if (!response.ok) {
-      const parsedError = Schema.decodeUnknownResult(ApiErrorResponseSchema)(
-        responseBody
-      )
-      const message = Result.isSuccess(parsedError)
-        ? getApiErrorMessage(parsedError.success)
-        : undefined
-      throw new Error(
-        `${options.method} ${options.path} failed with ${response.status}${message ? `: ${message}` : "."}`
-      )
-    }
-    const parsedResponse = Schema.decodeUnknownResult(options.responseSchema)(
-      responseBody
-    )
-    if (Result.isFailure(parsedResponse)) {
-      throw new Error(
-        `${options.method} ${options.path} returned an unexpected response.`
-      )
-    }
-    return parsedResponse.success
+    return await decodeApiResponse(response, options)
   }
 }
 
-interface LinkNode {
-  readonly nodeKey: string
-  readonly label: string
-  readonly type?: "file" | "folder" | undefined
-  readonly mediaNodeKind: "group" | "playable" | "resolvable"
-  readonly url?: string | undefined
-  readonly nodeUrl?: string | undefined
-  readonly resourceId?: string | undefined
-  readonly childrenResolved?: boolean | undefined
-  readonly resolutionKind?: "folder" | undefined
-  readonly children?: readonly LinkNode[] | undefined
-  readonly expiry?: number | undefined
-  readonly expirySource?: "signed-url" | undefined
-  readonly size?: string | undefined
-}
+type LinkNode = ExtractedLink
 
 interface LinkFixture {
   readonly slug: string
@@ -505,7 +470,7 @@ const groupNode = (
   type: "folder",
   mediaNodeKind: "group",
   childrenResolved: true,
-  children,
+  children: [...children],
 })
 
 const resolvableNode = (key: string, label: string): LinkNode => ({
@@ -682,6 +647,7 @@ const linkMetadata = (
 ) => {
   const metadata = {
     schemaVersion: 3,
+    artworkPolicy: "lynvo-generic" as const,
     source: {
       pluginId: fixture.pluginId,
       pluginName: fixture.pluginName,
@@ -789,23 +755,9 @@ export const seedDocsLinks = async (
   return updated.links
 }
 
-interface PluginServerEntry {
-  readonly id: string
-  readonly baseUrl: string
-  readonly manifest: string
-  readonly enabled: boolean
-  readonly verificationStatus: string
-  readonly hasProxyKey: boolean
-  readonly proxyEnabled: boolean
-  readonly proxyBalanceRemaining: number | null
-  readonly proxyBalanceLimit: number | null
-}
+type PluginServerEntry = (typeof PluginServerListSchema.Type)[number]
 
-interface PluginServerUsageEntry {
-  readonly pluginServerId: string
-  readonly metrics: typeof PluginServerUsageSchema.Type.metrics
-  readonly error?: string
-}
+type PluginServerUsageEntry = typeof PluginServerUsageSchema.Type
 
 interface PluginDomainEntry {
   readonly id: string
@@ -976,22 +928,31 @@ const configureAndVerifyProxy = async (
   if (
     !configuredServer?.hasProxyKey ||
     !configuredServer.proxyEnabled ||
-    configuredServer.proxyBalanceRemaining !== 4_210 ||
-    configuredServer.proxyBalanceLimit !== 5_000
+    configuredServer.proxyBalanceRemaining !==
+      DOCS_SEED_PROXY_BALANCE.remaining ||
+    configuredServer.proxyBalanceLimit !== DOCS_SEED_PROXY_BALANCE.limit
   ) {
     throw new Error("The docs scenario could not configure its proxy balance.")
   }
 
-  let manifest: ReturnType<typeof parsePluginServerManifestContract>
+  let manifestJson: unknown
   try {
-    manifest = parsePluginServerManifestContract(
-      JSON.parse(configuredServer.manifest)
+    manifestJson = JSON.parse(configuredServer.manifest)
+  } catch (cause) {
+    const detail = getCauseMessage(cause)
+    throw new Error(
+      `The local Custom Plugin Server manifest is invalid JSON: ${detail}`,
+      { cause }
     )
-  } catch {
-    throw new Error("The local Custom Plugin Server manifest is invalid.")
   }
+  const manifest = parsePluginServerManifestContract(manifestJson)
   if (!manifest.ok || !manifest.value) {
-    throw new Error("The local Custom Plugin Server manifest is invalid.")
+    const detail = manifest.issues
+      .map((issue) => `${issue.path}: ${issue.message}`)
+      .join("; ")
+    throw new Error(
+      `The local Custom Plugin Server manifest is invalid: ${detail}`
+    )
   }
   const proxyUsagePlugins = getLynvoManifestExtension(
     manifest.value
@@ -1021,7 +982,9 @@ const verifyPluginUsageRows = async (
       (entry) =>
         entry.pluginServerId === pluginServerId &&
         entry.error === undefined &&
-        entry.metrics.length > 0
+        entry.metrics.some(
+          (metric) => metric.id === "lynvo-plugin-server-operations"
+        )
     )
   ) {
     throw new Error("The local Custom Plugin Server returned no usage rows.")
@@ -1031,16 +994,42 @@ const verifyPluginUsageRows = async (
     "/api/data/usage",
     LynvoUsageSnapshotSchema
   )
-  if (managedUsage.metrics.length === 0) {
+  if (
+    !managedUsage.metrics.some(
+      (metric) =>
+        metric.id === "lynvo-plugin-server-operations" && metric.used === 1
+    ) ||
+    !managedUsage.metrics.some(
+      (metric) =>
+        metric.id === "lynvo-plugin-server-extractions" && metric.used === 1
+    )
+  ) {
     throw new Error("The managed Plugin Server returned no usage rows.")
   }
 }
 
-const seedDocsSettings = async (api: SeedApiClient): Promise<string> => {
+const seedDocsManagedUsage = async (
+  api: SeedApiClient,
+  seedTime: number
+): Promise<void> => {
+  const operationId = `${DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX}${new Date(seedTime).toISOString().slice(0, 10)}`
+  await api.mutate({
+    method: "POST",
+    path: "/api/data/usage/docs-seed",
+    body: { operationId },
+    retryWithOperationId: true,
+  })
+}
+
+const seedDocsSettings = async (
+  api: SeedApiClient,
+  seedTime: number
+): Promise<string> => {
   await clearPluginDomains(api)
   const pluginServer = await requireLocalPluginServer(api)
   await createDocsPluginDomains(api, pluginServer.id)
   await configureAndVerifyProxy(api, pluginServer.id)
+  await seedDocsManagedUsage(api, seedTime)
   await verifyPluginUsageRows(api, pluginServer.id)
   return pluginServer.id
 }
@@ -1157,23 +1146,42 @@ export const seedDocsScenario = async (
   seedTime = Date.now()
 ): Promise<{ readonly links: number; readonly sessions: number }> => {
   await requireNoAuthDevelopmentAccount(api)
-  const pluginServerId = await seedDocsSettings(api)
+  const pluginServerId = await seedDocsSettings(api, seedTime)
   const links = await seedDocsLinks(api, { seedTime, pluginServerId })
   const sessions = await seedDocsSessions(api)
   return { links: links.length, sessions }
 }
 
+type SeedScenario = (
+  api: SeedApiClient
+) => Promise<{ readonly links: number; readonly sessions: number }>
+
+const seedScenarios = {
+  docs: seedDocsScenario,
+} satisfies Readonly<Record<string, SeedScenario>>
+
+const isSeedScenarioName = (
+  scenarioName: string
+): scenarioName is keyof typeof seedScenarios =>
+  Object.hasOwn(seedScenarios, scenarioName)
+
 const run = async (): Promise<void> => {
-  const [scenario, ...unexpectedArguments] = process.argv.slice(2)
-  if (scenario !== "docs" || unexpectedArguments.length > 0) {
-    throw new Error("Usage: pnpm --filter @lynvo/app seed docs")
+  const [scenarioName, ...unexpectedArguments] = process.argv.slice(2)
+  const registeredScenarioName =
+    scenarioName && isSeedScenarioName(scenarioName) ? scenarioName : undefined
+  const seedScenario = registeredScenarioName
+    ? seedScenarios[registeredScenarioName]
+    : undefined
+  if (!seedScenario || unexpectedArguments.length > 0) {
+    const scenarios = Object.keys(seedScenarios).join("|")
+    throw new Error(`Usage: pnpm --filter @lynvo/app seed <${scenarios}>`)
   }
 
   const origin = assertLocalOrigin(
     process.env.LYNVO_SEED_ORIGIN ?? DEFAULT_APP_ORIGIN
   )
   const api = new SeedApiClient(origin.href)
-  const summary = await seedDocsScenario(api)
+  const summary = await seedScenario(api)
   process.stdout.write(
     `Seeded the docs scenario: ${summary.links} Saved links and ${summary.sessions} active sessions at ${origin.origin}.\n`
   )

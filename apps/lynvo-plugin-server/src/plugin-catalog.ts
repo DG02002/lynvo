@@ -108,6 +108,11 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
   },
 ]
 
+const DOCS_SEED_PROXY_PLUGIN_IDS = new Set([
+  BHADOO_SOURCE_ID,
+  ONEDRIVE_SOURCE_ID,
+])
+
 export const findLynvoPlugin = (
   targetUrl: string,
   pluginId?: string
@@ -123,8 +128,9 @@ export const findLynvoPlugin = (
 
 export const createLynvoPluginServerManifest = (
   publicAssetOrigin?: string,
-  developmentProxyFixture = false
+  options: { readonly docsSeedProxyFixture?: boolean } = {}
 ): PluginServerManifest => {
+  const { docsSeedProxyFixture = false } = options
   const plugins = LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
     const publishedMatchers = isProbePlugin(plugin)
       ? undefined
@@ -153,14 +159,14 @@ export const createLynvoPluginServerManifest = (
     const withCredential = plugin.credential
       ? { ...withIconUrl, credential: plugin.credential }
       : withIconUrl
-    return developmentProxyFixture
+    return docsSeedProxyFixture && DOCS_SEED_PROXY_PLUGIN_IDS.has(plugin.id)
       ? {
           ...withCredential,
           proxyCreditUsage: "Demo estimate: 2 credits per Extraction.",
         }
       : withCredential
   })
-  const lynvoExtension = developmentProxyFixture
+  const lynvoExtension = docsSeedProxyFixture
     ? { plugins, proxyProvider: "scrape-do" as const }
     : { plugins }
 

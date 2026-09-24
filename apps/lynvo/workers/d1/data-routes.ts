@@ -3,6 +3,7 @@ import { Hono, type Context as HonoContext } from "hono"
 
 import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
 import { MediaArtworkRequestSchema } from "../../shared/api-contracts"
+import { DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX } from "../../shared/docs-seed-constants"
 import {
   DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,
@@ -52,7 +53,12 @@ import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "./storage-ledger"
-import { getUsage } from "./usage"
+import {
+  getUsage,
+  resetDevelopmentManagedUsage,
+  reserveManagedExtraction,
+  settleManagedExtraction,
+} from "./usage"
 import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
@@ -455,6 +461,17 @@ dataApp.post("/media-artwork", async (context) => {
       message: "Too many artwork requests",
     })
   }
+  if (
+    isDevelopmentAuthBypassEnabled(context.env) &&
+    (await preparation.database
+      .prepare(
+        "SELECT 1 AS found FROM links WHERE user_id = ?1 AND json_extract(meta_json, '$.artworkPolicy') = 'lynvo-generic' LIMIT 1"
+      )
+      .bind(preparation.session.userId)
+      .first<{ found: number }>())
+  ) {
+    return context.json({ results: body.body.requests.map(() => ({})) })
+  }
   const results = await lookupMediaArtworkCached(
     context.env,
     body.body.requests,
@@ -684,6 +701,66 @@ dataApp.get("/usage", async (context) => {
     Date.now()
   )
   return context.json(usage)
+})
+
+dataApp.post("/usage/docs-seed", async (context) => {
+  addRequestContext(context, { operation: "data_docs_seed_usage" })
+  const preparation = await beginDataRequest(context, { mutating: true })
+  if (!isReadyDataRequest(preparation)) {
+    return preparation.response
+  }
+  if (!isDevelopmentAuthBypassEnabled(context.env)) {
+    return await respondDataFailure({
+      context,
+      status: 404,
+      kind: "not_found",
+      message: "Usage fixture is available only in no-auth development mode.",
+    })
+  }
+  const requestBody = await readDataJsonBody(
+    context,
+    Schema.Struct({ operationId: Schema.NonEmptyString })
+  )
+  if (requestBody.kind === "invalid") {
+    return requestBody.response
+  }
+  if (
+    !requestBody.body.operationId.startsWith(
+      DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX
+    )
+  ) {
+    return await respondInvalidBody(context)
+  }
+
+  await resetDevelopmentManagedUsage(
+    preparation.database,
+    preparation.session.userId,
+    requestBody.body.operationId
+  )
+  await reserveManagedExtraction(
+    preparation.database,
+    preparation.session.userId,
+    {
+      operationId: requestBody.body.operationId,
+      pluginId: "direct-media",
+      now: Date.now(),
+    }
+  )
+  const settlement = await settleManagedExtraction(
+    preparation.database,
+    preparation.session.userId,
+    {
+      operationId: requestBody.body.operationId,
+      outcome: "consumed",
+      now: Date.now(),
+    }
+  )
+  await notifyAccountDataChanged(
+    context.env,
+    preparation.session.userId,
+    settlement.dataVersion
+  )
+  return context.json({ success: true, dataVersion: settlement.dataVersion })
 })
 
 export const registerD1DataRoutes = (

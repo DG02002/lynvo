@@ -155,18 +155,23 @@ describe("Lynvo plugin catalog", () => {
     )
     const developmentManifest = createLynvoPluginServerManifest(
       "https://lynvo.example",
-      true
+      { docsSeedProxyFixture: true }
     )
     const developmentExtension = getLynvoManifestExtension(developmentManifest)
 
     expect(productionExtension.proxyProvider).toBeUndefined()
-    expect(productionExtension.plugins?.[0]?.proxyCreditUsage).toBeUndefined()
-    expect(developmentExtension.proxyProvider).toBe("scrape-do")
     expect(
-      developmentExtension.plugins?.every(
-        (plugin) => plugin.proxyCreditUsage !== undefined
+      productionExtension.plugins?.every(
+        (plugin) => plugin.proxyCreditUsage === undefined
       )
     ).toBe(true)
+    expect(developmentExtension.proxyProvider).toBe("scrape-do")
+    expect(
+      developmentExtension.plugins
+        ?.filter((plugin) => plugin.proxyCreditUsage)
+        .map((plugin) => plugin.id)
+        .toSorted()
+    ).toEqual(["bhadoo-google-drive-index", "onedrive-index"])
     expect(validatePluginServerManifestContract(developmentManifest)).toEqual({
       ok: true,
       issues: [],

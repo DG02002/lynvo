@@ -169,7 +169,7 @@ available through a service binding, so start its local HTTP listener in a
 second terminal while seeding:
 
 ```sh
-pnpm --filter @lynvo/lynvo-plugin-server exec wrangler dev --config wrangler.jsonc --env local --port 8788
+pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed
 ```
 
 Then run `pnpm seed docs` from the repository root. Stop the standalone Worker

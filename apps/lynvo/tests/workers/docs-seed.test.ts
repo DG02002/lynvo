@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers"
 import { Schema } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { formatPlayableValidity } from "../../app/features/links/format-playable-expiry"
 import { getGalleryGroups } from "../../app/features/links/media-artwork/gallery-grouping"
@@ -13,6 +13,7 @@ import type {
 } from "../../app/features/links/types"
 import { getSaveDateGroupLabel } from "../../app/lib/save-date-groups"
 import { SeedApiClient, seedDocsLinks } from "../../scripts/seed"
+import { MediaArtworkResponseSchema } from "../../shared/api-contracts"
 import app from "../../workers/app"
 
 const SEED_TIME = Date.now()
@@ -186,6 +187,7 @@ describe("docs seed CLI Saved link fixtures", () => {
     const libraryMetadata = library && readMetadata(library)
     expect(libraryMetadata?.playback.openedUrls).toEqual([])
     expect(libraryMetadata?.artwork).toBeUndefined()
+    expect(libraryMetadata?.artworkPolicy).toBe("lynvo-generic")
     const libraryNodes = libraryMetadata?.extraction.extractedLinks
     const tvShows = findMediaNode(libraryNodes, "TV Shows")
     const severanceFolder = findMediaNode(tvShows?.children, "Severance")
@@ -250,5 +252,23 @@ describe("docs seed CLI Saved link fixtures", () => {
         SEED_TIME
       )
     ).toBe("Link expired")
+
+    const artworkFetch = vi.spyOn(globalThis, "fetch")
+    try {
+      const artwork = await api.mutateForResponse({
+        method: "POST",
+        path: "/api/data/media-artwork",
+        body: {
+          requests: [
+            { mediaKind: "movie", title: "Dune: Part Two", year: 2024 },
+          ],
+        },
+        responseSchema: MediaArtworkResponseSchema,
+      })
+      expect(artwork.results).toEqual([{}])
+      expect(artworkFetch).not.toHaveBeenCalled()
+    } finally {
+      artworkFetch.mockRestore()
+    }
   })
 })

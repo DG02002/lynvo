@@ -122,6 +122,7 @@ export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
 
 export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   schemaVersion: Schema.Literal(3),
+  artworkPolicy: Schema.optional(Schema.Literal("lynvo-generic")),
   source: Schema.Record(Schema.String, Schema.Json),
   extraction: Schema.Struct({
     extractedLinks: Schema.mutable(Schema.Array(extractedLinkSchema)),

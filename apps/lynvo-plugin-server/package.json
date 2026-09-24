@@ -6,6 +6,7 @@
   "scripts": {
     "build": "pnpm run prepare:protocol && wrangler deploy --dry-run --config wrangler.jsonc --env=\"\"",
     "dev": "pnpm run prepare:protocol && wrangler dev --config wrangler.jsonc --env local",
+    "dev:docs-seed": "pnpm run prepare:protocol && wrangler dev --config wrangler.jsonc --env local --port 8788 --var DOCS_SEED_PROXY_FIXTURE:true",
     "deploy": "pnpm run images:optimize && pnpm run check && pnpm run test && node scripts/deploy.mjs",
     "images:optimize": "node ../../scripts/optimize-images.mjs public/icons/sources",
     "cf-typegen": "wrangler types --env-interface LynvoPluginServerBindings",
