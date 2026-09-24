@@ -7,8 +7,8 @@
       "route": "/settings/account",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -99,8 +99,8 @@
       "route": "/settings/general",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -123,8 +123,8 @@
       "route": "/settings/general",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -147,8 +147,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -171,8 +171,8 @@
       "route": "/settings/general",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -195,8 +195,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -249,8 +249,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -314,8 +314,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -349,53 +349,12 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          },
-          "expectVisible": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "List view",
-            "exact": true
-          },
-          "expectVisible": {
-            "role": "radio",
-            "name": "List view"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
         {
           "action": "navigate",
           "path": "/save",
@@ -417,7 +376,8 @@
         }
       ],
       "framingTheme": "aurora-011",
-      "output": "app/features/site/docs/images/library-refresh-link-choices.png"
+      "output": "app/features/site/docs/images/library-refresh-link-choices.png",
+      "setup": "gallery-choice"
     },
     {
       "name": "library-change-artwork",
@@ -425,8 +385,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -490,8 +450,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -514,8 +474,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -560,8 +520,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -627,8 +587,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -673,8 +633,8 @@
       "route": "/settings/player",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -698,10 +658,10 @@
       "context": "phone",
       "viewport": {
         "width": 412,
-        "height": 915,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -754,8 +714,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -778,8 +738,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -813,8 +773,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -848,8 +808,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -883,8 +843,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -929,8 +889,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -964,8 +924,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -999,8 +959,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1034,8 +994,8 @@
       "route": "/settings/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1079,8 +1039,8 @@
       "route": "/settings/proxy",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1103,8 +1063,8 @@
       "route": "/settings/proxy",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1138,8 +1098,8 @@
       "route": "/settings/proxy",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1163,8 +1123,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1210,8 +1170,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1285,10 +1245,10 @@
       "context": "phone",
       "viewport": {
         "width": 412,
-        "height": 915,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -1318,10 +1278,10 @@
       "context": "phone",
       "viewport": {
         "width": 412,
-        "height": 915,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -1351,53 +1311,12 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          },
-          "expectVisible": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "List view",
-            "exact": true
-          },
-          "expectVisible": {
-            "role": "radio",
-            "name": "List view"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
         {
           "action": "navigate",
           "path": "/save",
@@ -1419,7 +1338,8 @@
         }
       ],
       "framingTheme": "aurora-037",
-      "output": "app/features/site/docs/images/saving-links-choose-links.png"
+      "output": "app/features/site/docs/images/saving-links-choose-links.png",
+      "setup": "gallery-choice"
     },
     {
       "name": "saving-links-extraction-failed",
@@ -1427,8 +1347,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1463,8 +1383,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1497,8 +1417,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1531,8 +1451,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1565,8 +1485,8 @@
       "route": "/save",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1598,8 +1518,8 @@
       "route": "/settings/security/active-sessions",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1622,8 +1542,8 @@
       "route": "/settings/security/active-sessions",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1658,8 +1578,8 @@
       "route": "/settings/security/active-sessions",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1693,8 +1613,8 @@
       "route": "/settings/security",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1751,8 +1671,8 @@
       "route": "/auth/device",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -1784,10 +1704,10 @@
       "context": "phone",
       "viewport": {
         "width": 412,
-        "height": 915,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -1817,52 +1737,11 @@
       "context": "phone",
       "viewport": {
         "width": 412,
-        "height": 915,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          },
-          "expectVisible": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "List view",
-            "exact": true
-          },
-          "expectVisible": {
-            "role": "radio",
-            "name": "List view"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
         {
           "action": "navigate",
           "path": "/save",
@@ -1884,7 +1763,8 @@
         }
       ],
       "framingTheme": "aurora-050",
-      "output": "app/features/site/docs/images/start-guide-choose-links.png"
+      "output": "app/features/site/docs/images/start-guide-choose-links.png",
+      "setup": "gallery-choice"
     },
     {
       "name": "start-guide-tv-library",
@@ -1898,47 +1778,6 @@
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          },
-          "expectVisible": {
-            "role": "switch",
-            "name": "Save all links automatically"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "List view",
-            "exact": true
-          },
-          "expectVisible": {
-            "role": "radio",
-            "name": "List view"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
         {
           "action": "navigate",
           "path": "/save",
@@ -2004,7 +1843,8 @@
         }
       ],
       "framingTheme": "aurora-051",
-      "output": "app/features/site/docs/images/start-guide-tv-library.png"
+      "output": "app/features/site/docs/images/start-guide-tv-library.png",
+      "setup": "gallery-choice"
     },
     {
       "name": "settings-storage",
@@ -2012,8 +1852,8 @@
       "route": "/settings/storage",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2036,8 +1876,8 @@
       "route": "/settings/storage",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2082,8 +1922,8 @@
       "route": "/settings/storage",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2117,8 +1957,8 @@
       "route": "/settings/usage",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2141,8 +1981,8 @@
       "route": "/settings/usage",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2166,8 +2006,8 @@
       "route": "/settings/usage",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2190,8 +2030,8 @@
       "route": "/",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2215,10 +2055,10 @@
       "context": "phone",
       "viewport": {
         "width": 412,
-        "height": 915,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -2238,8 +2078,8 @@
       "route": "/plugins",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2262,8 +2102,8 @@
       "route": "/pricing",
       "context": "desktop",
       "viewport": {
-        "width": 1440,
-        "height": 900,
+        "width": 1470,
+        "height": 836,
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
@@ -2280,5 +2120,50 @@
       "framingTheme": "aurora-061",
       "output": ".screenshots/intermediates/marketing-pricing-desktop.png"
     }
-  ]
+  ],
+  "setups": {
+    "gallery-choice": [
+      {
+        "action": "navigate",
+        "path": "/settings/general",
+        "expectVisible": {
+          "role": "heading",
+          "name": "General"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "role": "switch",
+          "name": "Save all links automatically"
+        },
+        "expectVisible": {
+          "role": "switch",
+          "name": "Save all links automatically"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "Gallery view",
+          "exact": true
+        },
+        "expectVisible": {
+          "text": "Beta",
+          "exact": true
+        }
+      }
+    ]
+  }
 }

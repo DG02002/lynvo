@@ -21,9 +21,11 @@ const MANIFEST_PATH = path.join(
 const DEFAULT_ORIGIN = "http://localhost:5173"
 const TV_BRO_USER_AGENT =
   "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)"
+const PIXEL_10_USER_AGENT =
+  "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36"
 const CONTEXT_VIEWPORTS = {
-  desktop: { height: 900, width: 1440 },
-  phone: { height: 915, width: 412 },
+  desktop: { height: 836, width: 1470 },
+  phone: { height: 924, width: 412 },
   tv: { height: 1080, width: 1920 },
 }
 const STEP_TIMEOUT_MS = 15_000
@@ -66,6 +68,7 @@ const ShotSchema = Schema.Struct({
   output: Schema.NonEmptyString,
   route: Schema.NonEmptyString,
   seedScenario: Schema.Literals(["docs", "none"]),
+  setup: Schema.optional(Schema.NonEmptyString),
   steps: Schema.Array(StepSchema),
   userAgent: Schema.NonEmptyString,
   viewport: Schema.Struct({
@@ -75,9 +78,23 @@ const ShotSchema = Schema.Struct({
   }),
 })
 const ManifestSchema = Schema.Struct({
+  setups: Schema.Record(Schema.String, Schema.Array(StepSchema)),
   shots: Schema.Array(ShotSchema),
   version: Schema.Number,
 })
+
+const expandShotSetup = (shot, setups) => {
+  if (shot.setup === undefined) {
+    return shot
+  }
+  const setupSteps = setups[shot.setup]
+  if (!setupSteps) {
+    throw new Error(`${shot.name} references an unknown setup: ${shot.setup}.`)
+  }
+  const shotWithoutSetup = { ...shot }
+  delete shotWithoutSetup.setup
+  return { ...shotWithoutSetup, steps: [...setupSteps, ...shot.steps] }
+}
 
 const validateViewport = (shot) => {
   const expectedViewport = CONTEXT_VIEWPORTS[shot.context]
@@ -91,6 +108,9 @@ const validateViewport = (shot) => {
   }
   if (shot.context === "tv" && shot.userAgent !== TV_BRO_USER_AGENT) {
     throw new Error(`${shot.name} must use the verified TV Bro user agent.`)
+  }
+  if (shot.context === "phone" && shot.userAgent !== PIXEL_10_USER_AGENT) {
+    throw new Error(`${shot.name} must use the Pixel 10 Chrome user agent.`)
   }
 }
 
@@ -157,10 +177,13 @@ const readManifest = async () => {
     outputs: new Set(),
     themes: new Set(),
   }
-  for (const shot of manifest.shots) {
+  const shots = manifest.shots.map((shot) =>
+    expandShotSetup(shot, manifest.setups)
+  )
+  for (const shot of shots) {
     validateShot(shot, state)
   }
-  return manifest.shots
+  return shots
 }
 
 const parseArguments = (argumentsList) => {
@@ -282,21 +305,29 @@ const expectVisible = async (page, descriptor, shotName) => {
   }
 }
 
-const waitForClientActivityResponse = async (page, origin) => {
-  const response = await page.waitForResponse(
-    (candidate) => {
-      const responseUrl = new URL(candidate.url())
-      return (
-        responseUrl.origin === origin.origin &&
-        responseUrl.pathname === "/api/settings/activity" &&
-        candidate.request().method() === "POST"
-      )
-    },
-    { timeout: STEP_TIMEOUT_MS }
-  )
+const waitForHydrationActivityResponse = async (page, origin, shotName) => {
+  let response
+  try {
+    response = await page.waitForResponse(
+      (candidate) => {
+        const responseUrl = new URL(candidate.url())
+        return (
+          responseUrl.origin === origin.origin &&
+          responseUrl.pathname === "/api/settings/activity" &&
+          candidate.request().method() === "POST"
+        )
+      },
+      { timeout: STEP_TIMEOUT_MS }
+    )
+  } catch (cause) {
+    throw new Error(
+      `${shotName} did not receive its hydration activity response (POST /api/settings/activity).`,
+      { cause }
+    )
+  }
   if (!response.ok()) {
     throw new Error(
-      `The local client-ready response failed with HTTP ${response.status()}.`
+      `${shotName} received HTTP ${response.status()} from its hydration activity response (POST /api/settings/activity).`
     )
   }
 }
@@ -317,9 +348,9 @@ const runStep = async ({ page, step, shot, origin, variables }) => {
     if (target.origin !== origin.origin) {
       throw new Error(`${shot.name} contains a non-local navigation step.`)
     }
-    // This response comes from a root client effect after React has hydrated.
+    // The root client effect emits this response after hydration.
     await Promise.all([
-      waitForClientActivityResponse(page, origin),
+      waitForHydrationActivityResponse(page, origin, shot.name),
       page.goto(target.href, { waitUntil: "domcontentloaded" }),
     ])
     await page.evaluate(() => {
@@ -336,6 +367,15 @@ const runStep = async ({ page, step, shot, origin, variables }) => {
       await getLocator(page, step.expectVisible).innerText()
     ).trim()
   }
+}
+
+const resetScrollForCapture = async (page, shot) => {
+  await page.evaluate(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+  })
+  const finalStep = shot.steps.at(-1)
+  await getLocator(page, finalStep.expectVisible).scrollIntoViewIfNeeded()
+  await expectVisible(page, finalStep.expectVisible, shot.name)
 }
 
 const captureShot = async (browser, shot, origin) => {
@@ -370,6 +410,7 @@ const captureShot = async (browser, shot, origin) => {
         "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
     })
     await page.evaluate(() => document.fonts.ready.then(() => true))
+    await resetScrollForCapture(page, shot)
     if (pageErrors.length > 0) {
       throw new AggregateError(
         pageErrors,
