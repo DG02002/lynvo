@@ -175,6 +175,27 @@ pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed
 Then run `pnpm seed docs` from the repository root. Stop the standalone Worker
 with Ctrl-C when the seed finishes.
 
+## Capture the screenshot manifest
+
+Install Playwright's Chromium browser once after installing dependencies:
+
+```sh
+pnpm --filter @lynvo/app exec playwright install chromium
+```
+
+Keep the no-auth app and `dev:docs-seed` Worker running as above, then capture
+the checked-in screenshot manifest:
+
+```sh
+pnpm capture:screenshots
+```
+
+The runner reseeds the selected scenarios before opening isolated browser
+contexts. Use `--list` to print shot names, `--dry-run` to inspect selected
+routes and outputs, or `--only <name-or-prefix>` to retake a subset. Documentation
+shots are raw PNGs under `apps/lynvo/app/features/site/docs/images/`; marketing
+captures stay in the ignored `apps/lynvo/.screenshots/intermediates/` directory.
+
 The MCP server launches Chrome with a dedicated persistent profile, separate
 from your personal Chrome profile. State in that profile persists between runs,
 and it never attaches to a personal browser session.

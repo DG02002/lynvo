@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
+    "capture:screenshots": "pnpm --filter @lynvo/app capture:screenshots",
     "check": "pnpm run fmt:check && oxlint scripts && pnpm run lint:markdown && pnpm -r --if-present run check && knip && pnpm run knip:production",
     "check:plugin-server-release": "node scripts/verify-plugin-server-release.mjs",
     "dev": "pnpm --filter @lynvo/app dev",

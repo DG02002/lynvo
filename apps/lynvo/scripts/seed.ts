@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
 import {
@@ -24,11 +25,43 @@ const DEFAULT_APP_ORIGIN = "http://localhost:5173"
 const DEVELOPMENT_USER_ID = "lynvo-development-user"
 const DEVELOPMENT_SESSION_ID = "lynvo-development-session"
 const DEVELOPMENT_PLUGIN_SERVER_URL = "http://localhost:8788"
-const DEVELOPMENT_PLUGIN_SERVER_KEY = "dev-local-api-key"
+const DEFAULT_DEVELOPMENT_PLUGIN_SERVER_KEY = "dev-local-api-key"
 const API_RESPONSE_LIMIT_BYTES = 8 * 1024 * 1024
 const DAY_MS = 24 * 60 * 60 * 1_000
 const HOUR_MS = 60 * 60 * 1_000
 const MINUTE_MS = 60 * 1_000
+
+const readDevelopmentPluginServerKey = async (): Promise<string> => {
+  const environmentKey = process.env.LYNVO_SEED_PLUGIN_SERVER_KEY?.trim()
+  if (environmentKey) {
+    return environmentKey
+  }
+
+  let localEnvironment: string
+  try {
+    localEnvironment = await readFile(
+      new URL("../.dev.vars", import.meta.url),
+      "utf8"
+    )
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return DEFAULT_DEVELOPMENT_PLUGIN_SERVER_KEY
+    }
+    throw error
+  }
+
+  const keyLine = localEnvironment
+    .split(/\r?\n/u)
+    .find((line) => line.startsWith("MANAGED_PLUGIN_SERVER_API_KEY="))
+  const value = keyLine
+    ?.slice("MANAGED_PLUGIN_SERVER_API_KEY=".length)
+    .trim()
+    .replace(
+      /^(?:"(.*)"|'(.*)')$/u,
+      (_, doubleQuoted, singleQuoted) => doubleQuoted ?? singleQuoted ?? ""
+    )
+  return value || DEFAULT_DEVELOPMENT_PLUGIN_SERVER_KEY
+}
 
 type FetchFunction = typeof fetch
 type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT"
@@ -829,12 +862,13 @@ const registerOrRefreshLocalPluginServer = async (
   existingServer: PluginServerEntry | undefined
 ): Promise<void> => {
   if (!existingServer) {
+    const apiKey = await readDevelopmentPluginServerKey()
     await api.mutate({
       method: "POST",
       path: "/api/plugin-servers",
       body: {
         baseUrl: DEVELOPMENT_PLUGIN_SERVER_URL,
-        apiKey: DEVELOPMENT_PLUGIN_SERVER_KEY,
+        apiKey,
       },
     })
     return
@@ -1083,12 +1117,22 @@ const createActiveDeviceSession = async (
 }
 
 const seedDocsSessions = async (api: SeedApiClient): Promise<number> => {
-  await api.mutate({
-    method: "DELETE",
-    path: "/api/settings/security/sessions",
-  })
-  await createActiveDeviceSession(api, "Android TV")
-  await createActiveDeviceSession(api, "Phone browser")
+  const expectedDeviceNames = ["Android TV", "Phone browser"]
+  const existingSessions = await api.get<readonly SessionEntry[]>(
+    "/api/settings/security/sessions",
+    SessionListSchema
+  )
+
+  // Reusing named sessions keeps repeated local seeds within device-approval limits.
+  for (const deviceName of expectedDeviceNames) {
+    if (
+      !existingSessions.some((session) => session.deviceName === deviceName)
+    ) {
+      // SAFETY: Create only missing fixtures; each request completes before the next approval.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      await createActiveDeviceSession(api, deviceName)
+    }
+  }
 
   const sessions = await api.get<readonly SessionEntry[]>(
     "/api/settings/security/sessions",
