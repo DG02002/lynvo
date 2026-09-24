@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url"
 import { Schema } from "effect"
 import { chromium } from "playwright"
 
+import { assertLocalHttpOrigin } from "./local-origin.mjs"
+
 const APP_DIRECTORY = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
@@ -17,7 +19,6 @@ const MANIFEST_PATH = path.join(
   "screenshot-manifest.json"
 )
 const DEFAULT_ORIGIN = "http://localhost:5173"
-const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"])
 const TV_BRO_USER_AGENT =
   "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)"
 const CONTEXT_VIEWPORTS = {
@@ -26,6 +27,7 @@ const CONTEXT_VIEWPORTS = {
   tv: { height: 1080, width: 1920 },
 }
 const STEP_TIMEOUT_MS = 15_000
+const SEED_TIMEOUT_MS = 120_000
 
 const LocatorDescriptorSchema = Schema.Struct({
   exact: Schema.optional(Schema.Boolean),
@@ -40,9 +42,9 @@ const LocatorDescriptorSchema = Schema.Struct({
 const StepSchema = Schema.Union([
   Schema.Struct({
     action: Schema.Literal("navigate"),
-    captureText: Schema.optional(Schema.String),
+    captureAs: Schema.optional(Schema.NonEmptyString),
     expectVisible: LocatorDescriptorSchema,
-    path: Schema.String,
+    path: Schema.NonEmptyString,
   }),
   Schema.Struct({
     action: Schema.Literal("click"),
@@ -57,14 +59,15 @@ const StepSchema = Schema.Union([
   }),
 ])
 const ShotSchema = Schema.Struct({
+  blockedReason: Schema.optional(Schema.NonEmptyString),
   context: Schema.Literals(["desktop", "tv", "phone"]),
-  framingTheme: Schema.String,
-  name: Schema.String,
-  output: Schema.String,
-  route: Schema.String,
-  seedScenario: Schema.String,
+  framingTheme: Schema.NonEmptyString,
+  name: Schema.NonEmptyString,
+  output: Schema.NonEmptyString,
+  route: Schema.NonEmptyString,
+  seedScenario: Schema.Literals(["docs", "none"]),
   steps: Schema.Array(StepSchema),
-  userAgent: Schema.String,
+  userAgent: Schema.NonEmptyString,
   viewport: Schema.Struct({
     deviceScaleFactor: Schema.Number,
     height: Schema.Number,
@@ -126,13 +129,19 @@ const validateShot = (shot, state) => {
   }
   state.names.add(shot.name)
   state.themes.add(shot.framingTheme)
-  if (
-    !shot.route.startsWith("/") ||
-    !shot.output ||
-    !shot.userAgent ||
-    !["docs", "none"].includes(shot.seedScenario)
-  ) {
+  if (!shot.route.startsWith("/")) {
     throw new Error(`${shot.name} is missing required manifest fields.`)
+  }
+  const finalNavigation = shot.steps
+    .toReversed()
+    .find((step) => step.action === "navigate")
+  if (
+    !finalNavigation ||
+    new URL(finalNavigation.path, "http://localhost").pathname !== shot.route
+  ) {
+    throw new Error(
+      `${shot.name} route must match its final navigate step's pathname.`
+    )
   }
   validateViewport(shot)
   validateOutput(shot, state)
@@ -193,24 +202,6 @@ const selectShots = (shots, prefix) => {
   return selected
 }
 
-const resolveLocalOrigin = (value) => {
-  const origin = new URL(value)
-  if (
-    origin.protocol !== "http:" ||
-    !LOCAL_HOSTNAMES.has(origin.hostname) ||
-    origin.username ||
-    origin.password ||
-    origin.pathname !== "/" ||
-    origin.search ||
-    origin.hash
-  ) {
-    throw new Error(
-      "Screenshot capture only connects to a local HTTP dev server. Set LYNVO_SEED_ORIGIN to a localhost origin."
-    )
-  }
-  return origin
-}
-
 const runSeedScenario = (scenario, origin) => {
   if (scenario === "none") {
     return
@@ -222,13 +213,30 @@ const runSeedScenario = (scenario, origin) => {
       cwd: WORKSPACE_DIRECTORY,
       env: { ...process.env, LYNVO_SEED_ORIGIN: origin.origin },
       stdio: "inherit",
+      timeout: SEED_TIMEOUT_MS,
     }
   )
+  if (result.error?.code === "ETIMEDOUT") {
+    throw new Error(
+      `Seeding the ${scenario} scenario timed out after ${SEED_TIMEOUT_MS} ms.`,
+      { cause: result.error }
+    )
+  }
   if (result.error) {
-    throw result.error
+    throw new Error(
+      `Seeding the ${scenario} scenario could not start: ${result.error.message}`,
+      { cause: result.error }
+    )
+  }
+  if (result.signal) {
+    throw new Error(
+      `Seeding the ${scenario} scenario was stopped by ${result.signal}.`
+    )
   }
   if (result.status !== 0) {
-    throw new Error(`Seeding the ${scenario} scenario failed.`)
+    throw new Error(
+      `Seeding the ${scenario} scenario exited with status ${result.status ?? "unknown"}.`
+    )
   }
 }
 
@@ -301,8 +309,8 @@ const runStep = async ({ page, step, shot, origin, variables }) => {
     await getLocator(page, step.target).fill(step.value)
   }
   await expectVisible(page, step.expectVisible, shot.name)
-  if (step.captureText) {
-    variables[step.captureText] = (
+  if (step.captureAs) {
+    variables[step.captureAs] = (
       await getLocator(page, step.expectVisible).innerText()
     ).trim()
   }
@@ -365,44 +373,77 @@ const captureShot = async (browser, shot, origin) => {
   }
 }
 
-const main = async () => {
-  const options = parseArguments(process.argv.slice(2))
-  const allShots = await readManifest()
-  const selectedShots = selectShots(allShots, options.only)
-
-  if (options.list) {
-    for (const shot of selectedShots) {
-      process.stdout.write(`${shot.name}\t${shot.context}\t${shot.route}\n`)
-    }
-    return
+const printShots = (shots, format) => {
+  for (const shot of shots) {
+    const blocked = shot.blockedReason ? `\tBLOCKED: ${shot.blockedReason}` : ""
+    const line =
+      format === "list"
+        ? `${shot.name}\t${shot.context}\t${shot.route}${blocked}`
+        : `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\t${shot.output}${blocked}`
+    process.stdout.write(`${line}\n`)
   }
+}
 
-  if (options.dryRun) {
-    for (const shot of selectedShots) {
-      process.stdout.write(
-        `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\t${shot.output}\n`
-      )
-    }
-    return
-  }
-
-  const origin = resolveLocalOrigin(
-    process.env.LYNVO_SEED_ORIGIN || DEFAULT_ORIGIN
-  )
-  const scenarios = [...new Set(selectedShots.map((shot) => shot.seedScenario))]
-  for (const scenario of scenarios) {
-    runSeedScenario(scenario, origin)
-  }
-
+const captureShots = async (shots, origin) => {
   const browser = await chromium.launch({ headless: true })
   try {
-    for (const shot of selectedShots) {
+    for (const shot of shots) {
       // SAFETY: Browser contexts are isolated and captures are written in manifest order.
       // oxlint-disable-next-line eslint/no-await-in-loop
       await captureShot(browser, shot, origin)
     }
   } finally {
     await browser.close()
+  }
+}
+
+const printBlockedShots = (shots) => {
+  for (const shot of shots) {
+    process.stdout.write(
+      `Skipped ${shot.name}: BLOCKED — ${shot.blockedReason}\n`
+    )
+  }
+}
+
+const seedScenariosForShots = (shots, origin) => {
+  const scenarios = [...new Set(shots.map((shot) => shot.seedScenario))]
+  for (const scenario of scenarios) {
+    runSeedScenario(scenario, origin)
+  }
+}
+
+const main = async () => {
+  const options = parseArguments(process.argv.slice(2))
+  const allShots = await readManifest()
+  const selectedShots = selectShots(allShots, options.only)
+
+  if (options.list) {
+    printShots(selectedShots, "list")
+    return
+  }
+
+  if (options.dryRun) {
+    printShots(selectedShots, "dry-run")
+    return
+  }
+
+  const blockedShots = selectedShots.filter((shot) => shot.blockedReason)
+  printBlockedShots(blockedShots)
+  const runnableShots = selectedShots.filter((shot) => !shot.blockedReason)
+  if (runnableShots.length === 0) {
+    return
+  }
+
+  const origin = assertLocalHttpOrigin(
+    process.env.LYNVO_SEED_ORIGIN || DEFAULT_ORIGIN,
+    "Screenshot capture only connects to a local HTTP dev server. Set LYNVO_SEED_ORIGIN to a localhost origin."
+  )
+  seedScenariosForShots(runnableShots, origin)
+  await captureShots(runnableShots, origin)
+  if (blockedShots.length > 0) {
+    process.stdout.write(
+      `Captured ${runnableShots.length} screenshot(s); skipped ${blockedShots.length} blocked screenshot(s).\n`
+    )
   }
 }
 

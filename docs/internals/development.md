@@ -161,6 +161,10 @@ the library and report console errors and failed network requests" or "run a
 Lighthouse audit of the sign-in page". Combine the browser's device emulation
 with the `TV Bro/1.0` user-agent prefix to exercise the TV layout.
 
+The MCP server launches Chrome with a dedicated persistent profile, separate
+from your personal Chrome profile. State in that profile persists between runs,
+and it never attaches to a personal browser session.
+
 ## Seed the docs scenario
 
 Start the app with `pnpm dev --no-auth`. The docs seed also registers a Custom
@@ -195,10 +199,6 @@ contexts. Use `--list` to print shot names, `--dry-run` to inspect selected
 routes and outputs, or `--only <name-or-prefix>` to retake a subset. Documentation
 shots are raw PNGs under `apps/lynvo/app/features/site/docs/images/`; marketing
 captures stay in the ignored `apps/lynvo/.screenshots/intermediates/` directory.
-
-The MCP server launches Chrome with a dedicated persistent profile, separate
-from your personal Chrome profile. State in that profile persists between runs,
-and it never attaches to a personal browser session.
 
 ## Test TV Bro-specific UI
 

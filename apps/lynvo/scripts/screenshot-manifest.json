@@ -1086,6 +1086,7 @@
     },
     {
       "name": "remote-play-device-picker",
+      "blockedReason": "The required shot combines live connected receivers with Search again; the local seed has no paired live browser and the current picker shows Search again only in its empty or error state.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -1132,6 +1133,7 @@
     },
     {
       "name": "remote-play-connected-to",
+      "blockedReason": "This shot requires a real Remote Play pairing between two live browser sessions, which the docs seed does not create.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -1156,6 +1158,7 @@
     },
     {
       "name": "remote-play-controlled-by",
+      "blockedReason": "This shot requires a real Remote Play pairing between two live browser sessions, which the docs seed does not create.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "tv",
@@ -1180,6 +1183,7 @@
     },
     {
       "name": "remote-play-receiver-overlay",
+      "blockedReason": "This shot requires an active controlling-device realtime event from a second live browser session, which the docs seed does not create.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "tv",
@@ -1360,6 +1364,7 @@
     },
     {
       "name": "saving-links-source-maintenance",
+      "blockedReason": "This transient Source status is produced during a live extraction and is not part of the persistent docs seed state.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -1393,6 +1398,7 @@
     },
     {
       "name": "saving-links-source-degraded",
+      "blockedReason": "This transient Source status is produced during a live extraction and is not part of the persistent docs seed state.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -1426,6 +1432,7 @@
     },
     {
       "name": "saving-links-source-unavailable",
+      "blockedReason": "This transient Source status is produced during a live extraction and is not part of the persistent docs seed state.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -1661,7 +1668,7 @@
           "expectVisible": {
             "label": "Sign-in verification code"
           },
-          "captureText": "deviceCode"
+          "captureAs": "deviceCode"
         },
         {
           "action": "navigate",
@@ -1941,6 +1948,7 @@
     },
     {
       "name": "settings-usage-retry",
+      "blockedReason": "The docs seed returns healthy Usage data; this error state needs an explicit local failed-response fixture.",
       "seedScenario": "docs",
       "route": "/settings/usage",
       "context": "desktop",
