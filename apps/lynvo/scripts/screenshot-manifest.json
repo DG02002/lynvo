@@ -39,10 +39,30 @@
       "steps": [
         {
           "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "heading",
+            "name": "General"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "selector": "[data-testid=\"gallery-save-item\"]",
-            "index": 0
+            "role": "button",
+            "name": "Open Dune Part Two (2024).mkv",
+            "exact": false
           }
         }
       ],
@@ -192,6 +212,17 @@
         {
           "action": "click",
           "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
             "text": "Gallery view",
             "exact": true
           },
@@ -204,8 +235,8 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for Dune: Part Two"
           }
         }
       ],
@@ -326,10 +357,51 @@
       "steps": [
         {
           "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "heading",
+            "name": "General"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          },
+          "expectVisible": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Gallery view",
+            "exact": true
+          },
+          "expectVisible": {
+            "text": "Beta",
+            "exact": true
+          }
+        },
+        {
+          "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Today",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for Shows and movies"
           }
         },
         {
@@ -1296,6 +1368,28 @@
         {
           "action": "click",
           "target": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          },
+          "expectVisible": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
             "text": "Gallery view",
             "exact": true
           },
@@ -1308,8 +1402,8 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Choose links for Shows and movies"
           }
         },
         {
@@ -1319,8 +1413,8 @@
             "name": "Choose links for Shows and movies"
           },
           "expectVisible": {
-            "text": "Select all",
-            "exact": true
+            "role": "tree",
+            "name": "Choose links to save"
           }
         }
       ],
@@ -1466,6 +1560,7 @@
     },
     {
       "name": "saving-links-domain-suggestion",
+      "blockedReason": "The docs seed configures drive.example.invalid already, so the unregistered-domain suggestion has no truthful local fixture state.",
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -1738,6 +1833,28 @@
         {
           "action": "click",
           "target": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          },
+          "expectVisible": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
             "text": "Gallery view",
             "exact": true
           },
@@ -1750,8 +1867,8 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Choose links for Shows and movies"
           }
         },
         {
@@ -1761,8 +1878,8 @@
             "name": "Choose links for Shows and movies"
           },
           "expectVisible": {
-            "text": "Select all",
-            "exact": true
+            "role": "tree",
+            "name": "Choose links to save"
           }
         }
       ],
@@ -1783,10 +1900,106 @@
       "steps": [
         {
           "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "heading",
+            "name": "General"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          },
+          "expectVisible": {
+            "role": "switch",
+            "name": "Save all links automatically"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Gallery view",
+            "exact": true
+          },
+          "expectVisible": {
+            "text": "Beta",
+            "exact": true
+          }
+        },
+        {
+          "action": "navigate",
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open Dune Part Two (2024)"
+            "name": "Choose links for Shows and movies"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Choose links for Shows and movies"
+          },
+          "expectVisible": {
+            "role": "tree",
+            "name": "Choose links to save"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "treeitem",
+            "name": "TV Shows"
+          },
+          "expectVisible": {
+            "role": "treeitem",
+            "name": "Severance"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "treeitem",
+            "name": "Severance"
+          },
+          "expectVisible": {
+            "role": "treeitem",
+            "name": "Season 02"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "treeitem",
+            "name": "Season 02"
+          },
+          "expectVisible": {
+            "role": "treeitem",
+            "name": "Severance S02E03.mkv"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "treeitem",
+            "name": "Movies"
+          },
+          "expectVisible": {
+            "role": "treeitem",
+            "name": "Dune Part Two (2024).mkv"
           }
         }
       ],

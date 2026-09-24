@@ -117,20 +117,16 @@ const validateOutput = (shot, state) => {
 }
 
 const validateShot = (shot, state) => {
-  if (!shot.name || state.names.has(shot.name)) {
-    throw new Error(
-      `The screenshot name is missing or duplicated: ${shot.name}`
-    )
+  if (state.names.has(shot.name)) {
+    throw new Error(`The screenshot name is duplicated: ${shot.name}`)
   }
-  if (!shot.framingTheme || state.themes.has(shot.framingTheme)) {
-    throw new Error(
-      `The framing theme is missing or duplicated: ${shot.framingTheme}`
-    )
+  if (state.themes.has(shot.framingTheme)) {
+    throw new Error(`The framing theme is duplicated: ${shot.framingTheme}`)
   }
   state.names.add(shot.name)
   state.themes.add(shot.framingTheme)
   if (!shot.route.startsWith("/")) {
-    throw new Error(`${shot.name} is missing required manifest fields.`)
+    throw new Error(`${shot.name} route must start with "/".`)
   }
   const finalNavigation = shot.steps
     .toReversed()
@@ -286,6 +282,25 @@ const expectVisible = async (page, descriptor, shotName) => {
   }
 }
 
+const waitForClientActivityResponse = async (page, origin) => {
+  const response = await page.waitForResponse(
+    (candidate) => {
+      const responseUrl = new URL(candidate.url())
+      return (
+        responseUrl.origin === origin.origin &&
+        responseUrl.pathname === "/api/settings/activity" &&
+        candidate.request().method() === "POST"
+      )
+    },
+    { timeout: STEP_TIMEOUT_MS }
+  )
+  if (!response.ok()) {
+    throw new Error(
+      `The local client-ready response failed with HTTP ${response.status()}.`
+    )
+  }
+}
+
 const runStep = async ({ page, step, shot, origin, variables }) => {
   if (step.action === "navigate") {
     const pathTemplate = step.path.replaceAll(
@@ -302,7 +317,14 @@ const runStep = async ({ page, step, shot, origin, variables }) => {
     if (target.origin !== origin.origin) {
       throw new Error(`${shot.name} contains a non-local navigation step.`)
     }
-    await page.goto(target.href, { waitUntil: "domcontentloaded" })
+    // This response comes from a root client effect after React has hydrated.
+    await Promise.all([
+      waitForClientActivityResponse(page, origin),
+      page.goto(target.href, { waitUntil: "domcontentloaded" }),
+    ])
+    await page.evaluate(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+    })
   } else if (step.action === "click") {
     await getLocator(page, step.target).click()
   } else if (step.action === "fill") {
@@ -347,9 +369,6 @@ const captureShot = async (browser, shot, origin) => {
       content:
         "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
     })
-    await page.evaluate(() => {
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" })
-    })
     await page.evaluate(() => document.fonts.ready.then(() => true))
     if (pageErrors.length > 0) {
       throw new AggregateError(
@@ -373,14 +392,21 @@ const captureShot = async (browser, shot, origin) => {
   }
 }
 
-const printShots = (shots, format) => {
+const printShotList = (shots) => {
   for (const shot of shots) {
     const blocked = shot.blockedReason ? `\tBLOCKED: ${shot.blockedReason}` : ""
-    const line =
-      format === "list"
-        ? `${shot.name}\t${shot.context}\t${shot.route}${blocked}`
-        : `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\t${shot.output}${blocked}`
-    process.stdout.write(`${line}\n`)
+    process.stdout.write(
+      `${shot.name}\t${shot.context}\t${shot.route}${blocked}\n`
+    )
+  }
+}
+
+const printShotDryRun = (shots) => {
+  for (const shot of shots) {
+    const blocked = shot.blockedReason ? `\tBLOCKED: ${shot.blockedReason}` : ""
+    process.stdout.write(
+      `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\t${shot.output}${blocked}\n`
+    )
   }
 }
 
@@ -418,12 +444,12 @@ const main = async () => {
   const selectedShots = selectShots(allShots, options.only)
 
   if (options.list) {
-    printShots(selectedShots, "list")
+    printShotList(selectedShots)
     return
   }
 
   if (options.dryRun) {
-    printShots(selectedShots, "dry-run")
+    printShotDryRun(selectedShots)
     return
   }
 
