@@ -32,18 +32,24 @@ const DAY_MS = 24 * 60 * 60 * 1_000
 const HOUR_MS = 60 * 60 * 1_000
 const MINUTE_MS = 60 * 1_000
 
-const readDevelopmentPluginServerKey = async (): Promise<string> => {
-  const environmentKey = process.env.LYNVO_SEED_PLUGIN_SERVER_KEY?.trim()
+interface DevelopmentPluginServerKeyOptions {
+  readonly environment?: Pick<NodeJS.ProcessEnv, "LYNVO_SEED_PLUGIN_SERVER_KEY">
+  readonly readLocalEnvironment?: () => Promise<string>
+}
+
+export const readDevelopmentPluginServerKey = async ({
+  environment = process.env,
+  readLocalEnvironment = () =>
+    readFile(new URL("../.dev.vars", import.meta.url), "utf8"),
+}: DevelopmentPluginServerKeyOptions = {}): Promise<string> => {
+  const environmentKey = environment.LYNVO_SEED_PLUGIN_SERVER_KEY?.trim()
   if (environmentKey) {
     return environmentKey
   }
 
   let localEnvironment: string
   try {
-    localEnvironment = await readFile(
-      new URL("../.dev.vars", import.meta.url),
-      "utf8"
-    )
+    localEnvironment = await readLocalEnvironment()
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return DEFAULT_DEVELOPMENT_PLUGIN_SERVER_KEY
@@ -1117,7 +1123,7 @@ const createActiveDeviceSession = async (
   })
 }
 
-const seedDocsSessions = async (api: SeedApiClient): Promise<number> => {
+export const seedDocsSessions = async (api: SeedApiClient): Promise<number> => {
   const expectedDeviceNames = ["Android TV", "Phone browser"]
   const existingSessions = await api.get<readonly SessionEntry[]>(
     "/api/settings/security/sessions",
