@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react"
+import { useSyncExternalStore, type CSSProperties } from "react"
 
 import screenshotFrameSpec from "./screenshot-frame-spec.json"
 import screenshotPalettes from "./screenshot-palettes.json"
@@ -34,6 +34,14 @@ const createPaletteStyle = (
 
 const { frame } = screenshotFrameSpec
 const { aurora } = screenshotFrameSpec
+const phoneViewportQuery = `(max-width: ${frame.phoneViewportMaxWidthCssPixels}px)`
+const subscribeToPhoneViewport = (onChange: () => void) => {
+  const query = window.matchMedia(phoneViewportQuery)
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
+}
+const getIsPhoneViewport = () => window.matchMedia(phoneViewportQuery).matches
+
 const shadowRgb = [1, 3, 5]
   .map((offset) =>
     Number.parseInt(frame.shadowColor.slice(offset, offset + 2), 16)
@@ -62,6 +70,11 @@ const frameStyle: HomeScreenshotFrameStyle = {
 }
 
 export const HomeScreenshotFrame = () => {
+  const isPhoneViewport = useSyncExternalStore(
+    subscribeToPhoneViewport,
+    getIsPhoneViewport,
+    () => false
+  )
   const style: HomeScreenshotFrameStyle = {
     ...frameStyle,
     ...createPaletteStyle("desktop", desktopPalette),
@@ -72,6 +85,7 @@ export const HomeScreenshotFrame = () => {
     <section
       aria-label="Lynvo Library preview"
       className="home-screenshot-stage"
+      data-phone-viewport={isPhoneViewport ? "true" : undefined}
       style={style}
     >
       <div className="home-screenshot-frame">

@@ -221,6 +221,19 @@ const createRoundedCapture = async (capture, layout) => {
     .toBuffer()
 }
 
+const writeScreenshot = async (image, outputPath) => {
+  const formattedImage =
+    path.extname(outputPath) === ".webp"
+      ? image.webp({ effort: 6, quality: 95, smartSubsample: true })
+      : image.png({
+          adaptiveFiltering: true,
+          compressionLevel: 9,
+          effort: 10,
+        })
+  await mkdir(path.dirname(outputPath), { recursive: true })
+  await formattedImage.toFile(outputPath)
+}
+
 export const validatePalette = (palette, label = "The screenshot palette") => {
   for (const color of Object.values(palette)) {
     if (!/^#[\dA-F]{6}$/iu.test(color)) {
@@ -230,10 +243,7 @@ export const validatePalette = (palette, label = "The screenshot palette") => {
 }
 
 export const saveScreenshot = async (capture, outputPath) => {
-  await mkdir(path.dirname(outputPath), { recursive: true })
-  await sharp(capture)
-    .toFormat(path.extname(outputPath).slice(1))
-    .toFile(outputPath)
+  await writeScreenshot(sharp(capture), outputPath)
 }
 
 export const frameScreenshot = async (
@@ -247,20 +257,17 @@ export const frameScreenshot = async (
     throw new Error("The screenshot has invalid dimensions or scale factor.")
   }
   const layout = getFrameLayout(metadata, viewport)
-  const [background, [wideShadow, nearShadow], roundedCapture] =
-    await Promise.all([
-      sharp(svgForBackground(layout, palette)).png().toBuffer(),
-      createShadows(layout),
-      createRoundedCapture(capture, layout),
-    ])
-  await mkdir(path.dirname(outputPath), { recursive: true })
-  await sharp(background)
-    .composite([
-      { input: wideShadow },
-      { input: nearShadow },
+  const [background, shadows, roundedCapture] = await Promise.all([
+    sharp(svgForBackground(layout, palette)).png().toBuffer(),
+    createShadows(layout),
+    createRoundedCapture(capture, layout),
+  ])
+  await writeScreenshot(
+    sharp(background).composite([
+      ...shadows.map((input) => ({ input })),
       { input: svgForPanel(layout) },
       { input: roundedCapture, left: layout.imageX, top: layout.imageY },
-    ])
-    .toFormat(path.extname(outputPath).slice(1))
-    .toFile(outputPath)
+    ]),
+    outputPath
+  )
 }

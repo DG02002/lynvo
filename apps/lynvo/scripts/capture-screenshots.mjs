@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { readFile } from "node:fs/promises"
+import { readFile, rm } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -103,24 +103,19 @@ const ManifestSchema = Schema.Struct({
   shots: Schema.Array(ShotSchema),
   version: Schema.Number,
 })
-const ScreenshotPaletteSchema = Schema.Struct({
-  baseEnd: Schema.NonEmptyString,
-  baseMiddle: Schema.NonEmptyString,
-  baseStart: Schema.NonEmptyString,
-  lowerLeft: Schema.NonEmptyString,
+const ScreenshotPaletteFields = {
   upperRight: Schema.NonEmptyString,
-})
+  lowerLeft: Schema.NonEmptyString,
+  baseStart: Schema.NonEmptyString,
+  baseMiddle: Schema.NonEmptyString,
+  baseEnd: Schema.NonEmptyString,
+}
+const ScreenshotPaletteSchema = Schema.Struct(ScreenshotPaletteFields)
 const ScreenshotPalettesSchema = Schema.Record(
   Schema.String,
   ScreenshotPaletteSchema
 )
-const PALETTE_COLOR_KEYS = [
-  "upperRight",
-  "lowerLeft",
-  "baseStart",
-  "baseMiddle",
-  "baseEnd",
-]
+const PALETTE_COLOR_KEYS = Object.keys(ScreenshotPaletteFields)
 // Keep large background fields from reading as repeats across the five stops.
 const MINIMUM_PALETTE_DISTANCE = 3.5
 
@@ -609,67 +604,20 @@ const waitForRequiredImages = async (page, shot) => {
       }
     })
   )
-
-  if (shot.requiredTmdbImageCount === undefined) {
-    return
-  }
-
-  try {
-    await page.waitForFunction(
-      (requiredImageCount) => {
-        const artworkImages = [...document.images].filter((image) => {
-          if (image.dataset.tmdbImagePreview === "true") {
-            return false
-          }
-          return /(^|\/)image\.tmdb\.org\/t\/p\//u.test(
-            image.currentSrc || image.src
-          )
-        })
-        for (const image of artworkImages) {
-          image.loading = "eager"
-        }
-        return (
-          artworkImages.length >= requiredImageCount &&
-          artworkImages.every(
-            (image) => image.complete && image.naturalWidth > 0
-          )
-        )
-      },
-      shot.requiredTmdbImageCount,
-      { timeout: IMAGE_TIMEOUT_MS }
-    )
-    await page.evaluate(async (requiredImageCount) => {
-      const artworkImages = [...document.images].filter(
-        (image) =>
-          image.dataset.tmdbImagePreview !== "true" &&
-          /(^|\/)image\.tmdb\.org\/t\/p\//u.test(image.currentSrc || image.src)
-      )
-      if (artworkImages.length < requiredImageCount) {
-        throw new Error("The required TMDB artwork images are missing.")
-      }
-      await Promise.all(artworkImages.map((image) => image.decode()))
-    }, shot.requiredTmdbImageCount)
-  } catch (error) {
-    throw new Error(
-      `${shot.name} did not load all ${shot.requiredTmdbImageCount} required TMDB artwork images.`,
-      { cause: error }
-    )
-  }
 }
 
-const waitForVisibleTmdbImages = async (page, shot) => {
+const waitForTmdbImages = async (page, shot) => {
   try {
     await page.waitForFunction(
-      () => {
-        const visibleImages = [...document.images].filter((image) => {
-          if (
-            image.dataset.tmdbImagePreview === "true" ||
-            !/(^|\/)image\.tmdb\.org\/t\/p\//u.test(
+      async (requiredImageCount) => {
+        const artworkImages = [...document.images].filter(
+          (image) =>
+            image.dataset.tmdbImagePreview !== "true" &&
+            /(^|\/)image\.tmdb\.org\/t\/p\//u.test(
               image.currentSrc || image.src
             )
-          ) {
-            return false
-          }
+        )
+        const visibleImages = artworkImages.filter((image) => {
           const bounds = image.getBoundingClientRect()
           return (
             bounds.width > 0 &&
@@ -680,41 +628,35 @@ const waitForVisibleTmdbImages = async (page, shot) => {
             bounds.left < window.innerWidth
           )
         })
-        for (const image of visibleImages) {
+        const requiredImages = artworkImages.slice(0, requiredImageCount)
+        const imagesToDecode = [
+          ...new Set([...requiredImages, ...visibleImages]),
+        ]
+        for (const image of imagesToDecode) {
           image.loading = "eager"
         }
-        return visibleImages.every(
-          (image) => image.complete && image.naturalWidth > 0
-        )
-      },
-      null,
-      { timeout: IMAGE_TIMEOUT_MS }
-    )
-    await page.evaluate(async () => {
-      const visibleImages = [...document.images].filter((image) => {
         if (
-          image.dataset.tmdbImagePreview === "true" ||
-          !/(^|\/)image\.tmdb\.org\/t\/p\//u.test(image.currentSrc || image.src)
+          artworkImages.length < requiredImageCount ||
+          imagesToDecode.some(
+            (image) => !image.complete || image.naturalWidth < 1
+          )
         ) {
           return false
         }
-        const bounds = image.getBoundingClientRect()
-        return (
-          bounds.width > 0 &&
-          bounds.height > 0 &&
-          bounds.bottom > 0 &&
-          bounds.right > 0 &&
-          bounds.top < window.innerHeight &&
-          bounds.left < window.innerWidth
-        )
-      })
-      await Promise.all(visibleImages.map((image) => image.decode()))
-    })
-  } catch (error) {
-    throw new Error(
-      `${shot.name} did not finish loading its visible TMDB artwork.`,
-      { cause: error }
+        await Promise.all(imagesToDecode.map((image) => image.decode()))
+        return true
+      },
+      shot.requiredTmdbImageCount ?? 0,
+      { timeout: IMAGE_TIMEOUT_MS }
     )
+  } catch (error) {
+    const requiredImageDescription =
+      shot.requiredTmdbImageCount === undefined
+        ? "visible TMDB artwork"
+        : `all ${shot.requiredTmdbImageCount} required TMDB artwork images`
+    throw new Error(`${shot.name} did not load ${requiredImageDescription}.`, {
+      cause: error,
+    })
   }
 }
 
@@ -742,7 +684,7 @@ const preparePageForCapture = async ({ page, shot }) => {
     await resetScrollForCapture(page, shot)
   }
   await waitForRequiredImages(page, shot)
-  await waitForVisibleTmdbImages(page, shot)
+  await waitForTmdbImages(page, shot)
   if (shot.framing !== false && shot.framing.mode === "css") {
     await page.waitForFunction(
       () => {
@@ -776,6 +718,16 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
     })
   } else {
     await saveScreenshot(capture, outputPath)
+  }
+  const docsImageDirectory =
+    path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
+    path.sep
+  if (outputPath.startsWith(docsImageDirectory)) {
+    // DocsScreenshot prefers PNG, so remove a stale alternate after the new output exists.
+    const extension = path.extname(outputPath)
+    const alternateExtension = extension === ".png" ? ".webp" : ".png"
+    const alternatePath = `${outputPath.slice(0, -extension.length)}${alternateExtension}`
+    await rm(alternatePath, { force: true })
   }
   process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
 }

@@ -498,15 +498,13 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   border-radius: var(--home-screenshot-screen-radius);
 }
 
-@media (max-width: 767px) {
-  .home-screenshot-stage {
-    --home-screenshot-frame-width: var(--home-screenshot-phone-frame-width);
-    --home-screenshot-upper-right: var(--home-screenshot-phone-upper-right);
-    --home-screenshot-lower-left: var(--home-screenshot-phone-lower-left);
-    --home-screenshot-base-start: var(--home-screenshot-phone-base-start);
-    --home-screenshot-base-middle: var(--home-screenshot-phone-base-middle);
-    --home-screenshot-base-end: var(--home-screenshot-phone-base-end);
-  }
+.home-screenshot-stage[data-phone-viewport="true"] {
+  --home-screenshot-frame-width: var(--home-screenshot-phone-frame-width);
+  --home-screenshot-upper-right: var(--home-screenshot-phone-upper-right);
+  --home-screenshot-lower-left: var(--home-screenshot-phone-lower-left);
+  --home-screenshot-base-start: var(--home-screenshot-phone-base-start);
+  --home-screenshot-base-middle: var(--home-screenshot-phone-base-middle);
+  --home-screenshot-base-end: var(--home-screenshot-phone-base-end);
 }
 
 @keyframes home-demo-layer-in {

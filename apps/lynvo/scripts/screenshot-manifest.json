@@ -22,7 +22,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-account.png",
+      "output": "app/features/site/docs/images/settings-account.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-001"
@@ -69,7 +69,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/android-tv-tv-bro.png",
+      "output": "app/features/site/docs/images/android-tv-tv-bro.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-002"
@@ -103,7 +103,7 @@
         "Artwork for When Life Gives You Tangerines (2025) S01",
         "Artwork for Breaking Bad (2008) S01"
       ],
-      "output": "app/features/site/docs/images/android-tv-gallery.png",
+      "output": "app/features/site/docs/images/android-tv-gallery.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-003"
@@ -130,7 +130,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-general.png",
+      "output": "app/features/site/docs/images/settings-general.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-004"
@@ -157,7 +157,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-general-view-cards.png",
+      "output": "app/features/site/docs/images/settings-general-view-cards.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-005"
@@ -211,7 +211,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/library-view-cards.png",
+      "output": "app/features/site/docs/images/library-view-cards.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-007"
@@ -245,7 +245,7 @@
         "Artwork for When Life Gives You Tangerines (2025) S01",
         "Artwork for Breaking Bad (2008) S01"
       ],
-      "output": "app/features/site/docs/images/library-gallery-view.png",
+      "output": "app/features/site/docs/images/library-gallery-view.webp",
       "setup": ["general-settings", "list-to-gallery"],
       "framing": {
         "mode": "postprocess",
@@ -299,7 +299,7 @@
       ],
       "requiredImages": ["Artwork for The Sandman S01"],
       "requiredTmdbImageCount": 3,
-      "output": "app/features/site/docs/images/library-gallery-controls.png",
+      "output": "app/features/site/docs/images/library-gallery-controls.webp",
       "setup": ["general-settings", "gallery-view"],
       "framing": {
         "mode": "postprocess",
@@ -338,7 +338,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/library-item-menu.png",
+      "output": "app/features/site/docs/images/library-item-menu.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-010"
@@ -376,7 +376,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/library-refresh-link-choices.png",
+      "output": "app/features/site/docs/images/library-refresh-link-choices.webp",
       "setup": ["general-settings", "gallery-choice"],
       "framing": {
         "mode": "postprocess",
@@ -425,7 +425,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/library-change-artwork.png",
+      "output": "app/features/site/docs/images/library-change-artwork.webp",
       "setup": ["general-settings", "gallery-view"],
       "framing": {
         "mode": "postprocess",
@@ -453,7 +453,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/library-expiry-states.png",
+      "output": "app/features/site/docs/images/library-expiry-states.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-013"
@@ -493,7 +493,7 @@
         }
       ],
       "setup": ["list-view"],
-      "output": "app/features/site/docs/images/opening-links-folder-browser.png",
+      "output": "app/features/site/docs/images/opening-links-folder-browser.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-014"
@@ -555,7 +555,7 @@
         }
       ],
       "setup": ["list-view"],
-      "output": "app/features/site/docs/images/opening-links-resolving-folder.png",
+      "output": "app/features/site/docs/images/opening-links-resolving-folder.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-015"
@@ -607,7 +607,7 @@
         }
       ],
       "setup": ["list-view"],
-      "output": "app/features/site/docs/images/opening-links-watched-confirmation.png",
+      "output": "app/features/site/docs/images/opening-links-watched-confirmation.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-016"
@@ -634,7 +634,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-player.png",
+      "output": "app/features/site/docs/images/settings-player.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-017"
@@ -694,7 +694,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/player-not-installed.png",
+      "output": "app/features/site/docs/images/player-not-installed.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-018"
@@ -721,7 +721,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins.png",
+      "output": "app/features/site/docs/images/settings-plugins.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-019"
@@ -772,7 +772,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-info.png",
+      "output": "app/features/site/docs/images/settings-plugins-info.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-020"
@@ -821,7 +821,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.png",
+      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-021"
@@ -870,7 +870,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.png",
+      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-022"
@@ -930,7 +930,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.png",
+      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-023"
@@ -979,7 +979,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-remove-domain.png",
+      "output": "app/features/site/docs/images/settings-plugins-remove-domain.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-024"
@@ -1017,7 +1017,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-add-server.png",
+      "output": "app/features/site/docs/images/settings-plugins-add-server.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-025"
@@ -1055,7 +1055,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-server-row.png",
+      "output": "app/features/site/docs/images/settings-plugins-server-row.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-026"
@@ -1103,7 +1103,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-plugins-delete-server.png",
+      "output": "app/features/site/docs/images/settings-plugins-delete-server.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-027"
@@ -1130,7 +1130,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-proxy.png",
+      "output": "app/features/site/docs/images/settings-proxy.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-028"
@@ -1168,7 +1168,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-proxy-key-dialog.png",
+      "output": "app/features/site/docs/images/settings-proxy-key-dialog.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-029"
@@ -1195,7 +1195,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-proxy-balance.png",
+      "output": "app/features/site/docs/images/settings-proxy-balance.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-030"
@@ -1245,7 +1245,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/remote-play-device-picker.png",
+      "output": "app/features/site/docs/images/remote-play-device-picker.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-031"
@@ -1273,7 +1273,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/remote-play-connected-to.png",
+      "output": "app/features/site/docs/images/remote-play-connected-to.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-032"
@@ -1301,7 +1301,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/remote-play-controlled-by.png",
+      "output": "app/features/site/docs/images/remote-play-controlled-by.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-033"
@@ -1329,7 +1329,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/remote-play-receiver-overlay.png",
+      "output": "app/features/site/docs/images/remote-play-receiver-overlay.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-034"
@@ -1365,7 +1365,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-input.png",
+      "output": "app/features/site/docs/images/saving-links-input.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-035"
@@ -1402,7 +1402,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-clipboard-permission.png",
+      "output": "app/features/site/docs/images/saving-links-clipboard-permission.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-036"
@@ -1440,7 +1440,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-choose-links.png",
+      "output": "app/features/site/docs/images/saving-links-choose-links.webp",
       "setup": ["general-settings", "gallery-choice"],
       "framing": {
         "mode": "postprocess",
@@ -1479,7 +1479,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-extraction-failed.png",
+      "output": "app/features/site/docs/images/saving-links-extraction-failed.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-038"
@@ -1516,7 +1516,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-source-maintenance.png",
+      "output": "app/features/site/docs/images/saving-links-source-maintenance.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-039"
@@ -1553,7 +1553,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-source-degraded.png",
+      "output": "app/features/site/docs/images/saving-links-source-degraded.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-040"
@@ -1590,7 +1590,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-source-unavailable.png",
+      "output": "app/features/site/docs/images/saving-links-source-unavailable.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-041"
@@ -1627,7 +1627,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/saving-links-domain-suggestion.png",
+      "output": "app/features/site/docs/images/saving-links-domain-suggestion.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-042"
@@ -1654,7 +1654,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-security-sessions.png",
+      "output": "app/features/site/docs/images/settings-security-sessions.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-043"
@@ -1693,7 +1693,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-security-sign-out-device.png",
+      "output": "app/features/site/docs/images/settings-security-sign-out-device.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-044"
@@ -1731,7 +1731,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-security-sign-out-all.png",
+      "output": "app/features/site/docs/images/settings-security-sign-out-all.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-045"
@@ -1769,7 +1769,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-security-delete-account.png",
+      "output": "app/features/site/docs/images/settings-security-delete-account.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-046"
@@ -1796,7 +1796,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/sign-in-tv-qr.png",
+      "output": "app/features/site/docs/images/sign-in-tv-qr.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-047"
@@ -1832,7 +1832,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/sign-in-approval.png",
+      "output": "app/features/site/docs/images/sign-in-approval.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-048"
@@ -1868,7 +1868,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/start-guide-save.png",
+      "output": "app/features/site/docs/images/start-guide-save.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-049"
@@ -1906,7 +1906,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/start-guide-choose-links.png",
+      "output": "app/features/site/docs/images/start-guide-choose-links.webp",
       "setup": ["general-settings", "gallery-choice"],
       "framing": {
         "mode": "postprocess",
@@ -1967,7 +1967,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/start-guide-tv-library.png",
+      "output": "app/features/site/docs/images/start-guide-tv-library.webp",
       "setup": ["general-settings", "gallery-choice"],
       "framing": {
         "mode": "postprocess",
@@ -1995,7 +1995,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-storage.png",
+      "output": "app/features/site/docs/images/settings-storage.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-052"
@@ -2044,7 +2044,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-storage-delete-older.png",
+      "output": "app/features/site/docs/images/settings-storage-delete-older.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-053"
@@ -2082,7 +2082,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-storage-delete-all.png",
+      "output": "app/features/site/docs/images/settings-storage-delete-all.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-054"
@@ -2110,7 +2110,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-usage.png",
+      "output": "app/features/site/docs/images/settings-usage.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-055"
@@ -2137,7 +2137,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-usage-custom.png",
+      "output": "app/features/site/docs/images/settings-usage-custom.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-056"
@@ -2165,7 +2165,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/settings-usage-retry.png",
+      "output": "app/features/site/docs/images/settings-usage-retry.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-057"
