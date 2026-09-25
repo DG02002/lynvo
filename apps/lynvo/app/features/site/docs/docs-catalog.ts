@@ -3,13 +3,22 @@ import { lazy } from "react"
 
 import { createHeadingId } from "./docs-heading"
 import { getDocumentationImageExtension } from "./docs-image-assets"
+import { cleanDocumentationMarkdown } from "./docs-markdown"
 import {
-  assembleDocumentationMarkdown,
-  cleanDocumentationMarkdown,
-  extractDocumentationSection,
-} from "./docs-markdown"
+  documentationSections,
+  getDocumentationPageUrl,
+  getDocumentationSection,
+  getDocumentationSectionKeyForPath,
+  getDocumentationSlug,
+  type DocumentationSection,
+} from "./docs-sections"
 import rootMeta from "./meta.json"
 import pluginServerMeta from "./plugin-server/meta.json"
+
+type DocumentationSectionKey = DocumentationPageContext["section"]
+
+const getContentPathKey = (path: string) =>
+  path.slice("./".length, -".mdx".length)
 
 const contentModules = import.meta.glob<DocumentationMdxModule>("./**/*.mdx")
 const contentFrontmatter = import.meta.glob<DocumentationFrontmatter>(
@@ -54,16 +63,6 @@ const getRawContent = (path: string) => {
   return content.success
 }
 
-const getContentPathKey = (path: string) =>
-  path.slice("./".length, -".mdx".length)
-
-const getContentSlug = (path: string) => {
-  const relativePath = path.slice("./".length, -".mdx".length)
-  return relativePath === "plugin-server/plugin-server"
-    ? "plugin-server"
-    : relativePath
-}
-
 const getHeadings = (content: string): readonly DocumentationHeading[] => {
   const headings: DocumentationHeading[] = []
 
@@ -98,24 +97,46 @@ const validateFrontmatter = (
   }
 }
 
-const pagesByContentPath = new Map<string, DocumentationPage>()
-const pagesBySlug = new Map<string, DocumentationPage>()
-const sourcePathBySlug = new Map<string, string>()
-
-const getPageByContentPath = (contentPathKey: string) => {
-  const page = pagesByContentPath.get(contentPathKey)
-  if (!page) {
-    throw new Error(`Documentation page is missing: ${contentPathKey}`)
-  }
-  return page
+interface DocumentationSectionState {
+  readonly section: DocumentationSection
+  readonly pagesBySlug: Map<string, DocumentationPage>
+  readonly pagesByContentPath: Map<string, DocumentationPage>
+  readonly sourcePathBySlug: Map<string, string>
+  groups: readonly DocumentationChapterGroup[]
+  orderedPages: DocumentationPage[]
+  readonly groupBySlug: Map<string, string>
 }
+
+const sectionStates = new Map<
+  DocumentationSectionKey,
+  DocumentationSectionState
+>(
+  documentationSections.map((section) => [
+    section.key,
+    {
+      section,
+      pagesBySlug: new Map(),
+      pagesByContentPath: new Map(),
+      sourcePathBySlug: new Map(),
+      orderedPages: [],
+      groups: [],
+      groupBySlug: new Map(),
+    },
+  ])
+)
 
 for (const [path, loadContent] of Object.entries(contentModules)) {
   const frontmatter = contentFrontmatter[path]
   const content = getRawContent(path)
   validateFrontmatter(path, frontmatter)
 
-  const slug = getContentSlug(path)
+  const sectionKey = getDocumentationSectionKeyForPath(path)
+  const state = sectionStates.get(sectionKey)
+  if (!state) {
+    throw new Error(`Documentation section is missing: ${sectionKey}`)
+  }
+
+  const slug = getDocumentationSlug(path)
   const headings = getHeadings(content)
   const headingIds = new Set<string>()
 
@@ -128,14 +149,14 @@ for (const [path, loadContent] of Object.entries(contentModules)) {
     headingIds.add(heading.id)
   }
 
-  if (pagesBySlug.has(slug)) {
+  if (state.pagesBySlug.has(slug)) {
     throw new Error(`Duplicate documentation slug: ${slug}`)
   }
 
   const page: DocumentationPage = {
     slug,
-    url: `/docs/${slug}`,
-    markdownUrl: `/docs/markdown/${slug}`,
+    url: getDocumentationPageUrl(sectionKey, slug),
+    markdownUrl: `${state.section.root}/markdown/${slug}`,
     navLabel: frontmatter.navLabel,
     title: frontmatter.title,
     description: frontmatter.description,
@@ -146,18 +167,19 @@ for (const [path, loadContent] of Object.entries(contentModules)) {
     Content: lazy(loadContent),
   }
 
-  pagesBySlug.set(slug, page)
-  pagesByContentPath.set(getContentPathKey(path), page)
-  sourcePathBySlug.set(slug, path)
+  state.pagesBySlug.set(slug, page)
+  state.pagesByContentPath.set(getContentPathKey(path), page)
+  state.sourcePathBySlug.set(slug, path)
 }
 
 const createGroups = (
+  state: DocumentationSectionState,
   groups: readonly DocumentationMetaGroup[]
-): readonly DocumentationChapterGroup[] =>
-  groups.map((group) => ({
+) => {
+  state.groups = groups.map((group) => ({
     group: group.title,
     pages: group.pages.map((contentPathKey) => {
-      const page = pagesByContentPath.get(contentPathKey)
+      const page = state.pagesByContentPath.get(contentPathKey)
       if (!page) {
         throw new Error(
           `Documentation navigation references a missing page: ${contentPathKey}`
@@ -166,252 +188,148 @@ const createGroups = (
       return page
     }),
   }))
+  state.orderedPages = state.groups.flatMap((group) => group.pages)
 
-const rootGroups = createGroups(rootMeta.groups)
-const pluginServerGroups = createGroups(pluginServerMeta.groups)
-const orderedPages = [
-  ...rootGroups.flatMap((group) => group.pages),
-  ...pluginServerGroups.flatMap((group) => group.pages),
-]
-const navigationContextBySlug = new Map<
-  string,
-  { group: string; section: "user" | "developer" }
->()
-
-for (const [groups, section] of [
-  [rootGroups, "user"],
-  [pluginServerGroups, "developer"],
-] as const) {
-  for (const group of groups) {
+  for (const group of state.groups) {
     for (const page of group.pages) {
-      if (navigationContextBySlug.has(page.slug)) {
+      if (state.groupBySlug.has(page.slug)) {
         throw new Error(
           `Documentation page appears more than once in navigation: ${page.slug}`
         )
       }
-      navigationContextBySlug.set(page.slug, { group: group.group, section })
+      state.groupBySlug.set(page.slug, group.group)
+    }
+  }
+
+  const navigatedSlugs = new Set(state.groupBySlug.keys())
+  for (const slug of state.pagesBySlug.keys()) {
+    if (!navigatedSlugs.has(slug)) {
+      throw new Error(
+        `Every documentation page must appear exactly once in navigation: ${slug}`
+      )
     }
   }
 }
 
-if (orderedPages.length !== pagesBySlug.size) {
-  throw new Error(
-    "Every documentation page must appear exactly once in navigation"
+createGroups(sectionStates.get("user")!, rootMeta.groups)
+createGroups(sectionStates.get("developer")!, pluginServerMeta.groups)
+
+const resolveSection = (key: DocumentationSectionKey) => {
+  const state = sectionStates.get(key)
+  if (!state) {
+    throw new Error(`Documentation section is missing: ${key}`)
+  }
+  return state
+}
+
+const resolveLinkTarget = (
+  destinationPath: string
+): DocumentationSectionState | undefined => {
+  const section = documentationSections.find(
+    (item) =>
+      destinationPath === item.root ||
+      destinationPath.startsWith(`${item.root}/`)
   )
+
+  return section ? resolveSection(section.key) : undefined
 }
 
-const getGroups = (
-  page: DocumentationPage
-): readonly DocumentationChapterGroup[] =>
-  navigationContextBySlug.get(page.slug)?.section === "developer"
-    ? pluginServerGroups
-    : rootGroups
+for (const state of sectionStates.values()) {
+  for (const [sourceSlug, sourcePath] of state.sourcePathBySlug) {
+    const content = getRawContent(sourcePath)
+    const markdownLinks = content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)
 
-const getContext = (slug: string): DocumentationPageContext | undefined => {
-  const page = pagesBySlug.get(slug)
-  if (!page) {
-    return undefined
-  }
+    for (const link of markdownLinks) {
+      const [, destination] = link
+      if (
+        !destination.startsWith("/docs") &&
+        !destination.startsWith("/developer") &&
+        !destination.startsWith("#")
+      ) {
+        continue
+      }
 
-  const pageIndex = orderedPages.indexOf(page)
-  const navigationContext = navigationContextBySlug.get(page.slug)
+      const [destinationPath, destinationHeading] = destination.split("#")
+      const isSectionHome =
+        destinationPath === "/docs" || destinationPath === "/developer"
+      const isHeadingLink = destinationPath.length === 0
+      const targetSection = resolveLinkTarget(destinationPath)
+      const destinationSlug = destinationPath.split("/").at(-1)
 
-  if (!navigationContext) {
-    throw new Error(
-      `Documentation page is missing from navigation: ${page.slug}`
-    )
-  }
+      let targetPage: DocumentationPage | undefined
+      if (!isSectionHome) {
+        if (isHeadingLink) {
+          targetPage = state.pagesBySlug.get(sourceSlug)
+        } else {
+          targetPage = targetSection?.pagesBySlug.get(destinationSlug ?? "")
+        }
+      }
 
-  return {
-    page,
-    groups: getGroups(page),
-    group: navigationContext.group,
-    section: navigationContext.section,
-    previous: pageIndex > 0 ? orderedPages[pageIndex - 1] : undefined,
-    next:
-      pageIndex < orderedPages.length - 1
-        ? orderedPages[pageIndex + 1]
-        : undefined,
-  }
-}
+      if (!isSectionHome && !targetPage) {
+        throw new Error(
+          `Broken documentation link "${destination}" in ${sourcePath}`
+        )
+      }
 
-for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
-  const content = getRawContent(sourcePath)
-  const markdownLinks = content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)
-
-  for (const link of markdownLinks) {
-    const [, destination] = link
-    if (!destination.startsWith("/docs") && !destination.startsWith("#")) {
-      continue
-    }
-
-    const [destinationPath, destinationHeading] = destination.split("#")
-    const destinationSlug = destinationPath.startsWith("/docs/")
-      ? destinationPath.slice("/docs/".length)
-      : sourceSlug
-    const targetPage =
-      destinationPath === "/docs" ? undefined : pagesBySlug.get(destinationSlug)
-
-    if (destinationPath !== "/docs" && !targetPage) {
-      throw new Error(
-        `Broken documentation link "${destination}" in ${sourcePath}`
-      )
-    }
-
-    if (
-      destinationHeading &&
-      targetPage &&
-      !targetPage.headings.some((heading) => heading.id === destinationHeading)
-    ) {
-      throw new Error(
-        `Broken documentation heading link "${destination}" in ${sourcePath}`
-      )
+      if (
+        destinationHeading &&
+        targetPage &&
+        !targetPage.headings.some(
+          (heading) => heading.id === destinationHeading
+        )
+      ) {
+        throw new Error(
+          `Broken documentation heading link "${destination}" in ${sourcePath}`
+        )
+      }
     }
   }
 }
 
 export const docsCatalog = {
-  resolve: getContext,
-  getMarkdown: (slug: string) => {
-    const page = pagesBySlug.get(slug)
+  sections: documentationSections,
+  getSection: getDocumentationSection,
+  getGroups: (key: DocumentationSectionKey) => resolveSection(key).groups,
+  resolve: (
+    key: DocumentationSectionKey,
+    slug: string
+  ): DocumentationPageContext | undefined => {
+    const state = resolveSection(key)
+    const page = state.pagesBySlug.get(slug)
     if (!page) {
       return undefined
     }
-    if (slug !== "plugin-server") {
-      return cleanDocumentationMarkdown(
-        page.rawContent,
-        getDocumentationImageExtension
+
+    const group = state.groupBySlug.get(page.slug)
+    if (!group) {
+      throw new Error(
+        `Documentation page is missing from navigation: ${page.slug}`
       )
     }
 
-    return assembleDocumentationMarkdown({
-      title: page.title,
-      description: page.description,
-      introduction: extractDocumentationSection(page.rawContent, "quickstart"),
-      sections: [
-        {
-          title: "What is a Custom Plugin Server?",
-          content: getPageByContentPath("plugin-server/what-is-a-plugin-server")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "What is a Plugin?",
-          content: getPageByContentPath("plugin-server/what-is-a-plugin")
-            .rawContent,
-        },
-        {
-          title: "Create a Plugin Server with an agent",
-          content: getPageByContentPath("plugin-server/agent-prompt")
-            .rawContent,
-        },
-        {
-          title: "Create a Plugin Server manually",
-          content:
-            "Follow the manual path when you want to understand or control each part of the implementation.",
-        },
-        {
-          level: 3,
-          title: "Prepare your development environment",
-          content: getPageByContentPath("plugin-server/prerequisites")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "Generate the project",
-          content: getPageByContentPath("plugin-server/create-plugin-server")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "Understand protocol version 1.0",
-          content: getPageByContentPath("plugin-server/protocol-overview")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "Configure the manifest",
-          content: getPageByContentPath("plugin-server/manifest").rawContent,
-        },
-        {
-          level: 3,
-          title: "Wire the shared routes",
-          content: getPageByContentPath("plugin-server/hono-routes").rawContent,
-        },
-        {
-          title: "Build a Plugin and return Media Nodes",
-          content:
-            "A Plugin recognizes one Source and converts its data into four product-level node types: playable item, folder, group, and unresolved item.",
-        },
-        {
-          level: 3,
-          title: "Add a Source Plugin",
-          content: getPageByContentPath("plugin-server/plugins").rawContent,
-        },
-        {
-          title: "Choose among the four node types",
-          content: getPageByContentPath("plugin-server/media-nodes").rawContent,
-        },
-        {
-          title: "Configure security and usage limits",
-          content:
-            "Create one secret API key for Lynvo, then define the finite usage limits enforced by your server.",
-        },
-        {
-          level: 3,
-          title: "Create the Plugin Server API key",
-          content: getPageByContentPath("plugin-server/authentication")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "Define and enforce usage limits",
-          content: getPageByContentPath("plugin-server/usage-limits")
-            .rawContent,
-        },
-        {
-          title: "Handle protocol requests and responses",
-          content:
-            "Validate every extraction request and return either normalized Media Nodes or a structured error.",
-        },
-        {
-          level: 3,
-          title: "Validate Extraction requests",
-          content: getPageByContentPath("plugin-server/extraction-requests")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "Return successful responses",
-          content: getPageByContentPath("plugin-server/success-responses")
-            .rawContent,
-        },
-        {
-          level: 3,
-          title: "Return structured errors",
-          content: getPageByContentPath("plugin-server/errors").rawContent,
-        },
-        {
-          title: "Test, deploy, and connect",
-          content:
-            "Run the contract checks locally before deploying the Worker and adding it to Lynvo.",
-        },
-        {
-          level: 3,
-          title: "Test the protocol contract",
-          content: getPageByContentPath("plugin-server/testing").rawContent,
-        },
-        {
-          level: 3,
-          title: "Deploy the Plugin Server",
-          content: getPageByContentPath("plugin-server/deployment").rawContent,
-        },
-        {
-          level: 3,
-          title: "Connect the Plugin Server to Lynvo",
-          content: getPageByContentPath("plugin-server/connect").rawContent,
-        },
-      ],
-    })
+    const pageIndex = state.orderedPages.indexOf(page)
+
+    return {
+      page,
+      groups: state.groups,
+      group,
+      section: key,
+      previous: pageIndex > 0 ? state.orderedPages[pageIndex - 1] : undefined,
+      next:
+        pageIndex < state.orderedPages.length - 1
+          ? state.orderedPages[pageIndex + 1]
+          : undefined,
+    }
+  },
+  getMarkdown: (key: DocumentationSectionKey, slug: string) => {
+    const page = resolveSection(key).pagesBySlug.get(slug)
+    if (!page) {
+      return undefined
+    }
+
+    return cleanDocumentationMarkdown(
+      page.rawContent,
+      getDocumentationImageExtension
+    )
   },
 }

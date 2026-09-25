@@ -65,4 +65,14 @@ describe("SiteLayout", () => {
     )
     expect(screen.getByTestId("site-footer")).toBeInTheDocument()
   })
+
+  it("hides the footer inside both documentation sections", () => {
+    renderLayout("/docs/general", <div>General settings</div>)
+    expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
+  })
+
+  it("hides the footer inside the developer documentation section", () => {
+    renderLayout("/developer/manifest", <div>Manifest</div>)
+    expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
+  })
 })

@@ -6,8 +6,8 @@ contents.
 
 The public how-to for creating, testing, deploying, and connecting a
 Lynvo-compatible Plugin Server lives in the app's in-app docs at
-`/docs/plugin-server`. Its source is under
-[`apps/lynvo/app/features/site/docs/plugin-server/`](../../apps/lynvo/app/features/site/docs/plugin-server/).
+`/developer`. Its source is under
+[`apps/lynvo/app/features/site/developer/`](../../apps/lynvo/app/features/site/developer/).
 Use that guide for the standalone author workflow. This file is not a second
 copy of those steps.
 

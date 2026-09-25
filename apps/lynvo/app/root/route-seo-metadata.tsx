@@ -6,6 +6,8 @@ const PUBLIC_EXACT_PATHS = new Set([
   "/",
   "/about",
   "/changelog",
+  "/developer",
+  "/docs",
   "/help-center",
   "/plugins",
   "/pricing",
@@ -16,7 +18,7 @@ const PUBLIC_EXACT_PATHS = new Set([
   "/policies/usage-policy",
 ])
 
-export const PUBLIC_SITEMAP_PATHS = [...PUBLIC_EXACT_PATHS, "/docs"]
+export const PUBLIC_SITEMAP_PATHS = [...PUBLIC_EXACT_PATHS]
 
 const normalizePathname = (pathname: string) => {
   if (pathname === "/") {
@@ -27,8 +29,8 @@ const normalizePathname = (pathname: string) => {
 
 const isPublicPath = (pathname: string) =>
   PUBLIC_EXACT_PATHS.has(pathname) ||
-  pathname === "/docs" ||
-  pathname.startsWith("/docs/")
+  pathname.startsWith("/docs/") ||
+  pathname.startsWith("/developer/")
 
 export const RouteSeoMetadata = () => {
   const pathname = normalizePathname(useLocation().pathname)

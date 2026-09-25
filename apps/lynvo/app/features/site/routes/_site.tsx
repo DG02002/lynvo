@@ -27,7 +27,9 @@ export const SiteLayoutContent = ({
   ReceiverOverlayComponent,
 }: SiteLayoutContentProps) => {
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/"
-  const isInnerDocsRoute = normalizedPathname.startsWith("/docs/")
+  const isInnerDocsRoute =
+    normalizedPathname.startsWith("/docs/") ||
+    normalizedPathname.startsWith("/developer/")
   const isSaveRoute = normalizedPathname === savePaths.root
   const isSaveFolderRoute = normalizedPathname.startsWith(
     savePaths.folderPrefix

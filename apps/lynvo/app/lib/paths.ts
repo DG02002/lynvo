@@ -8,6 +8,7 @@ export const sitePaths = {
   about: "/about",
   androidTvSetup: "/docs/android-tv",
   changelog: "/changelog",
+  developerDocs: "/developer",
   docs: "/docs",
   helpCenter: "/help-center",
   plugins: "/plugins",

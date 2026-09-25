@@ -1,20 +1,13 @@
 import type { DocumentationImageExtension } from "./docs-image-assets"
 
-interface MarkdownSection {
-  content: string
-  level?: 2 | 3
-  title: string
-}
-
 type ScreenshotExtensionResolver = (
   name: string
 ) => DocumentationImageExtension | undefined
 
 type ScreenshotReplacementArguments = [
-  component: string,
+  match: string,
   name: string,
   alt: string,
-  caption: string,
   ...rest: unknown[],
 ]
 
@@ -47,13 +40,11 @@ const convertScreenshots = (
   getScreenshotExtension: ScreenshotExtensionResolver
 ) =>
   content.replaceAll(
-    /<DocsScreenshot\s+name="([^"]+)"\s+alt="([^"]+)"\s*>([\s\S]*?)<\/DocsScreenshot>/g,
+    /<DocsScreenshot\s+name="([^"]+)"\s+alt="([^"]+)"\s*(?:\/>|>[\s\S]*?<\/DocsScreenshot>)/g,
     (...parts: ScreenshotReplacementArguments) => {
-      const [, name, alt, caption] = parts
+      const [, name, alt] = parts
       const extension = getScreenshotExtension(name) ?? "png"
-      const image = `![${alt}](images/${name}.${extension})`
-      const trimmedCaption = caption.trim()
-      return trimmedCaption ? `${image}\n\n*${trimmedCaption}*` : image
+      return `![${alt}](images/${name}.${extension})`
     }
   )
 
@@ -70,34 +61,3 @@ export const cleanDocumentationMarkdown = (
     .replaceAll(/^<\/?(?:DocsFaq|DocsScreenshot)(?:\s[^>]*)?>\s*$/gm, "")
     .replaceAll(/\n{3,}/g, "\n\n")
     .trim()
-
-export const extractDocumentationSection = (content: string, id: string) => {
-  const match = new RegExp(
-    `<DocSection id="${id}">\\s*([\\s\\S]*?)\\s*</DocSection>`
-  ).exec(removeFrontmatter(content))
-  return match?.[1].trim() ?? ""
-}
-
-export const assembleDocumentationMarkdown = ({
-  description,
-  introduction,
-  sections,
-  title,
-}: {
-  description: string
-  introduction: string
-  sections: readonly MarkdownSection[]
-  title: string
-}) =>
-  [
-    `# ${title}`,
-    description,
-    introduction,
-    ...sections.map(
-      (section) =>
-        `${"#".repeat(section.level ?? 2)} ${section.title}\n\n${cleanDocumentationMarkdown(section.content)}`
-    ),
-  ]
-    .filter(Boolean)
-    .join("\n\n")
-    .concat("\n")

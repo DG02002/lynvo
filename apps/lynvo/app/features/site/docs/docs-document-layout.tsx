@@ -1,12 +1,23 @@
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import { Link } from "react-router"
 
 import { MobilePageOutline } from "~/components/mobile-page-outline"
 import { PageTableOfContents } from "~/components/page-table-of-contents"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion"
+import { cn } from "~/lib/utils"
 
+import { docsCatalog } from "./docs-catalog"
+import { getDocumentationPageIcon } from "./docs-navigation-icons"
 import { DocsPageActions } from "./docs-page-actions"
+
+type DocumentationSectionKey = DocumentationPageContext["section"]
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
@@ -21,65 +32,136 @@ const getNavigationLinkStateClassName = (isCurrentPage: boolean) =>
     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
 
 const DocsSidebarContents = ({
-  context,
+  section,
+  currentSlug,
 }: {
-  context: DocumentationPageContext
+  section: DocumentationSectionKey
+  currentSlug?: string
+}) => {
+  const groups = docsCatalog.getGroups(section)
+  const currentGroup = currentSlug
+    ? groups.find((group) =>
+        group.pages.some((page) => page.slug === currentSlug)
+      )
+    : undefined
+
+  return (
+    <>
+      <nav aria-label="Documentation navigation" className="flex-1 space-y-0.5">
+        {groups.map((group) => (
+          <Accordion
+            key={group.group}
+            multiple
+            defaultValue={
+              !currentSlug || currentGroup === group ? [group.group] : []
+            }
+          >
+            <AccordionItem
+              value={group.group}
+              className="border-b-0 data-open:bg-transparent"
+            >
+              <AccordionTrigger className="rounded-lg px-3 py-2.5 text-sm font-medium hover:no-underline">
+                {group.group}
+              </AccordionTrigger>
+              <AccordionContent className="pb-2">
+                <ul className="flex flex-col gap-0.5">
+                  {group.pages.map((page) => {
+                    const isCurrentPage = page.slug === currentSlug
+
+                    return (
+                      <li key={page.slug}>
+                        <Link
+                          to={page.url}
+                          prefetch="intent"
+                          aria-current={isCurrentPage ? "page" : undefined}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                            getNavigationLinkStateClassName(isCurrentPage)
+                          )}
+                        >
+                          <HugeiconsIcon
+                            icon={getDocumentationPageIcon(page.slug)}
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                            strokeWidth={1.75}
+                          />
+                          <span className="truncate">{page.navLabel}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ))}
+      </nav>
+
+      <nav
+        aria-label="Documentation sections"
+        className="grid grid-cols-2 gap-1 border-t border-border pt-4"
+      >
+        {docsCatalog.sections.map((candidate) => {
+          const isCurrentSection = candidate.key === section
+
+          return (
+            <Link
+              key={candidate.key}
+              to={candidate.root}
+              prefetch="intent"
+              aria-current={isCurrentSection ? "page" : undefined}
+              className={cn(
+                "rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                getNavigationLinkStateClassName(isCurrentSection)
+              )}
+            >
+              {candidate.label}
+            </Link>
+          )
+        })}
+      </nav>
+    </>
+  )
+}
+
+/**
+ * Shared documentation shell: the section sidebar sits flush with the left
+ * edge, and the content column fills the remaining width without an outer
+ * max-width wrapper.
+ */
+export const DocsShell = ({
+  section,
+  currentSlug,
+  children,
+}: {
+  section: DocumentationSectionKey
+  currentSlug?: string
+  children: ReactNode
 }) => (
-  <>
-    <nav aria-label="Documentation navigation" className="flex-1 space-y-5">
-      {context.groups.map((group) => (
-        <details
-          key={group.group}
-          open={group.pages.some((page) => page.slug === context.page.slug)}
-          className="group"
-        >
-          <summary className="cursor-pointer list-none rounded-md py-1 text-sm font-medium text-foreground marker:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
-            {group.group}
-          </summary>
-          <ul className="mt-1 flex flex-col gap-0.5 border-l border-border pl-3">
-            {group.pages.map((page) => {
-              const isCurrentPage = page.slug === context.page.slug
+  <div className="w-full lg:flex">
+    <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] w-72 shrink-0 flex-col self-start overflow-y-auto border-r border-border px-5 py-7 lg:flex xl:w-80 xl:px-6">
+      <DocsSidebarContents section={section} currentSlug={currentSlug} />
+    </aside>
 
-              return (
-                <li key={page.slug}>
-                  <Link
-                    to={page.url}
-                    prefetch="intent"
-                    aria-current={isCurrentPage ? "page" : undefined}
-                    className={`block rounded-md px-3 py-2 text-sm leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${getNavigationLinkStateClassName(isCurrentPage)}`}
-                  >
-                    {page.navLabel}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </details>
-      ))}
-    </nav>
+    <div className="min-w-0 flex-1">
+      <details className="group border-b border-border px-6 py-3 lg:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          Browse documentation
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            aria-hidden="true"
+            strokeWidth={2}
+            className="size-4 shrink-0 transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-open:rotate-180 motion-reduce:transition-none"
+          />
+        </summary>
+        <div className="mt-4 flex max-h-[65svh] flex-col gap-5 overflow-y-auto pb-1">
+          <DocsSidebarContents section={section} currentSlug={currentSlug} />
+        </div>
+      </details>
 
-    <nav
-      aria-label="Documentation sections"
-      className="grid grid-cols-2 gap-1 border-t border-border pt-4"
-    >
-      <Link
-        to="/docs"
-        prefetch="intent"
-        aria-current={context.section === "user" ? "page" : undefined}
-        className={`rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${getNavigationLinkStateClassName(context.section === "user")}`}
-      >
-        Using Lynvo
-      </Link>
-      <Link
-        to="/docs/plugin-server"
-        prefetch="intent"
-        aria-current={context.section === "developer" ? "page" : undefined}
-        className={`rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${getNavigationLinkStateClassName(context.section === "developer")}`}
-      >
-        Developers
-      </Link>
-    </nav>
-  </>
+      {children}
+    </div>
+  </div>
 )
 
 const PageNavigation = ({
@@ -126,101 +208,77 @@ export const DocsDocumentLayout = ({
   context: DocumentationPageContext
   children: ReactNode
 }) => (
-  <div className="w-full px-6 pb-12 pt-6 md:px-8 lg:px-10 lg:py-0 xl:px-14">
-    <details className="mb-5 rounded-xl border border-border px-4 py-3 lg:hidden">
-      <summary className="cursor-pointer text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-        Browse documentation
-      </summary>
-      <div className="mt-4 flex max-h-[65svh] flex-col gap-5 overflow-y-auto pb-1">
-        <DocsSidebarContents context={context} />
-      </div>
-    </details>
+  <DocsShell section={context.section} currentSlug={context.page.slug}>
+    <div className="px-6 md:px-8 lg:hidden">
+      <MobilePageOutline
+        targetId="docs-content"
+        revealAfterSelector="#docs-page-introduction"
+        className="-mb-10"
+      />
+    </div>
 
-    <MobilePageOutline
-      targetId="docs-content"
-      revealAfterSelector="#docs-page-introduction"
-      className="-mt-6 lg:hidden"
-    />
-
-    <div className="mx-auto grid w-full max-w-[112rem] gap-8 lg:grid-cols-[15rem_minmax(0,1fr)_13rem] xl:grid-cols-[18rem_minmax(0,1fr)_16rem] xl:gap-10">
-      <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] self-start border-r border-border py-7 pr-6 lg:flex lg:flex-col">
-        <DocsSidebarContents context={context} />
-      </aside>
-
-      <article className="min-w-0 self-start py-4 lg:py-12">
-        <header
-          id="docs-page-introduction"
-          className="flex flex-col gap-5 border-b border-border pb-10"
-        >
-          <nav
-            aria-label="Breadcrumb"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
+    <div className="mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_16rem]">
+      <article className="min-w-0 px-6 pb-16 pt-8 md:px-8 lg:pt-12 xl:px-10">
+        <div className="mx-auto max-w-3xl">
+          <header
+            id="docs-page-introduction"
+            className="flex flex-col gap-5 border-b border-border pb-10"
           >
-            <span>{context.group}</span>
-            <HugeiconsIcon
-              icon={ArrowRight01Icon}
-              aria-hidden="true"
-              className="size-3.5 shrink-0"
-              strokeWidth={1.5}
-            />
-            <span aria-current="page" className="text-foreground">
-              {context.page.navLabel}
-            </span>
-          </nav>
-          <h1 className="max-w-3xl text-3xl font-normal tracking-tight text-balance md:text-4xl">
-            {context.page.title}
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground text-pretty">
-            {context.page.description}
-          </p>
-          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <DocsPageActions page={context.page} />
-            <p className="text-sm text-muted-foreground">
-              Last updated{" "}
-              <time dateTime={context.page.lastModified}>
-                {lastModifiedDateFormatter.format(
-                  new Date(`${context.page.lastModified}T00:00:00Z`)
-                )}
-              </time>
+            <h1 className="text-3xl font-normal tracking-tight text-balance md:text-4xl">
+              {context.page.title}
+            </h1>
+            <p className="text-base leading-7 text-muted-foreground text-pretty">
+              {context.page.description}
             </p>
-          </div>
-        </header>
+            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <DocsPageActions page={context.page} />
+              <p className="text-sm text-muted-foreground">
+                Last updated{" "}
+                <time dateTime={context.page.lastModified}>
+                  {lastModifiedDateFormatter.format(
+                    new Date(`${context.page.lastModified}T00:00:00Z`)
+                  )}
+                </time>
+              </p>
+            </div>
+          </header>
 
-        <div
-          id="docs-content"
-          className="typeset typeset-docs docs-content max-w-5xl pt-10"
-        >
-          {children}
-        </div>
-
-        {(context.previous || context.next) && (
-          <nav
-            aria-label="Documentation pages"
-            className="mt-12 grid grid-cols-2 gap-3 border-t border-border pt-6"
+          <div
+            id="docs-content"
+            className="typeset typeset-docs docs-content pt-10"
           >
-            {context.previous ? (
-              <PageNavigation
-                page={context.previous}
-                label="Previous"
-                direction="previous"
-              />
-            ) : (
-              <span />
-            )}
-            {context.next && (
-              <PageNavigation
-                page={context.next}
-                label="Next"
-                direction="next"
-              />
-            )}
-          </nav>
-        )}
+            {children}
+          </div>
+
+          {(context.previous || context.next) && (
+            <nav
+              aria-label="Documentation pages"
+              className="mt-12 grid grid-cols-2 gap-3 border-t border-border pt-6"
+            >
+              {context.previous ? (
+                <PageNavigation
+                  page={context.previous}
+                  label="Previous"
+                  direction="previous"
+                />
+              ) : (
+                <span />
+              )}
+              {context.next && (
+                <PageNavigation
+                  page={context.next}
+                  label="Next"
+                  direction="next"
+                />
+              )}
+            </nav>
+          )}
+        </div>
       </article>
 
-      <aside className="sticky top-16 hidden max-h-[calc(100svh-4rem)] self-start overflow-y-auto py-12 lg:block">
+      <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] self-start overflow-y-auto py-12 pl-2 pr-6 lg:block xl:pr-8">
         <PageTableOfContents targetId="docs-content" className="px-0" />
       </aside>
     </div>
-  </div>
+  </DocsShell>
 )

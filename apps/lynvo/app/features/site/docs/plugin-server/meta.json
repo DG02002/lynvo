@@ -3,7 +3,6 @@
     {
       "title": "Getting started",
       "pages": [
-        "plugin-server/plugin-server",
         "plugin-server/what-is-a-plugin-server",
         "plugin-server/what-is-a-plugin",
         "plugin-server/prerequisites",

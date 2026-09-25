@@ -50,6 +50,11 @@ export const createRoutes = (isDevelopment: boolean) =>
       route("help-center", "features/site/routes/_site.help-center.tsx"),
       route("docs/markdown/*", "features/site/routes/_site.docs-markdown.ts"),
       route("docs/*", "features/site/routes/_site.docs.tsx"),
+      route(
+        "developer/markdown/*",
+        "features/site/routes/_site.developer-markdown.ts"
+      ),
+      route("developer/*", "features/site/routes/_site.developer.tsx"),
       route("changelog", "features/site/routes/_site.changelog.tsx"),
       route("plugins", "features/site/routes/_site.plugins.tsx"),
       route("pricing", "features/site/routes/_site.pricing.tsx"),

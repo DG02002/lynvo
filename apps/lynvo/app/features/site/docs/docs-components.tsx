@@ -23,7 +23,14 @@ import {
 } from "react"
 import { Link } from "react-router"
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
+import { Dialog, DialogContent } from "~/components/ui/dialog"
 import { cn } from "~/lib/utils"
 
 import { getDocumentationImageAsset } from "./docs-image-assets"
@@ -177,44 +184,67 @@ export function DocsFaq({
   question: string
   children: ReactNode
 }) {
+  const itemId = useId()
+
   return (
-    <details className="not-typeset my-3 rounded-xl border border-border px-4 py-3">
-      <summary className="cursor-pointer text-sm font-medium leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-        {question}
-      </summary>
-      <div className="mt-3 text-sm leading-6 text-muted-foreground">
-        {children}
-      </div>
-    </details>
+    <Accordion className="not-typeset my-3 rounded-none border-0">
+      <AccordionItem
+        value={itemId}
+        className="border-border/50 data-open:bg-transparent"
+      >
+        <AccordionTrigger className="py-5 text-left text-sm font-normal hover:no-underline">
+          {question}
+        </AccordionTrigger>
+        <AccordionContent className="pb-5 leading-6 text-muted-foreground">
+          {children}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 
-export function DocsScreenshot({
-  name,
-  alt,
-  children,
-}: {
-  name: string
-  alt: string
-  children?: ReactNode
-}) {
+export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   const image = getDocumentationImageAsset(name)
   const expectedImagePaths = `images/${name}.png or images/${name}.webp`
+  const [zoomOpen, setZoomOpen] = useState(false)
 
   return (
-    <figure className="not-typeset my-6 overflow-hidden rounded-xl border border-border">
+    <figure className="not-typeset my-6">
       {image ? (
-        <img
-          src={image.source}
-          alt={alt}
-          loading="lazy"
-          className="h-auto w-full object-cover"
-        />
+        <>
+          <button
+            type="button"
+            onClick={() => setZoomOpen(true)}
+            aria-label={`Open image: ${alt}`}
+            className="mx-auto block w-full max-w-72 cursor-zoom-in overflow-hidden rounded-xl border border-border transition-[box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:shadow-[0_12px_32px_-20px_rgba(0,0,0,0.45)] sm:max-w-lg lg:max-w-full"
+          >
+            <img
+              src={image.source}
+              alt={alt}
+              loading="lazy"
+              className="h-auto w-full object-cover"
+            />
+          </button>
+
+          <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+            <DialogContent
+              aria-label={alt}
+              className="w-auto max-w-[min(90rem,calc(100vw-2rem))] gap-0 rounded-2xl bg-transparent p-0 ring-0"
+            >
+              <img
+                src={image.source}
+                alt={alt}
+                onClick={() => setZoomOpen(false)}
+                className="max-h-[82svh] w-auto max-w-full cursor-zoom-out rounded-2xl"
+              />
+            </DialogContent>
+          </Dialog>
+        </>
       ) : (
         <div
           role="img"
           aria-label={`${alt}. Expected image: ${expectedImagePaths}`}
-          className="flex min-h-36 flex-col justify-center gap-2 border-b border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
+          className="flex min-h-36 flex-col justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
         >
           <span className="font-medium text-foreground">Screenshot needed</span>
           <span className="font-mono text-muted-foreground">
@@ -222,11 +252,6 @@ export function DocsScreenshot({
           </span>
           <span className="text-muted-foreground">{alt}</span>
         </div>
-      )}
-      {children && (
-        <figcaption className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-          {children}
-        </figcaption>
       )}
     </figure>
   )
