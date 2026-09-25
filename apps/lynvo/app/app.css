@@ -449,49 +449,58 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   --home-screenshot-base-start: var(--home-screenshot-desktop-base-start);
   --home-screenshot-base-middle: var(--home-screenshot-desktop-base-middle);
   --home-screenshot-base-end: var(--home-screenshot-desktop-base-end);
+  --home-screenshot-frame-width: min(
+    var(--home-screenshot-desktop-frame-width),
+    var(--home-screenshot-frame-max-width)
+  );
+  --home-screenshot-background-padding: calc(
+    (100vw - var(--home-screenshot-frame-width)) / 2
+  );
   display: flex;
+  box-sizing: border-box;
   width: 100%;
   align-items: center;
   justify-content: center;
-  padding-block: clamp(40px, 5vw, 72px);
+  padding: var(--home-screenshot-background-padding);
   background:
     radial-gradient(
-      circle at 85% 8%,
+      circle at var(--home-screenshot-upper-right-position),
       var(--home-screenshot-upper-right) 0%,
-      transparent 42%
+      transparent var(--home-screenshot-upper-right-fade)
     ),
     radial-gradient(
-      circle at 15% 85%,
+      circle at var(--home-screenshot-lower-left-position),
       var(--home-screenshot-lower-left) 0%,
-      transparent 52%
+      transparent var(--home-screenshot-lower-left-fade)
     ),
     linear-gradient(
-      135deg,
+      var(--home-screenshot-linear-angle),
       var(--home-screenshot-base-start) 0%,
-      var(--home-screenshot-base-middle) 48%,
+      var(--home-screenshot-base-middle)
+        var(--home-screenshot-linear-middle-stop),
       var(--home-screenshot-base-end) 100%
     );
 }
 
 .home-screenshot-frame {
-  width: 84vw;
-  padding: 10px;
-  border-radius: 14px;
-  background: #101012;
-  box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.22),
-    0 6px 20px rgba(0, 0, 0, 0.12);
+  flex: none;
+  width: var(--home-screenshot-frame-width);
+  padding: var(--home-screenshot-frame-padding);
+  border-radius: var(--home-screenshot-frame-radius);
+  background: var(--home-screenshot-frame-color);
+  box-shadow: var(--home-screenshot-frame-shadow);
 }
 
 .home-screenshot-frame__image {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: var(--home-screenshot-screen-radius);
 }
 
 @media (max-width: 767px) {
   .home-screenshot-stage {
+    --home-screenshot-frame-width: var(--home-screenshot-phone-frame-width);
     --home-screenshot-upper-right: var(--home-screenshot-phone-upper-right);
     --home-screenshot-lower-left: var(--home-screenshot-phone-lower-left);
     --home-screenshot-base-start: var(--home-screenshot-phone-base-start);

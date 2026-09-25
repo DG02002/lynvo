@@ -6,7 +6,12 @@ import { fileURLToPath } from "node:url"
 import { Schema } from "effect"
 import { chromium } from "playwright"
 
-import { frameScreenshot, saveScreenshot } from "./frame-screenshot.mjs"
+import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec.json" with { type: "json" }
+import {
+  frameScreenshot,
+  saveScreenshot,
+  validatePalette,
+} from "./frame-screenshot.mjs"
 import { assertLocalHttpOrigin } from "./local-origin.mjs"
 
 const APP_DIRECTORY = path.resolve(
@@ -75,8 +80,11 @@ const ShotSchema = Schema.Struct({
       theme: Schema.NonEmptyString,
     }),
   ]),
+  holdExtractionUntilCapture: Schema.optional(Schema.Boolean),
   name: Schema.NonEmptyString,
   output: Schema.NonEmptyString,
+  preserveScrollPosition: Schema.optional(Schema.Boolean),
+  requiredImages: Schema.optional(Schema.Array(Schema.NonEmptyString)),
   route: Schema.NonEmptyString,
   seedScenario: Schema.Literals(["docs", "none"]),
   setup: Schema.optional(Schema.Array(Schema.NonEmptyString)),
@@ -104,6 +112,59 @@ const ScreenshotPalettesSchema = Schema.Record(
   Schema.String,
   ScreenshotPaletteSchema
 )
+const PALETTE_COLOR_KEYS = [
+  "upperRight",
+  "lowerLeft",
+  "baseStart",
+  "baseMiddle",
+  "baseEnd",
+]
+// Keep large background fields from reading as repeats across the five stops.
+const MINIMUM_PALETTE_DISTANCE = 3.5
+
+const paletteSignature = (palette) =>
+  PALETTE_COLOR_KEYS.map((key) => palette[key]).join("|")
+
+const colorToOklab = (color) => {
+  const [red, green, blue] = color
+    .slice(1)
+    .match(/.{2}/gu)
+    .map((channel) => Number.parseInt(channel, 16) / 255)
+    .map((channel) =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    )
+  const light = Math.cbrt(
+    0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue
+  )
+  const medium = Math.cbrt(
+    0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue
+  )
+  const dark = Math.cbrt(
+    0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue
+  )
+  return [
+    0.2104542553 * light + 0.793617785 * medium - 0.0040720468 * dark,
+    1.9779984951 * light - 2.428592205 * medium + 0.4505937099 * dark,
+    0.0259040371 * light + 0.7827717662 * medium - 0.808675766 * dark,
+  ]
+}
+
+const paletteDistance = (first, second) =>
+  100 *
+  Math.sqrt(
+    PALETTE_COLOR_KEYS.reduce((distance, key) => {
+      const firstLab = colorToOklab(first[key])
+      const secondLab = colorToOklab(second[key])
+      return (
+        distance +
+        firstLab.reduce(
+          (channelDistance, value, index) =>
+            channelDistance + (value - secondLab[index]) ** 2,
+          0
+        )
+      )
+    }, 0) / PALETTE_COLOR_KEYS.length
+  )
 
 const expandShotSetup = (shot, setups) => {
   if (shot.setup === undefined) {
@@ -135,8 +196,14 @@ const validateViewport = (shot) => {
   if (shot.context === "tv" && shot.userAgent !== TV_BRO_USER_AGENT) {
     throw new Error(`${shot.name} must use the verified TV Bro user agent.`)
   }
-  if (shot.context === "phone" && shot.userAgent !== PIXEL_10_USER_AGENT) {
-    throw new Error(`${shot.name} must use the Pixel 10 Chrome user agent.`)
+  if (
+    shot.context === "phone" &&
+    shot.userAgent !== PIXEL_10_USER_AGENT &&
+    shot.userAgent !== DESKTOP_USER_AGENT
+  ) {
+    throw new Error(
+      `${shot.name} has an unsupported phone screenshot user agent.`
+    )
   }
   if (shot.context === "desktop" && shot.userAgent !== DESKTOP_USER_AGENT) {
     throw new Error(`${shot.name} must use the desktop Chrome user agent.`)
@@ -186,13 +253,7 @@ const validateShotFraming = (shot, state, palettes) => {
       `${shot.name} reuses the framing palette ${shot.framing.theme}.`
     )
   }
-  const signature = [
-    palette.upperRight,
-    palette.lowerLeft,
-    palette.baseStart,
-    palette.baseMiddle,
-    palette.baseEnd,
-  ].join("|")
+  const signature = paletteSignature(palette)
   if (state.palettes.has(signature)) {
     throw new Error(
       `${shot.name} reuses a background palette already assigned to another screenshot.`
@@ -200,16 +261,17 @@ const validateShotFraming = (shot, state, palettes) => {
   }
   state.themes.add(shot.framing.theme)
   state.palettes.add(signature)
+  const expectedHomeTheme =
+    screenshotFrameSpec.homeThemes[
+      shot.context === "phone" ? "phone" : "desktop"
+    ]
   if (
     shot.framing.mode === "css" &&
-    (shot.route !== "/" ||
-      !shot.name.startsWith("marketing-homepage-") ||
-      shot.captureTarget === undefined ||
-      shot.framing.theme !==
-        (shot.context === "phone" ? "aurora-059" : "aurora-058"))
+    (shot.captureTarget === undefined ||
+      shot.framing.theme !== expectedHomeTheme)
   ) {
     throw new Error(
-      `${shot.name} must use the matching homepage CSS frame palette.`
+      `${shot.name} must use its assigned homepage CSS palette and capture target.`
     )
   }
 }
@@ -252,24 +314,22 @@ const readScreenshotPalettes = async () => {
     JSON.parse(serialized)
   )
   const signatures = new Set()
+  const checkedPalettes = []
   for (const [theme, palette] of Object.entries(palettes)) {
-    const colors = [
-      palette.upperRight,
-      palette.lowerLeft,
-      palette.baseStart,
-      palette.baseMiddle,
-      palette.baseEnd,
-    ]
-    if (colors.some((color) => !/^#[\dA-F]{6}$/iu.test(color))) {
-      throw new Error(
-        `${theme} contains a color that is not a six-digit hex value.`
-      )
-    }
-    const signature = colors.join("|")
+    validatePalette(palette, theme)
+    const signature = paletteSignature(palette)
     if (signatures.has(signature)) {
       throw new Error(`${theme} repeats another palette definition.`)
     }
     signatures.add(signature)
+    for (const other of checkedPalettes) {
+      if (paletteDistance(palette, other.palette) < MINIMUM_PALETTE_DISTANCE) {
+        throw new Error(
+          `${theme} is too similar to ${other.theme}; screenshot palettes must remain visually distinct.`
+        )
+      }
+    }
+    checkedPalettes.push({ theme, palette })
   }
   return palettes
 }
@@ -505,6 +565,31 @@ const resetScrollForCapture = async (page, shot) => {
   await expectVisible(page, finalStep.expectVisible, shot.name)
 }
 
+const waitForRequiredImages = async (page, shot) => {
+  await Promise.all(
+    (shot.requiredImages ?? []).map(async (alt) => {
+      try {
+        await page.waitForFunction(
+          (expectedAlt) =>
+            [...document.images].some(
+              (image) =>
+                image.alt === expectedAlt &&
+                image.complete &&
+                image.naturalWidth > 0
+            ),
+          alt,
+          { timeout: STEP_TIMEOUT_MS }
+        )
+      } catch (error) {
+        throw new Error(
+          `${shot.name} did not load its required image ${JSON.stringify(alt)}.`,
+          { cause: error }
+        )
+      }
+    })
+  )
+}
+
 const runShotSteps = async ({ page, shot, origin, variables }) => {
   for (const step of shot.steps) {
     // SAFETY: A later screenshot state depends on each prior visible condition.
@@ -514,14 +599,21 @@ const runShotSteps = async ({ page, shot, origin, variables }) => {
 }
 
 const preparePageForCapture = async ({ page, shot }) => {
-  await page.addStyleTag({
-    content: [
-      "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
-      shot.captureStyles ?? "",
-    ].join("\n"),
-  })
+  if (!shot.preserveScrollPosition) {
+    await page.addStyleTag({
+      content: [
+        "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
+        shot.captureStyles ?? "",
+      ].join("\n"),
+    })
+  }
   await page.evaluate(() => document.fonts.ready.then(() => true))
-  await resetScrollForCapture(page, shot)
+  if (shot.preserveScrollPosition) {
+    await expectVisible(page, shot.steps.at(-1).expectVisible, shot.name)
+  } else {
+    await resetScrollForCapture(page, shot)
+  }
+  await waitForRequiredImages(page, shot)
   if (shot.framing !== false && shot.framing.mode === "css") {
     await page.waitForFunction(
       () => {
@@ -559,6 +651,42 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
   process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
 }
 
+const createExtractionCaptureGate = () => {
+  let release
+  let isReleased = false
+  const heldUntilCapture = new Promise((resolve) => {
+    release = resolve
+  })
+  const pendingRoutes = new Set()
+  const routePattern = "**/api/extract**"
+  const holdRoute = async (route) => {
+    if (isReleased) {
+      await route.continue()
+      return
+    }
+    let resolveRoute
+    const routeFinished = new Promise((resolve) => {
+      resolveRoute = resolve
+    })
+    pendingRoutes.add(routeFinished)
+    try {
+      await heldUntilCapture
+      await route.continue()
+    } finally {
+      pendingRoutes.delete(routeFinished)
+      resolveRoute()
+    }
+  }
+  const releaseAndWait = async (page) => {
+    isReleased = true
+    release()
+    await Promise.all(pendingRoutes)
+    await page.unroute(routePattern, holdRoute)
+  }
+
+  return { holdRoute, releaseAndWait, routePattern }
+}
+
 const captureShot = async ({ browser, shot, origin, palettes }) => {
   const context = await browser.newContext({
     viewport: { width: shot.viewport.width, height: shot.viewport.height },
@@ -571,12 +699,18 @@ const captureShot = async ({ browser, shot, origin, palettes }) => {
     isMobile: shot.context === "phone",
     hasTouch: shot.context === "phone",
   })
+  let releaseHeldExtraction
   try {
     const page = await context.newPage()
     page.setDefaultTimeout(STEP_TIMEOUT_MS)
     page.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
     const pageErrors = []
     page.on("pageerror", (error) => pageErrors.push(error))
+    if (shot.holdExtractionUntilCapture) {
+      const extractionGate = createExtractionCaptureGate()
+      await page.route(extractionGate.routePattern, extractionGate.holdRoute)
+      releaseHeldExtraction = () => extractionGate.releaseAndWait(page)
+    }
     await runShotSteps({ page, shot, origin, variables: Object.create(null) })
     await preparePageForCapture({ page, shot })
     if (pageErrors.length > 0) {
@@ -587,6 +721,7 @@ const captureShot = async ({ browser, shot, origin, palettes }) => {
     }
     await saveCapturedShot({ page, shot, palettes })
   } finally {
+    await releaseHeldExtraction?.()
     await context.close()
   }
 }

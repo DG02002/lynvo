@@ -64,7 +64,7 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open Dune Part Two (2024).mkv",
+            "name": "Open 12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
             "exact": false
           }
         }
@@ -177,7 +177,7 @@
           }
         }
       ],
-      "output": "app/features/site/docs/images/library-list-view.png",
+      "output": "app/features/site/docs/images/library-list-view.webp",
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-006"
@@ -227,9 +227,15 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for 12 Angry Men"
           }
         }
+      ],
+      "requiredImages": [
+        "Artwork for 12 Angry Men (1957)",
+        "Artwork for Taxi Driver (1976)",
+        "Artwork for Mindhunter (2017) S01",
+        "Artwork for When Life Gives You Tangerines (2025) S01"
       ],
       "output": "app/features/site/docs/images/library-gallery-view.png",
       "setup": ["general-settings", "list-to-gallery"],
@@ -254,15 +260,16 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for Dune: Part Two"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open The Bear"
+            "name": "View The Bear",
+            "index": 0
           },
           "expectVisible": {
             "text": "Show episode names",
@@ -315,8 +322,8 @@
             "name": "Open menu for Dune: Part Two"
           },
           "expectVisible": {
-            "text": "View log",
-            "exact": true
+            "role": "menuitem",
+            "name": "View log"
           }
         }
       ],
@@ -381,8 +388,8 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for Dune: Part Two"
           }
         },
         {
@@ -403,8 +410,7 @@
             "exact": true
           },
           "expectVisible": {
-            "text": "Search by title",
-            "exact": false
+            "placeholder": "Search by title"
           }
         }
       ],
@@ -466,25 +472,27 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View Shows and movies"
+            "name": "View Shows and movies",
+            "exact": false
           },
           "expectVisible": {
-            "text": "Movies",
-            "exact": true
+            "role": "button",
+            "name": "Movies, new"
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "Movies",
-            "exact": true
+            "role": "button",
+            "name": "Movies, new"
           },
           "expectVisible": {
-            "text": "Dune Part Two (2024).mkv",
-            "exact": false
+            "role": "button",
+            "name": "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv, new"
           }
         }
       ],
+      "setup": ["list-view"],
       "output": "app/features/site/docs/images/opening-links-folder-browser.png",
       "framing": {
         "mode": "postprocess",
@@ -502,6 +510,7 @@
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "holdExtractionUntilCapture": true,
       "steps": [
         {
           "action": "navigate",
@@ -515,46 +524,48 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View Shows and movies"
+            "name": "View Shows and movies",
+            "exact": false
           },
           "expectVisible": {
-            "text": "TV Shows",
-            "exact": true
+            "role": "button",
+            "name": "TV Shows, new"
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "TV Shows",
-            "exact": true
+            "role": "button",
+            "name": "TV Shows, new"
           },
           "expectVisible": {
-            "text": "Severance",
-            "exact": true
+            "role": "button",
+            "name": "Severance, new"
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "Severance",
-            "exact": true
+            "role": "button",
+            "name": "Severance, new"
           },
           "expectVisible": {
-            "text": "Season 03",
-            "exact": true
+            "role": "button",
+            "name": "Season 03, new"
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "Season 03",
-            "exact": true
+            "role": "button",
+            "name": "Season 03, new"
           },
           "expectVisible": {
-            "label": "Loading playable links for Season 03…"
+            "label": "Loading Season 03…"
           }
         }
       ],
+      "setup": ["list-view"],
       "output": "app/features/site/docs/images/opening-links-resolving-folder.png",
       "framing": {
         "mode": "postprocess",
@@ -565,13 +576,13 @@
       "name": "opening-links-watched-confirmation",
       "seedScenario": "docs",
       "route": "/save",
-      "context": "desktop",
+      "context": "phone",
       "viewport": {
-        "width": 1470,
-        "height": 836,
+        "width": 412,
+        "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -585,18 +596,20 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View The Bear"
+            "name": "View The Bear",
+            "exact": false,
+            "index": 0
           },
           "expectVisible": {
-            "text": "The Bear S01E01.mkv",
+            "text": "The Bear (2022) - S01E01 - System - 1080p WEB-DL HEVC.mkv",
             "exact": true
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "The Bear S01E01.mkv",
-            "exact": true
+            "role": "button",
+            "name": "The Bear (2022) - S01E01 - System - 1080p WEB-DL HEVC.mkv, new"
           },
           "expectVisible": {
             "text": "Mark as watched?",
@@ -604,6 +617,7 @@
           }
         }
       ],
+      "setup": ["list-view"],
       "output": "app/features/site/docs/images/opening-links-watched-confirmation.png",
       "framing": {
         "mode": "postprocess",
@@ -647,7 +661,7 @@
         "height": 924,
         "deviceScaleFactor": 2
       },
-      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       "steps": [
         {
           "action": "navigate",
@@ -735,6 +749,7 @@
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "preserveScrollPosition": true,
       "steps": [
         {
           "action": "navigate",
@@ -748,7 +763,19 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Bhadoo’s Google Drive Index info"
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Bhadoo’s Google Drive Index info",
+            "index": 0
           },
           "expectVisible": {
             "text": "Version",
@@ -780,6 +807,17 @@
           "expectVisible": {
             "role": "heading",
             "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
           }
         },
         {
@@ -824,6 +862,17 @@
           "action": "click",
           "target": {
             "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
             "name": "Edit credentials for drive.example.invalid"
           },
           "expectVisible": {
@@ -856,6 +905,17 @@
           "expectVisible": {
             "role": "heading",
             "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
           }
         },
         {
@@ -905,6 +965,17 @@
           "expectVisible": {
             "role": "heading",
             "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
           }
         },
         {
@@ -1299,7 +1370,7 @@
           "target": {
             "label": "Link"
           },
-          "value": "https://media.example.invalid/Severance-S02E03.mkv",
+          "value": "https://media.example.invalid/lynvo-demo/12-angry-men-1957.mkv",
           "expectVisible": {
             "label": "Link"
           }
@@ -1704,8 +1775,8 @@
             "exact": true
           },
           "expectVisible": {
-            "text": "Delete account?",
-            "exact": true
+            "role": "heading",
+            "name": "Delete account"
           }
         }
       ],
@@ -1717,6 +1788,7 @@
     },
     {
       "name": "sign-in-tv-qr",
+      "blockedReason": "The local docs capture uses --no-auth, which signs every browser into the development account and redirects guest auth routes to /save.",
       "seedScenario": "docs",
       "route": "/auth/sign-in-with-another-device",
       "context": "tv",
@@ -1731,7 +1803,7 @@
           "action": "navigate",
           "path": "/auth/sign-in-with-another-device",
           "expectVisible": {
-            "label": "Sign-in verification code"
+            "selector": "[aria-label=\"Sign-in verification code\"]"
           }
         }
       ],
@@ -1743,6 +1815,7 @@
     },
     {
       "name": "sign-in-approval",
+      "blockedReason": "The local docs capture uses --no-auth, which signs every browser into the development account and redirects guest auth routes to /save.",
       "seedScenario": "docs",
       "route": "/auth/device",
       "context": "desktop",
@@ -1757,7 +1830,7 @@
           "action": "navigate",
           "path": "/auth/sign-in-with-another-device",
           "expectVisible": {
-            "label": "Sign-in verification code"
+            "selector": "[aria-label=\"Sign-in verification code\"]"
           },
           "captureAs": "deviceCode"
         },
@@ -1912,7 +1985,7 @@
           },
           "expectVisible": {
             "role": "treeitem",
-            "name": "Severance S02E03.mkv"
+            "name": "Severance (2022) - S02E03 - Who Is Alive? - 2160p WEB-DL HEVC HDR10.mkv"
           }
         },
         {
@@ -1923,7 +1996,7 @@
           },
           "expectVisible": {
             "role": "treeitem",
-            "name": "Dune Part Two (2024).mkv"
+            "name": "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv"
           }
         }
       ],
@@ -2064,8 +2137,9 @@
           "action": "navigate",
           "path": "/settings/usage",
           "expectVisible": {
-            "text": "Monthly usage limit",
-            "exact": true
+            "role": "heading",
+            "name": "Monthly usage limit",
+            "index": 0
           }
         }
       ],
@@ -2091,8 +2165,8 @@
           "action": "navigate",
           "path": "/settings/usage",
           "expectVisible": {
-            "text": "Custom Plugin Server",
-            "exact": false
+            "role": "heading",
+            "name": "Custom Plugin Server usage"
           }
         }
       ],
@@ -2273,6 +2347,27 @@
     }
   ],
   "setups": {
+    "list-view": [
+      {
+        "action": "navigate",
+        "path": "/settings/general",
+        "expectVisible": {
+          "role": "heading",
+          "name": "General"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      }
+    ],
     "general-settings": [
       {
         "action": "navigate",
