@@ -203,36 +203,6 @@
       "steps": [
         {
           "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "List view",
-            "exact": true
-          },
-          "expectVisible": {
-            "role": "radio",
-            "name": "List view"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
-        {
-          "action": "navigate",
           "path": "/save",
           "expectVisible": {
             "role": "button",
@@ -241,7 +211,8 @@
         }
       ],
       "framingTheme": "aurora-008",
-      "output": "app/features/site/docs/images/library-gallery-view.png"
+      "output": "app/features/site/docs/images/library-gallery-view.png",
+      "setup": ["general-settings", "list-to-gallery"]
     },
     {
       "name": "library-gallery-controls",
@@ -255,25 +226,6 @@
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
         {
           "action": "navigate",
           "path": "/save",
@@ -306,7 +258,8 @@
         }
       ],
       "framingTheme": "aurora-009",
-      "output": "app/features/site/docs/images/library-gallery-controls.png"
+      "output": "app/features/site/docs/images/library-gallery-controls.png",
+      "setup": ["general-settings", "gallery-view"]
     },
     {
       "name": "library-item-menu",
@@ -377,7 +330,7 @@
       ],
       "framingTheme": "aurora-011",
       "output": "app/features/site/docs/images/library-refresh-link-choices.png",
-      "setup": "gallery-choice"
+      "setup": ["general-settings", "gallery-choice"]
     },
     {
       "name": "library-change-artwork",
@@ -391,25 +344,6 @@
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/general",
-          "expectVisible": {
-            "role": "heading",
-            "name": "General"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Gallery view",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Beta",
-            "exact": true
-          }
-        },
         {
           "action": "navigate",
           "path": "/save",
@@ -442,7 +376,8 @@
         }
       ],
       "framingTheme": "aurora-012",
-      "output": "app/features/site/docs/images/library-change-artwork.png"
+      "output": "app/features/site/docs/images/library-change-artwork.png",
+      "setup": ["general-settings", "gallery-view"]
     },
     {
       "name": "library-expiry-states",
@@ -1339,7 +1274,7 @@
       ],
       "framingTheme": "aurora-037",
       "output": "app/features/site/docs/images/saving-links-choose-links.png",
-      "setup": "gallery-choice"
+      "setup": ["general-settings", "gallery-choice"]
     },
     {
       "name": "saving-links-extraction-failed",
@@ -1764,7 +1699,7 @@
       ],
       "framingTheme": "aurora-050",
       "output": "app/features/site/docs/images/start-guide-choose-links.png",
-      "setup": "gallery-choice"
+      "setup": ["general-settings", "gallery-choice"]
     },
     {
       "name": "start-guide-tv-library",
@@ -1844,7 +1779,7 @@
       ],
       "framingTheme": "aurora-051",
       "output": "app/features/site/docs/images/start-guide-tv-library.png",
-      "setup": "gallery-choice"
+      "setup": ["general-settings", "gallery-choice"]
     },
     {
       "name": "settings-storage",
@@ -2122,7 +2057,7 @@
     }
   ],
   "setups": {
-    "gallery-choice": [
+    "general-settings": [
       {
         "action": "navigate",
         "path": "/settings/general",
@@ -2130,7 +2065,9 @@
           "role": "heading",
           "name": "General"
         }
-      },
+      }
+    ],
+    "gallery-choice": [
       {
         "action": "click",
         "target": {
@@ -2142,6 +2079,43 @@
           "name": "Save all links automatically"
         }
       },
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "Gallery view",
+          "exact": true
+        },
+        "expectVisible": {
+          "text": "Beta",
+          "exact": true
+        }
+      }
+    ],
+    "gallery-view": [
+      {
+        "action": "click",
+        "target": {
+          "text": "Gallery view",
+          "exact": true
+        },
+        "expectVisible": {
+          "text": "Beta",
+          "exact": true
+        }
+      }
+    ],
+    "list-to-gallery": [
       {
         "action": "click",
         "target": {

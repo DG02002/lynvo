@@ -19,6 +19,8 @@ const MANIFEST_PATH = path.join(
   "screenshot-manifest.json"
 )
 const DEFAULT_ORIGIN = "http://localhost:5173"
+const DESKTOP_USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 const TV_BRO_USER_AGENT =
   "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)"
 const PIXEL_10_USER_AGENT =
@@ -68,7 +70,7 @@ const ShotSchema = Schema.Struct({
   output: Schema.NonEmptyString,
   route: Schema.NonEmptyString,
   seedScenario: Schema.Literals(["docs", "none"]),
-  setup: Schema.optional(Schema.NonEmptyString),
+  setup: Schema.optional(Schema.Array(Schema.NonEmptyString)),
   steps: Schema.Array(StepSchema),
   userAgent: Schema.NonEmptyString,
   viewport: Schema.Struct({
@@ -87,13 +89,17 @@ const expandShotSetup = (shot, setups) => {
   if (shot.setup === undefined) {
     return shot
   }
-  const setupSteps = setups[shot.setup]
-  if (!setupSteps) {
-    throw new Error(`${shot.name} references an unknown setup: ${shot.setup}.`)
+  if (shot.setup.length === 0) {
+    throw new Error(`${shot.name} must reference at least one setup.`)
   }
-  const shotWithoutSetup = { ...shot }
-  delete shotWithoutSetup.setup
-  return { ...shotWithoutSetup, steps: [...setupSteps, ...shot.steps] }
+  const setupSteps = shot.setup.flatMap((setupName) => {
+    const steps = setups[setupName]
+    if (!steps) {
+      throw new Error(`${shot.name} references an unknown setup: ${setupName}.`)
+    }
+    return steps
+  })
+  return { ...shot, steps: [...setupSteps, ...shot.steps] }
 }
 
 const validateViewport = (shot) => {
@@ -111,6 +117,9 @@ const validateViewport = (shot) => {
   }
   if (shot.context === "phone" && shot.userAgent !== PIXEL_10_USER_AGENT) {
     throw new Error(`${shot.name} must use the Pixel 10 Chrome user agent.`)
+  }
+  if (shot.context === "desktop" && shot.userAgent !== DESKTOP_USER_AGENT) {
+    throw new Error(`${shot.name} must use the desktop Chrome user agent.`)
   }
 }
 
@@ -170,6 +179,14 @@ const readManifest = async () => {
   )
   if (manifest.shots.length === 0) {
     throw new Error("The screenshot manifest must contain at least one shot.")
+  }
+
+  const usedSetups = new Set(manifest.shots.flatMap((shot) => shot.setup ?? []))
+  const unusedSetups = Object.keys(manifest.setups).filter(
+    (setupName) => !usedSetups.has(setupName)
+  )
+  if (unusedSetups.length > 0) {
+    throw new Error(`Unused screenshot setups: ${unusedSetups.join(", ")}.`)
   }
 
   const state = {
