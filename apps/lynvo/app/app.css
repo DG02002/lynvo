@@ -453,7 +453,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   width: 100%;
   align-items: center;
   justify-content: center;
-  padding-block: clamp(64px, 10vw, 144px);
+  padding-block: clamp(40px, 5vw, 72px);
   background:
     radial-gradient(
       circle at 85% 8%,
@@ -474,7 +474,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
 }
 
 .home-screenshot-frame {
-  width: min(82vw, 1140px);
+  width: 84vw;
   padding: 10px;
   border-radius: 14px;
   background: #101012;

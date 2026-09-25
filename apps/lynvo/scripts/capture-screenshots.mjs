@@ -65,6 +65,8 @@ const StepSchema = Schema.Union([
 ])
 const ShotSchema = Schema.Struct({
   blockedReason: Schema.optional(Schema.NonEmptyString),
+  captureTarget: Schema.optional(LocatorDescriptorSchema),
+  captureStyles: Schema.optional(Schema.NonEmptyString),
   context: Schema.Literals(["desktop", "tv", "phone"]),
   framing: Schema.Union([
     Schema.Literal(false),
@@ -202,6 +204,7 @@ const validateShotFraming = (shot, state, palettes) => {
     shot.framing.mode === "css" &&
     (shot.route !== "/" ||
       !shot.name.startsWith("marketing-homepage-") ||
+      shot.captureTarget === undefined ||
       shot.framing.theme !==
         (shot.context === "phone" ? "aurora-059" : "aurora-058"))
   ) {
@@ -512,8 +515,10 @@ const runShotSteps = async ({ page, shot, origin, variables }) => {
 
 const preparePageForCapture = async ({ page, shot }) => {
   await page.addStyleTag({
-    content:
+    content: [
       "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
+      shot.captureStyles ?? "",
+    ].join("\n"),
   })
   await page.evaluate(() => document.fonts.ready.then(() => true))
   await resetScrollForCapture(page, shot)
@@ -535,12 +540,14 @@ const preparePageForCapture = async ({ page, shot }) => {
 
 const saveCapturedShot = async ({ page, shot, palettes }) => {
   const outputPath = path.resolve(APP_DIRECTORY, shot.output)
-  const capture = await page.screenshot({
+  const screenshotOptions = {
     type: "png",
     animations: "disabled",
     caret: "hide",
-    fullPage: false,
-  })
+  }
+  const capture = shot.captureTarget
+    ? await getLocator(page, shot.captureTarget).screenshot(screenshotOptions)
+    : await page.screenshot({ ...screenshotOptions, fullPage: false })
   if (shot.framing !== false && shot.framing.mode === "postprocess") {
     await frameScreenshot(capture, palettes[shot.framing.theme], {
       outputPath,

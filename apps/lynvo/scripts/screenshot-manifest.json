@@ -2135,6 +2135,7 @@
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
+      "captureStyles": "[data-site-header]{display:none!important}[data-site-content]{padding-top:0!important}",
       "viewport": {
         "width": 1470,
         "height": 836,
@@ -2159,6 +2160,10 @@
       "seedScenario": "none",
       "route": "/",
       "context": "desktop",
+      "captureStyles": "[data-site-header]{display:none!important}",
+      "captureTarget": {
+        "selector": ".home-screenshot-stage"
+      },
       "viewport": {
         "width": 1470,
         "height": 836,
@@ -2186,6 +2191,10 @@
       "seedScenario": "none",
       "route": "/",
       "context": "phone",
+      "captureStyles": "[data-site-header]{display:none!important}",
+      "captureTarget": {
+        "selector": ".home-screenshot-stage"
+      },
       "viewport": {
         "width": 412,
         "height": 924,

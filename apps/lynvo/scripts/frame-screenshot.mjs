@@ -48,9 +48,7 @@ const getFrameLayout = (metadata, viewport) => {
   }
 
   const canvasWidth = metadata.width
-  const panelWidth = Math.round(
-    Math.min(viewport.width * 0.82, 1140) * pixelRatio
-  )
+  const panelWidth = Math.round(viewport.width * 0.84 * pixelRatio)
   const framePadding = FRAME_PADDING_CSS * pixelRatio
   const screenWidth = panelWidth - framePadding * 2
   const screenHeight = Math.round(
@@ -59,7 +57,7 @@ const getFrameLayout = (metadata, viewport) => {
   const panelHeight = screenHeight + framePadding * 2
   const side = Math.round((canvasWidth - panelWidth) / 2)
   const verticalPadding =
-    Math.round(Math.min(Math.max(64, viewport.width * 0.1), 144)) * pixelRatio
+    Math.round(Math.min(Math.max(40, viewport.width * 0.05), 72)) * pixelRatio
   const outputHeight = panelHeight + verticalPadding * 2
 
   return {
