@@ -1,3 +1,4 @@
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   ApiIcon,
   ArrowUpRight01Icon,
@@ -30,7 +31,6 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
-import { Dialog, DialogContent } from "~/components/ui/dialog"
 import { cn } from "~/lib/utils"
 
 import { getDocumentationImageAsset } from "./docs-image-assets"
@@ -216,7 +216,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
             type="button"
             onClick={() => setZoomOpen(true)}
             aria-label={`Open image: ${alt}`}
-            className="mx-auto block w-full max-w-72 cursor-zoom-in overflow-hidden rounded-xl border border-border transition-[box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:shadow-[0_12px_32px_-20px_rgba(0,0,0,0.45)] sm:max-w-lg lg:max-w-full"
+            className="mx-auto block w-full max-w-72 cursor-zoom-in overflow-hidden rounded-xl border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:max-w-md lg:max-w-xl"
           >
             <img
               src={image.source}
@@ -226,19 +226,25 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
             />
           </button>
 
-          <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
-            <DialogContent
-              aria-label={alt}
-              className="w-auto max-w-[min(90rem,calc(100vw-2rem))] gap-0 rounded-2xl bg-transparent p-0 ring-0"
-            >
-              <img
-                src={image.source}
-                alt={alt}
-                onClick={() => setZoomOpen(false)}
-                className="max-h-[82svh] w-auto max-w-full cursor-zoom-out rounded-2xl"
-              />
-            </DialogContent>
-          </Dialog>
+          {/* Composed from the Base UI primitives directly because the zoom
+              dialog needs a solid backdrop and a pure zoom animation, while
+              the shared DialogContent always renders a blurred overlay. */}
+          <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
+            <DialogPrimitive.Portal>
+              <DialogPrimitive.Backdrop className="fixed inset-0 isolate z-50 bg-black" />
+              <DialogPrimitive.Popup
+                aria-label={alt}
+                className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none duration-150 motion-reduce:duration-0 data-open:animate-in data-open:zoom-in-90 data-closed:animate-out data-closed:zoom-out-90"
+              >
+                <img
+                  src={image.source}
+                  alt={alt}
+                  onClick={() => setZoomOpen(false)}
+                  className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-xl"
+                />
+              </DialogPrimitive.Popup>
+            </DialogPrimitive.Portal>
+          </DialogPrimitive.Root>
         </>
       ) : (
         <div

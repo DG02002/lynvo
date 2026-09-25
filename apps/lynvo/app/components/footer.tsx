@@ -16,7 +16,6 @@ const companyLinks = [
 
 const docsLinks = [
   { label: "Docs", to: sitePaths.docs },
-  { label: "Set up Android TV", to: sitePaths.androidTvSetup },
   { label: "Developers", to: sitePaths.developerDocs },
 ] as const
 
@@ -74,8 +73,7 @@ export function Footer() {
   const showLinkGroups = !(
     normalizedPathname === "/save" ||
     normalizedPathname === "/settings" ||
-    normalizedPathname.startsWith("/settings/") ||
-    normalizedPathname.startsWith("/docs/")
+    normalizedPathname.startsWith("/settings/")
   )
 
   return (

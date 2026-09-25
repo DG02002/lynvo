@@ -5,7 +5,7 @@ import { Footer } from "~/components/footer"
 import { Header } from "~/components/header"
 import { ReceiverOverlay } from "~/components/receiver-overlay"
 import { RemoteCommandListener } from "~/components/remote-command-listener"
-import { savePaths } from "~/lib/paths"
+import { isDocsRoutePathname, savePaths } from "~/lib/paths"
 
 declare global {
   interface SiteLayoutContentProps {
@@ -27,9 +27,7 @@ export const SiteLayoutContent = ({
   ReceiverOverlayComponent,
 }: SiteLayoutContentProps) => {
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/"
-  const isInnerDocsRoute =
-    normalizedPathname.startsWith("/docs/") ||
-    normalizedPathname.startsWith("/developer/")
+  const isDocsRoute = isDocsRoutePathname(normalizedPathname)
   const isSaveRoute = normalizedPathname === savePaths.root
   const isSaveFolderRoute = normalizedPathname.startsWith(
     savePaths.folderPrefix
@@ -45,7 +43,7 @@ export const SiteLayoutContent = ({
       >
         {children}
       </main>
-      {!isInnerDocsRoute && !isSaveFolderRoute && <FooterComponent />}
+      {!isDocsRoute && !isSaveFolderRoute && <FooterComponent />}
       <ReceiverOverlayComponent />
     </>
   )

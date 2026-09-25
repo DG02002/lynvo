@@ -16,18 +16,20 @@ const getTableOfContentsLinkClassName = (
   heading: PageHeading,
   isActive: boolean
 ): string => {
+  // The docs variant draws its own left border on every item, forming the
+  // vertical rail; nested headings step the rail to the right.
   const variantClassName =
     variant === "docs"
-      ? "block rounded-lg px-4 py-3 text-[0.9375rem] font-normal leading-6 transition-[color,background-color]"
+      ? "block border-l py-2 pr-2 pl-4 text-[0.9375rem] font-normal leading-5 transition-colors"
       : "block text-xs font-normal leading-5 transition-colors"
   const levelClassName =
-    heading.level === 3 && (variant === "docs" ? "ml-3 text-sm" : "pl-4")
+    heading.level === 3 && (variant === "docs" ? "ml-3 pl-4 text-sm" : "pl-4")
 
   let activeClassName: string
   if (variant === "docs") {
     activeClassName = isActive
-      ? "bg-muted text-blue-500 dark:text-blue-400"
-      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+      ? "border-l-blue-500 text-foreground dark:border-l-blue-400"
+      : "border-l-border text-muted-foreground hover:border-l-foreground/40 hover:text-foreground"
   } else {
     activeClassName = isActive
       ? "text-foreground"
@@ -87,20 +89,16 @@ export function PageTableOfContents({
     <nav
       ref={navigationRef}
       aria-label="On this page"
-      className={cn(
-        "flex flex-col",
-        variant === "docs" && "gap-3 px-4",
-        className
-      )}
+      className={cn("flex flex-col", variant === "docs" && "gap-4", className)}
     >
       {variant === "docs" && (
         <p className="text-lg font-normal tracking-tight text-foreground">
           On this page
         </p>
       )}
-      <ul
-        className={cn("flex flex-col", variant === "docs" ? "gap-1" : "gap-4")}
-      >
+      {/* The docs list keeps zero gap so the per-item left borders form one
+          continuous rail; vertical rhythm comes from each item's padding. */}
+      <ul className={cn("flex flex-col", variant === "policy" && "gap-4")}>
         {headings.map((heading) => {
           const isActive = heading.id === activeHeadingId
 

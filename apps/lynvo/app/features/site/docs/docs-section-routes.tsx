@@ -8,18 +8,12 @@ import { DocsHome } from "./docs-home"
 
 type DocumentationSectionKey = DocumentationPageContext["section"]
 
-export interface DocumentationBreadcrumbItem {
-  readonly label: string
-  readonly to?: string
-}
-
 export interface DocsRouteParams {
   params: Record<string, string | undefined>
 }
 
 export interface DocsLoaderData {
   slug: string | null
-  breadcrumb: readonly DocumentationBreadcrumbItem[] | null
 }
 
 const legacyPluginServerSlug = "plugin-server"
@@ -35,24 +29,6 @@ const getRedirectedDeveloperSlug = (slug: string): string | undefined => {
   }
 
   return undefined
-}
-
-const getBreadcrumbItems = (
-  section: DocumentationSectionKey,
-  slug: string
-): readonly DocumentationBreadcrumbItem[] | null => {
-  const context = docsCatalog.resolve(section, slug)
-  if (!context) {
-    return null
-  }
-
-  const sectionInfo = docsCatalog.getSection(section)
-
-  return [
-    { label: sectionInfo.label, to: sectionInfo.root },
-    { label: context.group },
-    { label: context.page.navLabel },
-  ]
 }
 
 const DocsSectionPage = ({ section }: { section: DocumentationSectionKey }) => {
@@ -89,7 +65,7 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
     const requestedSlug = params["*"]
 
     if (!requestedSlug) {
-      return { slug: null, breadcrumb: null }
+      return { slug: null }
     }
 
     const redirectedSlug =
@@ -104,10 +80,7 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
       throw data(null, { status: 404 })
     }
 
-    return {
-      slug: requestedSlug,
-      breadcrumb: getBreadcrumbItems(section, requestedSlug),
-    }
+    return { slug: requestedSlug }
   },
 
   meta: ({ data: loaderData }: { data: DocsLoaderData | undefined }) => {

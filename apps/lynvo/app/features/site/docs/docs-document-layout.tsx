@@ -1,4 +1,8 @@
-import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowDown01Icon,
+  ArrowRight01Icon,
+  ChevronRightIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import { Link } from "react-router"
@@ -18,6 +22,9 @@ import { getDocumentationPageIcon } from "./docs-navigation-icons"
 import { DocsPageActions } from "./docs-page-actions"
 
 type DocumentationSectionKey = DocumentationPageContext["section"]
+
+const docsContentGridClassName =
+  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_16rem]"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
@@ -52,6 +59,7 @@ const DocsSidebarContents = ({
           <Accordion
             key={group.group}
             multiple
+            className="rounded-none border-0"
             defaultValue={
               !currentSlug || currentGroup === group ? [group.group] : []
             }
@@ -63,7 +71,7 @@ const DocsSidebarContents = ({
               <AccordionTrigger className="rounded-lg px-3 py-2.5 text-sm font-medium hover:no-underline">
                 {group.group}
               </AccordionTrigger>
-              <AccordionContent className="pb-2">
+              <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
                 <ul className="flex flex-col gap-0.5">
                   {group.pages.map((page) => {
                     const isCurrentPage = page.slug === currentSlug
@@ -217,13 +225,30 @@ export const DocsDocumentLayout = ({
       />
     </div>
 
-    <div className="mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_16rem]">
-      <article className="min-w-0 px-6 pb-16 pt-8 md:px-8 lg:pt-12 xl:px-10">
-        <div className="mx-auto max-w-3xl">
+    {/* The introduction band spans the whole content region so the separator
+       below it runs edge to edge instead of stopping at the text column. */}
+    <div className="border-b border-border">
+      <div className={docsContentGridClassName}>
+        <div className="min-w-0 px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
           <header
             id="docs-page-introduction"
-            className="flex flex-col gap-5 border-b border-border pb-10"
+            className="mx-auto flex max-w-3xl flex-col gap-5"
           >
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <span>{context.group}</span>
+              <HugeiconsIcon
+                icon={ChevronRightIcon}
+                aria-hidden="true"
+                className="size-3.5 shrink-0"
+                strokeWidth={1.5}
+              />
+              <span aria-current="page" className="font-medium text-foreground">
+                {context.page.navLabel}
+              </span>
+            </nav>
             <h1 className="text-3xl font-normal tracking-tight text-balance md:text-4xl">
               {context.page.title}
             </h1>
@@ -242,11 +267,15 @@ export const DocsDocumentLayout = ({
               </p>
             </div>
           </header>
+        </div>
+        <div aria-hidden="true" className="hidden lg:block" />
+      </div>
+    </div>
 
-          <div
-            id="docs-content"
-            className="typeset typeset-docs docs-content pt-10"
-          >
+    <div className={docsContentGridClassName}>
+      <article className="min-w-0 px-6 pb-16 pt-10 md:px-8 xl:px-10">
+        <div className="mx-auto max-w-3xl">
+          <div id="docs-content" className="typeset typeset-docs docs-content">
             {children}
           </div>
 
@@ -277,7 +306,7 @@ export const DocsDocumentLayout = ({
       </article>
 
       <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] self-start overflow-y-auto py-12 pl-2 pr-6 lg:block xl:pr-8">
-        <PageTableOfContents targetId="docs-content" className="px-0" />
+        <PageTableOfContents targetId="docs-content" />
       </aside>
     </div>
   </DocsShell>

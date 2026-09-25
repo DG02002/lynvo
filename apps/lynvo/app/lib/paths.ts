@@ -6,7 +6,6 @@ export const authPaths = {
 
 export const sitePaths = {
   about: "/about",
-  androidTvSetup: "/docs/android-tv",
   changelog: "/changelog",
   developerDocs: "/developer",
   docs: "/docs",
@@ -15,6 +14,12 @@ export const sitePaths = {
   pricing: "/pricing",
   settings: "/settings",
 } as const
+
+export const isDocsRoutePathname = (pathname: string): boolean =>
+  pathname === sitePaths.docs ||
+  pathname.startsWith(`${sitePaths.docs}/`) ||
+  pathname === sitePaths.developerDocs ||
+  pathname.startsWith(`${sitePaths.developerDocs}/`)
 
 export const policyPaths = {
   cookiePolicy: "/policies/cookie-policy",

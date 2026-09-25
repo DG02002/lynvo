@@ -75,4 +75,12 @@ describe("SiteLayout", () => {
     renderLayout("/developer/manifest", <div>Manifest</div>)
     expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
   })
+
+  it("hides the footer on both documentation home pages", () => {
+    renderLayout("/docs", <div>Documentation home</div>)
+    expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
+
+    renderLayout("/developer", <div>Developer home</div>)
+    expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
+  })
 })
