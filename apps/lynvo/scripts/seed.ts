@@ -567,116 +567,125 @@ const docsMediaFixture = ({
 const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
   {
     slug: "drive-library",
-    url: sourceUrl("Shows%20and%20Movies/"),
-    title: "Shows and movies",
+    url: sourceUrl("TV%20Shows/"),
+    title: "TV Shows",
     daysAgo: 12,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
     nodes: [
-      groupNode("library-shows", "TV Shows", [
-        groupNode("library-severance", "Severance", [
-          groupNode("library-severance-s02", "Season 02", [
-            playableNode({
-              key: "library-severance-s02e03",
-              label:
-                "Severance (2022) - S02E03 - Who Is Alive? - 2160p WEB-DL HEVC HDR10.mkv",
-              url: playableUrl("severance-s02e03"),
-              size: "1.4 GB",
-            }),
-          ]),
-          resolvableNode("severance-season-03", "Season 03"),
-        ]),
-        groupNode("library-bear", "The Bear", [
+      groupNode("library-mindhunter", "Mindhunter", [
+        groupNode("library-mindhunter-s01", "Season 01", [
           playableNode({
-            key: "library-bear-s02e04",
+            key: "library-mindhunter-s01e01",
             label:
-              "Season 02/The Bear (2022) - S02E04 - Honeydew - 2160p WEB-DL HEVC.mkv",
-            url: playableUrl("the-bear-s02e04"),
-            size: "1.1 GB",
+              "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
+            url: playableUrl("mindhunter-s01e01"),
+            size: "1.2 GB",
           }),
         ]),
-        groupNode("library-mindhunter", "Mindhunter", [
-          groupNode("library-mindhunter-s01", "Season 01", [
-            playableNode({
-              key: "library-mindhunter-s01e01",
-              label:
-                "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
-              url: playableUrl("mindhunter-s01e01"),
-              size: "1.2 GB",
-            }),
-          ]),
-        ]),
+        resolvableNode("mindhunter-season-02", "Season 02"),
       ]),
-      groupNode("library-movies", "Movies", [
-        playableNode({
-          key: "library-12-angry-men",
-          label: "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
-          url: playableUrl("12-angry-men-1957"),
-          size: "1.6 GB",
-        }),
-        playableNode({
-          key: "library-taxi-driver",
-          label: "Taxi Driver (1976) - 1080p Blu-ray AVC.mkv",
-          url: playableUrl("taxi-driver-1976"),
-          size: "2.1 GB",
-        }),
-        playableNode({
-          key: "library-dune-part-two",
-          label: "Dune Part Two (2024) - 2160p Blu-ray HEVC HDR10.mkv",
-          url: playableUrl("dune-part-two"),
-          size: "2.8 GB",
-        }),
+      groupNode("library-the-sandman", "The Sandman", [
+        groupNode("library-the-sandman-s01", "Season 01", [
+          playableNode({
+            key: "library-the-sandman-s01e01",
+            label: "The Sandman S01E01 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s01e01"),
+            size: "4.2 GB",
+          }),
+          playableNode({
+            key: "library-the-sandman-s01e02",
+            label: "The Sandman S01E02 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s01e02"),
+            size: "4.0 GB",
+          }),
+        ]),
+        groupNode("library-the-sandman-s02", "Season 02", [
+          playableNode({
+            key: "library-the-sandman-s02e01",
+            label: "The Sandman S02E01 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s02e01"),
+            size: "4.5 GB",
+          }),
+          playableNode({
+            key: "library-the-sandman-s02e02",
+            label: "The Sandman S02E02 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s02e02"),
+            size: "4.3 GB",
+          }),
+        ]),
       ]),
     ],
   },
   {
-    slug: "the-bear-season-01",
-    url: sourceUrl("The%20Bear/Season%2001/"),
-    title: "The Bear",
+    slug: "movies-library",
+    url: sourceUrl("Movies/"),
+    title: "Movies",
+    daysAgo: 12,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      playableNode({
+        key: "library-12-angry-men",
+        label: "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
+        url: playableUrl("12-angry-men-1957"),
+        size: "1.6 GB",
+      }),
+      playableNode({
+        key: "library-taxi-driver",
+        label: "Taxi Driver (1976) - 1080p Blu-ray AVC.mkv",
+        url: playableUrl("taxi-driver-1976"),
+        size: "2.1 GB",
+      }),
+    ],
+  },
+  {
+    slug: "the-sandman-season-01",
+    url: sourceUrl("The%20Sandman/Season%2001/"),
+    title: "The Sandman",
     daysAgo: 2,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
     nodes: [
-      groupNode("bear-s01-show", "The Bear", [
-        groupNode("bear-s01-folder", "Season 01", [
+      groupNode("sandman-s01-show", "The Sandman", [
+        groupNode("sandman-s01-folder", "Season 01", [
           playableNode({
-            key: "bear-s01e01",
-            label: "The Bear (2022) - S01E01 - System - 1080p WEB-DL HEVC.mkv",
-            url: playableUrl("the-bear-s01e01"),
-            size: "1.0 GB",
+            key: "sandman-s01e01",
+            label: "The Sandman S01E01 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s01e01"),
+            size: "4.2 GB",
           }),
           playableNode({
-            key: "bear-s01e02",
-            label: "The Bear (2022) - S01E02 - Hands - 1080p WEB-DL HEVC.mkv",
-            url: playableUrl("the-bear-s01e02"),
-            size: "980 MB",
+            key: "sandman-s01e02",
+            label: "The Sandman S01E02 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s01e02"),
+            size: "4.0 GB",
           }),
         ]),
       ]),
     ],
   },
   {
-    slug: "the-bear-season-02",
-    url: sourceUrl("The%20Bear/Season%2002/"),
-    title: "The Bear",
+    slug: "the-sandman-season-02",
+    url: sourceUrl("The%20Sandman/Season%2002/"),
+    title: "The Sandman",
     daysAgo: 4,
     pluginId: "onedrive-index",
     pluginName: "Spencerwooo’s OneDrive Vercel Index",
     nodes: [
-      groupNode("bear-s02-show", "The Bear", [
-        groupNode("bear-s02-folder", "Season 02", [
+      groupNode("sandman-s02-show", "The Sandman", [
+        groupNode("sandman-s02-folder", "Season 02", [
           playableNode({
-            key: "bear-s02e04",
-            label:
-              "The Bear (2022) - S02E04 - Honeydew - 2160p WEB-DL HEVC.mkv",
-            url: playableUrl("the-bear-s02e04"),
-            size: "1.1 GB",
+            key: "sandman-s02e01",
+            label: "The Sandman S02E01 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s02e01"),
+            size: "4.5 GB",
           }),
           playableNode({
-            key: "bear-s02e05",
-            label: "The Bear (2022) - S02E05 - Pop - 2160p WEB-DL HEVC.mkv",
-            url: playableUrl("the-bear-s02e05"),
-            size: "1.2 GB",
+            key: "sandman-s02e02",
+            label: "The Sandman S02E02 2160p Blu-ray DV.mkv",
+            url: playableUrl("the-sandman-s02e02"),
+            size: "4.3 GB",
           }),
         ]),
       ]),
@@ -699,7 +708,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
   docsMediaFixture({
     slug: "mindhunter-s01e01",
     title: "Mindhunter",
-    filename: "Mindhunter (2017) - S01E01 - Episode 1 - 1080p WEB-DL HEVC.mkv",
+    filename: "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
     daysAgo: 0,
     size: "1.2 GB",
   }),
@@ -707,7 +716,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     slug: "when-life-gives-you-tangerines-s01e01",
     title: "When Life Gives You Tangerines",
     filename:
-      "When Life Gives You Tangerines (2025) - S01E01 - Episode 1 - 1080p WEB-DL HEVC.mkv",
+      "When Life Gives You Tangerines (2025) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
     daysAgo: 0,
     size: "1.3 GB",
   }),
@@ -722,7 +731,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
   docsMediaFixture({
     slug: "solo-leveling-s02e01",
     title: "Solo Leveling",
-    filename: "Solo Leveling (2024) - S02E01 - 1080p WEB-DL HEVC.mkv",
+    filename: "Solo Leveling (2024) - S02E01 - 1080p Blu-ray HEVC.mkv",
     daysAgo: 1,
     size: "1.1 GB",
   }),
@@ -768,12 +777,11 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     size: "1.2 GB",
   }),
   docsMediaFixture({
-    slug: "the-sandman-s01e01",
-    title: "The Sandman",
-    filename:
-      "The Sandman (2022) - S01E01 - Sleep of the Just - 2160p Blu-ray Dolby Vision HEVC.mkv",
+    slug: "green-mile-1999",
+    title: "The Green Mile",
+    filename: "The Green Mile (1999) - 2160p Blu-ray HEVC HDR10.mkv",
     daysAgo: 2,
-    size: "4.2 GB",
+    size: "7.4 GB",
   }),
   docsMediaFixture({
     slug: "dark-knight-2008",
@@ -797,9 +805,9 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     size: "2.0 GB",
   }),
   docsMediaFixture({
-    slug: "dune-part-two",
-    title: "Dune: Part Two",
-    filename: "Dune Part Two (2024) - 2160p Blu-ray HEVC HDR10.mkv",
+    slug: "the-prestige-2006",
+    title: "The Prestige",
+    filename: "The Prestige (2006) - 2160p Blu-ray HEVC HDR10.mkv",
     daysAgo: 4,
     size: "11.7 GB",
   }),
@@ -807,7 +815,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     slug: "severance-s02e03",
     title: "Severance",
     filename:
-      "Severance (2022) - S02E03 - Who Is Alive? - 2160p WEB-DL HEVC HDR10.mkv",
+      "Severance (2022) - S02E03 - Who Is Alive? - 2160p Blu-ray HEVC HDR10.mkv",
     daysAgo: 4,
     size: "2.4 GB",
     expiry: seedTime + 3 * DAY_MS + 5 * HOUR_MS + 30 * MINUTE_MS,

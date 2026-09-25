@@ -96,6 +96,13 @@
           }
         }
       ],
+      "requiredImages": [
+        "Artwork for 12 Angry Men (1957)",
+        "Artwork for Taxi Driver (1976)",
+        "Artwork for Mindhunter (2017) S01",
+        "Artwork for When Life Gives You Tangerines (2025) S01",
+        "Artwork for Breaking Bad (2008) S01"
+      ],
       "output": "app/features/site/docs/images/android-tv-gallery.png",
       "framing": {
         "mode": "postprocess",
@@ -235,7 +242,8 @@
         "Artwork for 12 Angry Men (1957)",
         "Artwork for Taxi Driver (1976)",
         "Artwork for Mindhunter (2017) S01",
-        "Artwork for When Life Gives You Tangerines (2025) S01"
+        "Artwork for When Life Gives You Tangerines (2025) S01",
+        "Artwork for Breaking Bad (2008) S01"
       ],
       "output": "app/features/site/docs/images/library-gallery-view.png",
       "setup": ["general-settings", "list-to-gallery"],
@@ -261,14 +269,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View The Bear",
+            "name": "View The Sandman",
             "index": 0
           },
           "expectVisible": {
@@ -280,7 +288,8 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for The Bear"
+            "name": "Open menu for The Sandman",
+            "index": 0
           },
           "expectVisible": {
             "text": "Change artwork",
@@ -288,6 +297,8 @@
           }
         }
       ],
+      "requiredImages": ["Artwork for The Sandman S01"],
+      "requiredTmdbImageCount": 3,
       "output": "app/features/site/docs/images/library-gallery-controls.png",
       "setup": ["general-settings", "gallery-view"],
       "framing": {
@@ -319,7 +330,7 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           },
           "expectVisible": {
             "role": "menuitem",
@@ -350,14 +361,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open menu for Shows and movies"
+            "name": "Open menu for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Shows and movies"
+            "name": "Open menu for TV Shows"
           },
           "expectVisible": {
             "text": "Refresh link choices",
@@ -389,14 +400,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           },
           "expectVisible": {
             "text": "Change artwork",
@@ -472,19 +483,8 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View Shows and movies",
+            "name": "View Movies",
             "exact": false
-          },
-          "expectVisible": {
-            "role": "button",
-            "name": "Movies, new"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Movies, new"
           },
           "expectVisible": {
             "role": "button",
@@ -524,44 +524,33 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View Shows and movies",
+            "name": "View TV Shows",
             "exact": false
           },
           "expectVisible": {
             "role": "button",
-            "name": "TV Shows, new"
+            "name": "Mindhunter, new"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "TV Shows, new"
+            "name": "Mindhunter, new"
           },
           "expectVisible": {
             "role": "button",
-            "name": "Severance, new"
+            "name": "Season 02, new"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Severance, new"
+            "name": "Season 02, new"
           },
           "expectVisible": {
-            "role": "button",
-            "name": "Season 03, new"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Season 03, new"
-          },
-          "expectVisible": {
-            "label": "Loading Season 03…"
+            "label": "Loading Season 02…"
           }
         }
       ],
@@ -596,12 +585,12 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View The Bear",
+            "name": "View The Sandman",
             "exact": false,
             "index": 0
           },
           "expectVisible": {
-            "text": "The Bear (2022) - S01E01 - System - 1080p WEB-DL HEVC.mkv",
+            "text": "The Sandman S01E01 2160p Blu-ray DV.mkv",
             "exact": true
           }
         },
@@ -609,7 +598,7 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "The Bear (2022) - S01E01 - System - 1080p WEB-DL HEVC.mkv, new"
+            "name": "The Sandman S01E01 2160p Blu-ray DV.mkv, new"
           },
           "expectVisible": {
             "text": "Mark as watched?",
@@ -675,7 +664,7 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           },
           "expectVisible": {
             "text": "Open in",
@@ -1436,14 +1425,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           },
           "expectVisible": {
             "role": "tree",
@@ -1873,7 +1862,7 @@
           "target": {
             "label": "Link"
           },
-          "value": "https://example.invalid/Dune.mkv",
+          "value": "https://example.invalid/Taxi%20Driver%20(1976).mkv",
           "expectVisible": {
             "label": "Link"
           }
@@ -1902,14 +1891,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           },
           "expectVisible": {
             "role": "tree",
@@ -1941,14 +1930,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           },
           "expectVisible": {
             "role": "tree",
@@ -1959,44 +1948,22 @@
           "action": "click",
           "target": {
             "role": "treeitem",
-            "name": "TV Shows"
+            "name": "Mindhunter"
           },
           "expectVisible": {
             "role": "treeitem",
-            "name": "Severance"
+            "name": "Season 01"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "treeitem",
-            "name": "Severance"
+            "name": "Season 01"
           },
           "expectVisible": {
             "role": "treeitem",
-            "name": "Season 02"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "treeitem",
-            "name": "Season 02"
-          },
-          "expectVisible": {
-            "role": "treeitem",
-            "name": "Severance (2022) - S02E03 - Who Is Alive? - 2160p WEB-DL HEVC HDR10.mkv"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "treeitem",
-            "name": "Movies"
-          },
-          "expectVisible": {
-            "role": "treeitem",
-            "name": "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv"
+            "name": "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv"
           }
         }
       ],

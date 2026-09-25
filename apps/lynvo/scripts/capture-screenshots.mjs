@@ -37,6 +37,7 @@ const CONTEXT_VIEWPORTS = {
   tv: { height: 1080, width: 1920 },
 }
 const STEP_TIMEOUT_MS = 15_000
+const IMAGE_TIMEOUT_MS = 45_000
 const SEED_TIMEOUT_MS = 120_000
 
 const LocatorDescriptorSchema = Schema.Struct({
@@ -84,6 +85,7 @@ const ShotSchema = Schema.Struct({
   name: Schema.NonEmptyString,
   output: Schema.NonEmptyString,
   preserveScrollPosition: Schema.optional(Schema.Boolean),
+  requiredTmdbImageCount: Schema.optional(Schema.Number),
   requiredImages: Schema.optional(Schema.Array(Schema.NonEmptyString)),
   route: Schema.NonEmptyString,
   seedScenario: Schema.Literals(["docs", "none"]),
@@ -192,6 +194,13 @@ const validateViewport = (shot) => {
     shot.steps.length === 0
   ) {
     throw new Error(`${shot.name} has an invalid viewport or no steps.`)
+  }
+  if (
+    shot.requiredTmdbImageCount !== undefined &&
+    (!Number.isSafeInteger(shot.requiredTmdbImageCount) ||
+      shot.requiredTmdbImageCount < 1)
+  ) {
+    throw new Error(`${shot.name} has an invalid required TMDB image count.`)
   }
   if (shot.context === "tv" && shot.userAgent !== TV_BRO_USER_AGENT) {
     throw new Error(`${shot.name} must use the verified TV Bro user agent.`)
@@ -570,16 +579,28 @@ const waitForRequiredImages = async (page, shot) => {
     (shot.requiredImages ?? []).map(async (alt) => {
       try {
         await page.waitForFunction(
-          (expectedAlt) =>
-            [...document.images].some(
-              (image) =>
-                image.alt === expectedAlt &&
-                image.complete &&
-                image.naturalWidth > 0
-            ),
+          (expectedAlt) => {
+            const image = [...document.images].find(
+              (candidate) => candidate.alt === expectedAlt
+            )
+            if (!image) {
+              return false
+            }
+            image.loading = "eager"
+            return image.complete && image.naturalWidth > 0
+          },
           alt,
-          { timeout: STEP_TIMEOUT_MS }
+          { timeout: IMAGE_TIMEOUT_MS }
         )
+        await page.evaluate((expectedAlt) => {
+          const image = [...document.images].find(
+            (candidate) => candidate.alt === expectedAlt
+          )
+          if (!image) {
+            throw new Error(`The required image ${expectedAlt} is missing.`)
+          }
+          return image.decode()
+        }, alt)
       } catch (error) {
         throw new Error(
           `${shot.name} did not load its required image ${JSON.stringify(alt)}.`,
@@ -588,6 +609,113 @@ const waitForRequiredImages = async (page, shot) => {
       }
     })
   )
+
+  if (shot.requiredTmdbImageCount === undefined) {
+    return
+  }
+
+  try {
+    await page.waitForFunction(
+      (requiredImageCount) => {
+        const artworkImages = [...document.images].filter((image) => {
+          if (image.dataset.tmdbImagePreview === "true") {
+            return false
+          }
+          return /(^|\/)image\.tmdb\.org\/t\/p\//u.test(
+            image.currentSrc || image.src
+          )
+        })
+        for (const image of artworkImages) {
+          image.loading = "eager"
+        }
+        return (
+          artworkImages.length >= requiredImageCount &&
+          artworkImages.every(
+            (image) => image.complete && image.naturalWidth > 0
+          )
+        )
+      },
+      shot.requiredTmdbImageCount,
+      { timeout: IMAGE_TIMEOUT_MS }
+    )
+    await page.evaluate(async (requiredImageCount) => {
+      const artworkImages = [...document.images].filter(
+        (image) =>
+          image.dataset.tmdbImagePreview !== "true" &&
+          /(^|\/)image\.tmdb\.org\/t\/p\//u.test(image.currentSrc || image.src)
+      )
+      if (artworkImages.length < requiredImageCount) {
+        throw new Error("The required TMDB artwork images are missing.")
+      }
+      await Promise.all(artworkImages.map((image) => image.decode()))
+    }, shot.requiredTmdbImageCount)
+  } catch (error) {
+    throw new Error(
+      `${shot.name} did not load all ${shot.requiredTmdbImageCount} required TMDB artwork images.`,
+      { cause: error }
+    )
+  }
+}
+
+const waitForVisibleTmdbImages = async (page, shot) => {
+  try {
+    await page.waitForFunction(
+      () => {
+        const visibleImages = [...document.images].filter((image) => {
+          if (
+            image.dataset.tmdbImagePreview === "true" ||
+            !/(^|\/)image\.tmdb\.org\/t\/p\//u.test(
+              image.currentSrc || image.src
+            )
+          ) {
+            return false
+          }
+          const bounds = image.getBoundingClientRect()
+          return (
+            bounds.width > 0 &&
+            bounds.height > 0 &&
+            bounds.bottom > 0 &&
+            bounds.right > 0 &&
+            bounds.top < window.innerHeight &&
+            bounds.left < window.innerWidth
+          )
+        })
+        for (const image of visibleImages) {
+          image.loading = "eager"
+        }
+        return visibleImages.every(
+          (image) => image.complete && image.naturalWidth > 0
+        )
+      },
+      null,
+      { timeout: IMAGE_TIMEOUT_MS }
+    )
+    await page.evaluate(async () => {
+      const visibleImages = [...document.images].filter((image) => {
+        if (
+          image.dataset.tmdbImagePreview === "true" ||
+          !/(^|\/)image\.tmdb\.org\/t\/p\//u.test(image.currentSrc || image.src)
+        ) {
+          return false
+        }
+        const bounds = image.getBoundingClientRect()
+        return (
+          bounds.width > 0 &&
+          bounds.height > 0 &&
+          bounds.bottom > 0 &&
+          bounds.right > 0 &&
+          bounds.top < window.innerHeight &&
+          bounds.left < window.innerWidth
+        )
+      })
+      await Promise.all(visibleImages.map((image) => image.decode()))
+    })
+  } catch (error) {
+    throw new Error(
+      `${shot.name} did not finish loading its visible TMDB artwork.`,
+      { cause: error }
+    )
+  }
 }
 
 const runShotSteps = async ({ page, shot, origin, variables }) => {
@@ -614,6 +742,7 @@ const preparePageForCapture = async ({ page, shot }) => {
     await resetScrollForCapture(page, shot)
   }
   await waitForRequiredImages(page, shot)
+  await waitForVisibleTmdbImages(page, shot)
   if (shot.framing !== false && shot.framing.mode === "css") {
     await page.waitForFunction(
       () => {
