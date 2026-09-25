@@ -14,8 +14,8 @@
     "linearMiddleStopPercent": 48
   },
   "frame": {
-    "widthViewportPercent": 70,
-    "maxWidthCssPixels": 1140,
+    "widthViewportPercent": 92,
+    "maxWidthCssPixels": 1320,
     "phoneWidthViewportPercent": 80,
     "phoneViewportMaxWidthCssPixels": 767,
     "paddingCssPixels": 10,
