@@ -165,6 +165,42 @@ The MCP server launches Chrome with a dedicated persistent profile, separate
 from your personal Chrome profile. State in that profile persists between runs,
 and it never attaches to a personal browser session.
 
+## Seed the docs scenario
+
+Start the app with `pnpm dev --no-auth`. The docs seed also registers a Custom
+Plugin Server at `http://localhost:8788`. The Vite auxiliary Plugin Server is
+available through a service binding, so start its local HTTP listener in a
+second terminal while seeding:
+
+```sh
+pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed
+```
+
+Then run `pnpm seed docs` from the repository root. Stop the standalone Worker
+with Ctrl-C when the seed finishes.
+
+## Capture the screenshot manifest
+
+Install Playwright's Chromium browser once after installing dependencies:
+
+```sh
+pnpm --filter @lynvo/app exec playwright install chromium
+```
+
+Keep the no-auth app and `dev:docs-seed` Worker running as above, then capture
+the checked-in screenshot manifest:
+
+```sh
+pnpm capture:screenshots
+```
+
+The runner reseeds the selected scenarios before opening isolated browser
+contexts. Use `--list` to print shot names, `--dry-run` to inspect selected
+routes and outputs, or `--only <name-or-prefix>` to retake a subset. Documentation
+shots follow each manifest entry's framing option and write finished assets under
+`apps/lynvo/app/features/site/docs/images/`; marketing captures stay in the
+ignored `apps/lynvo/.screenshots/intermediates/` directory.
+
 ## Test TV Bro-specific UI
 
 Run `pnpm dev`, sign in, and open Settings > Development. Turn on **Use TV

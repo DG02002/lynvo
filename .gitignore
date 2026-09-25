@@ -17,6 +17,7 @@ dist/
 # Generated Wrangler runtime types (cf-typegen); never committed
 apps/lynvo/worker-configuration.d.ts
 apps/lynvo-plugin-server/worker-configuration.d.ts
+apps/lynvo/.screenshots/intermediates/
 
 .env*
 !.env.example

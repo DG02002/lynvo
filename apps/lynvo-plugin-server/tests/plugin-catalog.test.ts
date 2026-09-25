@@ -149,6 +149,35 @@ describe("Lynvo plugin catalog", () => {
     ).toBe(true)
   })
 
+  it("exposes seeded proxy details only in the development manifest", () => {
+    const productionExtension = getLynvoManifestExtension(
+      createLynvoPluginServerManifest("https://lynvo.example")
+    )
+    const developmentManifest = createLynvoPluginServerManifest(
+      "https://lynvo.example",
+      { docsSeedProxyFixture: true }
+    )
+    const developmentExtension = getLynvoManifestExtension(developmentManifest)
+
+    expect(productionExtension.proxyProvider).toBeUndefined()
+    expect(
+      productionExtension.plugins?.every(
+        (plugin) => plugin.proxyCreditUsage === undefined
+      )
+    ).toBe(true)
+    expect(developmentExtension.proxyProvider).toBe("scrape-do")
+    expect(
+      developmentExtension.plugins
+        ?.filter((plugin) => plugin.proxyCreditUsage)
+        .map((plugin) => plugin.id)
+        .toSorted()
+    ).toEqual(["bhadoo-google-drive-index", "onedrive-index"])
+    expect(validatePluginServerManifestContract(developmentManifest)).toEqual({
+      ok: true,
+      issues: [],
+    })
+  })
+
   it("discovers a OneDrive index from its upstream repository link", async () => {
     vi.stubGlobal(
       "fetch",

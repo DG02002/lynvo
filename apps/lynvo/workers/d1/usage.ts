@@ -22,8 +22,10 @@ export const MANAGED_PLUGIN_IDS = [
 
 export type ManagedPluginId = (typeof MANAGED_PLUGIN_IDS)[number]
 
-const LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID = "lynvo-plugin-server-operations"
-const LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID = "lynvo-plugin-server-extractions"
+export const LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID =
+  "lynvo-plugin-server-operations"
+export const LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID =
+  "lynvo-plugin-server-extractions"
 const GLOBAL_USAGE_OWNER_KEY = "global"
 const USAGE_COUNTER_INITIAL_VALUE = 1
 const DAILY_USAGE_PERIOD = "daily"

@@ -42,6 +42,7 @@
         "SERVICE_VERSION": "0.1.0",
         "COMMIT_HASH": "unknown",
         "PUBLIC_ASSET_ORIGIN": "http://localhost:5173/lynvo-plugin-server-assets",
+        "DOCS_SEED_PROXY_FIXTURE": "false",
       },
       "secrets": {
         "required": ["PLUGIN_SERVER_AUTH_KEY"],

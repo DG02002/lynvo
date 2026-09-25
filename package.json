@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
+    "capture:screenshots": "pnpm --filter @lynvo/app capture:screenshots",
     "check": "pnpm run fmt:check && oxlint scripts && pnpm run lint:markdown && pnpm -r --if-present run check && knip && pnpm run knip:production",
     "check:plugin-server-release": "node scripts/verify-plugin-server-release.mjs",
     "dev": "pnpm --filter @lynvo/app dev",
@@ -13,6 +14,7 @@
     "lint": "oxlint scripts && pnpm run lint:markdown && pnpm -r --if-present run lint",
     "lint:markdown": "markdownlint-cli2",
     "prepare": "husky",
+    "seed": "pnpm --filter @lynvo/app seed",
     "sync:repos": "tsx scripts/sync-repos.ts",
     "knip": "knip",
     "fmt": "oxfmt package.json knip.json lint-staged.config.mjs .oxlintrc.json .oxfmtrc.json",

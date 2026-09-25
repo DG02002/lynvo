@@ -1,0 +1,2421 @@
+{
+  "version": 1,
+  "shots": [
+    {
+      "name": "settings-account",
+      "seedScenario": "docs",
+      "route": "/settings/account",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/account",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Account"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-account.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-001"
+      }
+    },
+    {
+      "name": "android-tv-tv-bro",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "tv",
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "heading",
+            "name": "General"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Open 12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
+            "exact": false
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/android-tv-tv-bro.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-002"
+      }
+    },
+    {
+      "name": "android-tv-gallery",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "tv",
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "selector": "[data-testid=\"gallery-save-item\"]",
+            "index": 0
+          }
+        }
+      ],
+      "requiredImages": [
+        "Artwork for 12 Angry Men (1957)",
+        "Artwork for Taxi Driver (1976)",
+        "Artwork for Mindhunter (2017) S01",
+        "Artwork for When Life Gives You Tangerines (2025) S01",
+        "Artwork for Breaking Bad (2008) S01"
+      ],
+      "output": "app/features/site/docs/images/android-tv-gallery.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-003"
+      }
+    },
+    {
+      "name": "settings-general",
+      "seedScenario": "docs",
+      "route": "/settings/general",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "heading",
+            "name": "General"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-general.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-004"
+      }
+    },
+    {
+      "name": "settings-general-view-cards",
+      "seedScenario": "docs",
+      "route": "/settings/general",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "radio",
+            "name": "Gallery view"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-general-view-cards.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-005"
+      }
+    },
+    {
+      "name": "library-list-view",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/library-list-view.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-006"
+      }
+    },
+    {
+      "name": "library-view-cards",
+      "seedScenario": "docs",
+      "route": "/settings/general",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/library-view-cards.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-007"
+      }
+    },
+    {
+      "name": "library-gallery-view",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Open menu for 12 Angry Men"
+          }
+        }
+      ],
+      "requiredImages": [
+        "Artwork for 12 Angry Men (1957)",
+        "Artwork for Taxi Driver (1976)",
+        "Artwork for Mindhunter (2017) S01",
+        "Artwork for When Life Gives You Tangerines (2025) S01",
+        "Artwork for Breaking Bad (2008) S01"
+      ],
+      "output": "app/features/site/docs/images/library-gallery-view.webp",
+      "setup": ["general-settings", "list-to-gallery"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-008"
+      }
+    },
+    {
+      "name": "library-gallery-controls",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Open menu for The Prestige"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "View The Sandman",
+            "index": 0
+          },
+          "expectVisible": {
+            "text": "Show episode names",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Open menu for The Sandman",
+            "index": 0
+          },
+          "expectVisible": {
+            "text": "Change artwork",
+            "exact": true
+          }
+        }
+      ],
+      "requiredImages": ["Artwork for The Sandman S01"],
+      "requiredTmdbImageCount": 3,
+      "output": "app/features/site/docs/images/library-gallery-controls.webp",
+      "setup": ["general-settings", "gallery-view"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-009"
+      }
+    },
+    {
+      "name": "library-item-menu",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Open menu for The Prestige"
+          },
+          "expectVisible": {
+            "role": "menuitem",
+            "name": "View log"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/library-item-menu.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-010"
+      }
+    },
+    {
+      "name": "library-refresh-link-choices",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Open menu for TV Shows"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Open menu for TV Shows"
+          },
+          "expectVisible": {
+            "text": "Refresh link choices",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/library-refresh-link-choices.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-011"
+      }
+    },
+    {
+      "name": "library-change-artwork",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Open menu for The Prestige"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Open menu for The Prestige"
+          },
+          "expectVisible": {
+            "text": "Change artwork",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Change artwork",
+            "exact": true
+          },
+          "expectVisible": {
+            "placeholder": "Search by title"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/library-change-artwork.webp",
+      "setup": ["general-settings", "gallery-view"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-012"
+      }
+    },
+    {
+      "name": "library-expiry-states",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Link expired",
+            "exact": false
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/library-expiry-states.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-013"
+      }
+    },
+    {
+      "name": "opening-links-folder-browser",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "View Movies",
+            "exact": false
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv, new"
+          }
+        }
+      ],
+      "setup": ["list-view"],
+      "output": "app/features/site/docs/images/opening-links-folder-browser.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-014"
+      }
+    },
+    {
+      "name": "opening-links-resolving-folder",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "holdExtractionUntilCapture": true,
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "View TV Shows",
+            "exact": false
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "Mindhunter, new"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Mindhunter, new"
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "Season 02, new"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Season 02, new"
+          },
+          "expectVisible": {
+            "label": "Loading Season 02…"
+          }
+        }
+      ],
+      "setup": ["list-view"],
+      "output": "app/features/site/docs/images/opening-links-resolving-folder.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-015"
+      }
+    },
+    {
+      "name": "opening-links-watched-confirmation",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "View The Sandman",
+            "exact": false,
+            "index": 0
+          },
+          "expectVisible": {
+            "text": "The Sandman S01E01 2160p Blu-ray DV.mkv",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "The Sandman S01E01 2160p Blu-ray DV.mkv, new"
+          },
+          "expectVisible": {
+            "text": "Mark as watched?",
+            "exact": true
+          }
+        }
+      ],
+      "setup": ["list-view"],
+      "output": "app/features/site/docs/images/opening-links-watched-confirmation.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-016"
+      }
+    },
+    {
+      "name": "settings-player",
+      "seedScenario": "docs",
+      "route": "/settings/player",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/player",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Player"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-player.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-017"
+      }
+    },
+    {
+      "name": "player-not-installed",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Open menu for The Prestige"
+          },
+          "expectVisible": {
+            "text": "Open in",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Open in",
+            "exact": true
+          },
+          "expectVisible": {
+            "text": "Just (Video) Player",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Just (Video) Player",
+            "exact": true
+          },
+          "expectVisible": {
+            "text": "Couldn’t open Just (Video) Player",
+            "exact": false
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/player-not-installed.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-018"
+      }
+    },
+    {
+      "name": "settings-plugins",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-019"
+      }
+    },
+    {
+      "name": "settings-plugins-info",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "preserveScrollPosition": true,
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Bhadoo’s Google Drive Index info",
+            "index": 0
+          },
+          "expectVisible": {
+            "text": "Version",
+            "exact": false
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-info.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-020"
+      }
+    },
+    {
+      "name": "settings-plugins-domain-dialog",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Add domain for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "HTTP Basic Auth",
+            "exact": false
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-021"
+      }
+    },
+    {
+      "name": "settings-plugins-edit-credentials",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Edit credentials for drive.example.invalid"
+          },
+          "expectVisible": {
+            "text": "Edit Plugin Credentials",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-022"
+      }
+    },
+    {
+      "name": "settings-plugins-remove-credentials",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Edit credentials for drive.example.invalid"
+          },
+          "expectVisible": {
+            "text": "Edit Plugin Credentials",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Remove credentials"
+          },
+          "expectVisible": {
+            "text": "Remove these Plugin Credentials?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-023"
+      }
+    },
+    {
+      "name": "settings-plugins-remove-domain",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Remove drive.example.invalid"
+          },
+          "expectVisible": {
+            "text": "Remove this domain?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-remove-domain.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-024"
+      }
+    },
+    {
+      "name": "settings-plugins-add-server",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Add Custom Plugin Server"
+          },
+          "expectVisible": {
+            "text": "Server URL",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-add-server.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-025"
+      }
+    },
+    {
+      "name": "settings-plugins-server-row",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Collapse plugins"
+          },
+          "expectVisible": {
+            "text": "Spencerwooo’s OneDrive Vercel Index",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-server-row.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-026"
+      }
+    },
+    {
+      "name": "settings-plugins-delete-server",
+      "seedScenario": "docs",
+      "route": "/settings/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "selector": "button[aria-label^='Actions for ']"
+          },
+          "expectVisible": {
+            "text": "Delete",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Delete",
+            "exact": true
+          },
+          "expectVisible": {
+            "text": "Delete this Custom Plugin Server?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-plugins-delete-server.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-027"
+      }
+    },
+    {
+      "name": "settings-proxy",
+      "seedScenario": "docs",
+      "route": "/settings/proxy",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/proxy",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Proxy keys"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-proxy.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-028"
+      }
+    },
+    {
+      "name": "settings-proxy-key-dialog",
+      "seedScenario": "docs",
+      "route": "/settings/proxy",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/proxy",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Proxy keys"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Change key"
+          },
+          "expectVisible": {
+            "text": "Scrape.do API token",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-proxy-key-dialog.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-029"
+      }
+    },
+    {
+      "name": "settings-proxy-balance",
+      "seedScenario": "docs",
+      "route": "/settings/proxy",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/proxy",
+          "expectVisible": {
+            "text": "Refresh balance",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-proxy-balance.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-030"
+      }
+    },
+    {
+      "name": "remote-play-device-picker",
+      "blockedReason": "The required shot combines live connected receivers with Search again; the local seed has no paired live browser and the current picker shows Search again only in its empty or error state.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Set up or control Remote Play"
+          },
+          "expectVisible": {
+            "text": "Connect Remote Play",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Search again"
+          },
+          "expectVisible": {
+            "text": "No Remote Play devices found",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/remote-play-device-picker.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-031"
+      }
+    },
+    {
+      "name": "remote-play-connected-to",
+      "blockedReason": "This shot requires a real Remote Play pairing between two live browser sessions, which the docs seed does not create.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/remote-play-connected-to.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-032"
+      }
+    },
+    {
+      "name": "remote-play-controlled-by",
+      "blockedReason": "This shot requires a real Remote Play pairing between two live browser sessions, which the docs seed does not create.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "tv",
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Severance",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/remote-play-controlled-by.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-033"
+      }
+    },
+    {
+      "name": "remote-play-receiver-overlay",
+      "blockedReason": "This shot requires an active controlling-device realtime event from a second live browser session, which the docs seed does not create.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "tv",
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Severance",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/remote-play-receiver-overlay.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-034"
+      }
+    },
+    {
+      "name": "saving-links-input",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "label": "Link"
+          }
+        },
+        {
+          "action": "fill",
+          "target": {
+            "label": "Link"
+          },
+          "value": "https://media.example.invalid/lynvo-demo/12-angry-men-1957.mkv",
+          "expectVisible": {
+            "label": "Link"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-input.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-035"
+      }
+    },
+    {
+      "name": "saving-links-clipboard-permission",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "label": "Link"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Enable clipboard suggestions"
+          },
+          "expectVisible": {
+            "text": "Paste links faster",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-clipboard-permission.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-036"
+      }
+    },
+    {
+      "name": "saving-links-choose-links",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Choose links for TV Shows"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Choose links for TV Shows"
+          },
+          "expectVisible": {
+            "role": "tree",
+            "name": "Choose links to save"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-choose-links.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-037"
+      }
+    },
+    {
+      "name": "saving-links-extraction-failed",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "View log"
+          },
+          "expectVisible": {
+            "text": "Link log",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-extraction-failed.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-038"
+      }
+    },
+    {
+      "name": "saving-links-source-maintenance",
+      "blockedReason": "This transient Source status is produced during a live extraction and is not part of the persistent docs seed state.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "label": "Link"
+          },
+          "expectVisible": {
+            "label": "Link"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-source-maintenance.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-039"
+      }
+    },
+    {
+      "name": "saving-links-source-degraded",
+      "blockedReason": "This transient Source status is produced during a live extraction and is not part of the persistent docs seed state.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "label": "Link"
+          },
+          "expectVisible": {
+            "label": "Link"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-source-degraded.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-040"
+      }
+    },
+    {
+      "name": "saving-links-source-unavailable",
+      "blockedReason": "This transient Source status is produced during a live extraction and is not part of the persistent docs seed state.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "label": "Link"
+          },
+          "expectVisible": {
+            "label": "Link"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-source-unavailable.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-041"
+      }
+    },
+    {
+      "name": "saving-links-domain-suggestion",
+      "blockedReason": "The docs seed configures drive.example.invalid already, so the unregistered-domain suggestion has no truthful local fixture state.",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "label": "Link"
+          }
+        },
+        {
+          "action": "fill",
+          "target": {
+            "label": "Link"
+          },
+          "value": "https://drive.example.invalid/New%20Folder/",
+          "expectVisible": {
+            "label": "Link"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/saving-links-domain-suggestion.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-042"
+      }
+    },
+    {
+      "name": "settings-security-sessions",
+      "seedScenario": "docs",
+      "route": "/settings/security/active-sessions",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/security/active-sessions",
+          "expectVisible": {
+            "text": "Current session",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-security-sessions.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-043"
+      }
+    },
+    {
+      "name": "settings-security-sign-out-device",
+      "seedScenario": "docs",
+      "route": "/settings/security/active-sessions",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/security/active-sessions",
+          "expectVisible": {
+            "text": "Current session",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sign out",
+            "index": 1
+          },
+          "expectVisible": {
+            "text": "Sign out this session?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-security-sign-out-device.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-044"
+      }
+    },
+    {
+      "name": "settings-security-sign-out-all",
+      "seedScenario": "docs",
+      "route": "/settings/security/active-sessions",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/security/active-sessions",
+          "expectVisible": {
+            "text": "Current session",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Sign out of all sessions"
+          },
+          "expectVisible": {
+            "text": "Sign out of all sessions?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-security-sign-out-all.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-045"
+      }
+    },
+    {
+      "name": "settings-security-delete-account",
+      "seedScenario": "docs",
+      "route": "/settings/security",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/security",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Security and sign-in"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "Delete account",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "heading",
+            "name": "Delete account"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-security-delete-account.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-046"
+      }
+    },
+    {
+      "name": "sign-in-tv-qr",
+      "blockedReason": "The local docs capture uses --no-auth, which signs every browser into the development account and redirects guest auth routes to /save.",
+      "seedScenario": "docs",
+      "route": "/auth/sign-in-with-another-device",
+      "context": "tv",
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/auth/sign-in-with-another-device",
+          "expectVisible": {
+            "selector": "[aria-label=\"Sign-in verification code\"]"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/sign-in-tv-qr.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-047"
+      }
+    },
+    {
+      "name": "sign-in-approval",
+      "blockedReason": "The local docs capture uses --no-auth, which signs every browser into the development account and redirects guest auth routes to /save.",
+      "seedScenario": "docs",
+      "route": "/auth/device",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/auth/sign-in-with-another-device",
+          "expectVisible": {
+            "selector": "[aria-label=\"Sign-in verification code\"]"
+          },
+          "captureAs": "deviceCode"
+        },
+        {
+          "action": "navigate",
+          "path": "/auth/device?user_code={{deviceCode}}",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Approve sign-in"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/sign-in-approval.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-048"
+      }
+    },
+    {
+      "name": "start-guide-save",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "label": "Link"
+          }
+        },
+        {
+          "action": "fill",
+          "target": {
+            "label": "Link"
+          },
+          "value": "https://example.invalid/Taxi%20Driver%20(1976).mkv",
+          "expectVisible": {
+            "label": "Link"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/start-guide-save.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-049"
+      }
+    },
+    {
+      "name": "start-guide-choose-links",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Choose links for TV Shows"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Choose links for TV Shows"
+          },
+          "expectVisible": {
+            "role": "tree",
+            "name": "Choose links to save"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/start-guide-choose-links.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-050"
+      }
+    },
+    {
+      "name": "start-guide-tv-library",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "tv",
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "role": "button",
+            "name": "Choose links for TV Shows"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Choose links for TV Shows"
+          },
+          "expectVisible": {
+            "role": "tree",
+            "name": "Choose links to save"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "treeitem",
+            "name": "Mindhunter"
+          },
+          "expectVisible": {
+            "role": "treeitem",
+            "name": "Season 01"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "treeitem",
+            "name": "Season 01"
+          },
+          "expectVisible": {
+            "role": "treeitem",
+            "name": "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/start-guide-tv-library.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-051"
+      }
+    },
+    {
+      "name": "settings-storage",
+      "seedScenario": "docs",
+      "route": "/settings/storage",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/storage",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Storage"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-storage.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-052"
+      }
+    },
+    {
+      "name": "settings-storage-delete-older",
+      "seedScenario": "docs",
+      "route": "/settings/storage",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/storage",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Storage"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "combobox",
+            "name": "Delete saved links after"
+          },
+          "expectVisible": {
+            "text": "7 days",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "7 days",
+            "exact": true
+          },
+          "expectVisible": {
+            "text": "Delete older links?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-storage-delete-older.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-053"
+      }
+    },
+    {
+      "name": "settings-storage-delete-all",
+      "seedScenario": "docs",
+      "route": "/settings/storage",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/storage",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Storage"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Delete all"
+          },
+          "expectVisible": {
+            "text": "Delete all saved links?",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-storage-delete-all.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-054"
+      }
+    },
+    {
+      "name": "settings-usage",
+      "seedScenario": "docs",
+      "route": "/settings/usage",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/usage",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Monthly usage limit",
+            "index": 0
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-usage.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-055"
+      }
+    },
+    {
+      "name": "settings-usage-custom",
+      "seedScenario": "docs",
+      "route": "/settings/usage",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/usage",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Custom Plugin Server usage"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-usage-custom.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-056"
+      }
+    },
+    {
+      "name": "settings-usage-retry",
+      "blockedReason": "The docs seed returns healthy Usage data; this error state needs an explicit local failed-response fixture.",
+      "seedScenario": "docs",
+      "route": "/settings/usage",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/usage",
+          "expectVisible": {
+            "text": "Usage couldn’t be loaded",
+            "exact": false
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-usage-retry.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-057"
+      }
+    },
+    {
+      "name": "homepage-library-source",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "captureStyles": "[data-site-header]{display:none!important}[data-site-content]{padding-top:0!important}",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        }
+      ],
+      "output": "public/images/homepage/library-overview.png",
+      "framing": false
+    },
+    {
+      "name": "marketing-homepage-desktop",
+      "seedScenario": "none",
+      "route": "/",
+      "context": "desktop",
+      "captureStyles": "[data-site-header]{display:none!important}",
+      "captureTarget": {
+        "selector": ".home-screenshot-stage"
+      },
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/",
+          "expectVisible": {
+            "role": "img",
+            "name": "Lynvo Library in List view"
+          }
+        }
+      ],
+      "output": ".screenshots/intermediates/marketing-homepage-desktop.png",
+      "framing": {
+        "mode": "css",
+        "theme": "aurora-058"
+      }
+    },
+    {
+      "name": "marketing-homepage-phone",
+      "seedScenario": "none",
+      "route": "/",
+      "context": "phone",
+      "captureStyles": "[data-site-header]{display:none!important}",
+      "captureTarget": {
+        "selector": ".home-screenshot-stage"
+      },
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/",
+          "expectVisible": {
+            "role": "img",
+            "name": "Lynvo Library in List view"
+          }
+        }
+      ],
+      "output": ".screenshots/intermediates/marketing-homepage-phone.png",
+      "framing": {
+        "mode": "css",
+        "theme": "aurora-059"
+      }
+    },
+    {
+      "name": "marketing-plugins-desktop",
+      "seedScenario": "none",
+      "route": "/plugins",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/plugins",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Lynvo Plugins"
+          }
+        }
+      ],
+      "output": ".screenshots/intermediates/marketing-plugins-desktop.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-060"
+      }
+    },
+    {
+      "name": "marketing-pricing-desktop",
+      "seedScenario": "none",
+      "route": "/pricing",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/pricing",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Pricing"
+          }
+        }
+      ],
+      "output": ".screenshots/intermediates/marketing-pricing-desktop.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-061"
+      }
+    }
+  ],
+  "setups": {
+    "list-view": [
+      {
+        "action": "navigate",
+        "path": "/settings/general",
+        "expectVisible": {
+          "role": "heading",
+          "name": "General"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      }
+    ],
+    "general-settings": [
+      {
+        "action": "navigate",
+        "path": "/settings/general",
+        "expectVisible": {
+          "role": "heading",
+          "name": "General"
+        }
+      }
+    ],
+    "gallery-choice": [
+      {
+        "action": "click",
+        "target": {
+          "role": "switch",
+          "name": "Save all links automatically"
+        },
+        "expectVisible": {
+          "role": "switch",
+          "name": "Save all links automatically"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "Gallery view",
+          "exact": true
+        },
+        "expectVisible": {
+          "text": "Beta",
+          "exact": true
+        }
+      }
+    ],
+    "gallery-view": [
+      {
+        "action": "click",
+        "target": {
+          "text": "Gallery view",
+          "exact": true
+        },
+        "expectVisible": {
+          "text": "Beta",
+          "exact": true
+        }
+      }
+    ],
+    "list-to-gallery": [
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "Gallery view",
+          "exact": true
+        },
+        "expectVisible": {
+          "text": "Beta",
+          "exact": true
+        }
+      }
+    ]
+  }
+}
