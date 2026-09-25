@@ -41,5 +41,10 @@
   "homeThemes": {
     "desktop": "aurora-058",
     "phone": "aurora-059"
+  },
+  "docsCanvas": {
+    "widthCssPixels": 1470,
+    "heightCssPixels": 827,
+    "panelMarginCssPixels": 36
   }
 }

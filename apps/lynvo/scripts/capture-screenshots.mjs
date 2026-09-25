@@ -8,6 +8,7 @@ import { chromium } from "playwright"
 
 import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec.json" with { type: "json" }
 import {
+  frameDocsScreenshot,
   frameScreenshot,
   saveScreenshot,
   validatePalette,
@@ -233,6 +234,7 @@ const validateOutput = (shot, state) => {
     (!isDocsOutput && !isMarketingOutput && !isHomepageImageOutput) ||
     (isDocsOutput &&
       path.basename(outputPath) !== `${shot.name}${extension}`) ||
+    (isDocsOutput && shot.framing === false) ||
     (isHomepageImageOutput && shot.framing !== false)
   ) {
     throw new Error(
@@ -716,7 +718,12 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
     ? await getLocator(page, shot.captureTarget).screenshot(screenshotOptions)
     : await page.screenshot({ ...screenshotOptions, fullPage: false })
   if (shot.framing !== false && shot.framing.mode === "postprocess") {
-    await frameScreenshot(capture, palettes[shot.framing.theme], {
+    // Documentation images share the fixed docs canvas; marketing captures
+    // keep the viewport-proportional frame.
+    const frameCapture = outputPath.startsWith(DOCS_IMAGES_DIRECTORY)
+      ? frameDocsScreenshot
+      : frameScreenshot
+    await frameCapture(capture, palettes[shot.framing.theme], {
       outputPath,
       viewport: shot.viewport,
     })

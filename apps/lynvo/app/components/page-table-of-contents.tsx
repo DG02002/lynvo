@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState, type RefObject } from "react"
 
 import { DOCS_SCROLL_OFFSET_PX } from "~/lib/constants"
 import { cn } from "~/lib/utils"
@@ -9,37 +9,99 @@ import {
   useHeadingClickHandler,
   type PageHeading,
 } from "./page-heading-navigation"
-import { getScrollAdjustment } from "./page-table-of-contents-utils"
+import {
+  buildOutlineRail,
+  getScrollAdjustment,
+  type OutlineRailPaths,
+  type OutlineRailRow,
+} from "./page-table-of-contents-utils"
+
+const OUTLINE_RAIL_STEP_PX = 12
+const OUTLINE_RAIL_WIDTH_PX = OUTLINE_RAIL_STEP_PX + 4
 
 const getTableOfContentsLinkClassName = (
   variant: "docs" | "policy",
   heading: PageHeading,
   isActive: boolean
 ): string => {
-  // The docs variant draws its own left border on every item, forming the
-  // vertical rail; nested headings step the rail to the right.
+  // The docs variant reserves room for the SVG rail drawn behind the list;
+  // nested headings shift right to line up with the rail's inner step.
   const variantClassName =
     variant === "docs"
-      ? "block border-l py-2 pr-2 pl-4 text-[0.9375rem] font-normal leading-5 transition-colors"
+      ? "block py-2 pr-2 pl-6 text-[0.9375rem] font-normal leading-5 transition-colors"
       : "block text-xs font-normal leading-5 transition-colors"
   const levelClassName =
-    heading.level === 3 && (variant === "docs" ? "ml-3 pl-4 text-sm" : "pl-4")
+    heading.level === 3 && (variant === "docs" ? "ml-3 pl-6 text-sm" : "pl-4")
 
-  let activeClassName: string
-  if (variant === "docs") {
-    activeClassName = isActive
-      ? "border-l-blue-500 text-foreground dark:border-l-blue-400"
-      : "border-l-border text-muted-foreground hover:border-l-foreground/40 hover:text-foreground"
-  } else {
-    activeClassName = isActive
-      ? "text-foreground"
-      : "text-muted-foreground hover:text-foreground"
-  }
+  const activeClassName = isActive
+    ? "text-foreground"
+    : "text-muted-foreground hover:text-foreground"
 
   return cn(variantClassName, levelClassName, activeClassName)
 }
 
 const getDocsScrollOffset = () => DOCS_SCROLL_OFFSET_PX
+
+interface OutlineRailGeometry {
+  height: number
+  paths: OutlineRailPaths
+}
+
+const useOutlineRailGeometry = ({
+  activeHeadingId,
+  headings,
+  listRef,
+  variant,
+}: {
+  activeHeadingId: string
+  headings: readonly PageHeading[]
+  listRef: RefObject<HTMLUListElement | null>
+  variant: "docs" | "policy"
+}) => {
+  const [geometry, setGeometry] = useState<OutlineRailGeometry>()
+
+  useEffect(() => {
+    const list = listRef.current
+    if (!list || variant !== "docs" || headings.length === 0) {
+      return undefined
+    }
+
+    const measureRail = () => {
+      // The rail SVG is also a child of the list, so measure the list items.
+      const items = Array.from(list.children).filter(
+        (child): child is HTMLLIElement => child instanceof HTMLLIElement
+      )
+      const rows: OutlineRailRow[] = headings.map((heading, index) => {
+        const item = items[index]
+        const top = item?.offsetTop ?? 0
+        return {
+          bottom: item ? top + item.offsetHeight : 0,
+          level: heading.level ?? 2,
+          top,
+        }
+      })
+      const activeRowIndex = headings.findIndex(
+        (heading) => heading.id === activeHeadingId
+      )
+      const paths = buildOutlineRail(rows, activeRowIndex, OUTLINE_RAIL_STEP_PX)
+      if (paths) {
+        setGeometry({ height: list.offsetHeight, paths })
+      }
+    }
+
+    measureRail()
+    const observer = new ResizeObserver(measureRail)
+    observer.observe(list)
+    for (const item of Array.from(list.children)) {
+      if (item instanceof HTMLElement) {
+        observer.observe(item)
+      }
+    }
+    return () => observer.disconnect()
+  }, [activeHeadingId, headings, listRef, variant])
+
+  return geometry
+}
 
 export function PageTableOfContents({
   className,
@@ -53,12 +115,19 @@ export function PageTableOfContents({
   variant?: "docs" | "policy"
 }) {
   const navigationRef = useRef<HTMLElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
   const headings = useDocumentHeadings(providedHeadings, targetId)
   const [activeHeadingId, setActiveHeadingId] = useActiveHeadingTracker(
     headings,
     getDocsScrollOffset
   )
   const handleHeadingClick = useHeadingClickHandler(setActiveHeadingId)
+  const railGeometry = useOutlineRailGeometry({
+    activeHeadingId,
+    headings,
+    listRef,
+    variant,
+  })
 
   useEffect(() => {
     const navigation = navigationRef.current
@@ -96,9 +165,41 @@ export function PageTableOfContents({
           On this page
         </p>
       )}
-      {/* The docs list keeps zero gap so the per-item left borders form one
-          continuous rail; vertical rhythm comes from each item's padding. */}
-      <ul className={cn("flex flex-col", variant === "policy" && "gap-4")}>
+      {/* The docs list is the positioning context for the rail and keeps zero
+          gap so the measured offsets stay continuous; vertical rhythm comes
+          from each item's padding. */}
+      <ul
+        ref={listRef}
+        className={cn(
+          "relative flex flex-col",
+          variant === "policy" && "gap-4"
+        )}
+      >
+        {variant === "docs" && railGeometry && (
+          <svg
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 left-0 overflow-visible"
+            width={OUTLINE_RAIL_WIDTH_PX}
+            height={railGeometry.height}
+            viewBox={`0 0 ${OUTLINE_RAIL_WIDTH_PX} ${railGeometry.height}`}
+            fill="none"
+          >
+            <path
+              d={railGeometry.paths.basePath}
+              className="stroke-border"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+            <path
+              d={railGeometry.paths.activePath}
+              className="stroke-blue-500 dark:stroke-blue-400"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+          </svg>
+        )}
         {headings.map((heading) => {
           const isActive = heading.id === activeHeadingId
 

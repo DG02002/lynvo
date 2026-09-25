@@ -19,8 +19,11 @@ import { DocsPageActions } from "./docs-page-actions"
 
 type DocumentationSectionKey = DocumentationPageContext["section"]
 
+// The content column is capped so the article and its table of contents sit
+// together as one centered group instead of the TOC drifting to the far edge
+// of a maximally wide content track.
 const docsContentGridClassName =
-  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_16rem]"
+  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,50rem)_15rem] lg:justify-center xl:grid-cols-[minmax(0,50rem)_16rem]"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
@@ -221,39 +224,41 @@ export const DocsDocumentLayout = ({
       />
     </div>
 
-    {/* The introduction band spans the whole content region so the separator
-       below it runs edge to edge instead of stopping at the text column. */}
-    <div className="border-b border-border">
-      <div className={docsContentGridClassName}>
-        <div className="min-w-0 px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
-          <header
-            id="docs-page-introduction"
-            className="mx-auto flex max-w-3xl flex-col gap-5"
-          >
-            <h1 className="text-3xl font-normal tracking-tight text-balance md:text-4xl">
-              {context.page.title}
-            </h1>
-            <p className="text-base leading-7 text-muted-foreground text-pretty">
-              {context.page.description}
-            </p>
-            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <DocsPageActions page={context.page} />
-              <p className="text-sm text-muted-foreground">
-                Last updated{" "}
-                <time dateTime={context.page.lastModified}>
-                  {lastModifiedDateFormatter.format(
-                    new Date(`${context.page.lastModified}T00:00:00Z`)
-                  )}
-                </time>
-              </p>
-            </div>
-          </header>
-        </div>
-        <div aria-hidden="true" className="hidden lg:block" />
-      </div>
-    </div>
-
+    {/* One grid holds the introduction, the article, and the outline; the
+       outline cell spans both rows so "On this page" starts beside the page
+       title instead of below the introduction separator. */}
     <div className={docsContentGridClassName}>
+      <div className="min-w-0 border-b border-border px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
+        <header
+          id="docs-page-introduction"
+          className="mx-auto flex max-w-3xl flex-col gap-5"
+        >
+          <h1 className="text-3xl font-normal tracking-tight text-balance md:text-4xl">
+            {context.page.title}
+          </h1>
+          <p className="text-base leading-7 text-muted-foreground text-pretty">
+            {context.page.description}
+          </p>
+          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <DocsPageActions page={context.page} />
+            <p className="text-sm text-muted-foreground">
+              Last updated{" "}
+              <time dateTime={context.page.lastModified}>
+                {lastModifiedDateFormatter.format(
+                  new Date(`${context.page.lastModified}T00:00:00Z`)
+                )}
+              </time>
+            </p>
+          </div>
+        </header>
+      </div>
+
+      <div className="hidden lg:row-span-2 lg:block">
+        <aside className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto py-12 pl-2 pr-6 xl:pr-8">
+          <PageTableOfContents targetId="docs-content" />
+        </aside>
+      </div>
+
       <article className="min-w-0 px-6 pb-16 pt-10 md:px-8 xl:px-10">
         <div className="mx-auto max-w-3xl">
           <div id="docs-content" className="typeset typeset-docs docs-content">
@@ -285,10 +290,6 @@ export const DocsDocumentLayout = ({
           )}
         </div>
       </article>
-
-      <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] self-start overflow-y-auto py-12 pl-2 pr-6 lg:block xl:pr-8">
-        <PageTableOfContents targetId="docs-content" />
-      </aside>
     </div>
   </DocsShell>
 )

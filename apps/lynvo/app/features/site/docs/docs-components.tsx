@@ -216,8 +216,10 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
             type="button"
             onClick={() => setZoomOpen(true)}
             aria-label={`Open image: ${alt}`}
-            className="mx-auto block w-full max-w-72 cursor-zoom-in overflow-hidden rounded-xl border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:max-w-md lg:max-w-xl"
+            className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-xl border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
+            {/* Framed docs screenshots share one fixed canvas, so full-width
+                rendering keeps every figure the same size. */}
             <img
               src={image.source}
               alt={alt}
