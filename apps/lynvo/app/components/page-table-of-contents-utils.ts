@@ -27,53 +27,50 @@ export interface OutlineRailRow {
 }
 
 export interface OutlineRailPaths {
-  activePath: string
+  activeSegment: { top: number; bottom: number }
   basePath: string
 }
-
-const OUTLINE_RAIL_CORNER_RADIUS_PX = 8
 
 // SVG accepts raw numbers, but measured offsets pick up float noise; trim to
 // two decimals so the path strings stay stable.
 const formatRailCoordinate = (value: number) => `${Number(value.toFixed(2))}`
 
 const getRailX = (level: 2 | 3, stepPx: number) => (level === 2 ? 0 : stepPx)
+const OUTLINE_RAIL_CORNER_RADIUS_PX = 4
 
-// Rounds one polyline corner into a line-to plus quadratic curve pair, with
-// the radius clamped so neighboring corners never overlap.
-const getCornerCurveParts = (
+const getCornerParts = (
   previous: readonly [number, number],
   corner: readonly [number, number],
   next: readonly [number, number]
-): [string, string] => {
+): string[] => {
   const [previousX, previousY] = previous
   const [cornerX, cornerY] = corner
   const [nextX, nextY] = next
-  const radius = Math.min(
-    OUTLINE_RAIL_CORNER_RADIUS_PX,
-    Math.hypot(cornerX - previousX, cornerY - previousY) / 2,
-    Math.hypot(nextX - cornerX, nextY - cornerY) / 2
-  )
   const incomingX = cornerX - previousX
   const incomingY = cornerY - previousY
-  const incomingLength = Math.hypot(incomingX, incomingY) || 1
   const outgoingX = nextX - cornerX
   const outgoingY = nextY - cornerY
-  const outgoingLength = Math.hypot(outgoingX, outgoingY) || 1
+  const incomingLength = Math.hypot(incomingX, incomingY)
+  const outgoingLength = Math.hypot(outgoingX, outgoingY)
+  const radius = Math.min(
+    OUTLINE_RAIL_CORNER_RADIUS_PX,
+    incomingLength / 2,
+    outgoingLength / 2
+  )
+  if (radius === 0) {
+    return [
+      `L ${formatRailCoordinate(cornerX)} ${formatRailCoordinate(cornerY)}`,
+    ]
+  }
   return [
-    `L ${formatRailCoordinate(
-      cornerX - (incomingX / incomingLength) * radius
-    )} ${formatRailCoordinate(cornerY - (incomingY / incomingLength) * radius)}`,
-    `Q ${formatRailCoordinate(cornerX)} ${formatRailCoordinate(cornerY)} ${formatRailCoordinate(
-      cornerX + (outgoingX / outgoingLength) * radius
-    )} ${formatRailCoordinate(cornerY + (outgoingY / outgoingLength) * radius)}`,
+    `L ${formatRailCoordinate(cornerX - (incomingX / incomingLength) * radius)} ${formatRailCoordinate(cornerY - (incomingY / incomingLength) * radius)}`,
+    `Q ${formatRailCoordinate(cornerX)} ${formatRailCoordinate(cornerY)} ${formatRailCoordinate(cornerX + (outgoingX / outgoingLength) * radius)} ${formatRailCoordinate(cornerY + (outgoingY / outgoingLength) * radius)}`,
   ]
 }
 
-const buildRoundedPath = (points: ReadonlyArray<readonly [number, number]>) => {
+const buildRailPath = (points: ReadonlyArray<readonly [number, number]>) => {
   const firstPoint = points.at(0)
-  const lastPoint = points.at(-1)
-  if (!firstPoint || !lastPoint || points.length < 2) {
+  if (!firstPoint || points.length < 2) {
     return ""
   }
   const [startX, startY] = firstPoint
@@ -82,14 +79,10 @@ const buildRoundedPath = (points: ReadonlyArray<readonly [number, number]>) => {
   ]
   for (let index = 1; index < points.length - 1; index += 1) {
     pathParts.push(
-      ...getCornerCurveParts(
-        points[index - 1],
-        points[index],
-        points[index + 1]
-      )
+      ...getCornerParts(points[index - 1], points[index], points[index + 1])
     )
   }
-  const [endX, endY] = lastPoint
+  const [endX, endY] = points.at(-1)!
   pathParts.push(
     `L ${formatRailCoordinate(endX)} ${formatRailCoordinate(endY)}`
   )
@@ -105,10 +98,15 @@ const getBaseRailPoints = (
   ]
   for (let index = 1; index < rows.length; index += 1) {
     if (rows[index].level !== rows[index - 1].level) {
-      const boundaryY = rows[index].top
+      const previousBottom = rows[index - 1].bottom
+      const nextTop = rows[index].top
+      const cornerInset = Math.min(
+        OUTLINE_RAIL_CORNER_RADIUS_PX,
+        Math.max(0, nextTop - previousBottom) / 2
+      )
       points.push(
-        [getRailX(rows[index - 1].level, stepPx), boundaryY],
-        [getRailX(rows[index].level, stepPx), boundaryY]
+        [getRailX(rows[index - 1].level, stepPx), previousBottom + cornerInset],
+        [getRailX(rows[index].level, stepPx), nextTop - cornerInset]
       )
     }
   }
@@ -119,43 +117,6 @@ const getBaseRailPoints = (
   return points
 }
 
-const getActiveRailPoints = (
-  rows: readonly OutlineRailRow[],
-  activeRowIndex: number,
-  stepPx: number
-): Array<[number, number]> => {
-  const activeRow = rows[activeRowIndex] ?? rows[0]
-  const activeX = getRailX(activeRow.level, stepPx)
-  const points: Array<[number, number]> = [[activeX, activeRow.top]]
-  let activeBottom = activeRow.bottom
-  let childStart: number | undefined
-  for (
-    let index = activeRowIndex + 1;
-    index < rows.length && rows[index].level > activeRow.level;
-    index += 1
-  ) {
-    childStart ??= rows[index].top
-    activeBottom = rows[index].bottom
-  }
-  if (childStart !== undefined) {
-    points.push(
-      [activeX, childStart],
-      [getRailX(3, stepPx), childStart],
-      [getRailX(3, stepPx), activeBottom],
-      [activeX, activeBottom]
-    )
-  } else {
-    points.push([activeX, activeBottom])
-  }
-  return points
-}
-
-/**
- * Builds the table-of-contents rail as SVG paths: one continuous base line
- * that steps sideways with rounded elbows wherever the heading level changes,
- * and one active segment that starts at the active heading, follows its
- * nested children, and returns to the parent indent.
- */
 export const buildOutlineRail = (
   rows: readonly OutlineRailRow[],
   activeRowIndex: number,
@@ -164,10 +125,12 @@ export const buildOutlineRail = (
   if (rows.length === 0) {
     return undefined
   }
+  const activeRow = rows[activeRowIndex] ?? rows[0]
   return {
-    activePath: buildRoundedPath(
-      getActiveRailPoints(rows, activeRowIndex, stepPx)
-    ),
-    basePath: buildRoundedPath(getBaseRailPoints(rows, stepPx)),
+    activeSegment: {
+      top: activeRow.top,
+      bottom: activeRow.bottom,
+    },
+    basePath: buildRailPath(getBaseRailPoints(rows, stepPx)),
   }
 }

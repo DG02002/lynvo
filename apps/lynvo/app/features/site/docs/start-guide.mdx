@@ -1,67 +1,30 @@
 ---
 title: Start guide
-description: Save a supported link on your phone, find it on your TV, and open it in an Android player.
+description: Save a supported URL on one device and open it on Android TV without typing the link with a remote.
 navLabel: Start guide
 contentType: Tutorial
 ---
 
-<DocsScreenshot
-  name="start-guide-save"
-  alt="Lynvo Save page on a phone with a Source URL ready to save"
-/>
-
-<DocSection id="overview">
-
-## Overview
-
-Lynvo saves the Source URL you choose, finds playable links, and sends the link you select to an Android player. You bring the links and choose the player.
-
-</DocSection>
-
-<DocSection id="configure">
-
-## Configure
-
-Set up your TV before saving links:
-
-1. Install TV Bro on your Android TV.
-2. Install Just (Video) Player or VLC on the TV.
-3. Open Lynvo on a phone or computer and [sign in with Google](/docs/sign-in).
-4. Open Lynvo in TV Bro and [sign in on the TV](/docs/android-tv).
-
-</DocSection>
-
-<DocSection id="basics">
-
-## Basics
-
-### Save a Source URL
-
-1. Open Lynvo on the device where you have the URL.
-2. Paste the URL into **Link** and choose **Save link**.
-3. If Lynvo finds more than one playable choice, select the links you want and choose **Save**.
-
-Read [how saving links works](/docs/saving-links) if you see an error, a loading state, or a link-selection dialog.
-
-<DocsScreenshot
-  name="start-guide-choose-links"
-  alt="Choose links dialog on a phone showing Media Nodes and Playable links ready for selection"
-/>
-
-### Find the Saved link on your TV
-
-Open Lynvo in TV Bro while signed in to the same account. Saved links sync across signed-in sessions. Choose the Saved link, browse its folders if needed, then open a Playable link in the configured player.
+Save a supported URL on your phone or computer, then open its Playable link on Android TV without typing the URL with a remote.
 
 <DocsScreenshot
   name="start-guide-tv-library"
-  alt="Lynvo Library on Android TV showing a Saved link and its Playable link choices"
+  alt="Lynvo Library in TV Bro on Android TV showing Saved links ready to open"
 />
 
-Read [how to open links](/docs/opening-links) for folder navigation and player choices.
+<DocSection id="get-started">
 
-### Send a link from your phone
+## Get started
 
-Keep Lynvo open on the TV, then use [Remote Play](/docs/remote-play) from another signed-in device to choose the TV and send a Playable link to it.
+Use a URL you have permission to access. Lynvo keeps the links you choose; it does not provide videos or play them itself.
+
+1. On your phone or computer, [sign in with Google](/docs/sign-in).
+2. Open [Save](/save), paste a supported URL into **Link**, and choose **Save link**. If **Choose links** appears, select the Playable links you want and choose **Save**. The Saved link may show a loading state while Lynvo finds them. Read [Saving links](/docs/saving-links) if it needs attention.
+3. On your Android TV, install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser) and [Just (Video) Player](https://play.google.com/store/apps/details?id=com.brouken.player) or [VLC for Android](https://play.google.com/store/apps/details?id=org.videolan.vlc).
+4. Open Lynvo in TV Bro. Choose **Sign in**, then **Use a QR code**. Scan and approve the code with the phone or computer you signed in on. See [Android TV setup](/docs/android-tv) if you need help entering Lynvo's address.
+5. In TV Bro, find the Saved link in your Library. Open it, browse any Folders, and choose a Playable link. Lynvo sends that link to the installed Android player.
+
+Read [Opening links](/docs/opening-links) for folder navigation and player choices. You can also use [Remote Play](/docs/remote-play) to send a Playable link from your phone to an open TV session.
 
 </DocSection>
 
@@ -69,18 +32,16 @@ Keep Lynvo open on the TV, then use [Remote Play](/docs/remote-play) from anothe
 
 ## FAQ
 
-<DocsFaq question="Does Lynvo provide videos to save?">
-  No. Lynvo is a link library. You choose supported Source URLs and are
-  responsible for having permission to access and play them.
+<DocsFaq question="Why can't I find my Saved link on the TV?">
+  Check that Lynvo is signed in to the same account on both devices. If the
+  Saved link is still loading or needs a selection, finish that step in your
+  Library before opening its Playable link.
 </DocsFaq>
 
-<DocsFaq question="Does Lynvo remember where I stopped watching?">
-  No. Lynvo records whether you opened a link. The external player owns playback
-  and its position.
-</DocsFaq>
-
-<DocsFaq question="Can I use a different Android player?">
-Lynvo supports Just (Video) Player, VLC, mpv, and MX Player. Choose defaults in [**Settings > Player**](/settings/player), or choose a player for one open from the Saved link menu.
+<DocsFaq question="What if the link does not open in a player?">
+  Install the player selected in [**Settings > Player**](/settings/player) on
+  the TV. If Lynvo could not load the link, check its status in your Library
+  and follow [Saving links](/docs/saving-links) to retry.
 </DocsFaq>
 
 </DocSection>

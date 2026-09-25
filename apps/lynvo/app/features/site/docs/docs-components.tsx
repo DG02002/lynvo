@@ -216,7 +216,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
             type="button"
             onClick={() => setZoomOpen(true)}
             aria-label={`Open image: ${alt}`}
-            className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-xl border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {/* Framed docs screenshots share one fixed canvas, so full-width
                 rendering keeps every figure the same size. */}
@@ -233,16 +233,16 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
               the shared DialogContent always renders a blurred overlay. */}
           <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
             <DialogPrimitive.Portal>
-              <DialogPrimitive.Backdrop className="fixed inset-0 isolate z-50 bg-black" />
+              <DialogPrimitive.Backdrop className="docs-image-backdrop fixed inset-0 isolate z-50 bg-white dark:bg-black" />
               <DialogPrimitive.Popup
                 aria-label={alt}
-                className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none duration-150 motion-reduce:duration-0 data-open:animate-in data-open:zoom-in-90 data-closed:animate-out data-closed:zoom-out-90"
+                className="docs-image-popup fixed top-1/2 left-1/2 z-50 outline-none"
               >
                 <img
                   src={image.source}
                   alt={alt}
                   onClick={() => setZoomOpen(false)}
-                  className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-xl"
+                  className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md"
                 />
               </DialogPrimitive.Popup>
             </DialogPrimitive.Portal>
@@ -252,7 +252,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
         <div
           role="img"
           aria-label={`${alt}. Expected image: ${expectedImagePaths}`}
-          className="flex min-h-36 flex-col justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
+          className="flex min-h-36 flex-col justify-center gap-2 rounded-md border border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
         >
           <span className="font-medium text-foreground">Screenshot needed</span>
           <span className="font-mono text-muted-foreground">

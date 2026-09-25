@@ -56,56 +56,62 @@ describe("documentation outline rail", () => {
     const rail = buildOutlineRail([row(0, 40, 2), row(40, 80, 2)], 0, 12)
 
     expect(rail?.basePath).toBe("M 0 0 L 0 80")
-    expect(rail?.activePath).toBe("M 0 0 L 0 40")
+    expect(rail?.activeSegment).toEqual({ top: 0, bottom: 40 })
   })
 
-  it("curves the base rail out and back around nested headings", () => {
+  it("softens the base rail steps around nested headings", () => {
     const rail = buildOutlineRail(
-      [row(0, 40, 2), row(40, 80, 3), row(80, 120, 3), row(120, 160, 2)],
+      [row(0, 40, 2), row(60, 100, 3), row(100, 140, 3), row(160, 200, 2)],
       3,
       12
     )
 
-    expect(rail?.basePath?.startsWith("M 0 0")).toBe(true)
-    expect(rail?.basePath).toContain("L 0 34 Q 0 40 6 40")
-    expect(rail?.basePath).toContain("L 6 40 Q 12 40 12 46")
-    expect(rail?.basePath).toContain("L 12 114 Q 12 120 6 120")
-    expect(rail?.basePath).toContain("L 6 120 Q 0 120 0 126")
-    expect(rail?.basePath?.endsWith("L 0 160")).toBe(true)
+    expect(rail?.basePath).toContain("L 0 40 Q 0 44")
+    expect(rail?.basePath).toContain("Q 12 56 12 60")
+    expect(rail?.basePath).toContain("L 12 140 Q 12 144")
+    expect(rail?.basePath).toContain("Q 0 156 0 160")
   })
 
   it("keeps an active nested heading on the inner step", () => {
     const rail = buildOutlineRail(
-      [row(0, 40, 2), row(40, 80, 3), row(80, 120, 2)],
+      [row(0, 40, 2), row(60, 100, 3), row(120, 160, 2)],
       1,
       12
     )
 
-    expect(rail?.activePath).toBe("M 12 40 L 12 80")
+    expect(rail?.activeSegment).toEqual({ top: 60, bottom: 100 })
   })
 
-  it("extends an active parent heading along its nested children", () => {
+  it("highlights only the active parent heading", () => {
     const rail = buildOutlineRail(
-      [row(0, 40, 2), row(40, 80, 3), row(80, 120, 3), row(120, 160, 2)],
+      [row(0, 40, 2), row(60, 100, 3), row(100, 140, 3), row(160, 200, 2)],
       0,
       12
     )
 
-    expect(rail?.activePath?.startsWith("M 0 0")).toBe(true)
-    expect(rail?.activePath).toContain("Q 12 40")
-    expect(rail?.activePath).toContain("Q 12 120 6 120")
-    expect(rail?.activePath?.endsWith("L 0 120")).toBe(true)
+    expect(rail?.activeSegment).toEqual({ top: 0, bottom: 40 })
   })
 
-  it("clamps the elbow radius on short segments", () => {
-    const rail = buildOutlineRail([row(0, 8, 2), row(8, 16, 3)], 1, 12)
+  it("keeps both active rows full length around an indented bend", () => {
+    const rows = [row(0, 40, 2), row(60, 100, 3)]
+    const parentRail = buildOutlineRail(rows, 0, 18)
+    const childRail = buildOutlineRail(rows, 1, 18)
 
-    expect(rail?.basePath).toContain("Q 0 8 4 8")
+    expect(parentRail?.activeSegment).toEqual({ top: 0, bottom: 40 })
+    expect(parentRail?.basePath).toContain("L 0 40 Q 0 44")
+    expect(childRail?.activeSegment).toEqual({ top: 60, bottom: 100 })
+  })
+
+  it("keeps small bends within short segments", () => {
+    const rail = buildOutlineRail([row(0, 8, 2), row(12, 20, 3)], 1, 12)
+
+    expect(rail?.basePath).toContain("Q")
+    expect(rail?.activeSegment).toEqual({ top: 12, bottom: 20 })
   })
 
   it("keeps the rail at the inner step when the list ends nested", () => {
-    const rail = buildOutlineRail([row(0, 40, 2), row(40, 80, 3)], 1, 12)
+    const rail = buildOutlineRail([row(0, 40, 2), row(60, 100, 3)], 1, 12)
 
-    expect(rail?.basePath?.endsWith("L 12 80")).toBe(true)
+    expect(rail?.basePath?.endsWith("L 12 100")).toBe(true)
   })
 })

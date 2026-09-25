@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from "react"
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react"
 
 import { DOCS_SCROLL_OFFSET_PX } from "~/lib/constants"
 import { cn } from "~/lib/utils"
@@ -16,7 +22,7 @@ import {
   type OutlineRailRow,
 } from "./page-table-of-contents-utils"
 
-const OUTLINE_RAIL_STEP_PX = 12
+const OUTLINE_RAIL_STEP_PX = 18
 const OUTLINE_RAIL_WIDTH_PX = OUTLINE_RAIL_STEP_PX + 4
 
 const getTableOfContentsLinkClassName = (
@@ -31,7 +37,8 @@ const getTableOfContentsLinkClassName = (
       ? "block py-2 pr-2 pl-6 text-[0.9375rem] font-normal leading-5 transition-colors"
       : "block text-xs font-normal leading-5 transition-colors"
   const levelClassName =
-    heading.level === 3 && (variant === "docs" ? "ml-3 pl-6 text-sm" : "pl-4")
+    heading.level === 3 &&
+    (variant === "docs" ? "ml-[18px] pl-6 text-sm" : "pl-4")
 
   const activeClassName = isActive
     ? "text-foreground"
@@ -101,6 +108,69 @@ const useOutlineRailGeometry = ({
   }, [activeHeadingId, headings, listRef, variant])
 
   return geometry
+}
+
+const getPathLengthAtY = (path: SVGPathElement, y: number, total: number) => {
+  let lower = 0
+  let upper = total
+  for (let index = 0; index < 24; index += 1) {
+    const middle = (lower + upper) / 2
+    if (path.getPointAtLength(middle).y < y) {
+      lower = middle
+    } else {
+      upper = middle
+    }
+  }
+  return (lower + upper) / 2
+}
+
+function OutlineRail({ height, paths }: OutlineRailGeometry) {
+  const activePathRef = useRef<SVGPathElement>(null)
+  const [dash, setDash] = useState<{
+    length: number
+    offset: number
+    total: number
+  }>()
+
+  useLayoutEffect(() => {
+    const path = activePathRef.current
+    if (!path) {
+      return
+    }
+    const total = path.getTotalLength()
+    const start = getPathLengthAtY(path, paths.activeSegment.top, total)
+    const end = getPathLengthAtY(path, paths.activeSegment.bottom, total)
+    setDash({ length: end - start, offset: -start, total })
+  }, [paths])
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0 overflow-visible"
+      width={OUTLINE_RAIL_WIDTH_PX}
+      height={height}
+      viewBox={`0 0 ${OUTLINE_RAIL_WIDTH_PX} ${height}`}
+      fill="none"
+    >
+      <path
+        d={paths.basePath}
+        className="stroke-border"
+        strokeLinecap="butt"
+        strokeLinejoin="round"
+        strokeWidth={2}
+      />
+      <path
+        ref={activePathRef}
+        d={paths.basePath}
+        className="docs-outline-active stroke-blue-500 dark:stroke-blue-400"
+        strokeDasharray={dash ? `${dash.length} ${dash.total}` : "0 1"}
+        strokeDashoffset={dash?.offset ?? 0}
+        strokeLinecap="butt"
+        strokeLinejoin="round"
+        strokeWidth={2}
+      />
+    </svg>
+  )
 }
 
 export function PageTableOfContents({
@@ -176,35 +246,21 @@ export function PageTableOfContents({
         )}
       >
         {variant === "docs" && railGeometry && (
-          <svg
-            aria-hidden="true"
-            className="pointer-events-none absolute top-0 left-0 overflow-visible"
-            width={OUTLINE_RAIL_WIDTH_PX}
-            height={railGeometry.height}
-            viewBox={`0 0 ${OUTLINE_RAIL_WIDTH_PX} ${railGeometry.height}`}
-            fill="none"
-          >
-            <path
-              d={railGeometry.paths.basePath}
-              className="stroke-border"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-            />
-            <path
-              d={railGeometry.paths.activePath}
-              className="stroke-blue-500 dark:stroke-blue-400"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-            />
-          </svg>
+          <OutlineRail {...railGeometry} />
         )}
-        {headings.map((heading) => {
+        {headings.map((heading, index) => {
           const isActive = heading.id === activeHeadingId
+          const changesLevel =
+            index > 0 &&
+            (heading.level ?? 2) !== (headings[index - 1].level ?? 2)
 
           return (
-            <li key={heading.id}>
+            <li
+              key={heading.id}
+              className={
+                variant === "docs" && changesLevel ? "mt-5" : undefined
+              }
+            >
               <a
                 href={`#${heading.id}`}
                 aria-current={isActive ? "location" : undefined}

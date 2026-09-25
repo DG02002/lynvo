@@ -200,6 +200,7 @@ routes and outputs, or `--only <name-or-prefix>` to retake a subset. Documentati
 shots follow each manifest entry's framing option and write finished assets under
 `apps/lynvo/app/features/site/docs/images/`; marketing captures stay in the
 ignored `apps/lynvo/.screenshots/intermediates/` directory.
+TV Bro shots use a 960 × 540 browser viewport at device scale factor 1.
 
 ## Test TV Bro-specific UI
 

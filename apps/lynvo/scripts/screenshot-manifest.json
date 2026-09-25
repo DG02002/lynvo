@@ -34,9 +34,9 @@
       "route": "/save",
       "context": "tv",
       "viewport": {
-        "width": 1920,
-        "height": 1080,
-        "deviceScaleFactor": 2
+        "width": 960,
+        "height": 540,
+        "deviceScaleFactor": 1
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -81,9 +81,9 @@
       "route": "/save",
       "context": "tv",
       "viewport": {
-        "width": 1920,
-        "height": 1080,
-        "deviceScaleFactor": 2
+        "width": 960,
+        "height": 540,
+        "deviceScaleFactor": 1
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -1286,9 +1286,9 @@
       "route": "/save",
       "context": "tv",
       "viewport": {
-        "width": 1920,
-        "height": 1080,
-        "deviceScaleFactor": 2
+        "width": 960,
+        "height": 540,
+        "deviceScaleFactor": 1
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -1314,9 +1314,9 @@
       "route": "/save",
       "context": "tv",
       "viewport": {
-        "width": 1920,
-        "height": 1080,
-        "deviceScaleFactor": 2
+        "width": 960,
+        "height": 540,
+        "deviceScaleFactor": 1
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -1782,9 +1782,9 @@
       "route": "/auth/sign-in-with-another-device",
       "context": "tv",
       "viewport": {
-        "width": 1920,
-        "height": 1080,
-        "deviceScaleFactor": 2
+        "width": 960,
+        "height": 540,
+        "deviceScaleFactor": 1
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -1839,140 +1839,48 @@
       }
     },
     {
-      "name": "start-guide-save",
-      "seedScenario": "docs",
-      "route": "/save",
-      "context": "phone",
-      "viewport": {
-        "width": 412,
-        "height": 924,
-        "deviceScaleFactor": 2
-      },
-      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
-      "steps": [
-        {
-          "action": "navigate",
-          "path": "/save",
-          "expectVisible": {
-            "label": "Link"
-          }
-        },
-        {
-          "action": "fill",
-          "target": {
-            "label": "Link"
-          },
-          "value": "https://example.invalid/Taxi%20Driver%20(1976).mkv",
-          "expectVisible": {
-            "label": "Link"
-          }
-        }
-      ],
-      "output": "app/features/site/docs/images/start-guide-save.webp",
-      "framing": {
-        "mode": "postprocess",
-        "theme": "aurora-049"
-      }
-    },
-    {
-      "name": "start-guide-choose-links",
-      "seedScenario": "docs",
-      "route": "/save",
-      "context": "phone",
-      "viewport": {
-        "width": 412,
-        "height": 924,
-        "deviceScaleFactor": 2
-      },
-      "userAgent": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Mobile Safari/537.36",
-      "steps": [
-        {
-          "action": "navigate",
-          "path": "/save",
-          "expectVisible": {
-            "role": "button",
-            "name": "Choose links for TV Shows"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Choose links for TV Shows"
-          },
-          "expectVisible": {
-            "role": "tree",
-            "name": "Choose links to save"
-          }
-        }
-      ],
-      "output": "app/features/site/docs/images/start-guide-choose-links.webp",
-      "setup": ["general-settings", "gallery-choice"],
-      "framing": {
-        "mode": "postprocess",
-        "theme": "aurora-050"
-      }
-    },
-    {
       "name": "start-guide-tv-library",
       "seedScenario": "docs",
       "route": "/save",
       "context": "tv",
       "viewport": {
-        "width": 1920,
-        "height": 1080,
-        "deviceScaleFactor": 2
+        "width": 960,
+        "height": 540,
+        "deviceScaleFactor": 1
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
         {
           "action": "navigate",
+          "path": "/settings/general",
+          "expectVisible": {
+            "role": "heading",
+            "name": "General"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "text": "List view",
+            "exact": true
+          },
+          "expectVisible": {
+            "role": "radio",
+            "name": "List view"
+          }
+        },
+        {
+          "action": "navigate",
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for TV Shows"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Choose links for TV Shows"
-          },
-          "expectVisible": {
-            "role": "tree",
-            "name": "Choose links to save"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "treeitem",
-            "name": "Mindhunter"
-          },
-          "expectVisible": {
-            "role": "treeitem",
-            "name": "Season 01"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "treeitem",
-            "name": "Season 01"
-          },
-          "expectVisible": {
-            "role": "treeitem",
-            "name": "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv"
+            "name": "Open 12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
+            "exact": false
           }
         }
       ],
       "output": "app/features/site/docs/images/start-guide-tv-library.webp",
-      "setup": ["general-settings", "gallery-choice"],
-      "framing": {
-        "mode": "postprocess",
-        "theme": "aurora-051"
-      }
+      "framing": false
     },
     {
       "name": "settings-storage",

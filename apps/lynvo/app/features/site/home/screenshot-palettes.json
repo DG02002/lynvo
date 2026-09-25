@@ -335,27 +335,6 @@
     "baseMiddle": "#022235",
     "baseEnd": "#083655"
   },
-  "aurora-049": {
-    "upperRight": "#8E90FF",
-    "lowerLeft": "#6680E9",
-    "baseStart": "#11164D",
-    "baseMiddle": "#22255F",
-    "baseEnd": "#343470"
-  },
-  "aurora-050": {
-    "upperRight": "#A8BFFF",
-    "lowerLeft": "#5897F9",
-    "baseStart": "#000F30",
-    "baseMiddle": "#0B1C45",
-    "baseEnd": "#21305B"
-  },
-  "aurora-051": {
-    "upperRight": "#A6B1FB",
-    "lowerLeft": "#507AFD",
-    "baseStart": "#060855",
-    "baseMiddle": "#131561",
-    "baseEnd": "#292B79"
-  },
   "aurora-052": {
     "upperRight": "#5E93F0",
     "lowerLeft": "#8EC2FB",
