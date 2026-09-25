@@ -24,6 +24,9 @@ const MANIFEST_PATH = path.join(
   "scripts",
   "screenshot-manifest.json"
 )
+const DOCS_IMAGES_DIRECTORY =
+  path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
+  path.sep
 const DEFAULT_ORIGIN = "http://localhost:5173"
 const DESKTOP_USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
@@ -216,14 +219,11 @@ const validateViewport = (shot) => {
 
 const validateOutput = (shot, state) => {
   const outputPath = path.resolve(APP_DIRECTORY, shot.output)
-  const docsDirectory =
-    path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
-    path.sep
   const marketingDirectory =
     path.join(APP_DIRECTORY, ".screenshots", "intermediates") + path.sep
   const homepageImageDirectory =
     path.join(APP_DIRECTORY, "public", "images", "homepage") + path.sep
-  const isDocsOutput = outputPath.startsWith(docsDirectory)
+  const isDocsOutput = outputPath.startsWith(DOCS_IMAGES_DIRECTORY)
   const isMarketingOutput = outputPath.startsWith(marketingDirectory)
   const isHomepageImageOutput = outputPath.startsWith(homepageImageDirectory)
   const extension = path.extname(outputPath)
@@ -570,40 +570,44 @@ const resetScrollForCapture = async (page, shot) => {
 }
 
 const waitForRequiredImages = async (page, shot) => {
-  await Promise.all(
-    (shot.requiredImages ?? []).map(async (alt) => {
-      try {
-        await page.waitForFunction(
-          (expectedAlt) => {
-            const image = [...document.images].find(
-              (candidate) => candidate.alt === expectedAlt
-            )
-            if (!image) {
-              return false
-            }
-            image.loading = "eager"
-            return image.complete && image.naturalWidth > 0
-          },
-          alt,
-          { timeout: IMAGE_TIMEOUT_MS }
+  const requiredImageAlts = shot.requiredImages ?? []
+  if (requiredImageAlts.length === 0) {
+    return
+  }
+
+  try {
+    await page.waitForFunction(
+      async (expectedAlts) => {
+        const imagesByAlt = new Map(
+          [...document.images].map((image) => [image.alt, image])
         )
-        await page.evaluate((expectedAlt) => {
-          const image = [...document.images].find(
-            (candidate) => candidate.alt === expectedAlt
+        const images = expectedAlts.map((alt) => imagesByAlt.get(alt))
+        if (images.some((image) => image === undefined)) {
+          return false
+        }
+        const loadedImages = images.filter((image) => image !== undefined)
+        for (const image of loadedImages) {
+          image.loading = "eager"
+        }
+        if (
+          loadedImages.some(
+            (image) => !image.complete || image.naturalWidth < 1
           )
-          if (!image) {
-            throw new Error(`The required image ${expectedAlt} is missing.`)
-          }
-          return image.decode()
-        }, alt)
-      } catch (error) {
-        throw new Error(
-          `${shot.name} did not load its required image ${JSON.stringify(alt)}.`,
-          { cause: error }
-        )
-      }
-    })
-  )
+        ) {
+          return false
+        }
+        await Promise.all(loadedImages.map((image) => image.decode()))
+        return true
+      },
+      requiredImageAlts,
+      { timeout: IMAGE_TIMEOUT_MS }
+    )
+  } catch (error) {
+    throw new Error(
+      `${shot.name} did not load its required images ${JSON.stringify(requiredImageAlts)}.`,
+      { cause: error }
+    )
+  }
 }
 
 const waitForTmdbImages = async (page, shot) => {
@@ -719,10 +723,7 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
   } else {
     await saveScreenshot(capture, outputPath)
   }
-  const docsImageDirectory =
-    path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
-    path.sep
-  if (outputPath.startsWith(docsImageDirectory)) {
+  if (outputPath.startsWith(DOCS_IMAGES_DIRECTORY)) {
     // DocsScreenshot prefers PNG, so remove a stale alternate after the new output exists.
     const extension = path.extname(outputPath)
     const alternateExtension = extension === ".png" ? ".webp" : ".png"

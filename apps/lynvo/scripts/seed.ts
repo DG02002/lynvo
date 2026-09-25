@@ -564,6 +564,27 @@ const docsMediaFixture = ({
   ],
 })
 
+const SANDMAN_EPISODES = [
+  { season: "01", episode: "01", size: "4.2 GB" },
+  { season: "01", episode: "02", size: "4.0 GB" },
+  { season: "02", episode: "01", size: "4.5 GB" },
+  { season: "02", episode: "02", size: "4.3 GB" },
+] as const
+type SandmanSeason = (typeof SANDMAN_EPISODES)[number]["season"]
+
+const createSandmanEpisodeNodes = (season: SandmanSeason, keyPrefix: string) =>
+  SANDMAN_EPISODES.filter((episode) => episode.season === season).map(
+    ({ episode, size }) => {
+      const seasonEpisode = `s${season}e${episode}`
+      return playableNode({
+        key: `${keyPrefix}-${seasonEpisode}`,
+        label: `The Sandman S${season}E${episode} 2160p Blu-ray DV.mkv`,
+        url: playableUrl(`the-sandman-${seasonEpisode}`),
+        size,
+      })
+    }
+  )
+
 const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
   {
     slug: "drive-library",
@@ -587,32 +608,10 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
       ]),
       groupNode("library-the-sandman", "The Sandman", [
         groupNode("library-the-sandman-s01", "Season 01", [
-          playableNode({
-            key: "library-the-sandman-s01e01",
-            label: "The Sandman S01E01 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s01e01"),
-            size: "4.2 GB",
-          }),
-          playableNode({
-            key: "library-the-sandman-s01e02",
-            label: "The Sandman S01E02 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s01e02"),
-            size: "4.0 GB",
-          }),
+          ...createSandmanEpisodeNodes("01", "library-the-sandman"),
         ]),
         groupNode("library-the-sandman-s02", "Season 02", [
-          playableNode({
-            key: "library-the-sandman-s02e01",
-            label: "The Sandman S02E01 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s02e01"),
-            size: "4.5 GB",
-          }),
-          playableNode({
-            key: "library-the-sandman-s02e02",
-            label: "The Sandman S02E02 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s02e02"),
-            size: "4.3 GB",
-          }),
+          ...createSandmanEpisodeNodes("02", "library-the-sandman"),
         ]),
       ]),
     ],
@@ -649,18 +648,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     nodes: [
       groupNode("sandman-s01-show", "The Sandman", [
         groupNode("sandman-s01-folder", "Season 01", [
-          playableNode({
-            key: "sandman-s01e01",
-            label: "The Sandman S01E01 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s01e01"),
-            size: "4.2 GB",
-          }),
-          playableNode({
-            key: "sandman-s01e02",
-            label: "The Sandman S01E02 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s01e02"),
-            size: "4.0 GB",
-          }),
+          ...createSandmanEpisodeNodes("01", "sandman"),
         ]),
       ]),
     ],
@@ -675,18 +663,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     nodes: [
       groupNode("sandman-s02-show", "The Sandman", [
         groupNode("sandman-s02-folder", "Season 02", [
-          playableNode({
-            key: "sandman-s02e01",
-            label: "The Sandman S02E01 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s02e01"),
-            size: "4.5 GB",
-          }),
-          playableNode({
-            key: "sandman-s02e02",
-            label: "The Sandman S02E02 2160p Blu-ray DV.mkv",
-            url: playableUrl("the-sandman-s02e02"),
-            size: "4.3 GB",
-          }),
+          ...createSandmanEpisodeNodes("02", "sandman"),
         ]),
       ]),
     ],
