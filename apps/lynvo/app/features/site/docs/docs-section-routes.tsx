@@ -14,6 +14,10 @@ export interface DocsRouteParams {
 
 export interface DocsLoaderData {
   slug: string | null
+  breadcrumb: {
+    group: string
+    pageLabel: string
+  } | null
 }
 
 const legacyPluginServerSlug = "plugin-server"
@@ -65,7 +69,7 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
     const requestedSlug = params["*"]
 
     if (!requestedSlug) {
-      return { slug: null }
+      return { slug: null, breadcrumb: null }
     }
 
     const redirectedSlug =
@@ -76,11 +80,18 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
       )
     }
 
-    if (!docsCatalog.resolve(section, requestedSlug)) {
+    const context = docsCatalog.resolve(section, requestedSlug)
+    if (!context) {
       throw data(null, { status: 404 })
     }
 
-    return { slug: requestedSlug }
+    return {
+      slug: requestedSlug,
+      breadcrumb: {
+        group: context.group,
+        pageLabel: context.page.navLabel,
+      },
+    }
   },
 
   meta: ({ data: loaderData }: { data: DocsLoaderData | undefined }) => {

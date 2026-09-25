@@ -1,8 +1,4 @@
-import {
-  ArrowDown01Icon,
-  ArrowRight01Icon,
-  ChevronRightIcon,
-} from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import { Link } from "react-router"
@@ -234,21 +230,6 @@ export const DocsDocumentLayout = ({
             id="docs-page-introduction"
             className="mx-auto flex max-w-3xl flex-col gap-5"
           >
-            <nav
-              aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-sm text-muted-foreground"
-            >
-              <span>{context.group}</span>
-              <HugeiconsIcon
-                icon={ChevronRightIcon}
-                aria-hidden="true"
-                className="size-3.5 shrink-0"
-                strokeWidth={1.5}
-              />
-              <span aria-current="page" className="font-medium text-foreground">
-                {context.page.navLabel}
-              </span>
-            </nav>
             <h1 className="text-3xl font-normal tracking-tight text-balance md:text-4xl">
               {context.page.title}
             </h1>
