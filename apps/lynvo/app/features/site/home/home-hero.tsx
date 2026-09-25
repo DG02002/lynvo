@@ -1,4 +1,5 @@
 import { HomeSaveDemo } from "./home-save-demo"
+import { HomeScreenshotFrame } from "./home-screenshot-frame"
 
 export const HomeHero = () => {
   return (
@@ -17,6 +18,7 @@ export const HomeHero = () => {
 
         <HomeSaveDemo />
       </div>
+      <HomeScreenshotFrame />
     </section>
   )
 }

@@ -1,0 +1,429 @@
+{
+  "aurora-001": {
+    "upperRight": "#993f29",
+    "lowerLeft": "#298e4e",
+    "baseStart": "#0c111a",
+    "baseMiddle": "#2a132a",
+    "baseEnd": "#191e0d"
+  },
+  "aurora-002": {
+    "upperRight": "#299960",
+    "lowerLeft": "#6c298e",
+    "baseStart": "#1a0c0d",
+    "baseMiddle": "#232a13",
+    "baseEnd": "#0d141e"
+  },
+  "aurora-003": {
+    "upperRight": "#812999",
+    "lowerLeft": "#8e8929",
+    "baseStart": "#0c1a0f",
+    "baseMiddle": "#131d2a",
+    "baseEnd": "#1e0d0f"
+  },
+  "aurora-004": {
+    "upperRight": "#919929",
+    "lowerLeft": "#29768e",
+    "baseStart": "#130c1a",
+    "baseMiddle": "#2a1316",
+    "baseEnd": "#0d1e10"
+  },
+  "aurora-005": {
+    "upperRight": "#297099",
+    "lowerLeft": "#8e2958",
+    "baseStart": "#1a170c",
+    "baseMiddle": "#132a17",
+    "baseEnd": "#150d1e"
+  },
+  "aurora-006": {
+    "upperRight": "#99294f",
+    "lowerLeft": "#3b8e29",
+    "baseStart": "#0c191a",
+    "baseMiddle": "#1e132a",
+    "baseEnd": "#1e1a0d"
+  },
+  "aurora-007": {
+    "upperRight": "#2e9929",
+    "lowerLeft": "#35298e",
+    "baseStart": "#1a0c15",
+    "baseMiddle": "#2a2413",
+    "baseEnd": "#0d1d1e"
+  },
+  "aurora-008": {
+    "upperRight": "#442999",
+    "lowerLeft": "#8e5329",
+    "baseStart": "#111a0c",
+    "baseMiddle": "#13292a",
+    "baseEnd": "#1e0d18"
+  },
+  "aurora-009": {
+    "upperRight": "#996529",
+    "lowerLeft": "#298e70",
+    "baseStart": "#0c0d1a",
+    "baseMiddle": "#2a1322",
+    "baseEnd": "#131e0d"
+  },
+  "aurora-010": {
+    "upperRight": "#299986",
+    "lowerLeft": "#8e298e",
+    "baseStart": "#1a100c",
+    "baseMiddle": "#1c2a13",
+    "baseEnd": "#0d0e1e"
+  },
+  "aurora-011": {
+    "upperRight": "#99298c",
+    "lowerLeft": "#728e29",
+    "baseStart": "#0c1a14",
+    "baseMiddle": "#13152a",
+    "baseEnd": "#1e110d"
+  },
+  "aurora-012": {
+    "upperRight": "#6b9929",
+    "lowerLeft": "#29548e",
+    "baseStart": "#180c1a",
+    "baseMiddle": "#2a1813",
+    "baseEnd": "#0d1e16"
+  },
+  "aurora-013": {
+    "upperRight": "#294a99",
+    "lowerLeft": "#8e2937",
+    "baseStart": "#181a0c",
+    "baseMiddle": "#132a1f",
+    "baseEnd": "#1b0d1e"
+  },
+  "aurora-014": {
+    "upperRight": "#992929",
+    "lowerLeft": "#298e39",
+    "baseStart": "#0c141a",
+    "baseMiddle": "#25132a",
+    "baseEnd": "#1d1e0d"
+  },
+  "aurora-015": {
+    "upperRight": "#299949",
+    "lowerLeft": "#57298e",
+    "baseStart": "#1a0c10",
+    "baseMiddle": "#282a13",
+    "baseEnd": "#0d181e"
+  },
+  "aurora-016": {
+    "upperRight": "#6a2999",
+    "lowerLeft": "#8e7429",
+    "baseStart": "#0c1a0c",
+    "baseMiddle": "#13212a",
+    "baseEnd": "#1e0d13"
+  },
+  "aurora-017": {
+    "upperRight": "#998a29",
+    "lowerLeft": "#298b8e",
+    "baseStart": "#100c1a",
+    "baseMiddle": "#2a131b",
+    "baseEnd": "#0e1e0d"
+  },
+  "aurora-018": {
+    "upperRight": "#298799",
+    "lowerLeft": "#8e296d",
+    "baseStart": "#1a140c",
+    "baseMiddle": "#142a13",
+    "baseEnd": "#120d1e"
+  },
+  "aurora-019": {
+    "upperRight": "#992966",
+    "lowerLeft": "#508e29",
+    "baseStart": "#0c1a18",
+    "baseMiddle": "#19132a",
+    "baseEnd": "#1e170d"
+  },
+  "aurora-020": {
+    "upperRight": "#459929",
+    "lowerLeft": "#29328e",
+    "baseStart": "#1a0c18",
+    "baseMiddle": "#2a2013",
+    "baseEnd": "#0d1e1c"
+  },
+  "aurora-021": {
+    "upperRight": "#2d2999",
+    "lowerLeft": "#8e3e29",
+    "baseStart": "#141a0c",
+    "baseMiddle": "#132a26",
+    "baseEnd": "#1e0d1c"
+  },
+  "aurora-022": {
+    "upperRight": "#994e29",
+    "lowerLeft": "#298e5b",
+    "baseStart": "#0c101a",
+    "baseMiddle": "#2a1327",
+    "baseEnd": "#171e0d"
+  },
+  "aurora-023": {
+    "upperRight": "#29996e",
+    "lowerLeft": "#79298e",
+    "baseStart": "#1a0d0c",
+    "baseMiddle": "#202a13",
+    "baseEnd": "#0d121e"
+  },
+  "aurora-024": {
+    "upperRight": "#8f2999",
+    "lowerLeft": "#868e29",
+    "baseStart": "#0c1a11",
+    "baseMiddle": "#131a2a",
+    "baseEnd": "#1e0d0d"
+  },
+  "aurora-025": {
+    "upperRight": "#829929",
+    "lowerLeft": "#29698e",
+    "baseStart": "#150c1a",
+    "baseMiddle": "#2a1313",
+    "baseEnd": "#0d1e12"
+  },
+  "aurora-026": {
+    "upperRight": "#296199",
+    "lowerLeft": "#8e294b",
+    "baseStart": "#1a190c",
+    "baseMiddle": "#132a1a",
+    "baseEnd": "#170d1e"
+  },
+  "aurora-027": {
+    "upperRight": "#992941",
+    "lowerLeft": "#2e8e29",
+    "baseStart": "#0c171a",
+    "baseMiddle": "#21132a",
+    "baseEnd": "#1e1c0d"
+  },
+  "aurora-028": {
+    "upperRight": "#299932",
+    "lowerLeft": "#42298e",
+    "baseStart": "#1a0c13",
+    "baseMiddle": "#2a2713",
+    "baseEnd": "#0d1b1e"
+  },
+  "aurora-029": {
+    "upperRight": "#522999",
+    "lowerLeft": "#8e6029",
+    "baseStart": "#0f1a0c",
+    "baseMiddle": "#13262a",
+    "baseEnd": "#1e0d16"
+  },
+  "aurora-030": {
+    "upperRight": "#997329",
+    "lowerLeft": "#298e7d",
+    "baseStart": "#0e0c1a",
+    "baseMiddle": "#2a131f",
+    "baseEnd": "#111e0d"
+  },
+  "aurora-031": {
+    "upperRight": "#299994",
+    "lowerLeft": "#8e2982",
+    "baseStart": "#1a120c",
+    "baseMiddle": "#192a13",
+    "baseEnd": "#0e0d1e"
+  },
+  "aurora-032": {
+    "upperRight": "#99297d",
+    "lowerLeft": "#658e29",
+    "baseStart": "#0c1a16",
+    "baseMiddle": "#14132a",
+    "baseEnd": "#1e130d"
+  },
+  "aurora-033": {
+    "upperRight": "#5d9929",
+    "lowerLeft": "#29478e",
+    "baseStart": "#1a0c1a",
+    "baseMiddle": "#2a1b13",
+    "baseEnd": "#0d1e18"
+  },
+  "aurora-034": {
+    "upperRight": "#293c99",
+    "lowerLeft": "#8e292a",
+    "baseStart": "#161a0c",
+    "baseMiddle": "#132a22",
+    "baseEnd": "#1d0d1e"
+  },
+  "aurora-035": {
+    "upperRight": "#993629",
+    "lowerLeft": "#298e46",
+    "baseStart": "#0c121a",
+    "baseMiddle": "#28132a",
+    "baseEnd": "#1b1e0d"
+  },
+  "aurora-036": {
+    "upperRight": "#299957",
+    "lowerLeft": "#64298e",
+    "baseStart": "#1a0c0e",
+    "baseMiddle": "#252a13",
+    "baseEnd": "#0d151e"
+  },
+  "aurora-037": {
+    "upperRight": "#782999",
+    "lowerLeft": "#8e8129",
+    "baseStart": "#0c1a0e",
+    "baseMiddle": "#131e2a",
+    "baseEnd": "#1e0d10"
+  },
+  "aurora-038": {
+    "upperRight": "#999929",
+    "lowerLeft": "#297e8e",
+    "baseStart": "#120c1a",
+    "baseMiddle": "#2a1318",
+    "baseEnd": "#0d1e0f"
+  },
+  "aurora-039": {
+    "upperRight": "#297999",
+    "lowerLeft": "#8e2960",
+    "baseStart": "#1a160c",
+    "baseMiddle": "#132a15",
+    "baseEnd": "#140d1e"
+  },
+  "aurora-040": {
+    "upperRight": "#992958",
+    "lowerLeft": "#438e29",
+    "baseStart": "#0c1a1a",
+    "baseMiddle": "#1c132a",
+    "baseEnd": "#1e190d"
+  },
+  "aurora-041": {
+    "upperRight": "#379929",
+    "lowerLeft": "#2d298e",
+    "baseStart": "#1a0c16",
+    "baseMiddle": "#2a2313",
+    "baseEnd": "#0d1e1e"
+  },
+  "aurora-042": {
+    "upperRight": "#3b2999",
+    "lowerLeft": "#8e4b29",
+    "baseStart": "#121a0c",
+    "baseMiddle": "#132a29",
+    "baseEnd": "#1e0d1a"
+  },
+  "aurora-043": {
+    "upperRight": "#995c29",
+    "lowerLeft": "#298e68",
+    "baseStart": "#0c0e1a",
+    "baseMiddle": "#2a1324",
+    "baseEnd": "#151e0d"
+  },
+  "aurora-044": {
+    "upperRight": "#29997d",
+    "lowerLeft": "#86298e",
+    "baseStart": "#1a0f0c",
+    "baseMiddle": "#1e2a13",
+    "baseEnd": "#0d101e"
+  },
+  "aurora-045": {
+    "upperRight": "#992995",
+    "lowerLeft": "#7a8e29",
+    "baseStart": "#0c1a13",
+    "baseMiddle": "#13172a",
+    "baseEnd": "#1e0f0d"
+  },
+  "aurora-046": {
+    "upperRight": "#749929",
+    "lowerLeft": "#295c8e",
+    "baseStart": "#170c1a",
+    "baseMiddle": "#2a1613",
+    "baseEnd": "#0d1e14"
+  },
+  "aurora-047": {
+    "upperRight": "#295399",
+    "lowerLeft": "#8e293f",
+    "baseStart": "#191a0c",
+    "baseMiddle": "#132a1d",
+    "baseEnd": "#1a0d1e"
+  },
+  "aurora-048": {
+    "upperRight": "#992932",
+    "lowerLeft": "#298e31",
+    "baseStart": "#0c151a",
+    "baseMiddle": "#24132a",
+    "baseEnd": "#1e1e0d"
+  },
+  "aurora-049": {
+    "upperRight": "#299940",
+    "lowerLeft": "#4f298e",
+    "baseStart": "#1a0c11",
+    "baseMiddle": "#2a2a13",
+    "baseEnd": "#0d191e"
+  },
+  "aurora-050": {
+    "upperRight": "#612999",
+    "lowerLeft": "#8e6c29",
+    "baseStart": "#0d1a0c",
+    "baseMiddle": "#13232a",
+    "baseEnd": "#1e0d14"
+  },
+  "aurora-051": {
+    "upperRight": "#998129",
+    "lowerLeft": "#298e8a",
+    "baseStart": "#0f0c1a",
+    "baseMiddle": "#2a131d",
+    "baseEnd": "#0f1e0d"
+  },
+  "aurora-052": {
+    "upperRight": "#299099",
+    "lowerLeft": "#8e2975",
+    "baseStart": "#1a130c",
+    "baseMiddle": "#162a13",
+    "baseEnd": "#100d1e"
+  },
+  "aurora-053": {
+    "upperRight": "#99296f",
+    "lowerLeft": "#588e29",
+    "baseStart": "#0c1a17",
+    "baseMiddle": "#17132a",
+    "baseEnd": "#1e150d"
+  },
+  "aurora-054": {
+    "upperRight": "#4e9929",
+    "lowerLeft": "#293a8e",
+    "baseStart": "#1a0c19",
+    "baseMiddle": "#2a1e13",
+    "baseEnd": "#0d1e1a"
+  },
+  "aurora-055": {
+    "upperRight": "#292e99",
+    "lowerLeft": "#8e3629",
+    "baseStart": "#151a0c",
+    "baseMiddle": "#132a25",
+    "baseEnd": "#1e0d1d"
+  },
+  "aurora-056": {
+    "upperRight": "#994529",
+    "lowerLeft": "#298e53",
+    "baseStart": "#0c111a",
+    "baseMiddle": "#2a1329",
+    "baseEnd": "#181e0d"
+  },
+  "aurora-057": {
+    "upperRight": "#299965",
+    "lowerLeft": "#71298e",
+    "baseStart": "#1a0c0d",
+    "baseMiddle": "#222a13",
+    "baseEnd": "#0d131e"
+  },
+  "aurora-058": {
+    "upperRight": "#862999",
+    "lowerLeft": "#8e8e29",
+    "baseStart": "#0c1a10",
+    "baseMiddle": "#131c2a",
+    "baseEnd": "#1e0d0e"
+  },
+  "aurora-059": {
+    "upperRight": "#8b9929",
+    "lowerLeft": "#29718e",
+    "baseStart": "#140c1a",
+    "baseMiddle": "#2a1315",
+    "baseEnd": "#0d1e11"
+  },
+  "aurora-060": {
+    "upperRight": "#296a99",
+    "lowerLeft": "#8e2953",
+    "baseStart": "#1a180c",
+    "baseMiddle": "#132a18",
+    "baseEnd": "#160d1e"
+  },
+  "aurora-061": {
+    "upperRight": "#99294a",
+    "lowerLeft": "#368e29",
+    "baseStart": "#0c181a",
+    "baseMiddle": "#1f132a",
+    "baseEnd": "#1e1b0d"
+  }
+}

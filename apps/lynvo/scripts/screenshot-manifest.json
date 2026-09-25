@@ -22,8 +22,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-001",
-      "output": "app/features/site/docs/images/settings-account.png"
+      "output": "app/features/site/docs/images/settings-account.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-001"
+      }
     },
     {
       "name": "android-tv-tv-bro",
@@ -66,8 +69,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-002",
-      "output": "app/features/site/docs/images/android-tv-tv-bro.png"
+      "output": "app/features/site/docs/images/android-tv-tv-bro.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-002"
+      }
     },
     {
       "name": "android-tv-gallery",
@@ -90,8 +96,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-003",
-      "output": "app/features/site/docs/images/android-tv-gallery.png"
+      "output": "app/features/site/docs/images/android-tv-gallery.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-003"
+      }
     },
     {
       "name": "settings-general",
@@ -114,8 +123,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-004",
-      "output": "app/features/site/docs/images/settings-general.png"
+      "output": "app/features/site/docs/images/settings-general.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-004"
+      }
     },
     {
       "name": "settings-general-view-cards",
@@ -138,8 +150,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-005",
-      "output": "app/features/site/docs/images/settings-general-view-cards.png"
+      "output": "app/features/site/docs/images/settings-general-view-cards.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-005"
+      }
     },
     {
       "name": "library-list-view",
@@ -162,8 +177,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-006",
-      "output": "app/features/site/docs/images/library-list-view.png"
+      "output": "app/features/site/docs/images/library-list-view.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-006"
+      }
     },
     {
       "name": "library-view-cards",
@@ -186,8 +204,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-007",
-      "output": "app/features/site/docs/images/library-view-cards.png"
+      "output": "app/features/site/docs/images/library-view-cards.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-007"
+      }
     },
     {
       "name": "library-gallery-view",
@@ -210,9 +231,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-008",
       "output": "app/features/site/docs/images/library-gallery-view.png",
-      "setup": ["general-settings", "list-to-gallery"]
+      "setup": ["general-settings", "list-to-gallery"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-008"
+      }
     },
     {
       "name": "library-gallery-controls",
@@ -257,9 +281,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-009",
       "output": "app/features/site/docs/images/library-gallery-controls.png",
-      "setup": ["general-settings", "gallery-view"]
+      "setup": ["general-settings", "gallery-view"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-009"
+      }
     },
     {
       "name": "library-item-menu",
@@ -293,8 +320,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-010",
-      "output": "app/features/site/docs/images/library-item-menu.png"
+      "output": "app/features/site/docs/images/library-item-menu.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-010"
+      }
     },
     {
       "name": "library-refresh-link-choices",
@@ -328,9 +358,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-011",
       "output": "app/features/site/docs/images/library-refresh-link-choices.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-011"
+      }
     },
     {
       "name": "library-change-artwork",
@@ -375,9 +408,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-012",
       "output": "app/features/site/docs/images/library-change-artwork.png",
-      "setup": ["general-settings", "gallery-view"]
+      "setup": ["general-settings", "gallery-view"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-012"
+      }
     },
     {
       "name": "library-expiry-states",
@@ -400,8 +436,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-013",
-      "output": "app/features/site/docs/images/library-expiry-states.png"
+      "output": "app/features/site/docs/images/library-expiry-states.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-013"
+      }
     },
     {
       "name": "opening-links-folder-browser",
@@ -446,8 +485,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-014",
-      "output": "app/features/site/docs/images/opening-links-folder-browser.png"
+      "output": "app/features/site/docs/images/opening-links-folder-browser.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-014"
+      }
     },
     {
       "name": "opening-links-resolving-folder",
@@ -513,8 +555,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-015",
-      "output": "app/features/site/docs/images/opening-links-resolving-folder.png"
+      "output": "app/features/site/docs/images/opening-links-resolving-folder.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-015"
+      }
     },
     {
       "name": "opening-links-watched-confirmation",
@@ -559,8 +604,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-016",
-      "output": "app/features/site/docs/images/opening-links-watched-confirmation.png"
+      "output": "app/features/site/docs/images/opening-links-watched-confirmation.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-016"
+      }
     },
     {
       "name": "settings-player",
@@ -583,8 +631,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-017",
-      "output": "app/features/site/docs/images/settings-player.png"
+      "output": "app/features/site/docs/images/settings-player.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-017"
+      }
     },
     {
       "name": "player-not-installed",
@@ -640,8 +691,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-018",
-      "output": "app/features/site/docs/images/player-not-installed.png"
+      "output": "app/features/site/docs/images/player-not-installed.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-018"
+      }
     },
     {
       "name": "settings-plugins",
@@ -664,8 +718,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-019",
-      "output": "app/features/site/docs/images/settings-plugins.png"
+      "output": "app/features/site/docs/images/settings-plugins.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-019"
+      }
     },
     {
       "name": "settings-plugins-info",
@@ -699,8 +756,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-020",
-      "output": "app/features/site/docs/images/settings-plugins-info.png"
+      "output": "app/features/site/docs/images/settings-plugins-info.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-020"
+      }
     },
     {
       "name": "settings-plugins-domain-dialog",
@@ -734,8 +794,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-021",
-      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.png"
+      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-021"
+      }
     },
     {
       "name": "settings-plugins-edit-credentials",
@@ -769,8 +832,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-022",
-      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.png"
+      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-022"
+      }
     },
     {
       "name": "settings-plugins-remove-credentials",
@@ -815,8 +881,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-023",
-      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.png"
+      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-023"
+      }
     },
     {
       "name": "settings-plugins-remove-domain",
@@ -850,8 +919,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-024",
-      "output": "app/features/site/docs/images/settings-plugins-remove-domain.png"
+      "output": "app/features/site/docs/images/settings-plugins-remove-domain.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-024"
+      }
     },
     {
       "name": "settings-plugins-add-server",
@@ -885,8 +957,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-025",
-      "output": "app/features/site/docs/images/settings-plugins-add-server.png"
+      "output": "app/features/site/docs/images/settings-plugins-add-server.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-025"
+      }
     },
     {
       "name": "settings-plugins-server-row",
@@ -920,8 +995,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-026",
-      "output": "app/features/site/docs/images/settings-plugins-server-row.png"
+      "output": "app/features/site/docs/images/settings-plugins-server-row.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-026"
+      }
     },
     {
       "name": "settings-plugins-delete-server",
@@ -965,8 +1043,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-027",
-      "output": "app/features/site/docs/images/settings-plugins-delete-server.png"
+      "output": "app/features/site/docs/images/settings-plugins-delete-server.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-027"
+      }
     },
     {
       "name": "settings-proxy",
@@ -989,8 +1070,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-028",
-      "output": "app/features/site/docs/images/settings-proxy.png"
+      "output": "app/features/site/docs/images/settings-proxy.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-028"
+      }
     },
     {
       "name": "settings-proxy-key-dialog",
@@ -1024,8 +1108,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-029",
-      "output": "app/features/site/docs/images/settings-proxy-key-dialog.png"
+      "output": "app/features/site/docs/images/settings-proxy-key-dialog.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-029"
+      }
     },
     {
       "name": "settings-proxy-balance",
@@ -1048,8 +1135,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-030",
-      "output": "app/features/site/docs/images/settings-proxy-balance.png"
+      "output": "app/features/site/docs/images/settings-proxy-balance.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-030"
+      }
     },
     {
       "name": "remote-play-device-picker",
@@ -1095,8 +1185,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-031",
-      "output": "app/features/site/docs/images/remote-play-device-picker.png"
+      "output": "app/features/site/docs/images/remote-play-device-picker.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-031"
+      }
     },
     {
       "name": "remote-play-connected-to",
@@ -1120,8 +1213,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-032",
-      "output": "app/features/site/docs/images/remote-play-connected-to.png"
+      "output": "app/features/site/docs/images/remote-play-connected-to.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-032"
+      }
     },
     {
       "name": "remote-play-controlled-by",
@@ -1145,8 +1241,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-033",
-      "output": "app/features/site/docs/images/remote-play-controlled-by.png"
+      "output": "app/features/site/docs/images/remote-play-controlled-by.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-033"
+      }
     },
     {
       "name": "remote-play-receiver-overlay",
@@ -1170,8 +1269,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-034",
-      "output": "app/features/site/docs/images/remote-play-receiver-overlay.png"
+      "output": "app/features/site/docs/images/remote-play-receiver-overlay.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-034"
+      }
     },
     {
       "name": "saving-links-input",
@@ -1203,8 +1305,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-035",
-      "output": "app/features/site/docs/images/saving-links-input.png"
+      "output": "app/features/site/docs/images/saving-links-input.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-035"
+      }
     },
     {
       "name": "saving-links-clipboard-permission",
@@ -1237,8 +1342,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-036",
-      "output": "app/features/site/docs/images/saving-links-clipboard-permission.png"
+      "output": "app/features/site/docs/images/saving-links-clipboard-permission.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-036"
+      }
     },
     {
       "name": "saving-links-choose-links",
@@ -1272,9 +1380,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-037",
       "output": "app/features/site/docs/images/saving-links-choose-links.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-037"
+      }
     },
     {
       "name": "saving-links-extraction-failed",
@@ -1308,8 +1419,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-038",
-      "output": "app/features/site/docs/images/saving-links-extraction-failed.png"
+      "output": "app/features/site/docs/images/saving-links-extraction-failed.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-038"
+      }
     },
     {
       "name": "saving-links-source-maintenance",
@@ -1342,8 +1456,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-039",
-      "output": "app/features/site/docs/images/saving-links-source-maintenance.png"
+      "output": "app/features/site/docs/images/saving-links-source-maintenance.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-039"
+      }
     },
     {
       "name": "saving-links-source-degraded",
@@ -1376,8 +1493,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-040",
-      "output": "app/features/site/docs/images/saving-links-source-degraded.png"
+      "output": "app/features/site/docs/images/saving-links-source-degraded.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-040"
+      }
     },
     {
       "name": "saving-links-source-unavailable",
@@ -1410,8 +1530,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-041",
-      "output": "app/features/site/docs/images/saving-links-source-unavailable.png"
+      "output": "app/features/site/docs/images/saving-links-source-unavailable.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-041"
+      }
     },
     {
       "name": "saving-links-domain-suggestion",
@@ -1444,8 +1567,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-042",
-      "output": "app/features/site/docs/images/saving-links-domain-suggestion.png"
+      "output": "app/features/site/docs/images/saving-links-domain-suggestion.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-042"
+      }
     },
     {
       "name": "settings-security-sessions",
@@ -1468,8 +1594,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-043",
-      "output": "app/features/site/docs/images/settings-security-sessions.png"
+      "output": "app/features/site/docs/images/settings-security-sessions.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-043"
+      }
     },
     {
       "name": "settings-security-sign-out-device",
@@ -1504,8 +1633,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-044",
-      "output": "app/features/site/docs/images/settings-security-sign-out-device.png"
+      "output": "app/features/site/docs/images/settings-security-sign-out-device.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-044"
+      }
     },
     {
       "name": "settings-security-sign-out-all",
@@ -1539,8 +1671,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-045",
-      "output": "app/features/site/docs/images/settings-security-sign-out-all.png"
+      "output": "app/features/site/docs/images/settings-security-sign-out-all.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-045"
+      }
     },
     {
       "name": "settings-security-delete-account",
@@ -1574,8 +1709,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-046",
-      "output": "app/features/site/docs/images/settings-security-delete-account.png"
+      "output": "app/features/site/docs/images/settings-security-delete-account.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-046"
+      }
     },
     {
       "name": "sign-in-tv-qr",
@@ -1597,8 +1735,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-047",
-      "output": "app/features/site/docs/images/sign-in-tv-qr.png"
+      "output": "app/features/site/docs/images/sign-in-tv-qr.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-047"
+      }
     },
     {
       "name": "sign-in-approval",
@@ -1629,8 +1770,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-048",
-      "output": "app/features/site/docs/images/sign-in-approval.png"
+      "output": "app/features/site/docs/images/sign-in-approval.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-048"
+      }
     },
     {
       "name": "start-guide-save",
@@ -1662,8 +1806,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-049",
-      "output": "app/features/site/docs/images/start-guide-save.png"
+      "output": "app/features/site/docs/images/start-guide-save.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-049"
+      }
     },
     {
       "name": "start-guide-choose-links",
@@ -1697,9 +1844,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-050",
       "output": "app/features/site/docs/images/start-guide-choose-links.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-050"
+      }
     },
     {
       "name": "start-guide-tv-library",
@@ -1777,9 +1927,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-051",
       "output": "app/features/site/docs/images/start-guide-tv-library.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-051"
+      }
     },
     {
       "name": "settings-storage",
@@ -1802,8 +1955,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-052",
-      "output": "app/features/site/docs/images/settings-storage.png"
+      "output": "app/features/site/docs/images/settings-storage.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-052"
+      }
     },
     {
       "name": "settings-storage-delete-older",
@@ -1848,8 +2004,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-053",
-      "output": "app/features/site/docs/images/settings-storage-delete-older.png"
+      "output": "app/features/site/docs/images/settings-storage-delete-older.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-053"
+      }
     },
     {
       "name": "settings-storage-delete-all",
@@ -1883,8 +2042,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-054",
-      "output": "app/features/site/docs/images/settings-storage-delete-all.png"
+      "output": "app/features/site/docs/images/settings-storage-delete-all.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-054"
+      }
     },
     {
       "name": "settings-usage",
@@ -1907,8 +2069,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-055",
-      "output": "app/features/site/docs/images/settings-usage.png"
+      "output": "app/features/site/docs/images/settings-usage.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-055"
+      }
     },
     {
       "name": "settings-usage-custom",
@@ -1931,8 +2096,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-056",
-      "output": "app/features/site/docs/images/settings-usage-custom.png"
+      "output": "app/features/site/docs/images/settings-usage-custom.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-056"
+      }
     },
     {
       "name": "settings-usage-retry",
@@ -1956,8 +2124,35 @@
           }
         }
       ],
-      "framingTheme": "aurora-057",
-      "output": "app/features/site/docs/images/settings-usage-retry.png"
+      "output": "app/features/site/docs/images/settings-usage-retry.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-057"
+      }
+    },
+    {
+      "name": "homepage-library-source",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        }
+      ],
+      "output": "public/images/homepage/library-overview.png",
+      "framing": false
     },
     {
       "name": "marketing-homepage-desktop",
@@ -1975,13 +2170,16 @@
           "action": "navigate",
           "path": "/",
           "expectVisible": {
-            "text": "Save it here. Open it in an Android player.",
-            "exact": true
+            "role": "img",
+            "name": "Lynvo Library in List view"
           }
         }
       ],
-      "framingTheme": "aurora-058",
-      "output": ".screenshots/intermediates/marketing-homepage-desktop.png"
+      "output": ".screenshots/intermediates/marketing-homepage-desktop.png",
+      "framing": {
+        "mode": "css",
+        "theme": "aurora-058"
+      }
     },
     {
       "name": "marketing-homepage-phone",
@@ -1999,13 +2197,16 @@
           "action": "navigate",
           "path": "/",
           "expectVisible": {
-            "text": "Save it here. Open it in an Android player.",
-            "exact": true
+            "role": "img",
+            "name": "Lynvo Library in List view"
           }
         }
       ],
-      "framingTheme": "aurora-059",
-      "output": ".screenshots/intermediates/marketing-homepage-phone.png"
+      "output": ".screenshots/intermediates/marketing-homepage-phone.png",
+      "framing": {
+        "mode": "css",
+        "theme": "aurora-059"
+      }
     },
     {
       "name": "marketing-plugins-desktop",
@@ -2028,8 +2229,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-060",
-      "output": ".screenshots/intermediates/marketing-plugins-desktop.png"
+      "output": ".screenshots/intermediates/marketing-plugins-desktop.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-060"
+      }
     },
     {
       "name": "marketing-pricing-desktop",
@@ -2052,8 +2256,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-061",
-      "output": ".screenshots/intermediates/marketing-pricing-desktop.png"
+      "output": ".screenshots/intermediates/marketing-pricing-desktop.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-061"
+      }
     }
   ],
   "setups": {

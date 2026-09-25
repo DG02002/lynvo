@@ -1,11 +1,12 @@
 import { spawnSync } from "node:child_process"
-import { mkdir, readFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { Schema } from "effect"
 import { chromium } from "playwright"
 
+import { frameScreenshot, saveScreenshot } from "./frame-screenshot.mjs"
 import { assertLocalHttpOrigin } from "./local-origin.mjs"
 
 const APP_DIRECTORY = path.resolve(
@@ -65,7 +66,13 @@ const StepSchema = Schema.Union([
 const ShotSchema = Schema.Struct({
   blockedReason: Schema.optional(Schema.NonEmptyString),
   context: Schema.Literals(["desktop", "tv", "phone"]),
-  framingTheme: Schema.NonEmptyString,
+  framing: Schema.Union([
+    Schema.Literal(false),
+    Schema.Struct({
+      mode: Schema.Literals(["css", "postprocess"]),
+      theme: Schema.NonEmptyString,
+    }),
+  ]),
   name: Schema.NonEmptyString,
   output: Schema.NonEmptyString,
   route: Schema.NonEmptyString,
@@ -84,6 +91,17 @@ const ManifestSchema = Schema.Struct({
   shots: Schema.Array(ShotSchema),
   version: Schema.Number,
 })
+const ScreenshotPaletteSchema = Schema.Struct({
+  baseEnd: Schema.NonEmptyString,
+  baseMiddle: Schema.NonEmptyString,
+  baseStart: Schema.NonEmptyString,
+  lowerLeft: Schema.NonEmptyString,
+  upperRight: Schema.NonEmptyString,
+})
+const ScreenshotPalettesSchema = Schema.Record(
+  Schema.String,
+  ScreenshotPaletteSchema
+)
 
 const expandShotSetup = (shot, setups) => {
   if (shot.setup === undefined) {
@@ -130,30 +148,75 @@ const validateOutput = (shot, state) => {
     path.sep
   const marketingDirectory =
     path.join(APP_DIRECTORY, ".screenshots", "intermediates") + path.sep
+  const homepageImageDirectory =
+    path.join(APP_DIRECTORY, "public", "images", "homepage") + path.sep
   const isDocsOutput = outputPath.startsWith(docsDirectory)
   const isMarketingOutput = outputPath.startsWith(marketingDirectory)
+  const isHomepageImageOutput = outputPath.startsWith(homepageImageDirectory)
+  const extension = path.extname(outputPath)
   if (
     state.outputs.has(outputPath) ||
-    path.extname(outputPath) !== ".png" ||
-    (!isDocsOutput && !isMarketingOutput) ||
-    (isDocsOutput && path.basename(outputPath) !== `${shot.name}.png`)
+    ![".png", ".webp"].includes(extension) ||
+    (!isDocsOutput && !isMarketingOutput && !isHomepageImageOutput) ||
+    (isDocsOutput &&
+      path.basename(outputPath) !== `${shot.name}${extension}`) ||
+    (isHomepageImageOutput && shot.framing !== false)
   ) {
     throw new Error(
-      `${shot.name} output must be unique and use its name in the docs images or ignored marketing directory.`
+      `${shot.name} output must be unique and use PNG or WebP in the docs images, ignored marketing directory, or raw homepage image directory.`
     )
   }
   state.outputs.add(outputPath)
 }
 
-const validateShot = (shot, state) => {
+const validateShotFraming = (shot, state, palettes) => {
+  if (shot.framing === false) {
+    return
+  }
+  const palette = palettes[shot.framing.theme]
+  if (!palette) {
+    throw new Error(
+      `${shot.name} references an unknown framing palette: ${shot.framing.theme}.`
+    )
+  }
+  if (state.themes.has(shot.framing.theme)) {
+    throw new Error(
+      `${shot.name} reuses the framing palette ${shot.framing.theme}.`
+    )
+  }
+  const signature = [
+    palette.upperRight,
+    palette.lowerLeft,
+    palette.baseStart,
+    palette.baseMiddle,
+    palette.baseEnd,
+  ].join("|")
+  if (state.palettes.has(signature)) {
+    throw new Error(
+      `${shot.name} reuses a background palette already assigned to another screenshot.`
+    )
+  }
+  state.themes.add(shot.framing.theme)
+  state.palettes.add(signature)
+  if (
+    shot.framing.mode === "css" &&
+    (shot.route !== "/" ||
+      !shot.name.startsWith("marketing-homepage-") ||
+      shot.framing.theme !==
+        (shot.context === "phone" ? "aurora-059" : "aurora-058"))
+  ) {
+    throw new Error(
+      `${shot.name} must use the matching homepage CSS frame palette.`
+    )
+  }
+}
+
+const validateShot = (shot, state, palettes) => {
   if (state.names.has(shot.name)) {
     throw new Error(`The screenshot name is duplicated: ${shot.name}`)
   }
-  if (state.themes.has(shot.framingTheme)) {
-    throw new Error(`The framing theme is duplicated: ${shot.framingTheme}`)
-  }
   state.names.add(shot.name)
-  state.themes.add(shot.framingTheme)
+  validateShotFraming(shot, state, palettes)
   if (!shot.route.startsWith("/")) {
     throw new Error(`${shot.name} route must start with "/".`)
   }
@@ -170,6 +233,42 @@ const validateShot = (shot, state) => {
   }
   validateViewport(shot)
   validateOutput(shot, state)
+}
+
+const readScreenshotPalettes = async () => {
+  const palettesPath = path.join(
+    APP_DIRECTORY,
+    "app",
+    "features",
+    "site",
+    "home",
+    "screenshot-palettes.json"
+  )
+  const serialized = await readFile(palettesPath, "utf8")
+  const palettes = Schema.decodeUnknownSync(ScreenshotPalettesSchema)(
+    JSON.parse(serialized)
+  )
+  const signatures = new Set()
+  for (const [theme, palette] of Object.entries(palettes)) {
+    const colors = [
+      palette.upperRight,
+      palette.lowerLeft,
+      palette.baseStart,
+      palette.baseMiddle,
+      palette.baseEnd,
+    ]
+    if (colors.some((color) => !/^#[\dA-F]{6}$/iu.test(color))) {
+      throw new Error(
+        `${theme} contains a color that is not a six-digit hex value.`
+      )
+    }
+    const signature = colors.join("|")
+    if (signatures.has(signature)) {
+      throw new Error(`${theme} repeats another palette definition.`)
+    }
+    signatures.add(signature)
+  }
+  return palettes
 }
 
 const readManifest = async () => {
@@ -189,18 +288,26 @@ const readManifest = async () => {
     throw new Error(`Unused screenshot setups: ${unusedSetups.join(", ")}.`)
   }
 
+  const palettes = await readScreenshotPalettes()
   const state = {
     names: new Set(),
     outputs: new Set(),
+    palettes: new Set(),
     themes: new Set(),
   }
   const shots = manifest.shots.map((shot) =>
     expandShotSetup(shot, manifest.setups)
   )
   for (const shot of shots) {
-    validateShot(shot, state)
+    validateShot(shot, state, palettes)
   }
-  return shots
+  const unusedPalettes = Object.keys(palettes).filter(
+    (theme) => !state.themes.has(theme)
+  )
+  if (unusedPalettes.length > 0) {
+    throw new Error(`Unused screenshot palettes: ${unusedPalettes.join(", ")}.`)
+  }
+  return { palettes, shots }
 }
 
 const parseArguments = (argumentsList) => {
@@ -395,7 +502,57 @@ const resetScrollForCapture = async (page, shot) => {
   await expectVisible(page, finalStep.expectVisible, shot.name)
 }
 
-const captureShot = async (browser, shot, origin) => {
+const runShotSteps = async ({ page, shot, origin, variables }) => {
+  for (const step of shot.steps) {
+    // SAFETY: A later screenshot state depends on each prior visible condition.
+    // oxlint-disable-next-line eslint/no-await-in-loop
+    await runStep({ page, step, shot, origin, variables })
+  }
+}
+
+const preparePageForCapture = async ({ page, shot }) => {
+  await page.addStyleTag({
+    content:
+      "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
+  })
+  await page.evaluate(() => document.fonts.ready.then(() => true))
+  await resetScrollForCapture(page, shot)
+  if (shot.framing !== false && shot.framing.mode === "css") {
+    await page.waitForFunction(
+      () => {
+        const image = document.querySelector(".home-screenshot-frame__image")
+        return (
+          image instanceof HTMLImageElement &&
+          image.complete &&
+          image.naturalWidth > 0
+        )
+      },
+      null,
+      { timeout: STEP_TIMEOUT_MS }
+    )
+  }
+}
+
+const saveCapturedShot = async ({ page, shot, palettes }) => {
+  const outputPath = path.resolve(APP_DIRECTORY, shot.output)
+  const capture = await page.screenshot({
+    type: "png",
+    animations: "disabled",
+    caret: "hide",
+    fullPage: false,
+  })
+  if (shot.framing !== false && shot.framing.mode === "postprocess") {
+    await frameScreenshot(capture, palettes[shot.framing.theme], {
+      outputPath,
+      viewport: shot.viewport,
+    })
+  } else {
+    await saveScreenshot(capture, outputPath)
+  }
+  process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
+}
+
+const captureShot = async ({ browser, shot, origin, palettes }) => {
   const context = await browser.newContext({
     viewport: { width: shot.viewport.width, height: shot.viewport.height },
     deviceScaleFactor: shot.viewport.deviceScaleFactor,
@@ -407,44 +564,21 @@ const captureShot = async (browser, shot, origin) => {
     isMobile: shot.context === "phone",
     hasTouch: shot.context === "phone",
   })
-
   try {
     const page = await context.newPage()
     page.setDefaultTimeout(STEP_TIMEOUT_MS)
     page.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
     const pageErrors = []
     page.on("pageerror", (error) => pageErrors.push(error))
-    const variables = Object.create(null)
-
-    for (const step of shot.steps) {
-      // SAFETY: A later screenshot state depends on each prior visible condition.
-      // oxlint-disable-next-line eslint/no-await-in-loop
-      await runStep({ page, step, shot, origin, variables })
-    }
-
-    await page.addStyleTag({
-      content:
-        "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
-    })
-    await page.evaluate(() => document.fonts.ready.then(() => true))
-    await resetScrollForCapture(page, shot)
+    await runShotSteps({ page, shot, origin, variables: Object.create(null) })
+    await preparePageForCapture({ page, shot })
     if (pageErrors.length > 0) {
       throw new AggregateError(
         pageErrors,
         `${shot.name} raised a browser error.`
       )
     }
-
-    const outputPath = path.resolve(APP_DIRECTORY, shot.output)
-    await mkdir(path.dirname(outputPath), { recursive: true })
-    await page.screenshot({
-      path: outputPath,
-      type: "png",
-      animations: "disabled",
-      caret: "hide",
-      fullPage: false,
-    })
-    process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
+    await saveCapturedShot({ page, shot, palettes })
   } finally {
     await context.close()
   }
@@ -463,18 +597,18 @@ const printShotDryRun = (shots) => {
   for (const shot of shots) {
     const blocked = shot.blockedReason ? `\tBLOCKED: ${shot.blockedReason}` : ""
     process.stdout.write(
-      `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\t${shot.output}${blocked}\n`
+      `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\tframing=${shot.framing === false ? "none" : `${shot.framing.mode}:${shot.framing.theme}`}\t${shot.output}${blocked}\n`
     )
   }
 }
 
-const captureShots = async (shots, origin) => {
+const captureShots = async (shots, origin, palettes) => {
   const browser = await chromium.launch({ headless: true })
   try {
     for (const shot of shots) {
       // SAFETY: Browser contexts are isolated and captures are written in manifest order.
       // oxlint-disable-next-line eslint/no-await-in-loop
-      await captureShot(browser, shot, origin)
+      await captureShot({ browser, shot, origin, palettes })
     }
   } finally {
     await browser.close()
@@ -498,7 +632,7 @@ const seedScenariosForShots = (shots, origin) => {
 
 const main = async () => {
   const options = parseArguments(process.argv.slice(2))
-  const allShots = await readManifest()
+  const { palettes, shots: allShots } = await readManifest()
   const selectedShots = selectShots(allShots, options.only)
 
   if (options.list) {
@@ -523,7 +657,7 @@ const main = async () => {
     "Screenshot capture only connects to a local HTTP dev server. Set LYNVO_SEED_ORIGIN to a localhost origin."
   )
   seedScenariosForShots(runnableShots, origin)
-  await captureShots(runnableShots, origin)
+  await captureShots(runnableShots, origin, palettes)
   if (blockedShots.length > 0) {
     process.stdout.write(
       `Captured ${runnableShots.length} screenshot(s); skipped ${blockedShots.length} blocked screenshot(s).\n`

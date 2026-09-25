@@ -443,6 +443,63 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   animation: home-demo-item-swap 420ms var(--ease-out-strong) both;
 }
 
+.home-screenshot-stage {
+  --home-screenshot-upper-right: var(--home-screenshot-desktop-upper-right);
+  --home-screenshot-lower-left: var(--home-screenshot-desktop-lower-left);
+  --home-screenshot-base-start: var(--home-screenshot-desktop-base-start);
+  --home-screenshot-base-middle: var(--home-screenshot-desktop-base-middle);
+  --home-screenshot-base-end: var(--home-screenshot-desktop-base-end);
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding-block: clamp(64px, 10vw, 144px);
+  background:
+    radial-gradient(
+      circle at 85% 8%,
+      var(--home-screenshot-upper-right) 0%,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 15% 85%,
+      var(--home-screenshot-lower-left) 0%,
+      transparent 52%
+    ),
+    linear-gradient(
+      135deg,
+      var(--home-screenshot-base-start) 0%,
+      var(--home-screenshot-base-middle) 48%,
+      var(--home-screenshot-base-end) 100%
+    );
+}
+
+.home-screenshot-frame {
+  width: min(82vw, 1140px);
+  padding: 10px;
+  border-radius: 14px;
+  background: #101012;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.22),
+    0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.home-screenshot-frame__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+@media (max-width: 767px) {
+  .home-screenshot-stage {
+    --home-screenshot-upper-right: var(--home-screenshot-phone-upper-right);
+    --home-screenshot-lower-left: var(--home-screenshot-phone-lower-left);
+    --home-screenshot-base-start: var(--home-screenshot-phone-base-start);
+    --home-screenshot-base-middle: var(--home-screenshot-phone-base-middle);
+    --home-screenshot-base-end: var(--home-screenshot-phone-base-end);
+  }
+}
+
 @keyframes home-demo-layer-in {
   from {
     opacity: 0;

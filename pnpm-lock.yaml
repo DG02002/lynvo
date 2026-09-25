@@ -249,6 +249,9 @@ importers:
       remark-mdx-frontmatter:
         specifier: ^5.2.0
         version: 5.2.0
+      sharp:
+        specifier: 'catalog:'
+        version: 0.35.4(@types/node@26.5.1)
       shiki:
         specifier: ^4.4.3
         version: 4.4.3
