@@ -1,5 +1,4 @@
 import { Schema } from "effect"
-import { DOCS_SEED_ARTWORK_POLICY } from "~shared/docs-seed-constants"
 
 import type {
   ExtractedLink,
@@ -123,7 +122,6 @@ export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
 
 export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   schemaVersion: Schema.Literal(3),
-  artworkPolicy: Schema.optional(Schema.Literal(DOCS_SEED_ARTWORK_POLICY)),
   source: Schema.Record(Schema.String, Schema.Json),
   extraction: Schema.Struct({
     extractedLinks: Schema.mutable(Schema.Array(extractedLinkSchema)),

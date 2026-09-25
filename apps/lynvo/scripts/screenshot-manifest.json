@@ -22,8 +22,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-001",
-      "output": "app/features/site/docs/images/settings-account.png"
+      "output": "app/features/site/docs/images/settings-account.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-001"
+      }
     },
     {
       "name": "android-tv-tv-bro",
@@ -61,13 +64,16 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open Dune Part Two (2024).mkv",
+            "name": "Open 12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
             "exact": false
           }
         }
       ],
-      "framingTheme": "aurora-002",
-      "output": "app/features/site/docs/images/android-tv-tv-bro.png"
+      "output": "app/features/site/docs/images/android-tv-tv-bro.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-002"
+      }
     },
     {
       "name": "android-tv-gallery",
@@ -90,8 +96,18 @@
           }
         }
       ],
-      "framingTheme": "aurora-003",
-      "output": "app/features/site/docs/images/android-tv-gallery.png"
+      "requiredImages": [
+        "Artwork for 12 Angry Men (1957)",
+        "Artwork for Taxi Driver (1976)",
+        "Artwork for Mindhunter (2017) S01",
+        "Artwork for When Life Gives You Tangerines (2025) S01",
+        "Artwork for Breaking Bad (2008) S01"
+      ],
+      "output": "app/features/site/docs/images/android-tv-gallery.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-003"
+      }
     },
     {
       "name": "settings-general",
@@ -114,8 +130,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-004",
-      "output": "app/features/site/docs/images/settings-general.png"
+      "output": "app/features/site/docs/images/settings-general.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-004"
+      }
     },
     {
       "name": "settings-general-view-cards",
@@ -138,8 +157,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-005",
-      "output": "app/features/site/docs/images/settings-general-view-cards.png"
+      "output": "app/features/site/docs/images/settings-general-view-cards.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-005"
+      }
     },
     {
       "name": "library-list-view",
@@ -162,8 +184,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-006",
-      "output": "app/features/site/docs/images/library-list-view.png"
+      "output": "app/features/site/docs/images/library-list-view.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-006"
+      }
     },
     {
       "name": "library-view-cards",
@@ -186,8 +211,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-007",
-      "output": "app/features/site/docs/images/library-view-cards.png"
+      "output": "app/features/site/docs/images/library-view-cards.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-007"
+      }
     },
     {
       "name": "library-gallery-view",
@@ -206,13 +234,23 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for 12 Angry Men"
           }
         }
       ],
-      "framingTheme": "aurora-008",
-      "output": "app/features/site/docs/images/library-gallery-view.png",
-      "setup": ["general-settings", "list-to-gallery"]
+      "requiredImages": [
+        "Artwork for 12 Angry Men (1957)",
+        "Artwork for Taxi Driver (1976)",
+        "Artwork for Mindhunter (2017) S01",
+        "Artwork for When Life Gives You Tangerines (2025) S01",
+        "Artwork for Breaking Bad (2008) S01"
+      ],
+      "output": "app/features/site/docs/images/library-gallery-view.webp",
+      "setup": ["general-settings", "list-to-gallery"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-008"
+      }
     },
     {
       "name": "library-gallery-controls",
@@ -230,15 +268,16 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for The Prestige"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open The Bear"
+            "name": "View The Sandman",
+            "index": 0
           },
           "expectVisible": {
             "text": "Show episode names",
@@ -249,7 +288,8 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for The Bear"
+            "name": "Open menu for The Sandman",
+            "index": 0
           },
           "expectVisible": {
             "text": "Change artwork",
@@ -257,9 +297,14 @@
           }
         }
       ],
-      "framingTheme": "aurora-009",
-      "output": "app/features/site/docs/images/library-gallery-controls.png",
-      "setup": ["general-settings", "gallery-view"]
+      "requiredImages": ["Artwork for The Sandman S01"],
+      "requiredTmdbImageCount": 3,
+      "output": "app/features/site/docs/images/library-gallery-controls.webp",
+      "setup": ["general-settings", "gallery-view"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-009"
+      }
     },
     {
       "name": "library-item-menu",
@@ -285,16 +330,19 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           },
           "expectVisible": {
-            "text": "View log",
-            "exact": true
+            "role": "menuitem",
+            "name": "View log"
           }
         }
       ],
-      "framingTheme": "aurora-010",
-      "output": "app/features/site/docs/images/library-item-menu.png"
+      "output": "app/features/site/docs/images/library-item-menu.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-010"
+      }
     },
     {
       "name": "library-refresh-link-choices",
@@ -313,14 +361,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Open menu for Shows and movies"
+            "name": "Open menu for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Shows and movies"
+            "name": "Open menu for TV Shows"
           },
           "expectVisible": {
             "text": "Refresh link choices",
@@ -328,9 +376,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-011",
-      "output": "app/features/site/docs/images/library-refresh-link-choices.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "output": "app/features/site/docs/images/library-refresh-link-choices.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-011"
+      }
     },
     {
       "name": "library-change-artwork",
@@ -348,15 +399,15 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Dune: Part Two",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for The Prestige"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "Open menu for The Prestige"
           },
           "expectVisible": {
             "text": "Change artwork",
@@ -370,14 +421,16 @@
             "exact": true
           },
           "expectVisible": {
-            "text": "Search by title",
-            "exact": false
+            "placeholder": "Search by title"
           }
         }
       ],
-      "framingTheme": "aurora-012",
-      "output": "app/features/site/docs/images/library-change-artwork.png",
-      "setup": ["general-settings", "gallery-view"]
+      "output": "app/features/site/docs/images/library-change-artwork.webp",
+      "setup": ["general-settings", "gallery-view"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-012"
+      }
     },
     {
       "name": "library-expiry-states",
@@ -400,8 +453,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-013",
-      "output": "app/features/site/docs/images/library-expiry-states.png"
+      "output": "app/features/site/docs/images/library-expiry-states.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-013"
+      }
     },
     {
       "name": "opening-links-folder-browser",
@@ -427,27 +483,21 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View Shows and movies"
-          },
-          "expectVisible": {
-            "text": "Movies",
-            "exact": true
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Movies",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Dune Part Two (2024).mkv",
+            "name": "View Movies",
             "exact": false
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv, new"
           }
         }
       ],
-      "framingTheme": "aurora-014",
-      "output": "app/features/site/docs/images/opening-links-folder-browser.png"
+      "setup": ["list-view"],
+      "output": "app/features/site/docs/images/opening-links-folder-browser.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-014"
+      }
     },
     {
       "name": "opening-links-resolving-folder",
@@ -460,6 +510,7 @@
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "holdExtractionUntilCapture": true,
       "steps": [
         {
           "action": "navigate",
@@ -473,121 +524,45 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View Shows and movies"
+            "name": "View TV Shows",
+            "exact": false
           },
           "expectVisible": {
-            "text": "TV Shows",
-            "exact": true
+            "role": "button",
+            "name": "Mindhunter, new"
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "TV Shows",
-            "exact": true
+            "role": "button",
+            "name": "Mindhunter, new"
           },
           "expectVisible": {
-            "text": "Severance",
-            "exact": true
+            "role": "button",
+            "name": "Season 02, new"
           }
         },
         {
           "action": "click",
           "target": {
-            "text": "Severance",
-            "exact": true
+            "role": "button",
+            "name": "Season 02, new"
           },
           "expectVisible": {
-            "text": "Season 03",
-            "exact": true
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "Season 03",
-            "exact": true
-          },
-          "expectVisible": {
-            "label": "Loading playable links for Season 03…"
+            "label": "Loading Season 02…"
           }
         }
       ],
-      "framingTheme": "aurora-015",
-      "output": "app/features/site/docs/images/opening-links-resolving-folder.png"
+      "setup": ["list-view"],
+      "output": "app/features/site/docs/images/opening-links-resolving-folder.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-015"
+      }
     },
     {
       "name": "opening-links-watched-confirmation",
-      "seedScenario": "docs",
-      "route": "/save",
-      "context": "desktop",
-      "viewport": {
-        "width": 1470,
-        "height": 836,
-        "deviceScaleFactor": 2
-      },
-      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-      "steps": [
-        {
-          "action": "navigate",
-          "path": "/save",
-          "expectVisible": {
-            "text": "Today",
-            "exact": true
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "View The Bear"
-          },
-          "expectVisible": {
-            "text": "The Bear S01E01.mkv",
-            "exact": true
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "text": "The Bear S01E01.mkv",
-            "exact": true
-          },
-          "expectVisible": {
-            "text": "Mark as watched?",
-            "exact": true
-          }
-        }
-      ],
-      "framingTheme": "aurora-016",
-      "output": "app/features/site/docs/images/opening-links-watched-confirmation.png"
-    },
-    {
-      "name": "settings-player",
-      "seedScenario": "docs",
-      "route": "/settings/player",
-      "context": "desktop",
-      "viewport": {
-        "width": 1470,
-        "height": 836,
-        "deviceScaleFactor": 2
-      },
-      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-      "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/player",
-          "expectVisible": {
-            "role": "heading",
-            "name": "Player"
-          }
-        }
-      ],
-      "framingTheme": "aurora-017",
-      "output": "app/features/site/docs/images/settings-player.png"
-    },
-    {
-      "name": "player-not-installed",
       "seedScenario": "docs",
       "route": "/save",
       "context": "phone",
@@ -610,7 +585,86 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Open menu for Dune: Part Two"
+            "name": "View The Sandman",
+            "exact": false,
+            "index": 0
+          },
+          "expectVisible": {
+            "text": "The Sandman S01E01 2160p Blu-ray DV.mkv",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "The Sandman S01E01 2160p Blu-ray DV.mkv, new"
+          },
+          "expectVisible": {
+            "text": "Mark as watched?",
+            "exact": true
+          }
+        }
+      ],
+      "setup": ["list-view"],
+      "output": "app/features/site/docs/images/opening-links-watched-confirmation.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-016"
+      }
+    },
+    {
+      "name": "settings-player",
+      "seedScenario": "docs",
+      "route": "/settings/player",
+      "context": "desktop",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/settings/player",
+          "expectVisible": {
+            "role": "heading",
+            "name": "Player"
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/settings-player.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-017"
+      }
+    },
+    {
+      "name": "player-not-installed",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "phone",
+      "viewport": {
+        "width": 412,
+        "height": 924,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Open menu for The Prestige"
           },
           "expectVisible": {
             "text": "Open in",
@@ -640,8 +694,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-018",
-      "output": "app/features/site/docs/images/player-not-installed.png"
+      "output": "app/features/site/docs/images/player-not-installed.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-018"
+      }
     },
     {
       "name": "settings-plugins",
@@ -664,8 +721,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-019",
-      "output": "app/features/site/docs/images/settings-plugins.png"
+      "output": "app/features/site/docs/images/settings-plugins.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-019"
+      }
     },
     {
       "name": "settings-plugins-info",
@@ -678,6 +738,7 @@
         "deviceScaleFactor": 2
       },
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "preserveScrollPosition": true,
       "steps": [
         {
           "action": "navigate",
@@ -691,7 +752,19 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Bhadoo’s Google Drive Index info"
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Bhadoo’s Google Drive Index info",
+            "index": 0
           },
           "expectVisible": {
             "text": "Version",
@@ -699,8 +772,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-020",
-      "output": "app/features/site/docs/images/settings-plugins-info.png"
+      "output": "app/features/site/docs/images/settings-plugins-info.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-020"
+      }
     },
     {
       "name": "settings-plugins-domain-dialog",
@@ -726,6 +802,17 @@
           "action": "click",
           "target": {
             "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
             "name": "Add domain for Bhadoo’s Google Drive Index"
           },
           "expectVisible": {
@@ -734,8 +821,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-021",
-      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.png"
+      "output": "app/features/site/docs/images/settings-plugins-domain-dialog.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-021"
+      }
     },
     {
       "name": "settings-plugins-edit-credentials",
@@ -761,6 +851,17 @@
           "action": "click",
           "target": {
             "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
             "name": "Edit credentials for drive.example.invalid"
           },
           "expectVisible": {
@@ -769,8 +870,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-022",
-      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.png"
+      "output": "app/features/site/docs/images/settings-plugins-edit-credentials.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-022"
+      }
     },
     {
       "name": "settings-plugins-remove-credentials",
@@ -796,6 +900,17 @@
           "action": "click",
           "target": {
             "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
             "name": "Edit credentials for drive.example.invalid"
           },
           "expectVisible": {
@@ -815,8 +930,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-023",
-      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.png"
+      "output": "app/features/site/docs/images/settings-plugins-remove-credentials.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-023"
+      }
     },
     {
       "name": "settings-plugins-remove-domain",
@@ -842,6 +960,17 @@
           "action": "click",
           "target": {
             "role": "button",
+            "name": "Show domains for Bhadoo’s Google Drive Index"
+          },
+          "expectVisible": {
+            "text": "drive.example.invalid",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
             "name": "Remove drive.example.invalid"
           },
           "expectVisible": {
@@ -850,8 +979,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-024",
-      "output": "app/features/site/docs/images/settings-plugins-remove-domain.png"
+      "output": "app/features/site/docs/images/settings-plugins-remove-domain.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-024"
+      }
     },
     {
       "name": "settings-plugins-add-server",
@@ -885,8 +1017,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-025",
-      "output": "app/features/site/docs/images/settings-plugins-add-server.png"
+      "output": "app/features/site/docs/images/settings-plugins-add-server.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-025"
+      }
     },
     {
       "name": "settings-plugins-server-row",
@@ -920,8 +1055,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-026",
-      "output": "app/features/site/docs/images/settings-plugins-server-row.png"
+      "output": "app/features/site/docs/images/settings-plugins-server-row.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-026"
+      }
     },
     {
       "name": "settings-plugins-delete-server",
@@ -965,8 +1103,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-027",
-      "output": "app/features/site/docs/images/settings-plugins-delete-server.png"
+      "output": "app/features/site/docs/images/settings-plugins-delete-server.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-027"
+      }
     },
     {
       "name": "settings-proxy",
@@ -989,8 +1130,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-028",
-      "output": "app/features/site/docs/images/settings-proxy.png"
+      "output": "app/features/site/docs/images/settings-proxy.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-028"
+      }
     },
     {
       "name": "settings-proxy-key-dialog",
@@ -1024,8 +1168,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-029",
-      "output": "app/features/site/docs/images/settings-proxy-key-dialog.png"
+      "output": "app/features/site/docs/images/settings-proxy-key-dialog.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-029"
+      }
     },
     {
       "name": "settings-proxy-balance",
@@ -1048,8 +1195,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-030",
-      "output": "app/features/site/docs/images/settings-proxy-balance.png"
+      "output": "app/features/site/docs/images/settings-proxy-balance.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-030"
+      }
     },
     {
       "name": "remote-play-device-picker",
@@ -1095,8 +1245,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-031",
-      "output": "app/features/site/docs/images/remote-play-device-picker.png"
+      "output": "app/features/site/docs/images/remote-play-device-picker.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-031"
+      }
     },
     {
       "name": "remote-play-connected-to",
@@ -1120,8 +1273,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-032",
-      "output": "app/features/site/docs/images/remote-play-connected-to.png"
+      "output": "app/features/site/docs/images/remote-play-connected-to.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-032"
+      }
     },
     {
       "name": "remote-play-controlled-by",
@@ -1145,8 +1301,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-033",
-      "output": "app/features/site/docs/images/remote-play-controlled-by.png"
+      "output": "app/features/site/docs/images/remote-play-controlled-by.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-033"
+      }
     },
     {
       "name": "remote-play-receiver-overlay",
@@ -1170,8 +1329,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-034",
-      "output": "app/features/site/docs/images/remote-play-receiver-overlay.png"
+      "output": "app/features/site/docs/images/remote-play-receiver-overlay.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-034"
+      }
     },
     {
       "name": "saving-links-input",
@@ -1197,14 +1359,17 @@
           "target": {
             "label": "Link"
           },
-          "value": "https://media.example.invalid/Severance-S02E03.mkv",
+          "value": "https://media.example.invalid/lynvo-demo/12-angry-men-1957.mkv",
           "expectVisible": {
             "label": "Link"
           }
         }
       ],
-      "framingTheme": "aurora-035",
-      "output": "app/features/site/docs/images/saving-links-input.png"
+      "output": "app/features/site/docs/images/saving-links-input.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-035"
+      }
     },
     {
       "name": "saving-links-clipboard-permission",
@@ -1237,8 +1402,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-036",
-      "output": "app/features/site/docs/images/saving-links-clipboard-permission.png"
+      "output": "app/features/site/docs/images/saving-links-clipboard-permission.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-036"
+      }
     },
     {
       "name": "saving-links-choose-links",
@@ -1257,14 +1425,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           },
           "expectVisible": {
             "role": "tree",
@@ -1272,9 +1440,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-037",
-      "output": "app/features/site/docs/images/saving-links-choose-links.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "output": "app/features/site/docs/images/saving-links-choose-links.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-037"
+      }
     },
     {
       "name": "saving-links-extraction-failed",
@@ -1308,8 +1479,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-038",
-      "output": "app/features/site/docs/images/saving-links-extraction-failed.png"
+      "output": "app/features/site/docs/images/saving-links-extraction-failed.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-038"
+      }
     },
     {
       "name": "saving-links-source-maintenance",
@@ -1342,8 +1516,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-039",
-      "output": "app/features/site/docs/images/saving-links-source-maintenance.png"
+      "output": "app/features/site/docs/images/saving-links-source-maintenance.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-039"
+      }
     },
     {
       "name": "saving-links-source-degraded",
@@ -1376,8 +1553,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-040",
-      "output": "app/features/site/docs/images/saving-links-source-degraded.png"
+      "output": "app/features/site/docs/images/saving-links-source-degraded.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-040"
+      }
     },
     {
       "name": "saving-links-source-unavailable",
@@ -1410,8 +1590,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-041",
-      "output": "app/features/site/docs/images/saving-links-source-unavailable.png"
+      "output": "app/features/site/docs/images/saving-links-source-unavailable.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-041"
+      }
     },
     {
       "name": "saving-links-domain-suggestion",
@@ -1444,8 +1627,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-042",
-      "output": "app/features/site/docs/images/saving-links-domain-suggestion.png"
+      "output": "app/features/site/docs/images/saving-links-domain-suggestion.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-042"
+      }
     },
     {
       "name": "settings-security-sessions",
@@ -1468,8 +1654,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-043",
-      "output": "app/features/site/docs/images/settings-security-sessions.png"
+      "output": "app/features/site/docs/images/settings-security-sessions.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-043"
+      }
     },
     {
       "name": "settings-security-sign-out-device",
@@ -1504,8 +1693,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-044",
-      "output": "app/features/site/docs/images/settings-security-sign-out-device.png"
+      "output": "app/features/site/docs/images/settings-security-sign-out-device.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-044"
+      }
     },
     {
       "name": "settings-security-sign-out-all",
@@ -1539,8 +1731,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-045",
-      "output": "app/features/site/docs/images/settings-security-sign-out-all.png"
+      "output": "app/features/site/docs/images/settings-security-sign-out-all.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-045"
+      }
     },
     {
       "name": "settings-security-delete-account",
@@ -1569,16 +1764,20 @@
             "exact": true
           },
           "expectVisible": {
-            "text": "Delete account?",
-            "exact": true
+            "role": "heading",
+            "name": "Delete account"
           }
         }
       ],
-      "framingTheme": "aurora-046",
-      "output": "app/features/site/docs/images/settings-security-delete-account.png"
+      "output": "app/features/site/docs/images/settings-security-delete-account.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-046"
+      }
     },
     {
       "name": "sign-in-tv-qr",
+      "blockedReason": "The local docs capture uses --no-auth, which signs every browser into the development account and redirects guest auth routes to /save.",
       "seedScenario": "docs",
       "route": "/auth/sign-in-with-another-device",
       "context": "tv",
@@ -1593,15 +1792,19 @@
           "action": "navigate",
           "path": "/auth/sign-in-with-another-device",
           "expectVisible": {
-            "label": "Sign-in verification code"
+            "selector": "[aria-label=\"Sign-in verification code\"]"
           }
         }
       ],
-      "framingTheme": "aurora-047",
-      "output": "app/features/site/docs/images/sign-in-tv-qr.png"
+      "output": "app/features/site/docs/images/sign-in-tv-qr.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-047"
+      }
     },
     {
       "name": "sign-in-approval",
+      "blockedReason": "The local docs capture uses --no-auth, which signs every browser into the development account and redirects guest auth routes to /save.",
       "seedScenario": "docs",
       "route": "/auth/device",
       "context": "desktop",
@@ -1616,7 +1819,7 @@
           "action": "navigate",
           "path": "/auth/sign-in-with-another-device",
           "expectVisible": {
-            "label": "Sign-in verification code"
+            "selector": "[aria-label=\"Sign-in verification code\"]"
           },
           "captureAs": "deviceCode"
         },
@@ -1629,8 +1832,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-048",
-      "output": "app/features/site/docs/images/sign-in-approval.png"
+      "output": "app/features/site/docs/images/sign-in-approval.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-048"
+      }
     },
     {
       "name": "start-guide-save",
@@ -1656,14 +1862,17 @@
           "target": {
             "label": "Link"
           },
-          "value": "https://example.invalid/Dune.mkv",
+          "value": "https://example.invalid/Taxi%20Driver%20(1976).mkv",
           "expectVisible": {
             "label": "Link"
           }
         }
       ],
-      "framingTheme": "aurora-049",
-      "output": "app/features/site/docs/images/start-guide-save.png"
+      "output": "app/features/site/docs/images/start-guide-save.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-049"
+      }
     },
     {
       "name": "start-guide-choose-links",
@@ -1682,14 +1891,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           },
           "expectVisible": {
             "role": "tree",
@@ -1697,9 +1906,12 @@
           }
         }
       ],
-      "framingTheme": "aurora-050",
-      "output": "app/features/site/docs/images/start-guide-choose-links.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "output": "app/features/site/docs/images/start-guide-choose-links.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-050"
+      }
     },
     {
       "name": "start-guide-tv-library",
@@ -1718,14 +1930,14 @@
           "path": "/save",
           "expectVisible": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Choose links for Shows and movies"
+            "name": "Choose links for TV Shows"
           },
           "expectVisible": {
             "role": "tree",
@@ -1736,50 +1948,31 @@
           "action": "click",
           "target": {
             "role": "treeitem",
-            "name": "TV Shows"
+            "name": "Mindhunter"
           },
           "expectVisible": {
             "role": "treeitem",
-            "name": "Severance"
+            "name": "Season 01"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "treeitem",
-            "name": "Severance"
+            "name": "Season 01"
           },
           "expectVisible": {
             "role": "treeitem",
-            "name": "Season 02"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "treeitem",
-            "name": "Season 02"
-          },
-          "expectVisible": {
-            "role": "treeitem",
-            "name": "Severance S02E03.mkv"
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "treeitem",
-            "name": "Movies"
-          },
-          "expectVisible": {
-            "role": "treeitem",
-            "name": "Dune Part Two (2024).mkv"
+            "name": "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv"
           }
         }
       ],
-      "framingTheme": "aurora-051",
-      "output": "app/features/site/docs/images/start-guide-tv-library.png",
-      "setup": ["general-settings", "gallery-choice"]
+      "output": "app/features/site/docs/images/start-guide-tv-library.webp",
+      "setup": ["general-settings", "gallery-choice"],
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-051"
+      }
     },
     {
       "name": "settings-storage",
@@ -1802,8 +1995,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-052",
-      "output": "app/features/site/docs/images/settings-storage.png"
+      "output": "app/features/site/docs/images/settings-storage.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-052"
+      }
     },
     {
       "name": "settings-storage-delete-older",
@@ -1848,8 +2044,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-053",
-      "output": "app/features/site/docs/images/settings-storage-delete-older.png"
+      "output": "app/features/site/docs/images/settings-storage-delete-older.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-053"
+      }
     },
     {
       "name": "settings-storage-delete-all",
@@ -1883,8 +2082,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-054",
-      "output": "app/features/site/docs/images/settings-storage-delete-all.png"
+      "output": "app/features/site/docs/images/settings-storage-delete-all.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-054"
+      }
     },
     {
       "name": "settings-usage",
@@ -1902,13 +2104,17 @@
           "action": "navigate",
           "path": "/settings/usage",
           "expectVisible": {
-            "text": "Monthly usage limit",
-            "exact": true
+            "role": "heading",
+            "name": "Monthly usage limit",
+            "index": 0
           }
         }
       ],
-      "framingTheme": "aurora-055",
-      "output": "app/features/site/docs/images/settings-usage.png"
+      "output": "app/features/site/docs/images/settings-usage.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-055"
+      }
     },
     {
       "name": "settings-usage-custom",
@@ -1926,13 +2132,16 @@
           "action": "navigate",
           "path": "/settings/usage",
           "expectVisible": {
-            "text": "Custom Plugin Server",
-            "exact": false
+            "role": "heading",
+            "name": "Custom Plugin Server usage"
           }
         }
       ],
-      "framingTheme": "aurora-056",
-      "output": "app/features/site/docs/images/settings-usage-custom.png"
+      "output": "app/features/site/docs/images/settings-usage-custom.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-056"
+      }
     },
     {
       "name": "settings-usage-retry",
@@ -1956,14 +2165,46 @@
           }
         }
       ],
-      "framingTheme": "aurora-057",
-      "output": "app/features/site/docs/images/settings-usage-retry.png"
+      "output": "app/features/site/docs/images/settings-usage-retry.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-057"
+      }
+    },
+    {
+      "name": "homepage-library-source",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "captureStyles": "[data-site-header]{display:none!important}[data-site-content]{padding-top:0!important}",
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        }
+      ],
+      "output": "public/images/homepage/library-overview.png",
+      "framing": false
     },
     {
       "name": "marketing-homepage-desktop",
       "seedScenario": "none",
       "route": "/",
       "context": "desktop",
+      "captureStyles": "[data-site-header]{display:none!important}",
+      "captureTarget": {
+        "selector": ".home-screenshot-stage"
+      },
       "viewport": {
         "width": 1470,
         "height": 836,
@@ -1975,19 +2216,26 @@
           "action": "navigate",
           "path": "/",
           "expectVisible": {
-            "text": "Save it here. Open it in an Android player.",
-            "exact": true
+            "role": "img",
+            "name": "Lynvo Library in List view"
           }
         }
       ],
-      "framingTheme": "aurora-058",
-      "output": ".screenshots/intermediates/marketing-homepage-desktop.png"
+      "output": ".screenshots/intermediates/marketing-homepage-desktop.png",
+      "framing": {
+        "mode": "css",
+        "theme": "aurora-058"
+      }
     },
     {
       "name": "marketing-homepage-phone",
       "seedScenario": "none",
       "route": "/",
       "context": "phone",
+      "captureStyles": "[data-site-header]{display:none!important}",
+      "captureTarget": {
+        "selector": ".home-screenshot-stage"
+      },
       "viewport": {
         "width": 412,
         "height": 924,
@@ -1999,13 +2247,16 @@
           "action": "navigate",
           "path": "/",
           "expectVisible": {
-            "text": "Save it here. Open it in an Android player.",
-            "exact": true
+            "role": "img",
+            "name": "Lynvo Library in List view"
           }
         }
       ],
-      "framingTheme": "aurora-059",
-      "output": ".screenshots/intermediates/marketing-homepage-phone.png"
+      "output": ".screenshots/intermediates/marketing-homepage-phone.png",
+      "framing": {
+        "mode": "css",
+        "theme": "aurora-059"
+      }
     },
     {
       "name": "marketing-plugins-desktop",
@@ -2028,8 +2279,11 @@
           }
         }
       ],
-      "framingTheme": "aurora-060",
-      "output": ".screenshots/intermediates/marketing-plugins-desktop.png"
+      "output": ".screenshots/intermediates/marketing-plugins-desktop.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-060"
+      }
     },
     {
       "name": "marketing-pricing-desktop",
@@ -2052,11 +2306,35 @@
           }
         }
       ],
-      "framingTheme": "aurora-061",
-      "output": ".screenshots/intermediates/marketing-pricing-desktop.png"
+      "output": ".screenshots/intermediates/marketing-pricing-desktop.png",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-061"
+      }
     }
   ],
   "setups": {
+    "list-view": [
+      {
+        "action": "navigate",
+        "path": "/settings/general",
+        "expectVisible": {
+          "role": "heading",
+          "name": "General"
+        }
+      },
+      {
+        "action": "click",
+        "target": {
+          "text": "List view",
+          "exact": true
+        },
+        "expectVisible": {
+          "role": "radio",
+          "name": "List view"
+        }
+      }
+    ],
     "general-settings": [
       {
         "action": "navigate",

@@ -443,6 +443,70 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   animation: home-demo-item-swap 420ms var(--ease-out-strong) both;
 }
 
+.home-screenshot-stage {
+  --home-screenshot-upper-right: var(--home-screenshot-desktop-upper-right);
+  --home-screenshot-lower-left: var(--home-screenshot-desktop-lower-left);
+  --home-screenshot-base-start: var(--home-screenshot-desktop-base-start);
+  --home-screenshot-base-middle: var(--home-screenshot-desktop-base-middle);
+  --home-screenshot-base-end: var(--home-screenshot-desktop-base-end);
+  --home-screenshot-frame-width: min(
+    var(--home-screenshot-desktop-frame-width),
+    var(--home-screenshot-frame-max-width)
+  );
+  --home-screenshot-background-padding: calc(
+    (100vw - var(--home-screenshot-frame-width)) / 2
+  );
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: var(--home-screenshot-background-padding);
+  background:
+    radial-gradient(
+      circle at var(--home-screenshot-upper-right-position),
+      var(--home-screenshot-upper-right) 0%,
+      transparent var(--home-screenshot-upper-right-fade)
+    ),
+    radial-gradient(
+      circle at var(--home-screenshot-lower-left-position),
+      var(--home-screenshot-lower-left) 0%,
+      transparent var(--home-screenshot-lower-left-fade)
+    ),
+    linear-gradient(
+      var(--home-screenshot-linear-angle),
+      var(--home-screenshot-base-start) 0%,
+      var(--home-screenshot-base-middle)
+        var(--home-screenshot-linear-middle-stop),
+      var(--home-screenshot-base-end) 100%
+    );
+}
+
+.home-screenshot-frame {
+  flex: none;
+  width: var(--home-screenshot-frame-width);
+  padding: var(--home-screenshot-frame-padding);
+  border-radius: var(--home-screenshot-frame-radius);
+  background: var(--home-screenshot-frame-color);
+  box-shadow: var(--home-screenshot-frame-shadow);
+}
+
+.home-screenshot-frame__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--home-screenshot-screen-radius);
+}
+
+.home-screenshot-stage[data-phone-viewport="true"] {
+  --home-screenshot-frame-width: var(--home-screenshot-phone-frame-width);
+  --home-screenshot-upper-right: var(--home-screenshot-phone-upper-right);
+  --home-screenshot-lower-left: var(--home-screenshot-phone-lower-left);
+  --home-screenshot-base-start: var(--home-screenshot-phone-base-start);
+  --home-screenshot-base-middle: var(--home-screenshot-phone-base-middle);
+  --home-screenshot-base-end: var(--home-screenshot-phone-base-end);
+}
+
 @keyframes home-demo-layer-in {
   from {
     opacity: 0;

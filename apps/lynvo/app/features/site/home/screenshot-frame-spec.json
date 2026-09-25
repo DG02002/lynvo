@@ -1,0 +1,45 @@
+{
+  "aurora": {
+    "upperRight": {
+      "xPercent": 85,
+      "yPercent": 8,
+      "fadePercent": 42
+    },
+    "lowerLeft": {
+      "xPercent": 15,
+      "yPercent": 85,
+      "fadePercent": 52
+    },
+    "linearAngleDegrees": 135,
+    "linearMiddleStopPercent": 48
+  },
+  "frame": {
+    "widthViewportPercent": 92,
+    "maxWidthCssPixels": 1800,
+    "phoneWidthViewportPercent": 80,
+    "phoneViewportMaxWidthCssPixels": 767,
+    "paddingCssPixels": 10,
+    "radiusCssPixels": 14,
+    "screenRadiusCssPixels": 4,
+    "color": "#101012",
+    "shadowColor": "#000000",
+    "shadows": [
+      {
+        "offsetXCssPixels": 0,
+        "offsetYCssPixels": 24,
+        "blurCssPixels": 70,
+        "opacity": 0.22
+      },
+      {
+        "offsetXCssPixels": 0,
+        "offsetYCssPixels": 6,
+        "blurCssPixels": 20,
+        "opacity": 0.12
+      }
+    ]
+  },
+  "homeThemes": {
+    "desktop": "aurora-058",
+    "phone": "aurora-059"
+  }
+}

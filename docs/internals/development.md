@@ -197,8 +197,9 @@ pnpm capture:screenshots
 The runner reseeds the selected scenarios before opening isolated browser
 contexts. Use `--list` to print shot names, `--dry-run` to inspect selected
 routes and outputs, or `--only <name-or-prefix>` to retake a subset. Documentation
-shots are raw PNGs under `apps/lynvo/app/features/site/docs/images/`; marketing
-captures stay in the ignored `apps/lynvo/.screenshots/intermediates/` directory.
+shots follow each manifest entry's framing option and write finished assets under
+`apps/lynvo/app/features/site/docs/images/`; marketing captures stay in the
+ignored `apps/lynvo/.screenshots/intermediates/` directory.
 
 ## Test TV Bro-specific UI
 

@@ -10,8 +10,8 @@ import {
 import { Result, Schema } from "effect"
 
 import type { ExtractedLink } from "../app/features/links/types"
+import { LYNVO_PLUGIN_SERVER_ID } from "../shared/constants"
 import {
-  DOCS_SEED_ARTWORK_POLICY,
   DOCS_SEED_PROXY_BALANCE,
   DOCS_SEED_PROXY_KEY,
   DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
@@ -529,160 +529,335 @@ const resolvableNode = (key: string, label: string): LinkNode => ({
   resolutionKind: "folder",
 })
 
+interface DocsMediaFixtureInput {
+  readonly slug: string
+  readonly title: string
+  readonly filename: string
+  readonly daysAgo: number
+  readonly size: string
+  readonly expiry?: number
+}
+
+const docsMediaFixture = ({
+  slug,
+  title,
+  filename,
+  daysAgo,
+  size,
+  expiry,
+}: DocsMediaFixtureInput): LinkFixture => ({
+  slug,
+  url: sourceUrl(`Media/${encodeURIComponent(filename)}`),
+  title,
+  daysAgo,
+  pluginId: "direct-media",
+  pluginName: "Direct Media",
+  nodes: [
+    playableNode({
+      key: `${slug}-file`,
+      label: filename,
+      url: playableUrl(slug),
+      expiry,
+      expirySource: expiry === undefined ? undefined : "signed-url",
+      size,
+    }),
+  ],
+})
+
+const SANDMAN_EPISODES = [
+  { season: "01", episode: "01", size: "4.2 GB" },
+  { season: "01", episode: "02", size: "4.0 GB" },
+  { season: "02", episode: "01", size: "4.5 GB" },
+  { season: "02", episode: "02", size: "4.3 GB" },
+] as const
+type SandmanSeason = (typeof SANDMAN_EPISODES)[number]["season"]
+
+const createSandmanEpisodeNodes = (season: SandmanSeason, keyPrefix: string) =>
+  SANDMAN_EPISODES.filter((episode) => episode.season === season).map(
+    ({ episode, size }) => {
+      const seasonEpisode = `s${season}e${episode}`
+      return playableNode({
+        key: `${keyPrefix}-${seasonEpisode}`,
+        label: `The Sandman S${season}E${episode} 2160p Blu-ray DV.mkv`,
+        url: playableUrl(`the-sandman-${seasonEpisode}`),
+        size,
+      })
+    }
+  )
+
 const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
   {
     slug: "drive-library",
-    url: sourceUrl("Shows%20and%20Movies/"),
-    title: "Shows and movies",
+    url: sourceUrl("TV%20Shows/"),
+    title: "TV Shows",
     daysAgo: 12,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
     nodes: [
-      groupNode("library-shows", "TV Shows", [
-        groupNode("library-severance", "Severance", [
-          groupNode("library-severance-s02", "Season 02", [
-            playableNode({
-              key: "library-severance-s02e03",
-              label: "Severance S02E03.mkv",
-              url: playableUrl("severance-s02e03"),
-              size: "1.4 GB",
-            }),
-          ]),
-          resolvableNode("severance-season-03", "Season 03"),
-        ]),
-        groupNode("library-bear", "The Bear", [
+      groupNode("library-mindhunter", "Mindhunter", [
+        groupNode("library-mindhunter-s01", "Season 01", [
           playableNode({
-            key: "library-bear-s02e04",
-            label: "Season 02/The Bear S02E04.mkv",
-            url: playableUrl("the-bear-s02e04"),
-            size: "1.1 GB",
+            key: "library-mindhunter-s01e01",
+            label:
+              "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
+            url: playableUrl("mindhunter-s01e01"),
+            size: "1.2 GB",
           }),
         ]),
+        resolvableNode("mindhunter-season-02", "Season 02"),
       ]),
-      groupNode("library-movies", "Movies", [
-        playableNode({
-          key: "library-dune-part-two",
-          label: "Dune Part Two (2024).mkv",
-          url: playableUrl("dune-part-two"),
-          size: "2.8 GB",
-        }),
+      groupNode("library-the-sandman", "The Sandman", [
+        groupNode("library-the-sandman-s01", "Season 01", [
+          ...createSandmanEpisodeNodes("01", "library-the-sandman"),
+        ]),
+        groupNode("library-the-sandman-s02", "Season 02", [
+          ...createSandmanEpisodeNodes("02", "library-the-sandman"),
+        ]),
       ]),
     ],
   },
   {
-    slug: "the-bear-season-01",
-    url: sourceUrl("The%20Bear/Season%2001/"),
-    title: "The Bear",
+    slug: "movies-library",
+    url: sourceUrl("Movies/"),
+    title: "Movies",
+    daysAgo: 12,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      playableNode({
+        key: "library-12-angry-men",
+        label: "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
+        url: playableUrl("12-angry-men-1957"),
+        size: "1.6 GB",
+      }),
+      playableNode({
+        key: "library-taxi-driver",
+        label: "Taxi Driver (1976) - 1080p Blu-ray AVC.mkv",
+        url: playableUrl("taxi-driver-1976"),
+        size: "2.1 GB",
+      }),
+    ],
+  },
+  {
+    slug: "the-sandman-season-01",
+    url: sourceUrl("The%20Sandman/Season%2001/"),
+    title: "The Sandman",
     daysAgo: 2,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
     nodes: [
-      groupNode("bear-s01-show", "The Bear", [
-        groupNode("bear-s01-folder", "Season 01", [
-          playableNode({
-            key: "bear-s01e01",
-            label: "The Bear S01E01.mkv",
-            url: playableUrl("the-bear-s01e01"),
-            size: "1.0 GB",
-          }),
-          playableNode({
-            key: "bear-s01e02",
-            label: "The Bear S01E02.mkv",
-            url: playableUrl("the-bear-s01e02"),
-            size: "980 MB",
-          }),
+      groupNode("sandman-s01-show", "The Sandman", [
+        groupNode("sandman-s01-folder", "Season 01", [
+          ...createSandmanEpisodeNodes("01", "sandman"),
         ]),
       ]),
     ],
   },
   {
-    slug: "the-bear-season-02",
-    url: sourceUrl("The%20Bear/Season%2002/"),
-    title: "The Bear",
+    slug: "the-sandman-season-02",
+    url: sourceUrl("The%20Sandman/Season%2002/"),
+    title: "The Sandman",
     daysAgo: 4,
     pluginId: "onedrive-index",
     pluginName: "Spencerwooo’s OneDrive Vercel Index",
     nodes: [
-      groupNode("bear-s02-show", "The Bear", [
-        groupNode("bear-s02-folder", "Season 02", [
-          playableNode({
-            key: "bear-s02e04",
-            label: "The Bear S02E04.mkv",
-            url: playableUrl("the-bear-s02e04"),
-            size: "1.1 GB",
-          }),
-          playableNode({
-            key: "bear-s02e05",
-            label: "The Bear S02E05.mkv",
-            url: playableUrl("the-bear-s02e05"),
-            size: "1.2 GB",
-          }),
+      groupNode("sandman-s02-show", "The Sandman", [
+        groupNode("sandman-s02-folder", "Season 02", [
+          ...createSandmanEpisodeNodes("02", "sandman"),
         ]),
       ]),
     ],
   },
-  {
-    slug: "severance-s02e03",
-    url: sourceUrl("Severance/Season%2002/Severance%20S02E03.mkv"),
-    title: "Severance",
+  docsMediaFixture({
+    slug: "12-angry-men-1957",
+    title: "12 Angry Men",
+    filename: "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
     daysAgo: 0,
-    pluginId: "direct-media",
-    pluginName: "Direct Media",
-    nodes: [
-      playableNode({
-        key: "severance-s02e03-direct",
-        label: "Severance S02E03.mkv",
-        url: playableUrl("severance-s02e03"),
-        expiry: seedTime + 3 * DAY_MS + 4 * HOUR_MS + 59 * MINUTE_MS,
-        expirySource: "signed-url",
-        size: "1.4 GB",
-      }),
-    ],
-  },
-  {
-    slug: "dune-part-two",
-    url: sourceUrl("Movies/Dune%20Part%20Two%20(2024).mkv"),
-    title: "Dune: Part Two",
+    size: "1.6 GB",
+  }),
+  docsMediaFixture({
+    slug: "taxi-driver-1976",
+    title: "Taxi Driver",
+    filename: "Taxi Driver (1976) - 1080p Blu-ray AVC.mkv",
     daysAgo: 0,
-    pluginId: "direct-media",
-    pluginName: "Direct Media",
-    nodes: [
-      playableNode({
-        key: "dune-part-two-opened",
-        label: "Dune Part Two (2024).mkv",
-        url: playableUrl("dune-part-two"),
-        size: "2.8 GB",
-      }),
-    ],
-  },
+    size: "2.1 GB",
+  }),
+  docsMediaFixture({
+    slug: "mindhunter-s01e01",
+    title: "Mindhunter",
+    filename: "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 0,
+    size: "1.2 GB",
+  }),
+  docsMediaFixture({
+    slug: "when-life-gives-you-tangerines-s01e01",
+    title: "When Life Gives You Tangerines",
+    filename:
+      "When Life Gives You Tangerines (2025) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 0,
+    size: "1.3 GB",
+  }),
+  docsMediaFixture({
+    slug: "frieren-s01e01",
+    title: "Frieren: Beyond Journey's End",
+    filename:
+      "Frieren Beyond Journey's End (2023) - S01E01 - The End of the Journey - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 1,
+    size: "1.4 GB",
+  }),
+  docsMediaFixture({
+    slug: "solo-leveling-s02e01",
+    title: "Solo Leveling",
+    filename: "Solo Leveling (2024) - S02E01 - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 1,
+    size: "1.1 GB",
+  }),
+  docsMediaFixture({
+    slug: "shawshank-redemption-1994",
+    title: "The Shawshank Redemption",
+    filename: "The Shawshank Redemption (1994) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 1,
+    size: "8.4 GB",
+  }),
+  docsMediaFixture({
+    slug: "godfather-1972",
+    title: "The Godfather",
+    filename: "The Godfather (1972) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 1,
+    size: "9.1 GB",
+  }),
+  docsMediaFixture({
+    slug: "breaking-bad-s01e01",
+    title: "Breaking Bad",
+    filename: "Breaking Bad (2008) - S01E01 - Pilot - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 1,
+    size: "1.8 GB",
+  }),
   {
-    slug: "arrival-expired",
-    url: sourceUrl("Movies/Arrival%20(2016).mkv"),
-    title: "Arrival",
-    daysAgo: 10,
-    pluginId: "direct-media",
-    pluginName: "Direct Media",
-    nodes: [
-      playableNode({
-        key: "arrival-expired",
-        label: "Arrival (2016).mkv",
-        url: playableUrl("arrival"),
-        expiry: seedTime - MINUTE_MS,
-        expirySource: "signed-url",
-        size: "1.6 GB",
-      }),
-    ],
-  },
-  {
-    slug: "failed-extraction",
-    url: sourceUrl("Failed%20extraction/"),
-    title: "Season archive",
+    slug: "sopranos-failed-extraction",
+    url: sourceUrl(
+      `TV%20Shows/${encodeURIComponent("The Sopranos (1999) - S01E01 - Pilot - 1080p Blu-ray HEVC.mkv")}`
+    ),
+    title: "The Sopranos",
     daysAgo: 1,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
     nodes: [],
     failure: "The Plugin could not resolve this Source URL.",
   },
+  docsMediaFixture({
+    slug: "hunter-x-hunter-s01e01",
+    title: "Hunter x Hunter",
+    filename:
+      "Hunter x Hunter (2011) - S01E01 - Departure - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 2,
+    size: "1.2 GB",
+  }),
+  docsMediaFixture({
+    slug: "green-mile-1999",
+    title: "The Green Mile",
+    filename: "The Green Mile (1999) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 2,
+    size: "7.4 GB",
+  }),
+  docsMediaFixture({
+    slug: "dark-knight-2008",
+    title: "The Dark Knight",
+    filename: "The Dark Knight (2008) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 2,
+    size: "11.2 GB",
+  }),
+  docsMediaFixture({
+    slug: "pulp-fiction-1994",
+    title: "Pulp Fiction",
+    filename: "Pulp Fiction (1994) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 2,
+    size: "8.2 GB",
+  }),
+  docsMediaFixture({
+    slug: "chernobyl-s01e01",
+    title: "Chernobyl",
+    filename: "Chernobyl (2019) - S01E01 - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 2,
+    size: "2.0 GB",
+  }),
+  docsMediaFixture({
+    slug: "the-prestige-2006",
+    title: "The Prestige",
+    filename: "The Prestige (2006) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 4,
+    size: "11.7 GB",
+  }),
+  docsMediaFixture({
+    slug: "severance-s02e03",
+    title: "Severance",
+    filename:
+      "Severance (2022) - S02E03 - Who Is Alive? - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 4,
+    size: "2.4 GB",
+    expiry: seedTime + 3 * DAY_MS + 5 * HOUR_MS + 30 * MINUTE_MS,
+  }),
+  docsMediaFixture({
+    slug: "the-wire-s01e01",
+    title: "The Wire",
+    filename: "The Wire (2002) - S01E01 - The Target - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 4,
+    size: "1.6 GB",
+  }),
+  docsMediaFixture({
+    slug: "planet-earth-ii-s01e01",
+    title: "Planet Earth II",
+    filename:
+      "Planet Earth II (2016) - S01E01 - Islands - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 4,
+    size: "4.8 GB",
+  }),
+  docsMediaFixture({
+    slug: "interstellar-2014",
+    title: "Interstellar",
+    filename: "Interstellar (2014) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 4,
+    size: "12.6 GB",
+  }),
+  docsMediaFixture({
+    slug: "godfather-part-two-1974-expired",
+    title: "The Godfather Part II",
+    filename: "The Godfather Part II (1974) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 10,
+    size: "10.4 GB",
+    expiry: seedTime - MINUTE_MS,
+  }),
+  docsMediaFixture({
+    slug: "lord-of-the-rings-return-of-the-king-2003",
+    title: "The Lord of the Rings: The Return of the King",
+    filename:
+      "The Lord of the Rings The Return of the King (2003) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 10,
+    size: "15.3 GB",
+  }),
+  docsMediaFixture({
+    slug: "schindlers-list-1993",
+    title: "Schindler's List",
+    filename: "Schindler's List (1993) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 10,
+    size: "11.0 GB",
+  }),
+  docsMediaFixture({
+    slug: "lord-of-the-rings-fellowship-2001",
+    title: "The Lord of the Rings: The Fellowship of the Ring",
+    filename:
+      "The Lord of the Rings The Fellowship of the Ring (2001) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 10,
+    size: "14.8 GB",
+  }),
+  docsMediaFixture({
+    slug: "band-of-brothers-s01e01",
+    title: "Band of Brothers",
+    filename:
+      "Band of Brothers (2001) - S01E01 - Currahee - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 10,
+    size: "3.6 GB",
+  }),
 ]
 
 const linkMetadata = (
@@ -692,7 +867,6 @@ const linkMetadata = (
 ) => {
   const metadata = {
     schemaVersion: 3,
-    artworkPolicy: DOCS_SEED_ARTWORK_POLICY,
     source: {
       pluginId: fixture.pluginId,
       pluginName: fixture.pluginName,
@@ -775,9 +949,9 @@ export const seedDocsLinks = async (
     idsBySlug.set(fixture.slug, result.id)
   }
 
-  const openedSavedLinkId = idsBySlug.get("dune-part-two")
+  const openedSavedLinkId = idsBySlug.get("12-angry-men-1957")
   if (!openedSavedLinkId) {
-    throw new Error("The Dune: Part Two Saved link is missing.")
+    throw new Error("The 12 Angry Men Saved link is missing.")
   }
   await api.mutate({
     method: "POST",
@@ -787,7 +961,7 @@ export const seedDocsLinks = async (
       id: openedSavedLinkId,
       operation: {
         kind: "markOpened",
-        linkUrl: playableUrl("dune-part-two"),
+        linkUrl: playableUrl("12-angry-men-1957"),
       },
     },
     retryWithOperationId: true,
@@ -923,16 +1097,13 @@ const requireLocalPluginServer = async (
   return pluginServer
 }
 
-const createDocsPluginDomains = async (
-  api: SeedApiClient,
-  pluginServerId: string
-): Promise<void> => {
+const createDocsPluginDomains = async (api: SeedApiClient): Promise<void> => {
   await api.mutate({
     method: "POST",
     path: "/api/plugin-domains",
     body: {
       domain: "drive.example.invalid",
-      pluginServerId,
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
       pluginId: "bhadoo-google-drive-index",
       username: "docs-reader",
       password: "demo-library-password",
@@ -943,7 +1114,7 @@ const createDocsPluginDomains = async (
     path: "/api/plugin-domains",
     body: {
       domain: "onedrive.example.invalid",
-      pluginServerId,
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
       pluginId: "onedrive-index",
       password: "demo-index-password",
     },
@@ -1073,7 +1244,7 @@ const seedDocsSettings = async (
 ): Promise<string> => {
   await clearPluginDomains(api)
   const pluginServer = await requireLocalPluginServer(api)
-  await createDocsPluginDomains(api, pluginServer.id)
+  await createDocsPluginDomains(api)
   await configureAndVerifyProxy(api, pluginServer.id)
   await seedDocsManagedUsage(api, seedTime)
   await verifyPluginUsageRows(api, pluginServer.id)

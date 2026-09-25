@@ -1,11 +1,17 @@
 import { spawnSync } from "node:child_process"
-import { mkdir, readFile } from "node:fs/promises"
+import { readFile, rm } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { Schema } from "effect"
 import { chromium } from "playwright"
 
+import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec.json" with { type: "json" }
+import {
+  frameScreenshot,
+  saveScreenshot,
+  validatePalette,
+} from "./frame-screenshot.mjs"
 import { assertLocalHttpOrigin } from "./local-origin.mjs"
 
 const APP_DIRECTORY = path.resolve(
@@ -18,6 +24,9 @@ const MANIFEST_PATH = path.join(
   "scripts",
   "screenshot-manifest.json"
 )
+const DOCS_IMAGES_DIRECTORY =
+  path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
+  path.sep
 const DEFAULT_ORIGIN = "http://localhost:5173"
 const DESKTOP_USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
@@ -31,6 +40,7 @@ const CONTEXT_VIEWPORTS = {
   tv: { height: 1080, width: 1920 },
 }
 const STEP_TIMEOUT_MS = 15_000
+const IMAGE_TIMEOUT_MS = 45_000
 const SEED_TIMEOUT_MS = 120_000
 
 const LocatorDescriptorSchema = Schema.Struct({
@@ -64,10 +74,22 @@ const StepSchema = Schema.Union([
 ])
 const ShotSchema = Schema.Struct({
   blockedReason: Schema.optional(Schema.NonEmptyString),
+  captureTarget: Schema.optional(LocatorDescriptorSchema),
+  captureStyles: Schema.optional(Schema.NonEmptyString),
   context: Schema.Literals(["desktop", "tv", "phone"]),
-  framingTheme: Schema.NonEmptyString,
+  framing: Schema.Union([
+    Schema.Literal(false),
+    Schema.Struct({
+      mode: Schema.Literals(["css", "postprocess"]),
+      theme: Schema.NonEmptyString,
+    }),
+  ]),
+  holdExtractionUntilCapture: Schema.optional(Schema.Boolean),
   name: Schema.NonEmptyString,
   output: Schema.NonEmptyString,
+  preserveScrollPosition: Schema.optional(Schema.Boolean),
+  requiredTmdbImageCount: Schema.optional(Schema.Number),
+  requiredImages: Schema.optional(Schema.Array(Schema.NonEmptyString)),
   route: Schema.NonEmptyString,
   seedScenario: Schema.Literals(["docs", "none"]),
   setup: Schema.optional(Schema.Array(Schema.NonEmptyString)),
@@ -84,6 +106,65 @@ const ManifestSchema = Schema.Struct({
   shots: Schema.Array(ShotSchema),
   version: Schema.Number,
 })
+const ScreenshotPaletteFields = {
+  upperRight: Schema.NonEmptyString,
+  lowerLeft: Schema.NonEmptyString,
+  baseStart: Schema.NonEmptyString,
+  baseMiddle: Schema.NonEmptyString,
+  baseEnd: Schema.NonEmptyString,
+}
+const ScreenshotPaletteSchema = Schema.Struct(ScreenshotPaletteFields)
+const ScreenshotPalettesSchema = Schema.Record(
+  Schema.String,
+  ScreenshotPaletteSchema
+)
+const PALETTE_COLOR_KEYS = Object.keys(ScreenshotPaletteFields)
+// Keep large background fields from reading as repeats across the five stops.
+const MINIMUM_PALETTE_DISTANCE = 3.5
+
+const paletteSignature = (palette) =>
+  PALETTE_COLOR_KEYS.map((key) => palette[key]).join("|")
+
+const colorToOklab = (color) => {
+  const [red, green, blue] = color
+    .slice(1)
+    .match(/.{2}/gu)
+    .map((channel) => Number.parseInt(channel, 16) / 255)
+    .map((channel) =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    )
+  const light = Math.cbrt(
+    0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue
+  )
+  const medium = Math.cbrt(
+    0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue
+  )
+  const dark = Math.cbrt(
+    0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue
+  )
+  return [
+    0.2104542553 * light + 0.793617785 * medium - 0.0040720468 * dark,
+    1.9779984951 * light - 2.428592205 * medium + 0.4505937099 * dark,
+    0.0259040371 * light + 0.7827717662 * medium - 0.808675766 * dark,
+  ]
+}
+
+const paletteDistance = (first, second) =>
+  100 *
+  Math.sqrt(
+    PALETTE_COLOR_KEYS.reduce((distance, key) => {
+      const firstLab = colorToOklab(first[key])
+      const secondLab = colorToOklab(second[key])
+      return (
+        distance +
+        firstLab.reduce(
+          (channelDistance, value, index) =>
+            channelDistance + (value - secondLab[index]) ** 2,
+          0
+        )
+      )
+    }, 0) / PALETTE_COLOR_KEYS.length
+  )
 
 const expandShotSetup = (shot, setups) => {
   if (shot.setup === undefined) {
@@ -112,11 +193,24 @@ const validateViewport = (shot) => {
   ) {
     throw new Error(`${shot.name} has an invalid viewport or no steps.`)
   }
+  if (
+    shot.requiredTmdbImageCount !== undefined &&
+    (!Number.isSafeInteger(shot.requiredTmdbImageCount) ||
+      shot.requiredTmdbImageCount < 1)
+  ) {
+    throw new Error(`${shot.name} has an invalid required TMDB image count.`)
+  }
   if (shot.context === "tv" && shot.userAgent !== TV_BRO_USER_AGENT) {
     throw new Error(`${shot.name} must use the verified TV Bro user agent.`)
   }
-  if (shot.context === "phone" && shot.userAgent !== PIXEL_10_USER_AGENT) {
-    throw new Error(`${shot.name} must use the Pixel 10 Chrome user agent.`)
+  if (
+    shot.context === "phone" &&
+    shot.userAgent !== PIXEL_10_USER_AGENT &&
+    shot.userAgent !== DESKTOP_USER_AGENT
+  ) {
+    throw new Error(
+      `${shot.name} has an unsupported phone screenshot user agent.`
+    )
   }
   if (shot.context === "desktop" && shot.userAgent !== DESKTOP_USER_AGENT) {
     throw new Error(`${shot.name} must use the desktop Chrome user agent.`)
@@ -125,35 +219,73 @@ const validateViewport = (shot) => {
 
 const validateOutput = (shot, state) => {
   const outputPath = path.resolve(APP_DIRECTORY, shot.output)
-  const docsDirectory =
-    path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
-    path.sep
   const marketingDirectory =
     path.join(APP_DIRECTORY, ".screenshots", "intermediates") + path.sep
-  const isDocsOutput = outputPath.startsWith(docsDirectory)
+  const homepageImageDirectory =
+    path.join(APP_DIRECTORY, "public", "images", "homepage") + path.sep
+  const isDocsOutput = outputPath.startsWith(DOCS_IMAGES_DIRECTORY)
   const isMarketingOutput = outputPath.startsWith(marketingDirectory)
+  const isHomepageImageOutput = outputPath.startsWith(homepageImageDirectory)
+  const extension = path.extname(outputPath)
   if (
     state.outputs.has(outputPath) ||
-    path.extname(outputPath) !== ".png" ||
-    (!isDocsOutput && !isMarketingOutput) ||
-    (isDocsOutput && path.basename(outputPath) !== `${shot.name}.png`)
+    ![".png", ".webp"].includes(extension) ||
+    (!isDocsOutput && !isMarketingOutput && !isHomepageImageOutput) ||
+    (isDocsOutput &&
+      path.basename(outputPath) !== `${shot.name}${extension}`) ||
+    (isHomepageImageOutput && shot.framing !== false)
   ) {
     throw new Error(
-      `${shot.name} output must be unique and use its name in the docs images or ignored marketing directory.`
+      `${shot.name} output must be unique and use PNG or WebP in the docs images, ignored marketing directory, or raw homepage image directory.`
     )
   }
   state.outputs.add(outputPath)
 }
 
-const validateShot = (shot, state) => {
+const validateShotFraming = (shot, state, palettes) => {
+  if (shot.framing === false) {
+    return
+  }
+  const palette = palettes[shot.framing.theme]
+  if (!palette) {
+    throw new Error(
+      `${shot.name} references an unknown framing palette: ${shot.framing.theme}.`
+    )
+  }
+  if (state.themes.has(shot.framing.theme)) {
+    throw new Error(
+      `${shot.name} reuses the framing palette ${shot.framing.theme}.`
+    )
+  }
+  const signature = paletteSignature(palette)
+  if (state.palettes.has(signature)) {
+    throw new Error(
+      `${shot.name} reuses a background palette already assigned to another screenshot.`
+    )
+  }
+  state.themes.add(shot.framing.theme)
+  state.palettes.add(signature)
+  const expectedHomeTheme =
+    screenshotFrameSpec.homeThemes[
+      shot.context === "phone" ? "phone" : "desktop"
+    ]
+  if (
+    shot.framing.mode === "css" &&
+    (shot.captureTarget === undefined ||
+      shot.framing.theme !== expectedHomeTheme)
+  ) {
+    throw new Error(
+      `${shot.name} must use its assigned homepage CSS palette and capture target.`
+    )
+  }
+}
+
+const validateShot = (shot, state, palettes) => {
   if (state.names.has(shot.name)) {
     throw new Error(`The screenshot name is duplicated: ${shot.name}`)
   }
-  if (state.themes.has(shot.framingTheme)) {
-    throw new Error(`The framing theme is duplicated: ${shot.framingTheme}`)
-  }
   state.names.add(shot.name)
-  state.themes.add(shot.framingTheme)
+  validateShotFraming(shot, state, palettes)
   if (!shot.route.startsWith("/")) {
     throw new Error(`${shot.name} route must start with "/".`)
   }
@@ -170,6 +302,40 @@ const validateShot = (shot, state) => {
   }
   validateViewport(shot)
   validateOutput(shot, state)
+}
+
+const readScreenshotPalettes = async () => {
+  const palettesPath = path.join(
+    APP_DIRECTORY,
+    "app",
+    "features",
+    "site",
+    "home",
+    "screenshot-palettes.json"
+  )
+  const serialized = await readFile(palettesPath, "utf8")
+  const palettes = Schema.decodeUnknownSync(ScreenshotPalettesSchema)(
+    JSON.parse(serialized)
+  )
+  const signatures = new Set()
+  const checkedPalettes = []
+  for (const [theme, palette] of Object.entries(palettes)) {
+    validatePalette(palette, theme)
+    const signature = paletteSignature(palette)
+    if (signatures.has(signature)) {
+      throw new Error(`${theme} repeats another palette definition.`)
+    }
+    signatures.add(signature)
+    for (const other of checkedPalettes) {
+      if (paletteDistance(palette, other.palette) < MINIMUM_PALETTE_DISTANCE) {
+        throw new Error(
+          `${theme} is too similar to ${other.theme}; screenshot palettes must remain visually distinct.`
+        )
+      }
+    }
+    checkedPalettes.push({ theme, palette })
+  }
+  return palettes
 }
 
 const readManifest = async () => {
@@ -189,18 +355,26 @@ const readManifest = async () => {
     throw new Error(`Unused screenshot setups: ${unusedSetups.join(", ")}.`)
   }
 
+  const palettes = await readScreenshotPalettes()
   const state = {
     names: new Set(),
     outputs: new Set(),
+    palettes: new Set(),
     themes: new Set(),
   }
   const shots = manifest.shots.map((shot) =>
     expandShotSetup(shot, manifest.setups)
   )
   for (const shot of shots) {
-    validateShot(shot, state)
+    validateShot(shot, state, palettes)
   }
-  return shots
+  const unusedPalettes = Object.keys(palettes).filter(
+    (theme) => !state.themes.has(theme)
+  )
+  if (unusedPalettes.length > 0) {
+    throw new Error(`Unused screenshot palettes: ${unusedPalettes.join(", ")}.`)
+  }
+  return { palettes, shots }
 }
 
 const parseArguments = (argumentsList) => {
@@ -395,7 +569,207 @@ const resetScrollForCapture = async (page, shot) => {
   await expectVisible(page, finalStep.expectVisible, shot.name)
 }
 
-const captureShot = async (browser, shot, origin) => {
+const waitForRequiredImages = async (page, shot) => {
+  const requiredImageAlts = shot.requiredImages ?? []
+  if (requiredImageAlts.length === 0) {
+    return
+  }
+
+  try {
+    await page.waitForFunction(
+      async (expectedAlts) => {
+        const imagesByAlt = new Map(
+          [...document.images].map((image) => [image.alt, image])
+        )
+        const images = expectedAlts.map((alt) => imagesByAlt.get(alt))
+        if (images.some((image) => image === undefined)) {
+          return false
+        }
+        const loadedImages = images.filter((image) => image !== undefined)
+        for (const image of loadedImages) {
+          image.loading = "eager"
+        }
+        if (
+          loadedImages.some(
+            (image) => !image.complete || image.naturalWidth < 1
+          )
+        ) {
+          return false
+        }
+        await Promise.all(loadedImages.map((image) => image.decode()))
+        return true
+      },
+      requiredImageAlts,
+      { timeout: IMAGE_TIMEOUT_MS }
+    )
+  } catch (error) {
+    throw new Error(
+      `${shot.name} did not load its required images ${JSON.stringify(requiredImageAlts)}.`,
+      { cause: error }
+    )
+  }
+}
+
+const waitForTmdbImages = async (page, shot) => {
+  try {
+    await page.waitForFunction(
+      async (requiredImageCount) => {
+        const artworkImages = [...document.images].filter(
+          (image) =>
+            image.dataset.tmdbImagePreview !== "true" &&
+            /(^|\/)image\.tmdb\.org\/t\/p\//u.test(
+              image.currentSrc || image.src
+            )
+        )
+        const visibleImages = artworkImages.filter((image) => {
+          const bounds = image.getBoundingClientRect()
+          return (
+            bounds.width > 0 &&
+            bounds.height > 0 &&
+            bounds.bottom > 0 &&
+            bounds.right > 0 &&
+            bounds.top < window.innerHeight &&
+            bounds.left < window.innerWidth
+          )
+        })
+        const requiredImages = artworkImages.slice(0, requiredImageCount)
+        const imagesToDecode = [
+          ...new Set([...requiredImages, ...visibleImages]),
+        ]
+        for (const image of imagesToDecode) {
+          image.loading = "eager"
+        }
+        if (
+          artworkImages.length < requiredImageCount ||
+          imagesToDecode.some(
+            (image) => !image.complete || image.naturalWidth < 1
+          )
+        ) {
+          return false
+        }
+        await Promise.all(imagesToDecode.map((image) => image.decode()))
+        return true
+      },
+      shot.requiredTmdbImageCount ?? 0,
+      { timeout: IMAGE_TIMEOUT_MS }
+    )
+  } catch (error) {
+    const requiredImageDescription =
+      shot.requiredTmdbImageCount === undefined
+        ? "visible TMDB artwork"
+        : `all ${shot.requiredTmdbImageCount} required TMDB artwork images`
+    throw new Error(`${shot.name} did not load ${requiredImageDescription}.`, {
+      cause: error,
+    })
+  }
+}
+
+const runShotSteps = async ({ page, shot, origin, variables }) => {
+  for (const step of shot.steps) {
+    // SAFETY: A later screenshot state depends on each prior visible condition.
+    // oxlint-disable-next-line eslint/no-await-in-loop
+    await runStep({ page, step, shot, origin, variables })
+  }
+}
+
+const preparePageForCapture = async ({ page, shot }) => {
+  if (!shot.preserveScrollPosition) {
+    await page.addStyleTag({
+      content: [
+        "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
+        shot.captureStyles ?? "",
+      ].join("\n"),
+    })
+  }
+  await page.evaluate(() => document.fonts.ready.then(() => true))
+  if (shot.preserveScrollPosition) {
+    await expectVisible(page, shot.steps.at(-1).expectVisible, shot.name)
+  } else {
+    await resetScrollForCapture(page, shot)
+  }
+  await waitForRequiredImages(page, shot)
+  await waitForTmdbImages(page, shot)
+  if (shot.framing !== false && shot.framing.mode === "css") {
+    await page.waitForFunction(
+      () => {
+        const image = document.querySelector(".home-screenshot-frame__image")
+        return (
+          image instanceof HTMLImageElement &&
+          image.complete &&
+          image.naturalWidth > 0
+        )
+      },
+      null,
+      { timeout: STEP_TIMEOUT_MS }
+    )
+  }
+}
+
+const saveCapturedShot = async ({ page, shot, palettes }) => {
+  const outputPath = path.resolve(APP_DIRECTORY, shot.output)
+  const screenshotOptions = {
+    type: "png",
+    animations: "disabled",
+    caret: "hide",
+  }
+  const capture = shot.captureTarget
+    ? await getLocator(page, shot.captureTarget).screenshot(screenshotOptions)
+    : await page.screenshot({ ...screenshotOptions, fullPage: false })
+  if (shot.framing !== false && shot.framing.mode === "postprocess") {
+    await frameScreenshot(capture, palettes[shot.framing.theme], {
+      outputPath,
+      viewport: shot.viewport,
+    })
+  } else {
+    await saveScreenshot(capture, outputPath)
+  }
+  if (outputPath.startsWith(DOCS_IMAGES_DIRECTORY)) {
+    // DocsScreenshot prefers PNG, so remove a stale alternate after the new output exists.
+    const extension = path.extname(outputPath)
+    const alternateExtension = extension === ".png" ? ".webp" : ".png"
+    const alternatePath = `${outputPath.slice(0, -extension.length)}${alternateExtension}`
+    await rm(alternatePath, { force: true })
+  }
+  process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
+}
+
+const createExtractionCaptureGate = () => {
+  let release
+  let isReleased = false
+  const heldUntilCapture = new Promise((resolve) => {
+    release = resolve
+  })
+  const pendingRoutes = new Set()
+  const routePattern = "**/api/extract**"
+  const holdRoute = async (route) => {
+    if (isReleased) {
+      await route.continue()
+      return
+    }
+    let resolveRoute
+    const routeFinished = new Promise((resolve) => {
+      resolveRoute = resolve
+    })
+    pendingRoutes.add(routeFinished)
+    try {
+      await heldUntilCapture
+      await route.continue()
+    } finally {
+      pendingRoutes.delete(routeFinished)
+      resolveRoute()
+    }
+  }
+  const releaseAndWait = async (page) => {
+    isReleased = true
+    release()
+    await Promise.all(pendingRoutes)
+    await page.unroute(routePattern, holdRoute)
+  }
+
+  return { holdRoute, releaseAndWait, routePattern }
+}
+
+const captureShot = async ({ browser, shot, origin, palettes }) => {
   const context = await browser.newContext({
     viewport: { width: shot.viewport.width, height: shot.viewport.height },
     deviceScaleFactor: shot.viewport.deviceScaleFactor,
@@ -407,45 +781,29 @@ const captureShot = async (browser, shot, origin) => {
     isMobile: shot.context === "phone",
     hasTouch: shot.context === "phone",
   })
-
+  let releaseHeldExtraction
   try {
     const page = await context.newPage()
     page.setDefaultTimeout(STEP_TIMEOUT_MS)
     page.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
     const pageErrors = []
     page.on("pageerror", (error) => pageErrors.push(error))
-    const variables = Object.create(null)
-
-    for (const step of shot.steps) {
-      // SAFETY: A later screenshot state depends on each prior visible condition.
-      // oxlint-disable-next-line eslint/no-await-in-loop
-      await runStep({ page, step, shot, origin, variables })
+    if (shot.holdExtractionUntilCapture) {
+      const extractionGate = createExtractionCaptureGate()
+      await page.route(extractionGate.routePattern, extractionGate.holdRoute)
+      releaseHeldExtraction = () => extractionGate.releaseAndWait(page)
     }
-
-    await page.addStyleTag({
-      content:
-        "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}",
-    })
-    await page.evaluate(() => document.fonts.ready.then(() => true))
-    await resetScrollForCapture(page, shot)
+    await runShotSteps({ page, shot, origin, variables: Object.create(null) })
+    await preparePageForCapture({ page, shot })
     if (pageErrors.length > 0) {
       throw new AggregateError(
         pageErrors,
         `${shot.name} raised a browser error.`
       )
     }
-
-    const outputPath = path.resolve(APP_DIRECTORY, shot.output)
-    await mkdir(path.dirname(outputPath), { recursive: true })
-    await page.screenshot({
-      path: outputPath,
-      type: "png",
-      animations: "disabled",
-      caret: "hide",
-      fullPage: false,
-    })
-    process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
+    await saveCapturedShot({ page, shot, palettes })
   } finally {
+    await releaseHeldExtraction?.()
     await context.close()
   }
 }
@@ -463,18 +821,18 @@ const printShotDryRun = (shots) => {
   for (const shot of shots) {
     const blocked = shot.blockedReason ? `\tBLOCKED: ${shot.blockedReason}` : ""
     process.stdout.write(
-      `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\t${shot.output}${blocked}\n`
+      `${shot.name}\tseed=${shot.seedScenario}\troute=${shot.route}\tframing=${shot.framing === false ? "none" : `${shot.framing.mode}:${shot.framing.theme}`}\t${shot.output}${blocked}\n`
     )
   }
 }
 
-const captureShots = async (shots, origin) => {
+const captureShots = async (shots, origin, palettes) => {
   const browser = await chromium.launch({ headless: true })
   try {
     for (const shot of shots) {
       // SAFETY: Browser contexts are isolated and captures are written in manifest order.
       // oxlint-disable-next-line eslint/no-await-in-loop
-      await captureShot(browser, shot, origin)
+      await captureShot({ browser, shot, origin, palettes })
     }
   } finally {
     await browser.close()
@@ -498,7 +856,7 @@ const seedScenariosForShots = (shots, origin) => {
 
 const main = async () => {
   const options = parseArguments(process.argv.slice(2))
-  const allShots = await readManifest()
+  const { palettes, shots: allShots } = await readManifest()
   const selectedShots = selectShots(allShots, options.only)
 
   if (options.list) {
@@ -523,7 +881,7 @@ const main = async () => {
     "Screenshot capture only connects to a local HTTP dev server. Set LYNVO_SEED_ORIGIN to a localhost origin."
   )
   seedScenariosForShots(runnableShots, origin)
-  await captureShots(runnableShots, origin)
+  await captureShots(runnableShots, origin, palettes)
   if (blockedShots.length > 0) {
     process.stdout.write(
       `Captured ${runnableShots.length} screenshot(s); skipped ${blockedShots.length} blocked screenshot(s).\n`

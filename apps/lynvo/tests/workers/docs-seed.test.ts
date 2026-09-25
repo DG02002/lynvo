@@ -14,7 +14,6 @@ import type {
 import { getSaveDateGroupLabel } from "../../app/lib/save-date-groups"
 import { SeedApiClient, seedDocsLinks } from "../../scripts/seed"
 import { MediaArtworkResponseSchema } from "../../shared/api-contracts"
-import { DOCS_SEED_ARTWORK_POLICY } from "../../shared/docs-seed-constants"
 import app from "../../workers/app"
 
 const SEED_TIME = Date.now()
@@ -69,12 +68,13 @@ const findMediaNode = (
   label: string
 ): ExtractedLink | undefined => nodes?.find((node) => node.label === label)
 
-const createApi = (): SeedApiClient => {
+const createApi = (overrides: Partial<Env> = {}): SeedApiClient => {
   // SAFETY: The Cloudflare test environment supplies the generated Env bindings; only the two local development flags are overridden.
   const environment = {
     ...env,
     ENVIRONMENT: "development",
     LYNVO_NO_AUTH: "true",
+    ...overrides,
   } as Env
   const fetchFromWorker: typeof fetch = async (input, init) =>
     await app.fetch(new Request(input, init), environment)
@@ -118,7 +118,7 @@ describe("docs seed CLI Saved link fixtures", () => {
     const firstIds = new Map(firstSeed.map((link) => [link.url, link.id]))
     const secondIds = new Map(secondSeed.map((link) => [link.url, link.id]))
 
-    expect(snapshot.links).toHaveLength(7)
+    expect(snapshot.links).toHaveLength(29)
     expect(snapshot.links.some((link) => link.url === staleUrl)).toBe(false)
     expect(
       [...secondIds.entries()].toSorted(([leftUrl], [rightUrl]) =>
@@ -132,12 +132,51 @@ describe("docs seed CLI Saved link fixtures", () => {
     const dateByTitle = new Map(
       snapshot.links.map((link) => [link.title, link.createdAt])
     )
-    expect(dateByTitle.get("Shows and movies")).toBe(SEED_TIME - 12 * DAY_MS)
-    expect(dateByTitle.get("Severance")).toBe(SEED_TIME)
-    expect(dateByTitle.get("Dune: Part Two")).toBe(SEED_TIME)
-    expect(dateByTitle.get("Arrival")).toBe(SEED_TIME - 10 * DAY_MS)
-    expect(dateByTitle.get("Season archive")).toBe(SEED_TIME - DAY_MS)
+    expect(dateByTitle.get("TV Shows")).toBe(SEED_TIME - 12 * DAY_MS)
+    expect(dateByTitle.get("Movies")).toBe(SEED_TIME - 12 * DAY_MS)
+    expect(dateByTitle.get("12 Angry Men")).toBe(SEED_TIME)
+    expect(dateByTitle.get("Taxi Driver")).toBe(SEED_TIME)
+    expect(dateByTitle.get("Mindhunter")).toBe(SEED_TIME)
+    expect(dateByTitle.get("When Life Gives You Tangerines")).toBe(SEED_TIME)
+    expect(dateByTitle.get("The Prestige")).toBe(SEED_TIME - 4 * DAY_MS)
+    expect(dateByTitle.get("Severance")).toBe(SEED_TIME - 4 * DAY_MS)
+    expect(dateByTitle.get("The Godfather Part II")).toBe(
+      SEED_TIME - 10 * DAY_MS
+    )
+    expect(dateByTitle.get("The Sopranos")).toBe(SEED_TIME - DAY_MS)
     expect(getSaveDateGroupLabel(SEED_TIME, SEED_TIME)).toBe("Today")
+
+    const dateGroupCounts = new Map<string, number>()
+    for (const link of snapshot.links) {
+      const label = getSaveDateGroupLabel(link.createdAt, SEED_TIME)
+      dateGroupCounts.set(label, (dateGroupCounts.get(label) ?? 0) + 1)
+    }
+    expect(dateGroupCounts.get("Today")).toBe(4)
+    expect(
+      [...dateGroupCounts.values()].toSorted((left, right) => left - right)
+    ).toEqual([4, 6, 6, 6, 7])
+
+    const todayGalleryGroups = getGalleryGroups(
+      snapshot.links
+        .filter((link) => link.createdAt === SEED_TIME)
+        .map(toLinkViewItem)
+    )
+    expect(
+      todayGalleryGroups
+        .map(({ artworkRequest }) => artworkRequest?.title ?? "")
+        .toSorted((left, right) => left.localeCompare(right))
+    ).toEqual([
+      "12 Angry Men",
+      "Mindhunter",
+      "Taxi Driver",
+      "When Life Gives You Tangerines",
+    ])
+    expect(
+      todayGalleryGroups
+        .map(({ artworkRequest }) => artworkRequest?.mediaKind ?? "")
+        .toSorted((left, right) => left.localeCompare(right))
+    ).toEqual(["movie", "movie", "tv", "tv"])
+
     const weekdayGroup = getSaveDateGroupLabel(
       SEED_TIME - 2 * DAY_MS,
       SEED_TIME
@@ -148,75 +187,92 @@ describe("docs seed CLI Saved link fixtures", () => {
       "Older"
     )
 
-    const library = snapshot.links.find(
-      (link) => link.title === "Shows and movies"
+    const tvLibrary = snapshot.links.find((link) => link.title === "TV Shows")
+    const movieLibrary = snapshot.links.find((link) => link.title === "Movies")
+    const prestige = snapshot.links.find(
+      (link) => link.title === "The Prestige"
     )
-    const dune = snapshot.links.find((link) => link.title === "Dune: Part Two")
-    const arrival = snapshot.links.find((link) => link.title === "Arrival")
-    const failed = snapshot.links.find(
-      (link) => link.title === "Season archive"
+    const expired = snapshot.links.find(
+      (link) => link.title === "The Godfather Part II"
     )
-    const bearSeasons = snapshot.links.filter(
-      (link) => link.title === "The Bear"
+    const failed = snapshot.links.find((link) => link.title === "The Sopranos")
+    const sandmanSeasons = snapshot.links.filter(
+      (link) => link.title === "The Sandman"
     )
-    expect(bearSeasons).toHaveLength(2)
+    expect(sandmanSeasons).toHaveLength(2)
     expect(
-      bearSeasons.find((link) => link.url.endsWith("Season%2001/"))?.createdAt
+      sandmanSeasons.find((link) => link.url.endsWith("Season%2001/"))
+        ?.createdAt
     ).toBe(SEED_TIME - 2 * DAY_MS)
     expect(
-      bearSeasons.find((link) => link.url.endsWith("Season%2002/"))?.createdAt
+      sandmanSeasons.find((link) => link.url.endsWith("Season%2002/"))
+        ?.createdAt
     ).toBe(SEED_TIME - 4 * DAY_MS)
-    expect(library).toBeDefined()
-    expect(arrival).toBeDefined()
-    expect(dune).toBeDefined()
+    expect(tvLibrary).toBeDefined()
+    expect(movieLibrary).toBeDefined()
+    expect(expired).toBeDefined()
+    expect(prestige).toBeDefined()
     expect(failed).toBeDefined()
-    if (!library || !dune) {
+    if (!tvLibrary || !movieLibrary || !prestige || !expired) {
       throw new Error(
-        "The docs scenario is missing its library or Dune fixture."
+        "The docs scenario is missing its TV library, movie library, The Prestige, or expired media fixture."
       )
     }
-    const duneMetadata = dune && readMetadata(dune)
-    expect(duneMetadata?.playback.openedUrls).toContain(
-      "https://media.example.invalid/lynvo-demo/dune-part-two.mkv"
+    const twelveAngryMen = snapshot.links.find(
+      (link) => link.title === "12 Angry Men"
+    )
+    const twelveAngryMenMetadata =
+      twelveAngryMen && readMetadata(twelveAngryMen)
+    expect(twelveAngryMenMetadata?.playback.openedUrls).toContain(
+      "https://media.example.invalid/lynvo-demo/12-angry-men-1957.mkv"
     )
     expect(
-      getSavedLinkInteractionState(toLinkViewItem(library), SEED_TIME).isNew
+      getSavedLinkInteractionState(toLinkViewItem(tvLibrary), SEED_TIME).isNew
     ).toBe(true)
     expect(
-      getSavedLinkInteractionState(toLinkViewItem(dune), SEED_TIME).isNew
-    ).toBe(false)
-    const libraryMetadata = library && readMetadata(library)
-    expect(libraryMetadata?.playback.openedUrls).toEqual([])
-    expect(libraryMetadata?.artwork).toBeUndefined()
-    expect(libraryMetadata?.artworkPolicy).toBe(DOCS_SEED_ARTWORK_POLICY)
-    const libraryNodes = libraryMetadata?.extraction.extractedLinks
-    const tvShows = findMediaNode(libraryNodes, "TV Shows")
-    const severanceFolder = findMediaNode(tvShows?.children, "Severance")
-    const severanceSeasonTwo = findMediaNode(
-      severanceFolder?.children,
+      getSavedLinkInteractionState(toLinkViewItem(prestige), SEED_TIME).isNew
+    ).toBe(true)
+    const tvLibraryMetadata = readMetadata(tvLibrary)
+    const movieLibraryMetadata = readMetadata(movieLibrary)
+    expect(tvLibraryMetadata.playback.openedUrls).toEqual([])
+    expect(tvLibraryMetadata.artwork).toBeUndefined()
+    expect(tvLibraryMetadata).not.toHaveProperty("artworkPolicy")
+    const tvLibraryNodes = tvLibraryMetadata.extraction.extractedLinks
+    const mindhunterFolder = findMediaNode(tvLibraryNodes, "Mindhunter")
+    const mindhunterSeasonOne = findMediaNode(
+      mindhunterFolder?.children,
+      "Season 01"
+    )
+    const mindhunterSeasonTwo = findMediaNode(
+      mindhunterFolder?.children,
       "Season 02"
     )
-    const severanceSeasonThree = findMediaNode(
-      severanceFolder?.children,
-      "Season 03"
-    )
-    const bearFolder = findMediaNode(tvShows?.children, "The Bear")
-    const moviesFolder = findMediaNode(libraryNodes, "Movies")
-    expect(tvShows?.mediaNodeKind).toBe("group")
-    expect(severanceFolder?.children?.map((node) => node.label)).toEqual([
-      "Season 02",
-      "Season 03",
+    const sandmanFolder = findMediaNode(tvLibraryNodes, "The Sandman")
+    const sandmanSeasonsInLibrary = sandmanFolder?.children
+    const movieLibraryNodes = movieLibraryMetadata.extraction.extractedLinks
+    expect(tvLibraryNodes.map((node) => node.label)).toEqual([
+      "Mindhunter",
+      "The Sandman",
     ])
-    expect(severanceSeasonTwo?.children?.[0]?.label).toBe(
-      "Severance S02E03.mkv"
+    expect(mindhunterFolder?.children?.map((node) => node.label)).toEqual([
+      "Season 01",
+      "Season 02",
+    ])
+    expect(mindhunterSeasonOne?.children?.[0]?.label).toBe(
+      "Mindhunter (2017) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv"
     )
-    expect(severanceSeasonThree?.mediaNodeKind).toBe("resolvable")
-    expect(bearFolder?.children?.[0]?.label).toBe(
-      "Season 02/The Bear S02E04.mkv"
-    )
-    expect(moviesFolder?.children?.[0]?.label).toBe("Dune Part Two (2024).mkv")
+    expect(mindhunterSeasonTwo?.mediaNodeKind).toBe("resolvable")
+    expect(sandmanSeasonsInLibrary?.map((node) => node.label)).toEqual([
+      "Season 01",
+      "Season 02",
+    ])
+    expect(movieLibraryNodes.map((node) => node.label)).toEqual([
+      "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
+      "Taxi Driver (1976) - 1080p Blu-ray AVC.mkv",
+    ])
+    expect(movieLibraryNodes.some((node) => node.type === "folder")).toBe(false)
     const galleryGroups = getGalleryGroups(
-      bearSeasons.map((link) => ({
+      sandmanSeasons.map((link) => ({
         kind: "saved" as const,
         id: link.id,
         url: link.url,
@@ -226,7 +282,7 @@ describe("docs seed CLI Saved link fixtures", () => {
       }))
     )
     expect(galleryGroups.map((group) => group.displayTitle).toSorted()).toEqual(
-      ["The Bear S01", "The Bear S02"]
+      ["The Sandman S01", "The Sandman S02"]
     )
 
     const failedMetadata = failed && readMetadata(failed)
@@ -240,34 +296,56 @@ describe("docs seed CLI Saved link fixtures", () => {
     const severanceMetadata = severance && readMetadata(severance)
     const severanceNode = severanceMetadata?.extraction.extractedLinks[0]
     expect(severanceNode).toMatchObject({
-      label: "Severance S02E03.mkv",
-      expiry: SEED_TIME + 3 * DAY_MS + 4 * 60 * 60 * 1_000 + 59 * 60 * 1_000,
+      label:
+        "Severance (2022) - S02E03 - Who Is Alive? - 2160p Blu-ray HEVC HDR10.mkv",
+      expiry: SEED_TIME + 3 * DAY_MS + 5 * 60 * 60 * 1_000 + 30 * 60 * 1_000,
     })
     expect(formatPlayableValidity(severanceNode?.expiry ?? 0, SEED_TIME)).toBe(
-      "Link valid for 3d 4h"
+      "Link valid for 3d 5h"
     )
-    const arrivalMetadata = arrival && readMetadata(arrival)
+    const expiredMetadata = expired && readMetadata(expired)
     expect(
       formatPlayableValidity(
-        arrivalMetadata?.extraction.extractedLinks[0]?.expiry ?? 0,
+        expiredMetadata?.extraction.extractedLinks[0]?.expiry ?? 0,
         SEED_TIME
       )
     ).toBe("Link expired")
 
-    const artworkFetch = vi.spyOn(globalThis, "fetch")
+    const artworkApi = createApi({
+      TMDB_API_READ_ACCESS_TOKEN: "docs-seed-test-token",
+    })
+    const artworkFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: 987654,
+              title: "Lynvo docs seeded poster test",
+              release_date: "2026-01-01",
+              poster_path: "/docs-seed-poster-test.jpg",
+            },
+          ],
+        }),
+        { headers: { "content-type": "application/json" } }
+      )
+    )
     try {
-      const artwork = await api.mutateForResponse({
+      const artwork = await artworkApi.mutateForResponse({
         method: "POST",
         path: "/api/data/media-artwork",
         body: {
           requests: [
-            { mediaKind: "movie", title: "Dune: Part Two", year: 2024 },
+            {
+              mediaKind: "movie",
+              title: "Lynvo docs seeded poster test",
+              year: 2026,
+            },
           ],
         },
         responseSchema: MediaArtworkResponseSchema,
       })
-      expect(artwork.results).toEqual([{}])
-      expect(artworkFetch).not.toHaveBeenCalled()
+      expect(artwork.results[0]?.posterPath).toBe("/docs-seed-poster-test.jpg")
+      expect(artworkFetch).toHaveBeenCalledOnce()
     } finally {
       artworkFetch.mockRestore()
     }

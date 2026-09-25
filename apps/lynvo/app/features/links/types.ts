@@ -4,7 +4,6 @@ import type {
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import type { MediaArtworkIdentity } from "~shared/api-contracts"
-import type { DOCS_SEED_ARTWORK_POLICY } from "~shared/docs-seed-constants"
 
 export interface ExtractedLink {
   nodeKey?: string
@@ -56,7 +55,6 @@ export interface LinkDebugLogEntry {
 
 export interface LinkMetadata {
   schemaVersion: 3
-  artworkPolicy?: typeof DOCS_SEED_ARTWORK_POLICY
   source: Record<string, JsonValue>
   extraction: {
     extractedLinks: ExtractedLink[]
