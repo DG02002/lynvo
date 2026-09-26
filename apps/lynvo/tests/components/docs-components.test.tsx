@@ -27,22 +27,17 @@ describe("DocsFaq", () => {
 })
 
 describe("DocsScreenshot", () => {
-  it("shows the expected file name and alt text until an image is added", () => {
-    render(
-      <DocsScreenshot
-        name="example-screenshot-not-captured"
-        alt="Settings > Player with Just (Video) Player selected"
-      />
-    )
-
-    expect(screen.getByRole("img")).toHaveAccessibleName(
-      "Settings > Player with Just (Video) Player selected. Expected image: images/example-screenshot-not-captured.png or images/example-screenshot-not-captured.webp"
-    )
-    expect(
-      screen.getByText(
-        "images/example-screenshot-not-captured.png or images/example-screenshot-not-captured.webp"
+  it("throws when a screenshot asset is missing", () => {
+    expect(() =>
+      render(
+        <DocsScreenshot
+          name="example-screenshot-not-captured"
+          alt="Settings > Player with Just (Video) Player selected"
+        />
       )
-    ).toBeVisible()
+    ).toThrow(
+      "Documentation screenshot asset is missing: example-screenshot-not-captured"
+    )
   })
 
   it("opens the screenshot zoomed in and closes it again", () => {

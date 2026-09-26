@@ -12,37 +12,26 @@ import {
   type DocumentationSectionKey,
 } from "./docs-sections"
 
-const rawContentModules = import.meta.glob<unknown>("./**/*.mdx", {
+const rawContentModules = import.meta.glob<string>("./**/*.mdx", {
   eager: true,
+  import: "default",
   query: "?docs-raw",
 })
-const lastModifiedModules = import.meta.glob<string>("./**/*.mdx", {
+const lastModifiedModules = import.meta.glob<string | undefined>("./**/*.mdx", {
   eager: true,
   import: "default",
   query: "?docs-last-modified",
 })
-const defaultContentModuleSchema = Schema.Struct({ default: Schema.Unknown })
 const getDocumentationPageKey = (
   section: DocumentationSectionKey,
   slug: string
 ) => `${section}/${slug}`
 
 const getRawContent = (path: string) => {
-  let contentModule = rawContentModules[path]
-
-  while (true) {
-    const module = Schema.decodeUnknownResult(defaultContentModuleSchema)(
-      contentModule
-    )
-    if (Result.isFailure(module)) {
-      break
-    }
-    contentModule = module.success.default
-  }
-
-  const content = Schema.decodeUnknownResult(Schema.String)(contentModule)
+  const rawContent = rawContentModules[path]
+  const content = Schema.decodeUnknownResult(Schema.String)(rawContent)
   if (Result.isFailure(content)) {
-    const contentKind = Object.prototype.toString.call(contentModule)
+    const contentKind = Object.prototype.toString.call(rawContent)
     throw new Error(
       `Documentation source could not be read: ${path} [${contentKind}]`
     )
@@ -187,10 +176,10 @@ const getDocumentationLastModified = (
   slug: string
 ) => {
   const path = getDocumentationContentPath(section, slug)
-  const lastModified = lastModifiedModules[path]
-  if (!lastModified) {
-    throw new Error(`Documentation last-modified date is missing: ${path}`)
+  if (!Object.hasOwn(lastModifiedModules, path)) {
+    throw new Error(`Documentation last-modified module is missing: ${path}`)
   }
+  const lastModified = lastModifiedModules[path]
   return lastModified
 }
 
@@ -232,11 +221,17 @@ export const withDocumentationLastModified = async (
     )
   }
 
-  return {
+  const lastModified = getDocumentationLastModified(section, loaderData.slug)
+
+  const response = {
     ...loaderData,
-    lastModified: getDocumentationLastModified(section, loaderData.slug),
     headings,
   }
+  if (lastModified) {
+    response.lastModified = lastModified
+  }
+
+  return response
 }
 
 export const createDocsMarkdownLoader =

@@ -1,5 +1,6 @@
 import { lazy } from "react"
 
+import type { DocumentationFrontmatter } from "./docs-frontmatter"
 import { assertDocumentationPageIcons } from "./docs-navigation-icons"
 import {
   documentationSections,
@@ -23,20 +24,6 @@ const contentFrontmatter = import.meta.glob<DocumentationFrontmatter>(
     query: "?docs-frontmatter",
   }
 )
-const validateFrontmatter = (
-  path: string,
-  frontmatter: DocumentationFrontmatter | undefined
-) => {
-  if (
-    !frontmatter?.title ||
-    !frontmatter.description ||
-    !frontmatter.navLabel ||
-    !frontmatter.contentType
-  ) {
-    throw new Error(`Documentation frontmatter is incomplete: ${path}`)
-  }
-}
-
 interface DocumentationSectionState {
   readonly section: DocumentationSection
   readonly pagesBySlug: Map<string, DocumentationPage>
@@ -73,7 +60,9 @@ const resolveSection = (key: DocumentationSectionKey) => {
 
 for (const [path, loadContent] of Object.entries(contentModules)) {
   const frontmatter = contentFrontmatter[path]
-  validateFrontmatter(path, frontmatter)
+  if (!frontmatter) {
+    throw new Error(`Documentation frontmatter is missing: ${path}`)
+  }
 
   const sectionKey = getDocumentationSectionKeyForPath(path)
   const state = sectionStates.get(sectionKey)

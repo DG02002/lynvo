@@ -577,13 +577,16 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
 }
 
 ::view-transition-old(site-header),
-::view-transition-new(site-header),
-::view-transition-new(site-footer) {
+::view-transition-new(site-header) {
   animation: none;
 }
 
 ::view-transition-old(site-footer) {
   animation: var(--duration-enter) ease-in both page-fade-out;
+}
+
+::view-transition-new(site-footer) {
+  animation: var(--duration-enter) ease-out both page-fade;
 }
 
 @layer base {

@@ -208,7 +208,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   const [zoomOpen, setZoomOpen] = useState(false)
 
   if (!image) {
-    return null
+    throw new Error(`Documentation screenshot asset is missing: ${name}`)
   }
 
   return (

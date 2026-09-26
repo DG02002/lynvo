@@ -1,3 +1,4 @@
+import { stripDocumentationFrontmatter } from "./docs-frontmatter"
 import type { DocumentationImageExtension } from "./docs-image-assets"
 
 type ScreenshotExtensionResolver = (
@@ -10,9 +11,6 @@ type ScreenshotReplacementArguments = [
   alt: string,
   ...rest: unknown[],
 ]
-
-const removeFrontmatter = (content: string) =>
-  content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
 
 const convertNotes = (content: string) =>
   content.replaceAll(
@@ -44,6 +42,7 @@ const convertScreenshots = (
     (...parts: ScreenshotReplacementArguments) => {
       const [, name, alt] = parts
       const extension = getScreenshotExtension(name)
+      // Omit missing assets so exported Markdown never points to a dead link.
       return extension ? `![${alt}](images/${name}.${extension})` : ""
     }
   )
@@ -53,7 +52,7 @@ export const cleanDocumentationMarkdown = (
   getScreenshotExtension: ScreenshotExtensionResolver = () => undefined
 ) =>
   convertScreenshots(
-    convertFaqs(convertNotes(removeFrontmatter(content))),
+    convertFaqs(convertNotes(stripDocumentationFrontmatter(content))),
     getScreenshotExtension
   )
     .replaceAll(/^<\/?DocSection(?:\s[^>]*)?>\s*$/gm, "")

@@ -1,5 +1,4 @@
 import { exec, execFileSync } from "node:child_process"
-import { statSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
@@ -9,28 +8,17 @@ import { reactRouter } from "@react-router/dev/vite"
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core"
 import { transformerMetaHighlight } from "@shikijs/transformers"
 import tailwindcss from "@tailwindcss/vite"
-import { Result, Schema } from "effect"
 import remarkFrontmatter from "remark-frontmatter"
 import remarkGfm from "remark-gfm"
 import remarkMdxFrontmatter from "remark-mdx-frontmatter"
 import { createHighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 import { defineConfig, type Plugin, type ViteDevServer } from "vite"
-import { parse as parseYaml } from "yaml"
+
+import { parseDocumentationFrontmatter } from "./app/features/site/docs/docs-frontmatter.ts"
 
 // Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
 const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
-const documentationFrontmatterSchema = Schema.Struct({
-  title: Schema.String,
-  description: Schema.String,
-  navLabel: Schema.String,
-  contentType: Schema.Literals([
-    "Tutorial",
-    "How-to",
-    "Reference",
-    "Conceptual",
-  ]),
-})
 
 const loadDocumentationFrontmatter = async (
   filePath: string,
@@ -38,24 +26,9 @@ const loadDocumentationFrontmatter = async (
 ) => {
   addWatchFile(filePath)
   const content = await readFile(filePath, "utf8")
-  const frontmatterMatch = content.match(
-    /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/
-  )
+  const frontmatter = parseDocumentationFrontmatter(content, filePath)
 
-  if (!frontmatterMatch) {
-    throw new Error(`Documentation frontmatter is missing: ${filePath}`)
-  }
-
-  const parsedFrontmatter = parseYaml(frontmatterMatch[1])
-  const frontmatter = Schema.decodeUnknownResult(
-    documentationFrontmatterSchema
-  )(parsedFrontmatter)
-
-  if (Result.isFailure(frontmatter)) {
-    throw new Error(`Documentation frontmatter is invalid: ${filePath}`)
-  }
-
-  return `export default ${JSON.stringify(frontmatter.success)}`
+  return `export default ${JSON.stringify(frontmatter)}`
 }
 
 const loadDocumentationLastModified = (
@@ -63,10 +36,10 @@ const loadDocumentationLastModified = (
   addWatchFile: (filePath: string) => void
 ) => {
   addWatchFile(filePath)
-  let lastModified = ""
+  let lastModified: string | undefined
 
   try {
-    lastModified = execFileSync(
+    const gitDate = execFileSync(
       "git",
       ["log", "-1", "--format=%cs", "--", filePath],
       {
@@ -74,12 +47,11 @@ const loadDocumentationLastModified = (
         encoding: "utf8",
       }
     ).trim()
+    if (gitDate) {
+      lastModified = gitDate
+    }
   } catch {
     // Git metadata may not be available in packaged build environments.
-  }
-
-  if (!lastModified) {
-    lastModified = statSync(filePath).mtime.toISOString().slice(0, 10)
   }
 
   return `export default ${JSON.stringify(lastModified)}`

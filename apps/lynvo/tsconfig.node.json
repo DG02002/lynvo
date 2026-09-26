@@ -1,7 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "include": [
-    "vite.config.ts"
+    "vite.config.ts",
+    "app/features/site/docs/docs-frontmatter.ts"
   ],
   "compilerOptions": {
     "composite": true,
@@ -14,6 +15,7 @@
     ],
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true
   }
 }

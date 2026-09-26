@@ -21,14 +21,12 @@ Trust the server response.
     )
   })
 
-  it("exports screenshot alt text and the expected image path", () => {
+  it("omits screenshots when no asset resolver is available", () => {
     expect(
       cleanDocumentationMarkdown(
         '<DocsScreenshot name="settings-player" alt="Settings > Player showing VLC selected" />'
       )
-    ).toBe(
-      "![Settings > Player showing VLC selected](images/settings-player.png)"
-    )
+    ).toBe("")
   })
 
   it("uses the available WebP extension in screenshot links", () => {
@@ -43,14 +41,16 @@ Trust the server response.
   it("drops legacy screenshot captions instead of exporting them", () => {
     expect(
       cleanDocumentationMarkdown(
-        '<DocsScreenshot name="settings-player" alt="Player settings">Player defaults</DocsScreenshot>'
+        '<DocsScreenshot name="settings-player" alt="Player settings">Player defaults</DocsScreenshot>',
+        () => "png"
       )
     ).toBe("![Player settings](images/settings-player.png)")
   })
 
   it("cleans page source into Markdown instead of leaving raw MDX", () => {
     const markdown = cleanDocumentationMarkdown(
-      `---\ntitle: Saving links\n---\n\n<DocSection id="faq">\n<DocsScreenshot name="saving-links-input" alt="Save page input" />\n<DocsFaq question="Why did Extraction fail?">Refresh the Saved link.</DocsFaq>\n</DocSection>`
+      `---\ntitle: Saving links\n---\n\n<DocSection id="faq">\n<DocsScreenshot name="saving-links-input" alt="Save page input" />\n<DocsFaq question="Why did Extraction fail?">Refresh the Saved link.</DocsFaq>\n</DocSection>`,
+      () => "png"
     )
 
     expect(markdown).toContain("![Save page input]")

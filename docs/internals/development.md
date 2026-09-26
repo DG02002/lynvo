@@ -123,6 +123,12 @@ This is the one-command workflow for both Workers. To verify it, start
 Do not start the Plugin Server in a second terminal for the normal app
 workflow. The standalone command above is only for focused Worker debugging.
 
+After changing `apps/lynvo/vite.config.ts`, `apps/lynvo/wrangler.jsonc`, or
+`apps/lynvo/app/routes.ts`, restart the existing `pnpm dev` session. Hot reload
+can leave the generated Worker entry serving 500 responses even when a fresh
+start at the same commit works. Stop the current session with Ctrl+C before
+starting it again; do not launch another concurrent app server.
+
 Cloudflare documents both the Wrangler multiple-config mode and the Vite
 `auxiliaryWorkers` pattern in [Developing with multiple Workers](https://developers.cloudflare.com/workers/local-development/multi-workers/).
 This React Router app depends on Vite's generated
