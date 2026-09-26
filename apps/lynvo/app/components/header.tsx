@@ -1,5 +1,3 @@
-import { ChevronRightIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 import {
   Link,
@@ -9,7 +7,6 @@ import {
 } from "react-router"
 
 import { LogoLink } from "~/components/logo"
-import { useDocsBreadcrumb } from "~/features/site/docs/docs-breadcrumb"
 import { useViewTransition } from "~/lib/client-profile"
 import { isDocsRoutePathname, sitePaths } from "~/lib/paths"
 import { signOut } from "~/lib/session-http"
@@ -29,7 +26,6 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const viewTransition = useViewTransition()
   const isDocsRoute = isDocsRoutePathname(pathname)
-  const breadcrumb = useDocsBreadcrumb()
 
   const handleLogout = async () => {
     try {
@@ -106,30 +102,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
 
         {isDocsRoute ? (
           <div className="min-w-0 flex-1">
-            <div className="mx-auto flex h-full w-full max-w-[80rem] items-center gap-2 px-6 md:px-8 xl:px-10">
-              {breadcrumb && (
-                <nav
-                  aria-label="Breadcrumb"
-                  className="flex min-w-0 items-center gap-2 overflow-hidden text-sm"
-                >
-                  <span className="sr-only sm:not-sr-only sm:shrink-0 sm:text-muted-foreground">
-                    {breadcrumb.group}
-                  </span>
-                  <HugeiconsIcon
-                    icon={ChevronRightIcon}
-                    aria-hidden="true"
-                    className="hidden size-3.5 shrink-0 text-muted-foreground sm:block"
-                    strokeWidth={1.5}
-                  />
-                  <span
-                    aria-current="page"
-                    className="truncate font-medium text-foreground"
-                  >
-                    {breadcrumb.pageLabel}
-                  </span>
-                </nav>
-              )}
-              <div className="min-w-0 flex-1" />
+            <div className="mx-auto flex h-full w-full max-w-[80rem] items-center justify-end px-6 md:px-8 xl:px-10">
               {navigationActions}
             </div>
           </div>

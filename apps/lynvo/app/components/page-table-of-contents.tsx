@@ -34,11 +34,11 @@ const getTableOfContentsLinkClassName = (
   }
   const variantClassName =
     variant === "docs"
-      ? "block py-2 pr-2 text-sm font-normal leading-5 transition-colors"
+      ? "block truncate py-2 pr-2 text-sm font-normal leading-5 transition-colors"
       : "block text-xs font-normal leading-5 transition-colors"
 
   const activeClassName = isActive
-    ? "text-foreground"
+    ? "font-medium text-foreground"
     : "text-muted-foreground hover:text-foreground"
 
   return cn(variantClassName, levelClassName, activeClassName)

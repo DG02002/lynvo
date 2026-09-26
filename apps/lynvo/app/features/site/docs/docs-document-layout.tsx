@@ -1,4 +1,8 @@
-import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowDown01Icon,
+  ArrowRight01Icon,
+  ChevronRightIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import { Link } from "react-router"
@@ -13,18 +17,17 @@ import {
 } from "~/components/ui/accordion"
 import { cn } from "~/lib/utils"
 
+import { useDocsBreadcrumb } from "./docs-breadcrumb"
 import { docsCatalog } from "./docs-catalog"
 import { getDocumentationPageIcon } from "./docs-navigation-icons"
 import { DocsPageActions } from "./docs-page-actions"
 import type { DocumentationSectionKey } from "./docs-sections"
 
-// The content column is pinned to the container's leading edge so the article
-// title stays aligned with the breadcrumb in the header, which shares this
-// container and the same horizontal gutters. The outline column flexes to
-// fill the remaining container width (with a floor so it never starves), so
-// the layout leaves no dead band between the outline and the container edge.
+// The outline column is fixed at the container's right edge and the article
+// centers in the remaining column through its own max-w-3xl mx-auto wrapper,
+// so slack spreads around the article instead of pooling beside the outline.
 const docsContentGridClassName =
-  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,50rem)_minmax(14rem,1fr)]"
+  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,1fr)_15rem]"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
@@ -219,85 +222,114 @@ export const DocsDocumentLayout = ({
   children: ReactNode
   headings: readonly DocumentationHeading[]
   lastModified?: string
-}) => (
-  <DocsShell section={context.section} currentSlug={context.page.slug}>
-    <div className="px-6 md:px-8 lg:hidden">
-      <MobilePageOutline
-        headings={headings}
-        targetId="docs-content"
-        revealAfterSelector="#docs-page-introduction"
-        className="-mb-10"
-      />
-    </div>
+}) => {
+  const breadcrumb = useDocsBreadcrumb()
 
-    {/* One grid holds the introduction, the article, and the outline; the
+  return (
+    <DocsShell section={context.section} currentSlug={context.page.slug}>
+      <div className="px-6 md:px-8 lg:hidden">
+        <MobilePageOutline
+          headings={headings}
+          targetId="docs-content"
+          revealAfterSelector="#docs-page-introduction"
+          className="-mb-10"
+        />
+      </div>
+
+      {/* One grid holds the introduction, the article, and the outline; the
        outline cell spans both rows so "On this page" starts beside the page
        title instead of below the introduction separator. */}
-    <div className={docsContentGridClassName}>
-      <div className="min-w-0 border-b border-border px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
-        <header
-          id="docs-page-introduction"
-          className="mx-auto flex max-w-3xl flex-col gap-5"
-        >
-          <h1 className="text-3xl font-inter-tight font-medium tracking-tight text-balance md:text-4xl">
-            {context.page.title}
-          </h1>
-          <p className="text-base leading-7 text-muted-foreground text-pretty">
-            {context.page.description}
-          </p>
-          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <DocsPageActions page={context.page} />
-            {lastModified && (
-              <p className="text-sm text-muted-foreground">
-                Last updated{" "}
-                <time dateTime={lastModified}>
-                  {lastModifiedDateFormatter.format(
-                    new Date(`${lastModified}T00:00:00Z`)
-                  )}
-                </time>
-              </p>
+      <div className={docsContentGridClassName}>
+        <div className="min-w-0 border-b border-border px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
+          <header
+            id="docs-page-introduction"
+            className="mx-auto flex max-w-3xl flex-col gap-5"
+          >
+            {breadcrumb && (
+              <nav
+                aria-label="Breadcrumb"
+                className="flex min-w-0 items-center gap-2 text-sm"
+              >
+                <span className="shrink-0 text-muted-foreground">
+                  {breadcrumb.group}
+                </span>
+                <HugeiconsIcon
+                  icon={ChevronRightIcon}
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-muted-foreground"
+                  strokeWidth={1.5}
+                />
+                <span
+                  aria-current="page"
+                  className="truncate font-medium text-foreground"
+                >
+                  {breadcrumb.pageLabel}
+                </span>
+              </nav>
+            )}
+            <h1 className="text-3xl font-inter-tight font-medium tracking-tight text-balance md:text-4xl">
+              {context.page.title}
+            </h1>
+            <p className="text-base leading-7 text-muted-foreground text-pretty">
+              {context.page.description}
+            </p>
+            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <DocsPageActions page={context.page} />
+              {lastModified && (
+                <p className="text-sm text-muted-foreground">
+                  Last updated{" "}
+                  <time dateTime={lastModified}>
+                    {lastModifiedDateFormatter.format(
+                      new Date(`${lastModified}T00:00:00Z`)
+                    )}
+                  </time>
+                </p>
+              )}
+            </div>
+          </header>
+        </div>
+
+        <div className="hidden lg:row-span-2 lg:block">
+          <aside className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto py-12 pl-2 pr-4">
+            <PageTableOfContents headings={headings} targetId="docs-content" />
+          </aside>
+        </div>
+
+        <article className="min-w-0 px-6 pb-16 pt-10 md:px-8 xl:px-10">
+          <div className="mx-auto max-w-3xl">
+            <div
+              id="docs-content"
+              className="typeset typeset-docs docs-content"
+            >
+              {children}
+            </div>
+
+            {(context.previous || context.next) && (
+              <nav
+                aria-label="Documentation pages"
+                className="mt-12 grid grid-cols-2 gap-3 border-t border-border pt-6"
+              >
+                {context.previous ? (
+                  <PageNavigation
+                    page={context.previous}
+                    label="Previous"
+                    direction="previous"
+                  />
+                ) : (
+                  <span />
+                )}
+                {context.next && (
+                  <PageNavigation
+                    page={context.next}
+                    label="Next"
+                    direction="next"
+                  />
+                )}
+              </nav>
             )}
           </div>
-        </header>
+        </article>
       </div>
-
-      <div className="hidden lg:row-span-2 lg:block">
-        <aside className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto py-12 pl-2">
-          <PageTableOfContents headings={headings} targetId="docs-content" />
-        </aside>
-      </div>
-
-      <article className="min-w-0 px-6 pb-16 pt-10 md:px-8 xl:px-10">
-        <div className="mx-auto max-w-3xl">
-          <div id="docs-content" className="typeset typeset-docs docs-content">
-            {children}
-          </div>
-
-          {(context.previous || context.next) && (
-            <nav
-              aria-label="Documentation pages"
-              className="mt-12 grid grid-cols-2 gap-3 border-t border-border pt-6"
-            >
-              {context.previous ? (
-                <PageNavigation
-                  page={context.previous}
-                  label="Previous"
-                  direction="previous"
-                />
-              ) : (
-                <span />
-              )}
-              {context.next && (
-                <PageNavigation
-                  page={context.next}
-                  label="Next"
-                  direction="next"
-                />
-              )}
-            </nav>
-          )}
-        </div>
-      </article>
-    </div>
-  </DocsShell>
-)
+    </DocsShell>
+  )
+}
