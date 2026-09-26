@@ -525,7 +525,7 @@ export const docsComponents: MDXComponents = {
     <pre
       {...props}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 text-[0.8125rem] leading-6",
+        "overflow-x-auto bg-transparent p-4 font-jetbrains-mono text-base font-medium leading-6",
         className
       )}
     />

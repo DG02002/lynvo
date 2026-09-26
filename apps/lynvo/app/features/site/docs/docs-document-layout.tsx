@@ -237,7 +237,7 @@ export const DocsDocumentLayout = ({
           id="docs-page-introduction"
           className="mx-auto flex max-w-3xl flex-col gap-5"
         >
-          <h1 className="text-3xl font-normal tracking-tight text-balance md:text-4xl">
+          <h1 className="text-3xl font-inter-tight font-medium tracking-tight text-balance md:text-4xl">
             {context.page.title}
           </h1>
           <p className="text-base leading-7 text-muted-foreground text-pretty">

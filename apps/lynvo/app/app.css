@@ -3,12 +3,19 @@
 @import "shadcn/tailwind.css";
 @import "./typeset.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/inter-tight";
+@import "@fontsource-variable/jetbrains-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-inter: "Inter Variable", sans-serif;
+  --font-inter-tight: "Inter Tight Variable", "Inter Variable", sans-serif;
+  --font-jetbrains-mono:
+    "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
   --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: var(--font-inter);
   --font-mono:
     ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;

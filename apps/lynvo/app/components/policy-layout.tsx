@@ -1,7 +1,21 @@
+import interTightLatinFontUrl from "@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2?url"
 import * as React from "react"
+import type { LinkDescriptor } from "react-router"
 
 import { MobilePageOutline } from "~/components/mobile-page-outline"
 import { PageTableOfContents } from "~/components/page-table-of-contents"
+
+// Policy headings render in Inter Tight; preloading the latin subset keeps
+// first paint from swapping fonts.
+export const policyFontPreloadLinks = (): LinkDescriptor[] => [
+  {
+    rel: "preload",
+    href: interTightLatinFontUrl,
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  },
+]
 
 const createPolicySectionId = (title: string) =>
   title
@@ -60,7 +74,7 @@ export function PolicyLayout({
       <header className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 pt-20 text-center md:pt-0">
         <p className="text-sm">Updated: {updatedAt}</p>
         <div className="space-y-8">
-          <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
+          <h1 className="py-4 text-4xl font-inter-tight font-medium tracking-tight text-balance md:py-6 md:text-6xl">
             {title}
           </h1>
         </div>
