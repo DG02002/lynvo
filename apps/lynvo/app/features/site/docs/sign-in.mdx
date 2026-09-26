@@ -1,0 +1,63 @@
+---
+title: Sign in
+description: Sign in with Google on your device or approve a QR sign-in from another signed-in device.
+navLabel: Sign in
+contentType: How-to
+---
+
+<DocSection id="overview">
+
+## Overview
+
+Sign in with Google to sync your Saved links across devices. On Android TV, use a QR code and approve its activation code from a device where you are already signed in.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Use QR sign-in when the device you want to sign in has no convenient keyboard. Keep your signed-in device available until Lynvo confirms the new session.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Sign in with Google
+
+1. Open Lynvo and choose **Continue with Google**.
+2. Complete Google sign-in and return to Lynvo.
+
+Lynvo supports Google sign-in. If the sign-in attempt expires or Google cannot complete it, start again from the sign-in page.
+
+### Show a QR code on the device you want to sign in
+
+1. On that device, open Lynvo and choose **Use a QR code**.
+2. Keep the QR code and activation code visible. The code uses the format `ABCD-EFGH`.
+3. On a device where you are already signed in, scan the QR code or open Lynvo's **Approve sign-in** page at `/auth/device` and enter the shown code.
+4. Check that the code on both devices matches, then choose **Approve sign-in**.
+5. Return to the device displaying the QR code and wait for Lynvo to finish signing in.
+
+### Recover an expired or failed code
+
+If the code expires, generate a new code on the device you want to sign in, then scan and approve that code. If Lynvo cannot check or approve the code, use the page's retry action or return to sign-in and start again.
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Can I approve a code that no longer appears on the other device?">
+  No. Compare the activation code shown on both devices. If it has expired or
+  changed, generate a new QR code and approve the current code.
+</DocsFaq>
+
+<DocsFaq question="Why did the other device stay signed out?">
+  Keep Lynvo open on the QR-code device while you approve the request. If the
+  exchange fails, generate a new code and try again.
+</DocsFaq>
+
+</DocSection>

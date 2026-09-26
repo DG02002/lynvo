@@ -3,6 +3,7 @@ import type { ComponentType, LazyExoticComponent } from "react"
 
 import type { LynvoPlugin } from "~/features/site/settings/plugin-settings-data"
 
+import type { DocumentationFrontmatter } from "./features/site/docs/docs-frontmatter"
 import type { PluginIconSource } from "./lib/plugin-icons"
 
 declare global {
@@ -65,9 +66,6 @@ declare global {
     title: string
     description: string
     contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
-    lastModified: string
-    headings: readonly DocumentationHeading[]
-    rawContent: string
     Content: LazyExoticComponent<DocumentationMdxModule["default"]>
   }
 
@@ -85,15 +83,10 @@ declare global {
   interface DocumentationPageContext {
     page: DocumentationPage
     groups: readonly DocumentationChapterGroup[]
+    group: string
+    section: "user" | "developer"
     previous?: DocumentationPage
     next?: DocumentationPage
-  }
-
-  interface DocumentationFrontmatter {
-    title: string
-    description: string
-    navLabel: string
-    contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
   }
 
   interface DocumentationMdxModule {

@@ -1,0 +1,76 @@
+---
+title: Player
+description: Choose which Android player Lynvo uses for links with and without HTTP byte-range support.
+navLabel: Player
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="settings-player"
+  alt="Settings > Player showing the byte-range and no-byte-range player selectors with Just (Video) Player and VLC selected"
+/>
+
+<DocSection id="overview">
+
+## Overview
+
+Player settings choose the Android player Lynvo opens for links that support HTTP byte-range requests and links that do not.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Open [**Settings > Player**](/settings/player). Set **Links with HTTP byte-range support** and **Links without HTTP byte-range support** independently. Lynvo saves these preferences to your account so they are available on your signed-in sessions.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Choose players for each link type
+
+HTTP byte-range support lets a player request part of a media file, which helps it seek forward or backward. Lynvo checks whether a partial request works; it does not rely only on the `Accept-Ranges` header.
+
+| Setting                                   | Default             | Supported players and Android package names                                                                                       |
+| ----------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Links with HTTP byte-range support**    | Just (Video) Player | Just (Video) Player — `com.brouken.player`; VLC — `org.videolan.vlc`; mpv — `is.xyz.mpv`; MX Player — `com.mxtech.videoplayer.ad` |
+| **Links without HTTP byte-range support** | VLC                 | Just (Video) Player — `com.brouken.player`; VLC — `org.videolan.vlc`; mpv — `is.xyz.mpv`; MX Player — `com.mxtech.videoplayer.ad` |
+
+### Choose a player for one open
+
+Open the Saved link menu and choose **Open in** to send that link to a different player once. This does not change either default.
+
+### Fix a player handoff error
+
+If Lynvo cannot open the selected player, it shows `Couldn’t open {playerName}` and asks you to make sure that player is installed on the Android device. Install it, then open the Playable link again.
+
+<DocsScreenshot
+  name="player-not-installed"
+  alt="Couldn’t open player dialog asking the user to install the selected Android player"
+/>
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Why are there two player settings?">
+  Some media links support partial HTTP requests and some do not. Separate
+  defaults let you choose a player for each type, which can affect seeking.
+</DocsFaq>
+
+<DocsFaq question="Can I choose a different player without changing the defaults?">
+  Yes. Use **Open in** from the Saved link menu to override the default for that
+  open.
+</DocsFaq>
+
+<DocsFaq question="Why does Lynvo say it couldn’t open my player?">
+  Check that the player named in `Couldn’t open {playerName}` is installed on
+  your Android device, then try again.
+</DocsFaq>
+
+</DocSection>

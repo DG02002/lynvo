@@ -1,5 +1,4 @@
 import { exec, execFileSync } from "node:child_process"
-import { statSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
@@ -16,8 +15,56 @@ import { createHighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 import { defineConfig, type Plugin, type ViteDevServer } from "vite"
 
+import { parseDocumentationFrontmatter } from "./app/features/site/docs/docs-frontmatter.ts"
+
 // Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
 const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
+
+const loadDocumentationFrontmatter = async (
+  filePath: string,
+  addWatchFile: (filePath: string) => void
+) => {
+  addWatchFile(filePath)
+  const content = await readFile(filePath, "utf8")
+  const frontmatter = parseDocumentationFrontmatter(content, filePath)
+
+  return `export default ${JSON.stringify(frontmatter)}`
+}
+
+const loadDocumentationLastModified = (
+  filePath: string,
+  addWatchFile: (filePath: string) => void
+) => {
+  addWatchFile(filePath)
+  let lastModified: string | undefined
+
+  try {
+    const gitDate = execFileSync(
+      "git",
+      ["log", "-1", "--format=%cs", "--", filePath],
+      {
+        cwd: dirname(filePath),
+        encoding: "utf8",
+      }
+    ).trim()
+    if (gitDate) {
+      lastModified = gitDate
+    }
+  } catch {
+    // Git metadata may not be available in packaged build environments.
+  }
+
+  return `export default ${JSON.stringify(lastModified)}`
+}
+
+const loadRawDocumentation = async (
+  filePath: string,
+  addWatchFile: (filePath: string) => void
+) => {
+  addWatchFile(filePath)
+  const content = await readFile(filePath, "utf8")
+  return `export default ${JSON.stringify(content)}`
+}
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
@@ -42,9 +89,11 @@ const docsRaw = (): Plugin => ({
       return undefined
     }
 
-    const query = ["?docs-raw", "?docs-last-modified"].find((candidate) =>
-      source.endsWith(candidate)
-    )
+    const query = [
+      "?docs-raw",
+      "?docs-last-modified",
+      "?docs-frontmatter",
+    ].find((candidate) => source.endsWith(candidate))
     if (!query) {
       return undefined
     }
@@ -56,40 +105,26 @@ const docsRaw = (): Plugin => ({
 
     return `\0${query.slice(1)}:${filePath}`
   },
-  async load(id: string) {
+  load(id: string) {
+    if (id.startsWith("\0docs-frontmatter:")) {
+      return loadDocumentationFrontmatter(
+        id.slice("\0docs-frontmatter:".length),
+        (filePath) => this.addWatchFile(filePath)
+      )
+    }
+
     if (id.startsWith("\0docs-last-modified:")) {
-      const filePath = id.slice("\0docs-last-modified:".length)
-      this.addWatchFile(filePath)
-      let lastModified = ""
-
-      try {
-        lastModified = execFileSync(
-          "git",
-          ["log", "-1", "--format=%cs", "--", filePath],
-          {
-            cwd: dirname(filePath),
-            encoding: "utf8",
-          }
-        ).trim()
-      } catch {
-        // Git metadata may not be available in packaged build environments.
-      }
-
-      if (!lastModified) {
-        lastModified = statSync(filePath).mtime.toISOString().slice(0, 10)
-      }
-
-      return `export default ${JSON.stringify(lastModified)}`
+      return loadDocumentationLastModified(
+        id.slice("\0docs-last-modified:".length),
+        (filePath) => this.addWatchFile(filePath)
+      )
     }
 
-    if (!id.startsWith("\0docs-raw:")) {
-      return undefined
-    }
-
-    const filePath = id.slice("\0docs-raw:".length)
-    this.addWatchFile(filePath)
-    const content = await readFile(filePath, "utf8")
-    return `export default ${JSON.stringify(content)}`
+    return id.startsWith("\0docs-raw:")
+      ? loadRawDocumentation(id.slice("\0docs-raw:".length), (filePath) =>
+          this.addWatchFile(filePath)
+        )
+      : undefined
   },
 })
 

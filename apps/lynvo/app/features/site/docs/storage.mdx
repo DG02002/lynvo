@@ -1,0 +1,79 @@
+---
+title: Storage
+description: Review your Library storage, choose when Saved links are removed, or delete them now.
+navLabel: Storage
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="settings-storage"
+  alt="Settings > Storage showing the storage bar, Delete saved links after options, and Delete all links action"
+/>
+
+<DocSection id="overview">
+
+## Overview
+
+Storage settings show how much of your 3 MB account limit Saved links use and let you choose when Lynvo removes older links.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Open [**Settings > Storage**](/settings/storage). The storage bar shows the amount used. Use **Delete saved links after** to choose an automatic retention period, or choose **Delete all** to remove every Saved link immediately.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Read storage usage
+
+The bar shows a value such as **x of 3 MB used**. Account storage includes Saved link records and their metadata, not the linked video files. Each Saved link record can use up to 256 KB. If one Saved link exceeds the per-link limit, Lynvo cannot store that Saved link. If the account reaches its overall limit, remove Saved links to make room.
+
+### Choose an auto-delete period
+
+**Delete saved links after** offers **7 days**, **15 days**, or **30 days**. The default is **30 days**. Lynvo removes Saved links older than the selected period during its daily retention check.
+
+If a shorter period would remove existing Saved links, Lynvo shows **Delete older links?** with the number to be removed. Choose **Delete older links** to apply the period and remove them, or cancel the dialog to keep the current period. This deletion cannot be undone.
+
+<DocsScreenshot
+  name="settings-storage-delete-older"
+  alt="Delete older links confirmation showing how many Saved links will be permanently removed"
+/>
+
+### Delete all Saved links
+
+Choose **Delete all** beside **Delete all links**, review **Delete all saved links?**, then choose **Delete all saved links** to confirm. This permanently removes every Saved link and everything inside it from your account. The action cannot be undone. The button is disabled when there are no Saved links.
+
+<DocsScreenshot
+  name="settings-storage-delete-all"
+  alt="Delete all saved links confirmation dialog warning that all Saved links will be permanently removed"
+/>
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Do linked video files count toward storage?">
+  No. Lynvo stores the Saved link record, not the linked media. The URL's media
+  file does not count toward the account storage limit.
+</DocsFaq>
+
+<DocsFaq question="Can I cancel Delete older links?">
+  Yes. Close or cancel the confirmation before choosing **Delete older links**.
+  The retention period and Saved links stay as they were.
+</DocsFaq>
+
+<DocsFaq question="Can I recover deleted Saved links?">
+  No. The retention confirmation and **Delete all saved links** action
+  permanently remove the selected Saved links. Save their Source URLs again if
+  you want to add them later.
+</DocsFaq>
+
+</DocSection>

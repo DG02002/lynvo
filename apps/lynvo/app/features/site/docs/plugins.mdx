@@ -1,0 +1,65 @@
+---
+title: Plugins
+description: Configure Lynvo Plugin Domains and connect Custom Plugin Servers for the Sources you use.
+navLabel: Plugins
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="settings-plugins"
+  alt="Settings > Plugins showing Lynvo Plugins, Plugin Domains, and Custom Plugin Servers"
+/>
+
+<DocSection id="overview">
+
+## Overview
+
+Plugins recognize Sources and turn their URLs into Media Nodes. In Plugins settings, configure a domain for a Lynvo Plugin or connect a Custom Plugin Server that you manage.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Open [**Settings > Plugins**](/settings/plugins). The page lists Lynvo Plugins and connected Custom Plugin Servers.
+
+### Configure a Plugin Domain
+
+Choose **Add domain** for a Lynvo Plugin that supports domains. Enter the Source domain and add credentials only if that Source requires them. Lynvo encrypts saved Plugin Credentials and sends them from its server during Extraction.
+
+Use the domain's settings to replace credentials or remove the domain. Removing credentials keeps the domain. Removing the domain also removes its credentials.
+
+### Connect a Custom Plugin Server
+
+Choose **Add Custom Plugin Server**, then enter the server's HTTPS origin and API key. For local development, HTTP is accepted only for `localhost`. Do not include `/manifest` in the URL. Lynvo checks the server's manifest before it saves the connection.
+
+### Keep a server connection current
+
+Enable or disable a connected server in Plugins settings. Refresh it after changing its manifest or API key. Deleting the connection removes it from Lynvo but leaves the server under your control. An **Unavailable** status means Lynvo cannot use the server until it can connect again.
+
+To build a server, see the [Developers guide to connecting a Plugin Server](/developer/connect).
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Why can’t I add a Plugin Domain to a Lynvo Plugin?">
+  Only Lynvo Plugins that support domains can use a Plugin Domain. Choose a
+  Plugin that supports the Source you use.
+</DocsFaq>
+
+<DocsFaq question="Where does Lynvo send Plugin Credentials?">
+  Your browser sends credentials to Lynvo through the Plugin Domain form. Lynvo
+  stores them encrypted and uses them on its server during Extraction for the
+  matching domain.
+</DocsFaq>
+
+<DocsFaq question="Does deleting a connection remove my Custom Plugin Server?">
+  No. Deleting the connection removes it from Lynvo. The server remains under
+  your control.
+</DocsFaq>
+
+</DocSection>

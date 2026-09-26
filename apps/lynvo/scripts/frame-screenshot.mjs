@@ -5,7 +5,7 @@ import sharp from "sharp"
 
 import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec.json" with { type: "json" }
 
-const { aurora, frame } = screenshotFrameSpec
+const { aurora, docsCanvas, frame } = screenshotFrameSpec
 
 const getFarthestCornerRadius = ({ centerX, centerY, height, width }) =>
   Math.max(
@@ -36,9 +36,12 @@ const getLinearGradientEndpoints = (width, height, angleDegrees) => {
   }
 }
 
-const getFrameLayout = (metadata, viewport) => {
+const getViewportCaptureMetadata = (metadata, viewport) => {
   const pixelRatio = viewport.deviceScaleFactor
   if (
+    !metadata.width ||
+    !metadata.height ||
+    pixelRatio <= 0 ||
     metadata.width !== viewport.width * pixelRatio ||
     metadata.height !== viewport.height * pixelRatio
   ) {
@@ -46,6 +49,11 @@ const getFrameLayout = (metadata, viewport) => {
       "The screenshot dimensions do not match its manifest viewport."
     )
   }
+  return pixelRatio
+}
+
+const getFrameLayout = (metadata, viewport) => {
+  const pixelRatio = getViewportCaptureMetadata(metadata, viewport)
 
   const canvasWidth = metadata.width
   const frameWidthPercent =
@@ -77,6 +85,43 @@ const getFrameLayout = (metadata, viewport) => {
     panelWidth,
     panelX: side,
     panelY: verticalPadding,
+    pixelRatio,
+    screenHeight,
+    screenRadius: frame.screenRadiusCssPixels * pixelRatio,
+    screenWidth,
+  }
+}
+
+// Documentation screenshots share one fixed canvas so every image in a page
+// renders at the same size. The capture is contain-fit and centered; the
+// aurora background fills whatever space the capture cannot occupy.
+const getDocsCanvasLayout = (metadata, viewport) => {
+  const pixelRatio = getViewportCaptureMetadata(metadata, viewport)
+  const canvasWidth = Math.round(docsCanvas.widthCssPixels * pixelRatio)
+  const canvasHeight = Math.round(docsCanvas.heightCssPixels * pixelRatio)
+  const framePadding = frame.paddingCssPixels * pixelRatio
+  const panelMargin = docsCanvas.panelMarginCssPixels * pixelRatio
+  const maxScreenWidth = canvasWidth - panelMargin * 2 - framePadding * 2
+  const maxScreenHeight = canvasHeight - panelMargin * 2 - framePadding * 2
+  const scale = Math.min(
+    maxScreenWidth / metadata.width,
+    maxScreenHeight / metadata.height
+  )
+  const screenWidth = Math.round(metadata.width * scale)
+  const screenHeight = Math.round(metadata.height * scale)
+  const panelWidth = screenWidth + framePadding * 2
+  const panelHeight = screenHeight + framePadding * 2
+
+  return {
+    canvasWidth,
+    imageX: Math.round((canvasWidth - screenWidth) / 2),
+    imageY: Math.round((canvasHeight - screenHeight) / 2),
+    outputHeight: canvasHeight,
+    panelHeight,
+    panelRadius: frame.radiusCssPixels * pixelRatio,
+    panelWidth,
+    panelX: Math.round((canvasWidth - panelWidth) / 2),
+    panelY: Math.round((canvasHeight - panelHeight) / 2),
     pixelRatio,
     screenHeight,
     screenRadius: frame.screenRadiusCssPixels * pixelRatio,
@@ -246,17 +291,13 @@ export const saveScreenshot = async (capture, outputPath) => {
   await writeScreenshot(sharp(capture), outputPath)
 }
 
-export const frameScreenshot = async (
+const renderFramedScreenshot = async ({
   capture,
+  layout,
+  outputPath,
   palette,
-  { viewport, outputPath }
-) => {
+}) => {
   validatePalette(palette)
-  const metadata = await sharp(capture).metadata()
-  if (!metadata.width || !metadata.height || viewport.deviceScaleFactor <= 0) {
-    throw new Error("The screenshot has invalid dimensions or scale factor.")
-  }
-  const layout = getFrameLayout(metadata, viewport)
   const [background, shadows, roundedCapture] = await Promise.all([
     sharp(svgForBackground(layout, palette)).png().toBuffer(),
     createShadows(layout),
@@ -270,4 +311,24 @@ export const frameScreenshot = async (
     ]),
     outputPath
   )
+}
+
+export const frameScreenshot = async (
+  capture,
+  palette,
+  { viewport, outputPath }
+) => {
+  const metadata = await sharp(capture).metadata()
+  const layout = getFrameLayout(metadata, viewport)
+  await renderFramedScreenshot({ capture, layout, outputPath, palette })
+}
+
+export const frameDocsScreenshot = async (
+  capture,
+  palette,
+  { viewport, outputPath }
+) => {
+  const metadata = await sharp(capture).metadata()
+  const layout = getDocsCanvasLayout(metadata, viewport)
+  await renderFramedScreenshot({ capture, layout, outputPath, palette })
 }

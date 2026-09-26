@@ -1,0 +1,84 @@
+---
+title: Library views
+description: Choose rows or an artwork gallery to browse your Saved links.
+navLabel: Library views
+contentType: How-to
+---
+
+<DocsScreenshot
+  name="library-list-view"
+  alt="Lynvo Library in List view showing date groups and Saved links in rows"
+/>
+
+<DocSection id="overview">
+
+## Overview
+
+Your Library contains the Saved links you chose. List view shows each Saved link in a row; Gallery view groups related Saved links with Artwork.
+
+</DocSection>
+
+<DocSection id="configure">
+
+## Configure
+
+Choose a view in [**Settings > General**](/settings/general), under **Saved links view**:
+
+| Option           | Description                            | Availability                                                             |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| **List view**    | “Browse every saved link in rows.”     | Available on supported browsers.                                         |
+| **Gallery view** | “Group movies and shows with artwork.” | Beta. TV Bro uses Gallery view by default until you choose another view. |
+
+The radio cards show a preview of each layout. Your selection controls how the Library appears on signed-in sessions that use that preference.
+
+</DocSection>
+
+<DocSection id="basics">
+
+## Basics
+
+### Browse Saved links in List view
+
+List view shows Saved links in rows, grouped under **Today**, weekday names, and **Older**. Each row can show its title, New or opened state, and a Playable link's expiry when one is known.
+
+### Browse related links in Gallery view
+
+Gallery view groups related movies and shows with posters and Artwork. A show can be grouped by Season and Episode, with poster or episode-still Artwork. Choose a group to browse its contents. **Show episode names** changes whether episode names appear in the gallery. Choose **Change artwork** to select different Artwork for a group.
+
+<DocsScreenshot
+  name="library-gallery-view"
+  alt="Lynvo Gallery view with movie posters and a show grouped by season and episode"
+/>
+
+### Open a Saved link menu
+
+Open the item menu for actions that depend on the selected Saved link:
+
+- **Copy Source link** copies the original URL you saved.
+- **View log** opens Extraction details.
+- **Refresh** runs Extraction again. When automatic saving is off, it appears as **Refresh link choices** because the new choices need your selection.
+- **Open in** lets you choose a supported Android player for this open.
+- **Remove saved link** removes the Saved link from your Library; you can save it again from the Source URL.
+- In Gallery view, **Change artwork** opens the artwork chooser.
+
+### Read expiry and opened states
+
+**New** means a link has not been opened. **Opened** marks a link that you already opened; it is not a playback position. If a Playable link reports expiry, its badge can show a value such as **Link valid for 3d 4h** or **Link expired**. Expiry applies to that Playable link, not the Saved link; refresh the Saved link to request current choices.
+
+</DocSection>
+
+<DocSection id="faq">
+
+## FAQ
+
+<DocsFaq question="Does removing a Saved link delete the source media?">
+  No. **Remove saved link** removes the URL and its Lynvo data from your
+  Library. It does not delete anything from the Source.
+</DocsFaq>
+
+<DocsFaq question="Why does the link say expired while the Saved link is still there?">
+  The badge describes the Playable link URL. The Saved link remains in your
+  Library, and **Refresh** can request a current Playable link from its Source.
+</DocsFaq>
+
+</DocSection>

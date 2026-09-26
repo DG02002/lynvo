@@ -1,12 +1,25 @@
 {
   "groups": [
     {
-      "title": "Using Lynvo",
-      "pages": ["android-tv", "proxy-keys"]
+      "title": "Getting started",
+      "pages": ["start-guide", "concepts", "sign-in", "android-tv"]
     },
     {
-      "title": "Plugin Servers",
-      "pages": ["plugin-server"]
+      "title": "Link library",
+      "pages": ["saving-links", "library-views", "opening-links", "remote-play"]
+    },
+    {
+      "title": "Settings",
+      "pages": [
+        "general",
+        "account",
+        "security",
+        "plugins",
+        "proxy-keys",
+        "usage",
+        "storage",
+        "player"
+      ]
     }
   ]
 }

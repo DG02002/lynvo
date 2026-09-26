@@ -40,3 +40,25 @@ export const createHeadingId = (heading: string) =>
   )
     .replaceAll(/[^a-z0-9]+/g, "-")
     .replaceAll(/(^-|-$)/g, "")
+
+export const getDocumentationHeadings = (
+  content: string
+): readonly DocumentationHeading[] => {
+  const headings: DocumentationHeading[] = []
+
+  for (const line of content.split("\n")) {
+    const match = /^(##|###) (.+)$/.exec(line)
+    if (!match) {
+      continue
+    }
+
+    const label = match[2].trim()
+    headings.push({
+      id: createHeadingId(label),
+      label,
+      level: match[1] === "###" ? 3 : undefined,
+    })
+  }
+
+  return headings
+}

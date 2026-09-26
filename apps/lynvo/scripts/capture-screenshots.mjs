@@ -8,6 +8,7 @@ import { chromium } from "playwright"
 
 import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec.json" with { type: "json" }
 import {
+  frameDocsScreenshot,
   frameScreenshot,
   saveScreenshot,
   validatePalette,
@@ -37,7 +38,7 @@ const PIXEL_10_USER_AGENT =
 const CONTEXT_VIEWPORTS = {
   desktop: { height: 836, width: 1470 },
   phone: { height: 924, width: 412 },
-  tv: { height: 1080, width: 1920 },
+  tv: { height: 540, width: 960 },
 }
 const STEP_TIMEOUT_MS = 15_000
 const IMAGE_TIMEOUT_MS = 45_000
@@ -186,7 +187,7 @@ const expandShotSetup = (shot, setups) => {
 const validateViewport = (shot) => {
   const expectedViewport = CONTEXT_VIEWPORTS[shot.context]
   if (
-    shot.viewport.deviceScaleFactor !== 2 ||
+    shot.viewport.deviceScaleFactor !== (shot.context === "tv" ? 1 : 2) ||
     shot.viewport.width !== expectedViewport.width ||
     shot.viewport.height !== expectedViewport.height ||
     shot.steps.length === 0
@@ -233,6 +234,7 @@ const validateOutput = (shot, state) => {
     (!isDocsOutput && !isMarketingOutput && !isHomepageImageOutput) ||
     (isDocsOutput &&
       path.basename(outputPath) !== `${shot.name}${extension}`) ||
+    (isDocsOutput && shot.framing === false && shot.context !== "tv") ||
     (isHomepageImageOutput && shot.framing !== false)
   ) {
     throw new Error(
@@ -716,7 +718,12 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
     ? await getLocator(page, shot.captureTarget).screenshot(screenshotOptions)
     : await page.screenshot({ ...screenshotOptions, fullPage: false })
   if (shot.framing !== false && shot.framing.mode === "postprocess") {
-    await frameScreenshot(capture, palettes[shot.framing.theme], {
+    // Documentation images share the fixed docs canvas; marketing captures
+    // keep the viewport-proportional frame.
+    const frameCapture = outputPath.startsWith(DOCS_IMAGES_DIRECTORY)
+      ? frameDocsScreenshot
+      : frameScreenshot
+    await frameCapture(capture, palettes[shot.framing.theme], {
       outputPath,
       viewport: shot.viewport,
     })

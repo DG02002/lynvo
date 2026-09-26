@@ -335,6 +335,15 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   }
 }
 
+@keyframes page-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .navigation-progress {
   position: fixed;
   inset: 0 0 auto;
@@ -552,8 +561,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
 }
 
 ::view-transition-old(root) {
-  animation: none;
-  opacity: 0;
+  animation: var(--duration-enter) ease-in both page-fade-out;
 }
 
 ::view-transition-new(root) {
@@ -569,10 +577,16 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
 }
 
 ::view-transition-old(site-header),
-::view-transition-new(site-header),
-::view-transition-old(site-footer),
-::view-transition-new(site-footer) {
+::view-transition-new(site-header) {
   animation: none;
+}
+
+::view-transition-old(site-footer) {
+  animation: var(--duration-enter) ease-in both page-fade-out;
+}
+
+::view-transition-new(site-footer) {
+  animation: var(--duration-enter) ease-out both page-fade;
 }
 
 @layer base {
@@ -1129,5 +1143,52 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+.docs-outline-active {
+  transition:
+    stroke-dasharray 200ms var(--ease-in-out-strong),
+    stroke-dashoffset 200ms var(--ease-in-out-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-outline-active {
+    transition: none;
+  }
+}
+
+/* The screenshot viewer keeps its exit state mounted until the dialog closes. */
+.docs-image-backdrop {
+  opacity: 1;
+  transition: opacity 200ms var(--ease-out-strong);
+}
+
+.docs-image-backdrop[data-starting-style],
+.docs-image-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.docs-image-popup {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  transition:
+    opacity 200ms var(--ease-out-strong),
+    transform 200ms var(--ease-out-strong);
+}
+
+.docs-image-popup[data-starting-style],
+.docs-image-popup[data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-image-popup {
+    transition: opacity 200ms var(--ease-out-strong);
+  }
+
+  .docs-image-popup[data-starting-style],
+  .docs-image-popup[data-ending-style] {
+    transform: translate(-50%, -50%);
   }
 }

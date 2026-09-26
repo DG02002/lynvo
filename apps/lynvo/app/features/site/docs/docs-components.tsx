@@ -1,3 +1,4 @@
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   ApiIcon,
   ArrowUpRight01Icon,
@@ -23,8 +24,16 @@ import {
 } from "react"
 import { Link } from "react-router"
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
+
+import { getDocumentationImageAsset } from "./docs-image-assets"
 
 const copyWithTextArea = (code: string) => {
   const textArea = document.createElement("textarea")
@@ -165,6 +174,81 @@ function DocSection({ id, children }: { id: string; children: ReactNode }) {
     <section id={id} className="scroll-mt-24">
       {children}
     </section>
+  )
+}
+
+export function DocsFaq({
+  question,
+  children,
+}: {
+  question: string
+  children: ReactNode
+}) {
+  const itemId = useId()
+
+  return (
+    <Accordion className="not-typeset my-3 rounded-none border-0">
+      <AccordionItem
+        value={itemId}
+        className="border-border/50 data-open:bg-transparent"
+      >
+        <AccordionTrigger className="py-5 text-left text-sm font-normal hover:no-underline">
+          {question}
+        </AccordionTrigger>
+        <AccordionContent className="pb-5 leading-6 text-muted-foreground">
+          {children}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  )
+}
+
+export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
+  const image = getDocumentationImageAsset(name)
+  const [zoomOpen, setZoomOpen] = useState(false)
+
+  if (!image) {
+    throw new Error(`Documentation screenshot asset is missing: ${name}`)
+  }
+
+  return (
+    <figure className="not-typeset my-6">
+      <button
+        type="button"
+        onClick={() => setZoomOpen(true)}
+        aria-label={`Open image: ${alt}`}
+        className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        {/* Framed docs screenshots share one fixed canvas, so full-width
+            rendering keeps every figure the same size. */}
+        <img
+          src={image.source}
+          alt={alt}
+          loading="lazy"
+          className="h-auto w-full object-cover"
+        />
+      </button>
+
+      {/* Composed from the Base UI primitives directly because the zoom
+          dialog needs a solid backdrop and a pure zoom animation, while
+          the shared DialogContent always renders a blurred overlay. */}
+      <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Backdrop className="docs-image-backdrop fixed inset-0 isolate z-50 bg-white dark:bg-black" />
+          <DialogPrimitive.Popup
+            aria-label={alt}
+            className="docs-image-popup fixed top-1/2 left-1/2 z-50 outline-none"
+          >
+            <img
+              src={image.source}
+              alt={alt}
+              onClick={() => setZoomOpen(false)}
+              className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md"
+            />
+          </DialogPrimitive.Popup>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    </figure>
   )
 }
 
@@ -400,6 +484,8 @@ export const docsComponents: MDXComponents = {
   DocSection,
   CodeBlock,
   DocsNote,
+  DocsFaq,
+  DocsScreenshot,
   h2: ({ children, id, ...props }) => {
     const headingId = id ?? createHeadingId(children)
 
