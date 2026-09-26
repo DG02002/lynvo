@@ -267,7 +267,7 @@ export const DocsDocumentLayout = ({
                 </span>
               </nav>
             )}
-            <h1 className="font-inter-tight text-[2rem] leading-[2.5rem] font-semibold tracking-[-0.06em] text-balance md:text-[2.5rem] md:leading-[3rem]">
+            <h1 className="font-inter-tight text-[2rem] leading-[2.5rem] font-semibold text-balance md:text-[2.5rem] md:leading-[3rem]">
               {context.page.title}
             </h1>
             <p className="text-base leading-7 text-muted-foreground text-pretty">

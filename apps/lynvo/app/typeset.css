@@ -29,8 +29,8 @@
   }
 
   /* Docs content matches the reference docs scale (measured): 16px body at
-     1.7 leading with 20px flow, 48px section turns, and Inter Tight
-     semibold headings at 24px/19.2px. */
+     1.7 leading with 20px flow and Inter Tight semibold headings at
+     24px/19.2px. */
   .typeset-docs {
     --typeset-font-body: var(--font-inter);
     --typeset-font-heading: var(--font-inter-tight);
@@ -330,11 +330,12 @@
 
   /* Preserve Lynvo's established documentation rhythm inside Typeset. The
      vertical spacing derives from --typeset-flow so the docs scale stays
-     tied to the shared typeset system; heading gaps use the base typeset
-     values instead of docs-specific overrides. */
+     tied to the shared typeset system. The heading-adjacent gaps follow the
+     reference docs rhythm (measured): 36px above an h2 section, 24px above
+     an h3, and a close 12px from any heading to its first content. */
   .typeset-docs {
     > section + section {
-      margin-block-start: calc(var(--typeset-flow) * 3.5);
+      margin-block-start: calc(var(--typeset-flow) * 1.8);
     }
 
     > section > :first-child {
@@ -343,6 +344,15 @@
 
     > section > * + * {
       margin-block-start: var(--typeset-flow);
+    }
+
+    > section > h2 + *,
+    > section > h3 + * {
+      margin-block-start: calc(var(--typeset-flow) * 0.6);
+    }
+
+    > section > * + h3 {
+      margin-block-start: calc(var(--typeset-flow) * 1.2);
     }
 
     h1,
@@ -354,16 +364,15 @@
       font-weight: 600;
     }
 
+    /* Inter Tight is already a tight face; it keeps its natural spacing. */
     h2 {
       font-size: 1.5em;
       line-height: 1.3333;
-      letter-spacing: -0.04em;
     }
 
     h3 {
       font-size: 1.2em;
       line-height: 1.3542;
-      letter-spacing: -0.02em;
     }
 
     :not(pre) > code {
