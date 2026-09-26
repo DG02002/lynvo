@@ -205,62 +205,49 @@ export function DocsFaq({
 
 export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   const image = getDocumentationImageAsset(name)
-  const expectedImagePaths = `images/${name}.png or images/${name}.webp`
   const [zoomOpen, setZoomOpen] = useState(false)
+
+  if (!image) {
+    return null
+  }
 
   return (
     <figure className="not-typeset my-6">
-      {image ? (
-        <>
-          <button
-            type="button"
-            onClick={() => setZoomOpen(true)}
-            aria-label={`Open image: ${alt}`}
-            className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      <button
+        type="button"
+        onClick={() => setZoomOpen(true)}
+        aria-label={`Open image: ${alt}`}
+        className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        {/* Framed docs screenshots share one fixed canvas, so full-width
+            rendering keeps every figure the same size. */}
+        <img
+          src={image.source}
+          alt={alt}
+          loading="lazy"
+          className="h-auto w-full object-cover"
+        />
+      </button>
+
+      {/* Composed from the Base UI primitives directly because the zoom
+          dialog needs a solid backdrop and a pure zoom animation, while
+          the shared DialogContent always renders a blurred overlay. */}
+      <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Backdrop className="docs-image-backdrop fixed inset-0 isolate z-50 bg-white dark:bg-black" />
+          <DialogPrimitive.Popup
+            aria-label={alt}
+            className="docs-image-popup fixed top-1/2 left-1/2 z-50 outline-none"
           >
-            {/* Framed docs screenshots share one fixed canvas, so full-width
-                rendering keeps every figure the same size. */}
             <img
               src={image.source}
               alt={alt}
-              loading="lazy"
-              className="h-auto w-full object-cover"
+              onClick={() => setZoomOpen(false)}
+              className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md"
             />
-          </button>
-
-          {/* Composed from the Base UI primitives directly because the zoom
-              dialog needs a solid backdrop and a pure zoom animation, while
-              the shared DialogContent always renders a blurred overlay. */}
-          <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
-            <DialogPrimitive.Portal>
-              <DialogPrimitive.Backdrop className="docs-image-backdrop fixed inset-0 isolate z-50 bg-white dark:bg-black" />
-              <DialogPrimitive.Popup
-                aria-label={alt}
-                className="docs-image-popup fixed top-1/2 left-1/2 z-50 outline-none"
-              >
-                <img
-                  src={image.source}
-                  alt={alt}
-                  onClick={() => setZoomOpen(false)}
-                  className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md"
-                />
-              </DialogPrimitive.Popup>
-            </DialogPrimitive.Portal>
-          </DialogPrimitive.Root>
-        </>
-      ) : (
-        <div
-          role="img"
-          aria-label={`${alt}. Expected image: ${expectedImagePaths}`}
-          className="flex min-h-36 flex-col justify-center gap-2 rounded-md border border-dashed border-border bg-muted/20 px-5 py-6 text-sm"
-        >
-          <span className="font-medium text-foreground">Screenshot needed</span>
-          <span className="font-mono text-muted-foreground">
-            {expectedImagePaths}
-          </span>
-          <span className="text-muted-foreground">{alt}</span>
-        </div>
-      )}
+          </DialogPrimitive.Popup>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </figure>
   )
 }

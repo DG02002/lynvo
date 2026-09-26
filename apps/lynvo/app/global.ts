@@ -65,9 +65,6 @@ declare global {
     title: string
     description: string
     contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
-    lastModified: string
-    headings: readonly DocumentationHeading[]
-    rawContent: string
     Content: LazyExoticComponent<DocumentationMdxModule["default"]>
   }
 

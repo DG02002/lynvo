@@ -1,4 +1,4 @@
-type DocumentationSectionKey = DocumentationPageContext["section"]
+export type DocumentationSectionKey = DocumentationPageContext["section"]
 
 export interface DocumentationSection {
   readonly key: DocumentationSectionKey
@@ -27,17 +27,44 @@ export const documentationSections: readonly DocumentationSection[] = [
   },
 ]
 
-const developerContentPrefix = "./plugin-server/"
+const developerContentPrefix = "plugin-server/"
+const legacyDeveloperSlug = developerContentPrefix.slice(0, -1)
+
+export const getDocumentationContentPathKey = (path: string) =>
+  path.slice("./".length, -".mdx".length)
 
 export const getDocumentationSectionKeyForPath = (
   path: string
 ): DocumentationSectionKey =>
-  path.startsWith(developerContentPrefix) ? "developer" : "user"
+  getDocumentationContentPathKey(path).startsWith(developerContentPrefix)
+    ? "developer"
+    : "user"
 
-export const getDocumentationSlug = (path: string) =>
-  path.startsWith(developerContentPrefix)
-    ? path.slice(developerContentPrefix.length, -".mdx".length)
-    : path.slice("./".length, -".mdx".length)
+export const getDocumentationSlug = (path: string) => {
+  const contentPathKey = getDocumentationContentPathKey(path)
+  return contentPathKey.startsWith(developerContentPrefix)
+    ? contentPathKey.slice(developerContentPrefix.length)
+    : contentPathKey
+}
+
+export const getDocumentationContentPath = (
+  key: DocumentationSectionKey,
+  slug: string
+) => `./${key === "developer" ? developerContentPrefix : ""}${slug}.mdx`
+
+export const getDeveloperDocsRedirectSlug = (
+  slug: string
+): string | undefined => {
+  if (slug === legacyDeveloperSlug) {
+    return ""
+  }
+
+  if (slug.startsWith(developerContentPrefix)) {
+    return slug.slice(developerContentPrefix.length)
+  }
+
+  return undefined
+}
 
 export const getDocumentationSection = (key: DocumentationSectionKey) => {
   const section = documentationSections.find((item) => item.key === key)

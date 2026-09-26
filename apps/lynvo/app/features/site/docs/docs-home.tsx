@@ -7,8 +7,7 @@ import { useViewTransition } from "~/lib/client-profile"
 import { docsCatalog } from "./docs-catalog"
 import { DocsShell } from "./docs-document-layout"
 import { getDocumentationPageIcon } from "./docs-navigation-icons"
-
-type DocumentationSectionKey = DocumentationPageContext["section"]
+import type { DocumentationSectionKey } from "./docs-sections"
 
 export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
   const sectionInfo = docsCatalog.getSection(section)

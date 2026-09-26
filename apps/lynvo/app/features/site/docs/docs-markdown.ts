@@ -43,8 +43,8 @@ const convertScreenshots = (
     /<DocsScreenshot\s+name="([^"]+)"\s+alt="([^"]+)"\s*(?:\/>|>[\s\S]*?<\/DocsScreenshot>)/g,
     (...parts: ScreenshotReplacementArguments) => {
       const [, name, alt] = parts
-      const extension = getScreenshotExtension(name) ?? "png"
-      return `![${alt}](images/${name}.${extension})`
+      const extension = getScreenshotExtension(name)
+      return extension ? `![${alt}](images/${name}.${extension})` : ""
     }
   )
 

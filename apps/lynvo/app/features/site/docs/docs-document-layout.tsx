@@ -16,8 +16,7 @@ import { cn } from "~/lib/utils"
 import { docsCatalog } from "./docs-catalog"
 import { getDocumentationPageIcon } from "./docs-navigation-icons"
 import { DocsPageActions } from "./docs-page-actions"
-
-type DocumentationSectionKey = DocumentationPageContext["section"]
+import type { DocumentationSectionKey } from "./docs-sections"
 
 // The content column is capped so the article and its table of contents sit
 // together as one centered group instead of the TOC drifting to the far edge
@@ -211,13 +210,18 @@ const PageNavigation = ({
 export const DocsDocumentLayout = ({
   context,
   children,
+  headings,
+  lastModified,
 }: {
   context: DocumentationPageContext
   children: ReactNode
+  headings: readonly DocumentationHeading[]
+  lastModified?: string
 }) => (
   <DocsShell section={context.section} currentSlug={context.page.slug}>
     <div className="px-6 md:px-8 lg:hidden">
       <MobilePageOutline
+        headings={headings}
         targetId="docs-content"
         revealAfterSelector="#docs-page-introduction"
         className="-mb-10"
@@ -241,21 +245,23 @@ export const DocsDocumentLayout = ({
           </p>
           <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <DocsPageActions page={context.page} />
-            <p className="text-sm text-muted-foreground">
-              Last updated{" "}
-              <time dateTime={context.page.lastModified}>
-                {lastModifiedDateFormatter.format(
-                  new Date(`${context.page.lastModified}T00:00:00Z`)
-                )}
-              </time>
-            </p>
+            {lastModified && (
+              <p className="text-sm text-muted-foreground">
+                Last updated{" "}
+                <time dateTime={lastModified}>
+                  {lastModifiedDateFormatter.format(
+                    new Date(`${lastModified}T00:00:00Z`)
+                  )}
+                </time>
+              </p>
+            )}
           </div>
         </header>
       </div>
 
       <div className="hidden lg:row-span-2 lg:block">
         <aside className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto py-12 pl-2 pr-6 xl:pr-8">
-          <PageTableOfContents targetId="docs-content" />
+          <PageTableOfContents headings={headings} targetId="docs-content" />
         </aside>
       </div>
 

@@ -41,54 +41,12 @@
     "baseMiddle": "#012417",
     "baseEnd": "#063A2A"
   },
-  "aurora-007": {
-    "upperRight": "#36DFB8",
-    "lowerLeft": "#12B37E",
-    "baseStart": "#021C11",
-    "baseMiddle": "#033A2A",
-    "baseEnd": "#025240"
-  },
   "aurora-008": {
     "upperRight": "#3A85EA",
     "lowerLeft": "#0D73B9",
     "baseStart": "#000E1F",
     "baseMiddle": "#011D3A",
     "baseEnd": "#0B305C"
-  },
-  "aurora-009": {
-    "upperRight": "#248BA2",
-    "lowerLeft": "#02AFC0",
-    "baseStart": "#011013",
-    "baseMiddle": "#012227",
-    "baseEnd": "#033741"
-  },
-  "aurora-010": {
-    "upperRight": "#80CAFF",
-    "lowerLeft": "#21A6D9",
-    "baseStart": "#000F18",
-    "baseMiddle": "#012030",
-    "baseEnd": "#06344E"
-  },
-  "aurora-011": {
-    "upperRight": "#1D9177",
-    "lowerLeft": "#14B781",
-    "baseStart": "#021C11",
-    "baseMiddle": "#033A2A",
-    "baseEnd": "#025240"
-  },
-  "aurora-012": {
-    "upperRight": "#8688EE",
-    "lowerLeft": "#A6BBFE",
-    "baseStart": "#11164D",
-    "baseMiddle": "#22255F",
-    "baseEnd": "#343470"
-  },
-  "aurora-013": {
-    "upperRight": "#7775E9",
-    "lowerLeft": "#4C62D0",
-    "baseStart": "#11164D",
-    "baseMiddle": "#22255F",
-    "baseEnd": "#343470"
   },
   "aurora-014": {
     "upperRight": "#92AEFD",
@@ -132,62 +90,6 @@
     "baseMiddle": "#00242C",
     "baseEnd": "#0A3945"
   },
-  "aurora-020": {
-    "upperRight": "#619FF6",
-    "lowerLeft": "#148EE3",
-    "baseStart": "#03213A",
-    "baseMiddle": "#072E55",
-    "baseEnd": "#133D70"
-  },
-  "aurora-021": {
-    "upperRight": "#39C29A",
-    "lowerLeft": "#21895B",
-    "baseStart": "#011C0F",
-    "baseMiddle": "#083A28",
-    "baseEnd": "#09523D"
-  },
-  "aurora-022": {
-    "upperRight": "#9A9DF7",
-    "lowerLeft": "#596EC0",
-    "baseStart": "#0D0655",
-    "baseMiddle": "#191261",
-    "baseEnd": "#2F2978"
-  },
-  "aurora-023": {
-    "upperRight": "#21A7B9",
-    "lowerLeft": "#0CD7DE",
-    "baseStart": "#001314",
-    "baseMiddle": "#00272B",
-    "baseEnd": "#0C3F46"
-  },
-  "aurora-024": {
-    "upperRight": "#9DA1F5",
-    "lowerLeft": "#869DED",
-    "baseStart": "#050333",
-    "baseMiddle": "#141546",
-    "baseEnd": "#29295C"
-  },
-  "aurora-025": {
-    "upperRight": "#209992",
-    "lowerLeft": "#1D8070",
-    "baseStart": "#001B17",
-    "baseMiddle": "#003933",
-    "baseEnd": "#01504C"
-  },
-  "aurora-026": {
-    "upperRight": "#11A8F7",
-    "lowerLeft": "#2595C3",
-    "baseStart": "#000F18",
-    "baseMiddle": "#012030",
-    "baseEnd": "#06344E"
-  },
-  "aurora-027": {
-    "upperRight": "#0D8CDB",
-    "lowerLeft": "#0C78A6",
-    "baseStart": "#021826",
-    "baseMiddle": "#04344F",
-    "baseEnd": "#1C496A"
-  },
   "aurora-028": {
     "upperRight": "#1188B8",
     "lowerLeft": "#2BABD0",
@@ -208,34 +110,6 @@
     "baseStart": "#0B1137",
     "baseMiddle": "#272C56",
     "baseEnd": "#3D406C"
-  },
-  "aurora-031": {
-    "upperRight": "#37C3AF",
-    "lowerLeft": "#3DB997",
-    "baseStart": "#001610",
-    "baseMiddle": "#02261E",
-    "baseEnd": "#0A3B34"
-  },
-  "aurora-032": {
-    "upperRight": "#2EAB99",
-    "lowerLeft": "#28DCB1",
-    "baseStart": "#021B14",
-    "baseMiddle": "#05392F",
-    "baseEnd": "#095146"
-  },
-  "aurora-033": {
-    "upperRight": "#1D9177",
-    "lowerLeft": "#14B781",
-    "baseStart": "#01110A",
-    "baseMiddle": "#032319",
-    "baseEnd": "#023A2D"
-  },
-  "aurora-034": {
-    "upperRight": "#10D1D4",
-    "lowerLeft": "#0D9A91",
-    "baseStart": "#021B19",
-    "baseMiddle": "#073837",
-    "baseEnd": "#0F4F50"
   },
   "aurora-035": {
     "upperRight": "#7FABF6",
@@ -265,34 +139,6 @@
     "baseMiddle": "#272C56",
     "baseEnd": "#3D406C"
   },
-  "aurora-039": {
-    "upperRight": "#7FA5FA",
-    "lowerLeft": "#3A75BF",
-    "baseStart": "#01112A",
-    "baseMiddle": "#042760",
-    "baseEnd": "#1E3A7E"
-  },
-  "aurora-040": {
-    "upperRight": "#2BB890",
-    "lowerLeft": "#05A368",
-    "baseStart": "#032113",
-    "baseMiddle": "#052B1D",
-    "baseEnd": "#0C4232"
-  },
-  "aurora-041": {
-    "upperRight": "#188E95",
-    "lowerLeft": "#06B2AD",
-    "baseStart": "#032524",
-    "baseMiddle": "#053536",
-    "baseEnd": "#054649"
-  },
-  "aurora-042": {
-    "upperRight": "#6288E1",
-    "lowerLeft": "#75B1FC",
-    "baseStart": "#001534",
-    "baseMiddle": "#182F56",
-    "baseEnd": "#30446D"
-  },
   "aurora-043": {
     "upperRight": "#537FEB",
     "lowerLeft": "#106DCE",
@@ -320,20 +166,6 @@
     "baseStart": "#011D2D",
     "baseMiddle": "#03273C",
     "baseEnd": "#093B5C"
-  },
-  "aurora-047": {
-    "upperRight": "#21B1C9",
-    "lowerLeft": "#109BA5",
-    "baseStart": "#011315",
-    "baseMiddle": "#00272C",
-    "baseEnd": "#024049"
-  },
-  "aurora-048": {
-    "upperRight": "#0A83CD",
-    "lowerLeft": "#04A8E8",
-    "baseStart": "#001420",
-    "baseMiddle": "#022235",
-    "baseEnd": "#083655"
   },
   "aurora-052": {
     "upperRight": "#5E93F0",
@@ -369,13 +201,6 @@
     "baseStart": "#01112A",
     "baseMiddle": "#042760",
     "baseEnd": "#1E3A7E"
-  },
-  "aurora-057": {
-    "upperRight": "#27A0DD",
-    "lowerLeft": "#59CDFA",
-    "baseStart": "#010F17",
-    "baseMiddle": "#03202E",
-    "baseEnd": "#01354D"
   },
   "aurora-058": {
     "upperRight": "#6D65EF",

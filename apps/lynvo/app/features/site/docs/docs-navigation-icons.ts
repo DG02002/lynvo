@@ -72,5 +72,35 @@ const pageIconsBySlug = new Map<string, IconSvgElement>([
   ["agent-prompt", StarsIcon],
 ])
 
-export const getDocumentationPageIcon = (slug: string): IconSvgElement =>
-  pageIconsBySlug.get(slug) ?? FileEmpty01Icon
+export const assertDocumentationPageIcons = (slugs: readonly string[]) => {
+  const pageSlugs = new Set(slugs)
+  const missingSlugs = [...pageSlugs].filter(
+    (slug) => !pageIconsBySlug.has(slug)
+  )
+  const staleSlugs = [...pageIconsBySlug.keys()].filter(
+    (slug) => !pageSlugs.has(slug)
+  )
+
+  if (missingSlugs.length > 0 || staleSlugs.length > 0) {
+    throw new Error(
+      [
+        missingSlugs.length > 0
+          ? `Documentation pages are missing icons: ${missingSlugs.join(", ")}`
+          : undefined,
+        staleSlugs.length > 0
+          ? `Documentation icons have no page: ${staleSlugs.join(", ")}`
+          : undefined,
+      ]
+        .filter((message) => message !== undefined)
+        .join(". ")
+    )
+  }
+}
+
+export const getDocumentationPageIcon = (slug: string): IconSvgElement => {
+  const icon = pageIconsBySlug.get(slug)
+  if (!icon) {
+    throw new Error(`Documentation page icon is missing: ${slug}`)
+  }
+  return icon
+}

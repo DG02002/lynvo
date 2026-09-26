@@ -335,6 +335,15 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   }
 }
 
+@keyframes page-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .navigation-progress {
   position: fixed;
   inset: 0 0 auto;
@@ -552,8 +561,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
 }
 
 ::view-transition-old(root) {
-  animation: none;
-  opacity: 0;
+  animation: var(--duration-enter) ease-in both page-fade-out;
 }
 
 ::view-transition-new(root) {
@@ -570,9 +578,12 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
 
 ::view-transition-old(site-header),
 ::view-transition-new(site-header),
-::view-transition-old(site-footer),
 ::view-transition-new(site-footer) {
   animation: none;
+}
+
+::view-transition-old(site-footer) {
+  animation: var(--duration-enter) ease-in both page-fade-out;
 }
 
 @layer base {

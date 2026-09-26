@@ -9,7 +9,7 @@ import {
 } from "react-router"
 
 import { LogoLink } from "~/components/logo"
-import type { DocsLoaderData } from "~/features/site/docs/docs-section-routes"
+import { useDocsBreadcrumb } from "~/features/site/docs/docs-breadcrumb"
 import { useViewTransition } from "~/lib/client-profile"
 import { isDocsRoutePathname, sitePaths } from "~/lib/paths"
 import { signOut } from "~/lib/session-http"
@@ -24,18 +24,12 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const data = useRouteLoaderData<{
     user: { email: string; name?: string | null } | null
   }>("root")
-  const userDocsData = useRouteLoaderData<DocsLoaderData>(
-    "features/site/routes/_site.docs"
-  )
-  const developerDocsData = useRouteLoaderData<DocsLoaderData>(
-    "features/site/routes/_site.developer"
-  )
   const user = data?.user
   const [remotePlayOpen, setRemotePlayOpen] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const viewTransition = useViewTransition()
   const isDocsRoute = isDocsRoutePathname(pathname)
-  const breadcrumb = userDocsData?.breadcrumb ?? developerDocsData?.breadcrumb
+  const breadcrumb = useDocsBreadcrumb()
 
   const handleLogout = async () => {
     try {

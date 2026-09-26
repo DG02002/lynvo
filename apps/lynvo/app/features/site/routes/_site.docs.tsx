@@ -1,4 +1,5 @@
 import { createDocsSectionRoute } from "~/features/site/docs/docs-section-routes"
+import { withDocumentationLastModified } from "~/features/site/docs/docs-source.server"
 
 const {
   loader: docsSectionLoader,
@@ -8,7 +9,7 @@ const {
 } = createDocsSectionRoute("user")
 
 export function loader(parameters: Parameters<typeof docsSectionLoader>[0]) {
-  return docsSectionLoader(parameters)
+  return withDocumentationLastModified("user", docsSectionLoader, parameters)
 }
 
 export function meta(parameters: Parameters<typeof docsSectionMeta>[0]) {

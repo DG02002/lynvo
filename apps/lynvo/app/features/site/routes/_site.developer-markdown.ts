@@ -1,9 +1,6 @@
-import { createDocsMarkdownLoader } from "~/features/site/docs/docs-section-routes"
+import type { DocsRouteParams } from "~/features/site/docs/docs-section-routes"
+import { createDocsMarkdownLoader } from "~/features/site/docs/docs-source.server"
 
-const developerMarkdownLoader = createDocsMarkdownLoader("developer")
-
-export function loader(
-  parameters: Parameters<typeof developerMarkdownLoader>[0]
-) {
-  return developerMarkdownLoader(parameters)
+export function loader(parameters: DocsRouteParams) {
+  return createDocsMarkdownLoader("developer")(parameters)
 }

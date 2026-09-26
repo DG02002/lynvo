@@ -1,12 +1,20 @@
 import { Suspense } from "react"
-import { data, isRouteErrorResponse, redirect, useParams } from "react-router"
+import {
+  data,
+  isRouteErrorResponse,
+  redirect,
+  useLoaderData,
+} from "react-router"
 
 import { docsCatalog } from "./docs-catalog"
 import { docsComponents } from "./docs-components"
 import { DocsDocumentLayout } from "./docs-document-layout"
 import { DocsHome } from "./docs-home"
-
-type DocumentationSectionKey = DocumentationPageContext["section"]
+import {
+  getDeveloperDocsRedirectSlug,
+  getDocumentationSection,
+  type DocumentationSectionKey,
+} from "./docs-sections"
 
 export interface DocsRouteParams {
   params: Record<string, string | undefined>
@@ -18,38 +26,62 @@ export interface DocsLoaderData {
     group: string
     pageLabel: string
   } | null
+  metadata: {
+    title: string
+    description: string
+    contentType: DocumentationPage["contentType"]
+  } | null
+  headings: readonly DocumentationHeading[] | null
+  lastModified?: string
 }
 
-const legacyPluginServerSlug = "plugin-server"
-const legacyPluginServerPrefix = "plugin-server/"
-
-const getRedirectedDeveloperSlug = (slug: string): string | undefined => {
-  if (slug === legacyPluginServerSlug) {
-    return ""
-  }
-
-  if (slug.startsWith(legacyPluginServerPrefix)) {
-    return slug.slice(legacyPluginServerPrefix.length)
-  }
-
-  return undefined
-}
+const DocsContentLoading = ({
+  headings,
+}: {
+  headings: readonly DocumentationHeading[]
+}) => (
+  <div role="status" aria-label="Loading documentation" className="space-y-8">
+    <span className="sr-only">Loading documentation</span>
+    <div aria-hidden="true" className="space-y-8">
+      {headings.map((heading, index) => (
+        <div key={heading.id} className="space-y-4">
+          <div
+            className={`h-6 animate-pulse rounded bg-muted motion-reduce:animate-none ${heading.level === 3 ? "ml-4 w-2/5" : "w-1/2"}`}
+          />
+          <div className="h-4 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+          <div
+            className={`h-4 animate-pulse rounded bg-muted motion-reduce:animate-none ${index % 2 === 0 ? "w-4/5" : "w-3/5"}`}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+)
 
 const DocsSectionPage = ({ section }: { section: DocumentationSectionKey }) => {
-  const params = useParams()
-  const context = params["*"]
-    ? docsCatalog.resolve(section, params["*"])
+  const loaderData = useLoaderData<DocsLoaderData>()
+  const context = loaderData.slug
+    ? docsCatalog.resolve(section, loaderData.slug)
     : undefined
 
   if (!context) {
     return <DocsHome section={section} />
   }
+  if (!loaderData.headings) {
+    throw new Error(`Documentation headings are missing: ${context.page.slug}`)
+  }
 
   const { Content } = context.page
 
   return (
-    <DocsDocumentLayout context={context}>
-      <Suspense fallback={null}>
+    <DocsDocumentLayout
+      context={context}
+      headings={loaderData.headings}
+      lastModified={loaderData.lastModified}
+    >
+      <Suspense
+        fallback={<DocsContentLoading headings={loaderData.headings} />}
+      >
         <Content components={docsComponents} />
       </Suspense>
     </DocsDocumentLayout>
@@ -69,11 +101,18 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
     const requestedSlug = params["*"]
 
     if (!requestedSlug) {
-      return { slug: null, breadcrumb: null }
+      return {
+        slug: null,
+        breadcrumb: null,
+        metadata: null,
+        headings: null,
+      }
     }
 
     const redirectedSlug =
-      section === "user" ? getRedirectedDeveloperSlug(requestedSlug) : undefined
+      section === "user"
+        ? getDeveloperDocsRedirectSlug(requestedSlug)
+        : undefined
     if (redirectedSlug !== undefined) {
       return redirect(
         redirectedSlug ? `/developer/${redirectedSlug}` : "/developer"
@@ -91,21 +130,25 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
         group: context.group,
         pageLabel: context.page.navLabel,
       },
+      metadata: {
+        title: context.page.title,
+        description: context.page.description,
+        contentType: context.page.contentType,
+      },
+      headings: null,
     }
   },
 
   meta: ({ data: loaderData }: { data: DocsLoaderData | undefined }) => {
+    const sectionInfo = getDocumentationSection(section)
     if (!loaderData?.slug) {
-      const sectionInfo = docsCatalog.getSection(section)
-
       return [
         { title: `${sectionInfo.label} | Lynvo` },
         { name: "description", content: sectionInfo.homeDescription },
       ]
     }
 
-    const context = docsCatalog.resolve(section, loaderData.slug)
-    if (!context) {
+    if (!loaderData.metadata) {
       return [
         { title: "Page not found | Lynvo" },
         { name: "robots", content: "noindex" },
@@ -113,9 +156,9 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
     }
 
     return [
-      { title: `${context.page.title} | Lynvo` },
-      { name: "description", content: context.page.description },
-      { name: "contentType", content: context.page.contentType },
+      { title: `${loaderData.metadata.title} | Lynvo` },
+      { name: "description", content: loaderData.metadata.description },
+      { name: "contentType", content: loaderData.metadata.contentType },
     ]
   },
 
@@ -131,33 +174,3 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
     return <DocsSectionNotFound />
   },
 })
-
-export const createDocsMarkdownLoader =
-  (section: DocumentationSectionKey) =>
-  ({ params }: DocsRouteParams) => {
-    const slug = params["*"]
-
-    if (slug && section === "user") {
-      const redirectedSlug = getRedirectedDeveloperSlug(slug)
-      if (redirectedSlug !== undefined) {
-        return redirect(
-          redirectedSlug
-            ? `/developer/markdown/${redirectedSlug}`
-            : "/developer/markdown/what-is-a-plugin-server"
-        )
-      }
-    }
-
-    const markdown = slug ? docsCatalog.getMarkdown(section, slug) : undefined
-
-    if (!markdown || !slug) {
-      throw data(null, { status: 404 })
-    }
-
-    return new Response(markdown, {
-      headers: {
-        "Content-Type": "text/markdown; charset=utf-8",
-        "Content-Disposition": `inline; filename="${slug.replaceAll("/", "-")}.md"`,
-      },
-    })
-  }

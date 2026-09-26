@@ -9,15 +9,90 @@ import { reactRouter } from "@react-router/dev/vite"
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core"
 import { transformerMetaHighlight } from "@shikijs/transformers"
 import tailwindcss from "@tailwindcss/vite"
+import { Result, Schema } from "effect"
 import remarkFrontmatter from "remark-frontmatter"
 import remarkGfm from "remark-gfm"
 import remarkMdxFrontmatter from "remark-mdx-frontmatter"
 import { createHighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 import { defineConfig, type Plugin, type ViteDevServer } from "vite"
+import { parse as parseYaml } from "yaml"
 
 // Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
 const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
+const documentationFrontmatterSchema = Schema.Struct({
+  title: Schema.String,
+  description: Schema.String,
+  navLabel: Schema.String,
+  contentType: Schema.Literals([
+    "Tutorial",
+    "How-to",
+    "Reference",
+    "Conceptual",
+  ]),
+})
+
+const loadDocumentationFrontmatter = async (
+  filePath: string,
+  addWatchFile: (filePath: string) => void
+) => {
+  addWatchFile(filePath)
+  const content = await readFile(filePath, "utf8")
+  const frontmatterMatch = content.match(
+    /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/
+  )
+
+  if (!frontmatterMatch) {
+    throw new Error(`Documentation frontmatter is missing: ${filePath}`)
+  }
+
+  const parsedFrontmatter = parseYaml(frontmatterMatch[1])
+  const frontmatter = Schema.decodeUnknownResult(
+    documentationFrontmatterSchema
+  )(parsedFrontmatter)
+
+  if (Result.isFailure(frontmatter)) {
+    throw new Error(`Documentation frontmatter is invalid: ${filePath}`)
+  }
+
+  return `export default ${JSON.stringify(frontmatter.success)}`
+}
+
+const loadDocumentationLastModified = (
+  filePath: string,
+  addWatchFile: (filePath: string) => void
+) => {
+  addWatchFile(filePath)
+  let lastModified = ""
+
+  try {
+    lastModified = execFileSync(
+      "git",
+      ["log", "-1", "--format=%cs", "--", filePath],
+      {
+        cwd: dirname(filePath),
+        encoding: "utf8",
+      }
+    ).trim()
+  } catch {
+    // Git metadata may not be available in packaged build environments.
+  }
+
+  if (!lastModified) {
+    lastModified = statSync(filePath).mtime.toISOString().slice(0, 10)
+  }
+
+  return `export default ${JSON.stringify(lastModified)}`
+}
+
+const loadRawDocumentation = async (
+  filePath: string,
+  addWatchFile: (filePath: string) => void
+) => {
+  addWatchFile(filePath)
+  const content = await readFile(filePath, "utf8")
+  return `export default ${JSON.stringify(content)}`
+}
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
@@ -42,9 +117,11 @@ const docsRaw = (): Plugin => ({
       return undefined
     }
 
-    const query = ["?docs-raw", "?docs-last-modified"].find((candidate) =>
-      source.endsWith(candidate)
-    )
+    const query = [
+      "?docs-raw",
+      "?docs-last-modified",
+      "?docs-frontmatter",
+    ].find((candidate) => source.endsWith(candidate))
     if (!query) {
       return undefined
     }
@@ -56,40 +133,26 @@ const docsRaw = (): Plugin => ({
 
     return `\0${query.slice(1)}:${filePath}`
   },
-  async load(id: string) {
+  load(id: string) {
+    if (id.startsWith("\0docs-frontmatter:")) {
+      return loadDocumentationFrontmatter(
+        id.slice("\0docs-frontmatter:".length),
+        (filePath) => this.addWatchFile(filePath)
+      )
+    }
+
     if (id.startsWith("\0docs-last-modified:")) {
-      const filePath = id.slice("\0docs-last-modified:".length)
-      this.addWatchFile(filePath)
-      let lastModified = ""
-
-      try {
-        lastModified = execFileSync(
-          "git",
-          ["log", "-1", "--format=%cs", "--", filePath],
-          {
-            cwd: dirname(filePath),
-            encoding: "utf8",
-          }
-        ).trim()
-      } catch {
-        // Git metadata may not be available in packaged build environments.
-      }
-
-      if (!lastModified) {
-        lastModified = statSync(filePath).mtime.toISOString().slice(0, 10)
-      }
-
-      return `export default ${JSON.stringify(lastModified)}`
+      return loadDocumentationLastModified(
+        id.slice("\0docs-last-modified:".length),
+        (filePath) => this.addWatchFile(filePath)
+      )
     }
 
-    if (!id.startsWith("\0docs-raw:")) {
-      return undefined
-    }
-
-    const filePath = id.slice("\0docs-raw:".length)
-    this.addWatchFile(filePath)
-    const content = await readFile(filePath, "utf8")
-    return `export default ${JSON.stringify(content)}`
+    return id.startsWith("\0docs-raw:")
+      ? loadRawDocumentation(id.slice("\0docs-raw:".length), (filePath) =>
+          this.addWatchFile(filePath)
+        )
+      : undefined
   },
 })
 
