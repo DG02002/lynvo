@@ -240,7 +240,7 @@ export const DocsDocumentLayout = ({
        outline cell spans both rows so "On this page" starts beside the page
        title instead of below the introduction separator. */}
       <div className={docsContentGridClassName}>
-        <div className="min-w-0 border-b border-border px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
+        <div className="min-w-0 px-6 pb-10 pt-8 md:px-8 lg:pt-12 xl:px-10">
           <header
             id="docs-page-introduction"
             className="mx-auto flex max-w-3xl flex-col gap-5"
@@ -267,14 +267,13 @@ export const DocsDocumentLayout = ({
                 </span>
               </nav>
             )}
-            <h1 className="font-inter-tight text-[2rem] leading-[2.5rem] font-semibold text-balance md:text-[2.5rem] md:leading-[3rem]">
-              {context.page.title}
-            </h1>
-            <p className="text-base leading-7 text-muted-foreground text-pretty">
-              {context.page.description}
-            </p>
-            <div className="mt-2">
-              <DocsPageActions page={context.page} />
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+              <h1 className="font-inter-tight text-[2rem] leading-[2.5rem] font-semibold text-balance md:text-[2.5rem] md:leading-[3rem]">
+                {context.page.title}
+              </h1>
+              <div className="mt-1 shrink-0">
+                <DocsPageActions page={context.page} />
+              </div>
             </div>
           </header>
         </div>

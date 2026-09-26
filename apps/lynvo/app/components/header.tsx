@@ -26,6 +26,9 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const viewTransition = useViewTransition()
   const isDocsRoute = isDocsRoutePathname(pathname)
+  const developerRoot = sitePaths.developerDocs
+  const isDeveloperRoute =
+    pathname === developerRoot || pathname.startsWith(`${developerRoot}/`)
 
   const handleLogout = async () => {
     try {
@@ -89,12 +92,17 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
             <>
               <span aria-hidden="true" className="h-5 w-px bg-border" />
               <Link
-                to={sitePaths.docs}
+                to={isDeveloperRoute ? developerRoot : sitePaths.docs}
                 prefetch="intent"
-                aria-current={pathname === sitePaths.docs ? "page" : undefined}
+                aria-current={
+                  pathname ===
+                  (isDeveloperRoute ? developerRoot : sitePaths.docs)
+                    ? "page"
+                    : undefined
+                }
                 className="rounded-sm text-sm font-medium text-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                Docs
+                {isDeveloperRoute ? "Developer" : "Docs"}
               </Link>
             </>
           )}

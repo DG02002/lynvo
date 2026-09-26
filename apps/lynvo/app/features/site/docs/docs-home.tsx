@@ -1,4 +1,3 @@
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
 
@@ -17,9 +16,8 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
   return (
     <DocsShell section={section}>
       <div className="px-6 pb-16 pt-10 md:px-8 lg:pt-16 xl:px-10">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-6xl">
           <header className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">{sectionInfo.label}</p>
             <h1 className="text-4xl font-inter-tight font-medium tracking-tight text-balance md:text-6xl">
               {sectionInfo.homeTitle}
             </h1>
@@ -33,7 +31,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
               <h2 className="text-xl font-inter-tight font-medium tracking-tight">
                 {group.group}
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {group.pages.map((page) => (
                   <Link
                     key={page.slug}
@@ -48,20 +46,13 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
                       className="size-7"
                       strokeWidth={1.5}
                     />
-                    <span className="flex items-end justify-between gap-4">
-                      <span className="flex min-w-0 flex-col gap-2">
-                        <span className="text-lg tracking-tight text-balance">
-                          {page.navLabel}
-                        </span>
-                        <span className="text-sm leading-6 text-muted-foreground text-pretty">
-                          {page.description}
-                        </span>
+                    <span className="flex min-w-0 flex-col gap-2">
+                      <span className="text-lg tracking-tight text-balance">
+                        {page.navLabel}
                       </span>
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        aria-hidden="true"
-                        className="mb-1 size-5 shrink-0 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
-                      />
+                      <span className="truncate text-sm leading-6 text-muted-foreground">
+                        {page.description}
+                      </span>
                     </span>
                   </Link>
                 ))}
