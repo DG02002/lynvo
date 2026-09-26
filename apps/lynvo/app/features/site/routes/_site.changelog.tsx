@@ -294,7 +294,7 @@ export default function Changelog() {
   return (
     <div className="w-full px-6 py-12 md:px-8 md:py-24 lg:px-10 xl:px-14">
       <header className="flex max-w-3xl flex-col gap-5">
-        <h1 className="text-4xl font-normal tracking-tight text-balance md:text-6xl">
+        <h1 className="text-4xl font-normal text-balance md:text-6xl">
           Changelog
         </h1>
       </header>

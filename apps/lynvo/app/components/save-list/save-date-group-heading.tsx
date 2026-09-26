@@ -17,7 +17,7 @@ interface SaveDateGroupHeadingProps {
 }
 
 const SaveDateGroupHeading = ({ label, id }: SaveDateGroupHeadingProps) => (
-  <h2 id={id} className="font-heading text-2xl font-bold tracking-tight">
+  <h2 id={id} className="font-heading text-2xl font-bold">
     {label}
   </h2>
 )

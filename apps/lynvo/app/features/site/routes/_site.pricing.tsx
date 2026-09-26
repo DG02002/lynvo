@@ -219,7 +219,7 @@ export default function Pricing() {
     <div className="w-full px-6 py-16 md:px-8 md:py-24 lg:px-10 xl:px-14">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
         <p className="text-sm">Lynvo</p>
-        <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
+        <h1 className="my-4 text-4xl font-normal text-balance md:text-6xl">
           Pricing
         </h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -294,7 +294,7 @@ export default function Pricing() {
 
       <section className="mx-auto mt-24 max-w-3xl">
         <header className="flex flex-col gap-3 text-center">
-          <h2 className="text-3xl font-normal tracking-tight md:text-4xl">
+          <h2 className="text-3xl font-normal md:text-4xl">
             Compare features across plans
           </h2>
         </header>

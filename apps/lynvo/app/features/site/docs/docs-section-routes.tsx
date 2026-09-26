@@ -1,3 +1,4 @@
+import jetbrainsMonoLatinFontUrl from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url"
 import { Suspense } from "react"
 import {
   data,
@@ -90,13 +91,25 @@ const DocsSectionPage = ({ section }: { section: DocumentationSectionKey }) => {
 
 const DocsSectionNotFound = () => (
   <section className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-    <h1 className="text-4xl font-normal tracking-tight text-balance sm:text-6xl">
+    <h1 className="text-4xl font-medium text-balance sm:text-6xl">
       This documentation page can’t be found.
     </h1>
   </section>
 )
 
 export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
+  // Docs code blocks render in JetBrains Mono; preloading the latin subset
+  // keeps first paint from swapping fonts.
+  links: () => [
+    {
+      rel: "preload",
+      href: jetbrainsMonoLatinFontUrl,
+      as: "font",
+      type: "font/woff2",
+      crossOrigin: "anonymous",
+    },
+  ],
+
   loader: ({ params }: DocsRouteParams) => {
     const requestedSlug = params["*"]
 

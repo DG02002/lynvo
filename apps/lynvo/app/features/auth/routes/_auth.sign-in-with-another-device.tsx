@@ -34,9 +34,7 @@ export default function SignInWithAnotherDevice() {
             className="flex flex-col gap-4 text-center"
           >
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
-            <h1 className="text-4xl font-normal tracking-tight">
-              Sign in on this device
-            </h1>
+            <h1 className="text-4xl font-normal">Sign in on this device</h1>
             <p className="text-balance text-lg text-muted-foreground">
               On a device where you’re already signed in to Lynvo, scan the QR
               code below.

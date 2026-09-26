@@ -2,11 +2,14 @@ import { createDocsSectionRoute } from "~/features/site/docs/docs-section-routes
 import { withDocumentationLastModified } from "~/features/site/docs/docs-source.server"
 
 const {
+  links: developerSectionLinks,
   loader: developerSectionLoader,
   meta: developerSectionMeta,
   Component: DeveloperSectionComponent,
   ErrorBoundary: DeveloperSectionErrorBoundary,
 } = createDocsSectionRoute("developer")
+
+export const links = developerSectionLinks
 
 export function loader(
   parameters: Parameters<typeof developerSectionLoader>[0]

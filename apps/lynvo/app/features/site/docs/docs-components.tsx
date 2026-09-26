@@ -212,7 +212,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   }
 
   return (
-    <figure className="not-typeset my-6">
+    <figure className="not-typeset my-10">
       <button
         type="button"
         onClick={() => setZoomOpen(true)}
@@ -234,10 +234,10 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
           the shared DialogContent always renders a blurred overlay. */}
       <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Backdrop className="docs-image-backdrop fixed inset-0 isolate z-50 bg-white dark:bg-black" />
+          <DialogPrimitive.Backdrop className="fixed inset-0 isolate z-50 bg-white data-open:animate-in data-open:fade-in-0 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-200 dark:bg-black motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none" />
           <DialogPrimitive.Popup
             aria-label={alt}
-            className="docs-image-popup fixed top-1/2 left-1/2 z-50 outline-none"
+            className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
           >
             <img
               src={image.source}
@@ -301,9 +301,9 @@ function CodeBlock({
   return (
     <figure
       ref={figureRef}
-      className="not-typeset my-2 overflow-hidden rounded-lg border"
+      className="not-typeset my-5 overflow-hidden rounded-lg border border-foreground/20"
     >
-      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b bg-muted/30 pl-4 pr-1 text-sm text-foreground">
+      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/20 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
         <span className="flex min-w-0 items-center gap-2">
           <span aria-hidden="true" className="size-4 shrink-0">
             <CodeLabelIcon label={label} />
@@ -525,7 +525,7 @@ export const docsComponents: MDXComponents = {
     <pre
       {...props}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 text-[0.8125rem] leading-6",
+        "overflow-x-auto bg-transparent p-4 font-jetbrains-mono text-[0.8125rem] font-medium leading-6",
         className
       )}
     />

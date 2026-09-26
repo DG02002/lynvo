@@ -3,12 +3,17 @@
 @import "shadcn/tailwind.css";
 @import "./typeset.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-inter: "Inter Variable", sans-serif;
+  --font-jetbrains-mono:
+    "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
   --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: var(--font-inter);
   --font-mono:
     ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
@@ -601,6 +606,20 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   h6 {
     text-wrap: balance;
   }
+  /* Headings across Lynvo share one tight tracking scale; explicit tracking
+     utilities and the docs typeset values override it per context. */
+  h1 {
+    letter-spacing: -0.04em;
+  }
+  h2 {
+    letter-spacing: -0.03em;
+  }
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: -0.02em;
+  }
   ::selection {
     background: var(--foreground);
     color: var(--background);
@@ -685,7 +704,6 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 }
 
 .docs-content .shiki code {
-  counter-reset: docs-code-line;
   display: flex;
   flex-direction: column;
 }
@@ -694,13 +712,16 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 .dark .docs-content .shiki span {
   color: var(--shiki-dark) !important;
   background-color: transparent !important;
+}
+
+/* Token-level dark overrides only; the pre keeps its utility font-weight. */
+.dark .docs-content .shiki span {
   font-style: var(--shiki-dark-font-style) !important;
   font-weight: var(--shiki-dark-font-weight) !important;
   text-decoration: var(--shiki-dark-text-decoration) !important;
 }
 
 .docs-content .shiki .line {
-  counter-increment: docs-code-line;
   display: block;
   min-height: 1.5rem;
 }
@@ -740,16 +761,6 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   padding-right: 1rem;
   color: var(--muted-foreground);
   content: counter(log-code-line);
-  text-align: right;
-  user-select: none;
-}
-
-.docs-content .shiki .line::before {
-  display: inline-block;
-  width: 2.25rem;
-  padding-right: 1rem;
-  color: var(--muted-foreground);
-  content: counter(docs-code-line);
   text-align: right;
   user-select: none;
 }
@@ -1157,38 +1168,26 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
-/* The screenshot viewer keeps its exit state mounted until the dialog closes. */
-.docs-image-backdrop {
-  opacity: 1;
-  transition: opacity 200ms var(--ease-out-strong);
+/* The screenshot viewer zooms with the shared data-open/data-closed dialog
+   animation utilities; Base UI keeps it mounted through the exit animation. */
+
+/* The header section switcher expands from its trigger like a native
+   select: fade and scale from the trigger corner on the project's strong
+   ease-out. */
+.docs-section-switcher {
+  transform-origin: top left;
+  animation: docs-section-switcher-enter 150ms var(--ease-out-strong);
 }
 
-.docs-image-backdrop[data-starting-style],
-.docs-image-backdrop[data-ending-style] {
-  opacity: 0;
-}
-
-.docs-image-popup {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  transition:
-    opacity 200ms var(--ease-out-strong),
-    transform 200ms var(--ease-out-strong);
-}
-
-.docs-image-popup[data-starting-style],
-.docs-image-popup[data-ending-style] {
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.96);
+@keyframes docs-section-switcher-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .docs-image-popup {
-    transition: opacity 200ms var(--ease-out-strong);
-  }
-
-  .docs-image-popup[data-starting-style],
-  .docs-image-popup[data-ending-style] {
-    transform: translate(-50%, -50%);
+  .docs-section-switcher {
+    animation: none;
   }
 }
