@@ -1,5 +1,4 @@
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 import { useLocation, useNavigate, useRouteLoaderData } from "react-router"
@@ -15,6 +14,9 @@ import { GuestNavActions } from "./header/guest-nav-actions"
 import { LogoutDialog } from "./header/logout-dialog"
 import { UserNavActions } from "./header/user-nav-actions"
 
+const getSectionShortLabel = (sectionKey: string) =>
+  sectionKey === "developer" ? "Developer" : "Docs"
+
 export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -24,7 +26,10 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const user = data?.user
   const [remotePlayOpen, setRemotePlayOpen] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
-  const [sectionMenuOpen, setSectionMenuOpen] = useState(false)
+  // The section switcher expands in place like a native select: the closed
+  // control converts into the option list, with the current option's row
+  // sitting exactly where the trigger was.
+  const [sectionListOpen, setSectionListOpen] = useState(false)
   const viewTransition = useViewTransition()
   const isDocsRoute = isDocsRoutePathname(pathname)
   const developerRoot = sitePaths.developerDocs
@@ -35,6 +40,10 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
       isDeveloperRoute
         ? candidate.key === "developer"
         : candidate.key === "user"
+    ) ?? documentationSections[0]
+  const otherSection =
+    documentationSections.find(
+      (candidate) => candidate.key !== currentSection.key
     ) ?? documentationSections[0]
 
   const handleLogout = async () => {
@@ -98,35 +107,43 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
           {isDocsRoute && (
             <>
               <span aria-hidden="true" className="h-5 w-0.5 bg-foreground/25" />
-              <DialogPrimitive.Root
-                open={sectionMenuOpen}
-                onOpenChange={setSectionMenuOpen}
-              >
-                <DialogPrimitive.Trigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label="Switch documentation section"
-                      className="flex items-center gap-1 rounded-sm text-lg font-normal tracking-tight text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    />
-                  }
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Switch documentation section"
+                  aria-expanded={sectionListOpen}
+                  onClick={() => setSectionListOpen(true)}
+                  className={cn(
+                    "flex items-center gap-1 rounded-sm px-1 text-lg font-normal tracking-tight text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    sectionListOpen && "invisible"
+                  )}
                 >
-                  {currentSection.key === "developer" ? "Developer" : "Docs"}
+                  {getSectionShortLabel(currentSection.key)}
                   <HugeiconsIcon
                     icon={ArrowDown01Icon}
                     aria-hidden="true"
                     className="size-4"
                     strokeWidth={2}
                   />
-                </DialogPrimitive.Trigger>
-                <DialogPrimitive.Portal>
-                  <DialogPrimitive.Backdrop className="fixed inset-0 isolate z-50 bg-background/70 backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-200 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none" />
-                  <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none">
-                    <DialogPrimitive.Title className="sr-only">
-                      Switch documentation section
-                    </DialogPrimitive.Title>
-                    <div className="w-80 rounded-xl border border-foreground/20 bg-background p-2 shadow-2xl">
-                      {documentationSections.map((candidate) => {
+                </button>
+                {sectionListOpen && (
+                  <>
+                    <div
+                      aria-hidden="true"
+                      className="fixed inset-0 z-40 cursor-default"
+                      onClick={() => setSectionListOpen(false)}
+                    />
+                    <div
+                      role="listbox"
+                      aria-label="Documentation sections"
+                      className="docs-section-switcher absolute -top-[5px] -left-[5px] z-50 flex flex-col rounded-lg border border-foreground/15 bg-background p-1 shadow-lg"
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          setSectionListOpen(false)
+                        }
+                      }}
+                    >
+                      {[currentSection, otherSection].map((candidate) => {
                         const isCurrentSection =
                           candidate.key === currentSection.key
 
@@ -134,37 +151,38 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
                           <button
                             key={candidate.key}
                             type="button"
+                            role="option"
+                            aria-selected={isCurrentSection}
                             onClick={() => {
-                              setSectionMenuOpen(false)
+                              setSectionListOpen(false)
                               if (!isCurrentSection) {
                                 void navigate(candidate.root)
                               }
                             }}
                             className={cn(
-                              "flex w-full flex-col gap-1 rounded-lg px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                              "flex w-full items-center justify-between gap-4 rounded-sm px-1 text-lg font-normal tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                               isCurrentSection
-                                ? "bg-muted"
-                                : "hover:bg-muted/60"
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
                             )}
                           >
-                            <span
+                            {getSectionShortLabel(candidate.key)}
+                            <HugeiconsIcon
+                              icon={Tick02Icon}
+                              aria-hidden="true"
                               className={cn(
-                                "text-base tracking-tight text-foreground",
-                                isCurrentSection ? "font-medium" : "font-normal"
+                                "size-4 shrink-0",
+                                !isCurrentSection && "invisible"
                               )}
-                            >
-                              {candidate.label}
-                            </span>
-                            <span className="text-sm leading-5 text-muted-foreground">
-                              {candidate.homeDescription}
-                            </span>
+                              strokeWidth={2}
+                            />
                           </button>
                         )
                       })}
                     </div>
-                  </DialogPrimitive.Popup>
-                </DialogPrimitive.Portal>
-              </DialogPrimitive.Root>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>

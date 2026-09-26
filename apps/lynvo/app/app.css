@@ -1170,3 +1170,24 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 
 /* The screenshot viewer zooms with the shared data-open/data-closed dialog
    animation utilities; Base UI keeps it mounted through the exit animation. */
+
+/* The header section switcher expands from its trigger like a native
+   select: fade and scale from the trigger corner on the project's strong
+   ease-out. */
+.docs-section-switcher {
+  transform-origin: top left;
+  animation: docs-section-switcher-enter 150ms var(--ease-out-strong);
+}
+
+@keyframes docs-section-switcher-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-section-switcher {
+    animation: none;
+  }
+}
