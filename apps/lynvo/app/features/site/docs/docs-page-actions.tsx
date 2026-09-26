@@ -5,12 +5,7 @@ export const DocsPageActions = ({ page }: { page: DocumentationPage }) => (
     rel="noreferrer"
     className="inline-flex h-7 items-center gap-1.5 rounded-md border border-foreground/15 bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
   >
-    <span>View Markdown</span>
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 208 128"
-      className="h-3.5 w-auto text-current"
-    >
+    <svg aria-hidden="true" viewBox="0 0 208 128" className="h-4 w-auto">
       <path
         fill="none"
         stroke="currentColor"
@@ -22,5 +17,6 @@ export const DocsPageActions = ({ page }: { page: DocumentationPage }) => (
         d="M30 98V30h20l20 25 20-25h20v68H90V59L70 84 50 59v39H30zm125 0-30-33h20V30h20v35h20l-30 33z"
       />
     </svg>
+    <span>View Markdown</span>
   </a>
 )

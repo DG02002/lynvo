@@ -212,7 +212,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   }
 
   return (
-    <figure className="not-typeset my-6">
+    <figure className="not-typeset my-10">
       <button
         type="button"
         onClick={() => setZoomOpen(true)}

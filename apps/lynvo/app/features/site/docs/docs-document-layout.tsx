@@ -71,7 +71,7 @@ const DocsSidebarContents = ({
               value={group.group}
               className="border-b-0 data-open:bg-transparent"
             >
-              <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium hover:no-underline">
+              <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium tracking-tight hover:no-underline">
                 {group.group}
               </AccordionTrigger>
               <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
@@ -86,7 +86,7 @@ const DocsSidebarContents = ({
                           prefetch="intent"
                           aria-current={isCurrentPage ? "page" : undefined}
                           className={cn(
-                            "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                            "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-5 tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                             getNavigationLinkStateClassName(isCurrentPage)
                           )}
                         >
@@ -122,7 +122,7 @@ const DocsSidebarContents = ({
               prefetch="intent"
               aria-current={isCurrentSection ? "page" : undefined}
               className={cn(
-                "rounded-md px-3 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                "rounded-md px-3 py-2 text-center text-sm tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                 getNavigationLinkStateClassName(isCurrentSection)
               )}
             >
@@ -187,7 +187,7 @@ const PageNavigation = ({
   <Link
     to={page.url}
     prefetch="intent"
-    className={`group flex min-w-0 flex-col gap-1 text-sm transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+    className={`group flex min-w-0 flex-col gap-1 text-sm tracking-tight transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
       direction === "next" ? "items-end text-right" : "items-start"
     }`}
   >
@@ -240,7 +240,7 @@ export const DocsDocumentLayout = ({
        outline cell spans both rows so "On this page" starts beside the page
        title instead of below the introduction separator. */}
       <div className={docsContentGridClassName}>
-        <div className="min-w-0 px-6 pb-6 pt-8 md:px-8 lg:pt-12 xl:px-10">
+        <div className="min-w-0 px-6 pb-4 pt-8 md:px-8 lg:pt-12 xl:px-10">
           <header
             id="docs-page-introduction"
             className="mx-auto flex max-w-3xl flex-col gap-5"
@@ -271,7 +271,7 @@ export const DocsDocumentLayout = ({
               <h1 className="text-[2rem] leading-[2.5rem] font-semibold tracking-[-0.06em] text-balance md:text-[2.5rem] md:leading-[3rem]">
                 {context.page.title}
               </h1>
-              <div className="mt-1 shrink-0">
+              <div className="mt-2.5 shrink-0">
                 <DocsPageActions page={context.page} />
               </div>
             </div>
@@ -284,7 +284,7 @@ export const DocsDocumentLayout = ({
           </aside>
         </div>
 
-        <article className="min-w-0 px-6 pb-16 pt-6 md:px-8 xl:px-10">
+        <article className="min-w-0 px-6 pb-16 pt-4 md:px-8 xl:px-10">
           <div className="mx-auto max-w-3xl">
             <div
               id="docs-content"

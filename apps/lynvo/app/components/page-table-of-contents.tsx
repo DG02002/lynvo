@@ -34,7 +34,7 @@ const getTableOfContentsLinkClassName = (
   }
   const variantClassName =
     variant === "docs"
-      ? "block truncate py-2 pr-2 text-sm font-normal leading-5 transition-colors"
+      ? "block truncate py-2 pr-2 text-sm font-normal leading-5 tracking-tight transition-colors"
       : "block text-xs font-normal leading-5 transition-colors"
 
   const activeClassName = isActive
@@ -192,7 +192,9 @@ export function PageTableOfContents({
       className={cn("flex flex-col", variant === "docs" && "gap-4", className)}
     >
       {variant === "docs" && (
-        <p className="text-sm font-normal text-foreground">On this page</p>
+        <p className="text-sm font-normal tracking-tight text-foreground">
+          On this page
+        </p>
       )}
       {/* The docs list is the positioning context for the rail and keeps zero
           gap so the measured offsets stay continuous; vertical rhythm comes

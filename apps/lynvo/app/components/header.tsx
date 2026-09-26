@@ -86,7 +86,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
           <LogoLink
             variant="text-only"
             size="sm"
-            className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="rounded-sm tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           {isDocsRoute && (
             <>
@@ -100,7 +100,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
                     ? "page"
                     : undefined
                 }
-                className="rounded-sm text-lg font-semibold text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="rounded-sm text-lg font-normal tracking-tight text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {isDeveloperRoute ? "Developer" : "Docs"}
               </Link>

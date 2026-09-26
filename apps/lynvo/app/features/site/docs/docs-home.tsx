@@ -18,7 +18,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
       <div className="px-6 pb-16 pt-10 md:px-8 lg:pt-16 xl:px-10">
         <div className="mx-auto max-w-6xl">
           <header className="flex flex-col gap-3">
-            <h1 className="text-4xl font-medium tracking-tight text-balance md:text-6xl">
+            <h1 className="text-4xl font-medium tracking-[-0.04em] text-balance md:text-6xl">
               {sectionInfo.homeTitle}
             </h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground text-pretty">
@@ -28,7 +28,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
 
           {groups.map((group) => (
             <section key={group.group} className="mt-12 flex flex-col gap-4">
-              <h2 className="text-xl font-medium tracking-tight">
+              <h2 className="text-xl font-medium tracking-[-0.02em]">
                 {group.group}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -47,10 +47,10 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
                       strokeWidth={1.5}
                     />
                     <span className="flex min-w-0 flex-col gap-2">
-                      <span className="text-lg tracking-tight text-balance">
+                      <span className="text-lg tracking-[-0.02em] text-balance">
                         {page.navLabel}
                       </span>
-                      <span className="text-sm leading-6 text-muted-foreground">
+                      <span className="line-clamp-2 text-sm leading-6 text-muted-foreground">
                         {page.description}
                       </span>
                     </span>
