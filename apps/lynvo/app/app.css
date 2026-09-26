@@ -704,7 +704,6 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 }
 
 .docs-content .shiki code {
-  counter-reset: docs-code-line;
   display: flex;
   flex-direction: column;
 }
@@ -713,13 +712,16 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 .dark .docs-content .shiki span {
   color: var(--shiki-dark) !important;
   background-color: transparent !important;
+}
+
+/* Token-level dark overrides only; the pre keeps its utility font-weight. */
+.dark .docs-content .shiki span {
   font-style: var(--shiki-dark-font-style) !important;
   font-weight: var(--shiki-dark-font-weight) !important;
   text-decoration: var(--shiki-dark-text-decoration) !important;
 }
 
 .docs-content .shiki .line {
-  counter-increment: docs-code-line;
   display: block;
   min-height: 1.5rem;
 }
@@ -759,16 +761,6 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   padding-right: 1rem;
   color: var(--muted-foreground);
   content: counter(log-code-line);
-  text-align: right;
-  user-select: none;
-}
-
-.docs-content .shiki .line::before {
-  display: inline-block;
-  width: 2.25rem;
-  padding-right: 1rem;
-  color: var(--muted-foreground);
-  content: counter(docs-code-line);
   text-align: right;
   user-select: none;
 }
@@ -1176,38 +1168,5 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
-/* The screenshot viewer keeps its exit state mounted until the dialog closes. */
-.docs-image-backdrop {
-  opacity: 1;
-  transition: opacity 200ms var(--ease-out-strong);
-}
-
-.docs-image-backdrop[data-starting-style],
-.docs-image-backdrop[data-ending-style] {
-  opacity: 0;
-}
-
-.docs-image-popup {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  transition:
-    opacity 200ms var(--ease-out-strong),
-    transform 200ms var(--ease-out-strong);
-}
-
-.docs-image-popup[data-starting-style],
-.docs-image-popup[data-ending-style] {
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.96);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .docs-image-popup {
-    transition: opacity 200ms var(--ease-out-strong);
-  }
-
-  .docs-image-popup[data-starting-style],
-  .docs-image-popup[data-ending-style] {
-    transform: translate(-50%, -50%);
-  }
-}
+/* The screenshot viewer zooms with the shared data-open/data-closed dialog
+   animation utilities; Base UI keeps it mounted through the exit animation. */

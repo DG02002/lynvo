@@ -3,7 +3,7 @@ export const DocsPageActions = ({ page }: { page: DocumentationPage }) => (
     href={page.markdownUrl}
     target="_blank"
     rel="noreferrer"
-    className="inline-flex h-7 items-center gap-1.5 rounded-md border border-foreground/15 bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    className="inline-flex h-7 items-center gap-1.5 rounded-md border border-foreground/20 bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
   >
     <svg aria-hidden="true" viewBox="0 0 208 128" className="h-4 w-auto">
       <path

@@ -56,82 +56,56 @@ const DocsSidebarContents = ({
     : undefined
 
   return (
-    <>
-      <nav aria-label="Documentation navigation" className="flex-1 space-y-0.5">
-        {groups.map((group) => (
-          <Accordion
-            key={group.group}
-            multiple
-            className="rounded-none border-0"
-            defaultValue={
-              !currentSlug || currentGroup === group ? [group.group] : []
-            }
+    <nav aria-label="Documentation navigation" className="flex-1 space-y-0.5">
+      {groups.map((group) => (
+        <Accordion
+          key={group.group}
+          multiple
+          className="rounded-none border-0"
+          defaultValue={
+            !currentSlug || currentGroup === group ? [group.group] : []
+          }
+        >
+          <AccordionItem
+            value={group.group}
+            className="border-b-0 data-open:bg-transparent"
           >
-            <AccordionItem
-              value={group.group}
-              className="border-b-0 data-open:bg-transparent"
-            >
-              <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium tracking-tight hover:no-underline">
-                {group.group}
-              </AccordionTrigger>
-              <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
-                <ul className="flex flex-col gap-0.5">
-                  {group.pages.map((page) => {
-                    const isCurrentPage = page.slug === currentSlug
+            <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium tracking-tight hover:no-underline">
+              {group.group}
+            </AccordionTrigger>
+            <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
+              <ul className="flex flex-col gap-0.5">
+                {group.pages.map((page) => {
+                  const isCurrentPage = page.slug === currentSlug
 
-                    return (
-                      <li key={page.slug}>
-                        <Link
-                          to={page.url}
-                          prefetch="intent"
-                          aria-current={isCurrentPage ? "page" : undefined}
-                          className={cn(
-                            "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-5 tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                            getNavigationLinkStateClassName(isCurrentPage)
-                          )}
-                        >
-                          <HugeiconsIcon
-                            icon={getDocumentationPageIcon(page.slug)}
-                            aria-hidden="true"
-                            className="size-4 shrink-0"
-                            strokeWidth={1.75}
-                          />
-                          <span className="truncate">{page.navLabel}</span>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        ))}
-      </nav>
-
-      <nav
-        aria-label="Documentation sections"
-        className="grid grid-cols-2 gap-1 border-t border-border pt-4"
-      >
-        {docsCatalog.sections.map((candidate) => {
-          const isCurrentSection = candidate.key === section
-
-          return (
-            <Link
-              key={candidate.key}
-              to={candidate.root}
-              prefetch="intent"
-              aria-current={isCurrentSection ? "page" : undefined}
-              className={cn(
-                "rounded-md px-3 py-2 text-center text-sm tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                getNavigationLinkStateClassName(isCurrentSection)
-              )}
-            >
-              {candidate.label}
-            </Link>
-          )
-        })}
-      </nav>
-    </>
+                  return (
+                    <li key={page.slug}>
+                      <Link
+                        to={page.url}
+                        prefetch="intent"
+                        aria-current={isCurrentPage ? "page" : undefined}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-5 tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                          getNavigationLinkStateClassName(isCurrentPage)
+                        )}
+                      >
+                        <HugeiconsIcon
+                          icon={getDocumentationPageIcon(page.slug)}
+                          aria-hidden="true"
+                          className="size-4 shrink-0"
+                          strokeWidth={1.75}
+                        />
+                        <span className="truncate">{page.navLabel}</span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      ))}
+    </nav>
   )
 }
 
@@ -267,8 +241,8 @@ export const DocsDocumentLayout = ({
                 </span>
               </nav>
             )}
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-              <h1 className="text-[2rem] leading-[2.5rem] font-semibold tracking-[-0.06em] text-balance md:text-[2.5rem] md:leading-[3rem]">
+            <div className="flex items-start justify-between gap-x-4">
+              <h1 className="min-w-0 text-[2rem] leading-[2.5rem] font-semibold tracking-[-0.06em] text-balance md:text-[2.5rem] md:leading-[3rem]">
                 {context.page.title}
               </h1>
               <div className="mt-2.5 shrink-0">

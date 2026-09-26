@@ -381,6 +381,7 @@
     :not(pre) > code {
       font-size: 0.9em;
       padding: 0.0625em 0.3125em;
+      border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
     }
 
     ul,
