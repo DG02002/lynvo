@@ -18,11 +18,12 @@ import { getDocumentationPageIcon } from "./docs-navigation-icons"
 import { DocsPageActions } from "./docs-page-actions"
 import type { DocumentationSectionKey } from "./docs-sections"
 
-// The content column is capped so the article and its table of contents sit
-// together as one centered group instead of the TOC drifting to the far edge
-// of a maximally wide content track.
+// The content column is pinned to the container's leading edge so the article
+// title stays aligned with the breadcrumb in the header, which shares this
+// container and the same horizontal gutters. The outline column is capped so
+// the TOC sits beside the article instead of drifting to the container edge.
 const docsContentGridClassName =
-  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,50rem)_15rem] lg:justify-center xl:grid-cols-[minmax(0,50rem)_16rem]"
+  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,50rem)_15rem] xl:grid-cols-[minmax(0,50rem)_16rem]"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",

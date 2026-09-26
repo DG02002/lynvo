@@ -106,7 +106,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
 
         {isDocsRoute ? (
           <div className="min-w-0 flex-1">
-            <div className="mx-auto flex h-full w-full max-w-[80rem] items-center gap-2 px-3 sm:px-4 lg:px-8 xl:px-10">
+            <div className="mx-auto flex h-full w-full max-w-[80rem] items-center gap-2 px-6 md:px-8 xl:px-10">
               {breadcrumb && (
                 <nav
                   aria-label="Breadcrumb"

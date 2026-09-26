@@ -28,13 +28,16 @@
     );
   }
 
+  /* Docs content differs from the site typeset only in its heading face
+     (Inter Tight medium) and its mono face; sizes, leading, and flow stay
+     on the shared scale. */
   .typeset-docs {
     --typeset-font-body: var(--font-inter);
     --typeset-font-heading: var(--font-inter-tight);
     --typeset-font-mono: var(--font-jetbrains-mono);
-    --typeset-size: 15px;
-    --typeset-leading: 1.6;
-    --typeset-flow: 1em;
+    --typeset-size: 1rem;
+    --typeset-leading: 1.75;
+    --typeset-flow: 1rem;
     font-size: var(--typeset-size);
   }
 
@@ -325,10 +328,12 @@
     }
   }
 
-  /* Preserve Lynvo's established documentation rhythm inside Typeset. */
+  /* Preserve Lynvo's established documentation rhythm inside Typeset. The
+     vertical spacing derives from --typeset-flow so the docs scale stays
+     tied to the shared typeset system instead of fixed rem values. */
   .typeset-docs {
     > section + section {
-      margin-block-start: 3.5rem;
+      margin-block-start: calc(var(--typeset-flow) * 3.5);
     }
 
     > section > :first-child {
@@ -336,15 +341,15 @@
     }
 
     > section > * + * {
-      margin-block-start: 1rem;
+      margin-block-start: var(--typeset-flow);
     }
 
     > section > h2 + * {
-      margin-block-start: 2.25rem;
+      margin-block-start: calc(var(--typeset-flow) * 2.25);
     }
 
     > section > * + h3 {
-      margin-block-start: 2.25rem;
+      margin-block-start: calc(var(--typeset-flow) * 2.25);
     }
 
     h1,
