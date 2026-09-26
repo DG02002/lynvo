@@ -20,10 +20,11 @@ import type { DocumentationSectionKey } from "./docs-sections"
 
 // The content column is pinned to the container's leading edge so the article
 // title stays aligned with the breadcrumb in the header, which shares this
-// container and the same horizontal gutters. The outline column is capped so
-// the TOC sits beside the article instead of drifting to the container edge.
+// container and the same horizontal gutters. The outline column flexes to
+// fill the remaining container width (with a floor so it never starves), so
+// the layout leaves no dead band between the outline and the container edge.
 const docsContentGridClassName =
-  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,50rem)_15rem] xl:grid-cols-[minmax(0,50rem)_16rem]"
+  "mx-auto grid w-full max-w-[80rem] gap-0 lg:grid-cols-[minmax(0,50rem)_minmax(14rem,1fr)]"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
@@ -261,7 +262,7 @@ export const DocsDocumentLayout = ({
       </div>
 
       <div className="hidden lg:row-span-2 lg:block">
-        <aside className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto py-12 pl-2 pr-6 xl:pr-8">
+        <aside className="sticky top-16 h-[calc(100svh-4rem)] overflow-y-auto py-12 pl-2">
           <PageTableOfContents headings={headings} targetId="docs-content" />
         </aside>
       </div>

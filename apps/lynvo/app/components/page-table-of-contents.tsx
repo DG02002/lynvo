@@ -209,15 +209,18 @@ export function PageTableOfContents({
         )}
         {headings.map((heading, index) => {
           const isActive = heading.id === activeHeadingId
-          const changesLevel =
-            index > 0 &&
-            (heading.level ?? 2) !== (headings[index - 1].level ?? 2)
+          // Extra separation only where a top-level heading follows a nested
+          // group; a parent and its own nested headings stay tightly bound.
+          const startsNewTopLevelGroup =
+            index > 0 && (heading.level ?? 2) < (headings[index - 1].level ?? 2)
 
           return (
             <li
               key={heading.id}
               className={
-                variant === "docs" && changesLevel ? "mt-5" : undefined
+                variant === "docs" && startsNewTopLevelGroup
+                  ? "mt-4"
+                  : undefined
               }
             >
               <a
