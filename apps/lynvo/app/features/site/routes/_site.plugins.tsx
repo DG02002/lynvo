@@ -43,7 +43,7 @@ const Plugins = () => {
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12 md:px-8 md:py-24">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
-        <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
+        <h1 className="my-4 text-4xl font-normal text-balance md:text-6xl">
           Lynvo Plugins
         </h1>
       </header>

@@ -18,7 +18,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
       <div className="px-6 pb-16 pt-10 md:px-8 lg:pt-16 xl:px-10">
         <div className="mx-auto max-w-6xl">
           <header className="flex flex-col gap-3">
-            <h1 className="text-4xl font-medium tracking-[-0.04em] text-balance md:text-6xl">
+            <h1 className="text-4xl font-medium text-balance md:text-6xl">
               {sectionInfo.homeTitle}
             </h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground text-pretty">

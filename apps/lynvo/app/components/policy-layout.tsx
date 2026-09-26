@@ -60,7 +60,7 @@ export function PolicyLayout({
       <header className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 pt-20 text-center md:pt-0">
         <p className="text-sm">Updated: {updatedAt}</p>
         <div className="space-y-8">
-          <h1 className="py-4 text-4xl font-medium tracking-tight text-balance md:py-6 md:text-6xl">
+          <h1 className="py-4 text-4xl font-medium text-balance md:py-6 md:text-6xl">
             {title}
           </h1>
         </div>

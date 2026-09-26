@@ -91,7 +91,7 @@ const DocsSectionPage = ({ section }: { section: DocumentationSectionKey }) => {
 
 const DocsSectionNotFound = () => (
   <section className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-    <h1 className="text-4xl font-medium tracking-tight text-balance sm:text-6xl">
+    <h1 className="text-4xl font-medium text-balance sm:text-6xl">
       This documentation page can’t be found.
     </h1>
   </section>

@@ -17,7 +17,7 @@ const About = () => (
     <article className="mx-auto w-full max-w-2xl font-normal">
       <header className="flex flex-col items-center gap-4 text-center">
         <p className="text-sm">Company</p>
-        <h1 className="py-4 text-4xl font-medium tracking-tight text-balance md:py-6 md:text-6xl">
+        <h1 className="py-4 text-4xl font-medium text-balance md:py-6 md:text-6xl">
           About
         </h1>
       </header>

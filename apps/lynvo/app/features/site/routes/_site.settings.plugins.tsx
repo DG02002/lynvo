@@ -25,7 +25,7 @@ export default function PluginsSettingsRoute() {
   return (
     <section className="flex flex-col">
       <header className="pb-4">
-        <h1 className="text-2xl font-normal tracking-tight">Plugins</h1>
+        <h1 className="text-2xl font-normal">Plugins</h1>
       </header>
       <PluginsSettings
         lynvoPlugins={lynvoPlugins}

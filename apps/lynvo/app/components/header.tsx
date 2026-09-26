@@ -86,7 +86,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
           <LogoLink
             variant="text-only"
             size="sm"
-            className="rounded-sm tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           {isDocsRoute && (
             <>

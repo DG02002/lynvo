@@ -10,7 +10,7 @@ export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) => {
   if (isNotFound) {
     return (
       <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-        <h1 className="text-4xl font-normal tracking-tight text-balance sm:text-6xl">
+        <h1 className="text-4xl font-normal text-balance sm:text-6xl">
           The page you’re looking for can’t be found.
         </h1>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -27,7 +27,7 @@ export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) => {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-      <h1 className="text-4xl font-normal tracking-tight text-balance sm:text-6xl">
+      <h1 className="text-4xl font-normal text-balance sm:text-6xl">
         Something went off course.
       </h1>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

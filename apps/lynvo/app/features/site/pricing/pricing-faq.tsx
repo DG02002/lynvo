@@ -10,9 +10,7 @@ import { pricingFaqs } from "./pricing-content"
 export const PricingFaq = () => (
   <section id="faq" className="scroll-mt-20 pt-16 pb-24 md:pt-24 md:pb-32">
     <div className="mx-auto flex max-w-2xl flex-col gap-10">
-      <h2 className="text-center text-3xl font-normal tracking-tight md:text-4xl">
-        FAQ
-      </h2>
+      <h2 className="text-center text-3xl font-normal md:text-4xl">FAQ</h2>
       <Accordion className="w-full overflow-visible rounded-none border-0">
         {pricingFaqs.map((faq) => (
           <AccordionItem

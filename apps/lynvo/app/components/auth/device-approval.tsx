@@ -153,7 +153,7 @@ const DeviceApproval = () => {
         <FieldSet className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 text-center">
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
-            <h1 className="text-4xl font-normal tracking-tight">{heading}</h1>
+            <h1 className="text-4xl font-normal">{heading}</h1>
             {approvalPhase === "failed" ? (
               <LoadErrorRetry
                 className="items-center"
