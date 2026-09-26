@@ -1,8 +1,6 @@
 import { PrivacyPolicyContent } from "../content/privacy-policy-content"
 import type { Route } from "./+types/_site.policies.privacy-policy"
 
-export { policyFontPreloadLinks as links } from "~/components/policy-layout"
-
 export function meta(_: Route.MetaArgs) {
   return [
     { title: "Privacy policy | Lynvo" },

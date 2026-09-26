@@ -29,11 +29,11 @@
   }
 
   /* Docs content matches the reference docs scale (measured): 16px body at
-     1.7 leading with 20px flow and Inter Tight semibold headings at
-     24px/19.2px. */
+     1.7 leading with 20px flow. Headings use Inter semibold with the
+     reference's tighter tracking, so no second heading face is needed. */
   .typeset-docs {
     --typeset-font-body: var(--font-inter);
-    --typeset-font-heading: var(--font-inter-tight);
+    --typeset-font-heading: var(--font-inter);
     --typeset-font-mono: var(--font-jetbrains-mono);
     --typeset-size: 1rem;
     --typeset-leading: 1.7;
@@ -52,7 +52,7 @@
 
   .typeset-policy {
     --typeset-font-body: var(--font-sans);
-    --typeset-font-heading: var(--font-inter-tight);
+    --typeset-font-heading: var(--font-inter);
     --typeset-font-mono: var(--font-mono);
     --typeset-size: 1rem;
     --typeset-leading: 1.75;
@@ -364,15 +364,18 @@
       font-weight: 600;
     }
 
-    /* Inter Tight is already a tight face; it keeps its natural spacing. */
+    /* Inter adopts the reference heading tracking (-0.04em / -0.02em)
+     instead of a separate tight face. */
     h2 {
       font-size: 1.5em;
       line-height: 1.3333;
+      letter-spacing: -0.04em;
     }
 
     h3 {
       font-size: 1.2em;
       line-height: 1.3542;
+      letter-spacing: -0.02em;
     }
 
     :not(pre) > code {

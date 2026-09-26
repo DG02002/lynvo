@@ -1,8 +1,6 @@
 import { CookiePolicyContent } from "../content/cookie-policy-content"
 import type { Route } from "./+types/_site.policies.cookie-policy"
 
-export { policyFontPreloadLinks as links } from "~/components/policy-layout"
-
 export const meta = (_: Route.MetaArgs) => [
   { title: "Cookie policy | Lynvo" },
   {

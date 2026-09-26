@@ -18,7 +18,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
       <div className="px-6 pb-16 pt-10 md:px-8 lg:pt-16 xl:px-10">
         <div className="mx-auto max-w-6xl">
           <header className="flex flex-col gap-3">
-            <h1 className="text-4xl font-inter-tight font-medium tracking-tight text-balance md:text-6xl">
+            <h1 className="text-4xl font-medium tracking-tight text-balance md:text-6xl">
               {sectionInfo.homeTitle}
             </h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground text-pretty">
@@ -28,7 +28,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
 
           {groups.map((group) => (
             <section key={group.group} className="mt-12 flex flex-col gap-4">
-              <h2 className="text-xl font-inter-tight font-medium tracking-tight">
+              <h2 className="text-xl font-medium tracking-tight">
                 {group.group}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -50,7 +50,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
                       <span className="text-lg tracking-tight text-balance">
                         {page.navLabel}
                       </span>
-                      <span className="truncate text-sm leading-6 text-muted-foreground">
+                      <span className="text-sm leading-6 text-muted-foreground">
                         {page.description}
                       </span>
                     </span>

@@ -90,7 +90,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
           />
           {isDocsRoute && (
             <>
-              <span aria-hidden="true" className="h-5 w-px bg-border" />
+              <span aria-hidden="true" className="h-5 w-0.5 bg-foreground/25" />
               <Link
                 to={isDeveloperRoute ? developerRoot : sitePaths.docs}
                 prefetch="intent"
@@ -100,7 +100,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
                     ? "page"
                     : undefined
                 }
-                className="rounded-sm text-sm font-medium text-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="rounded-sm text-lg font-semibold text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {isDeveloperRoute ? "Developer" : "Docs"}
               </Link>

@@ -1,4 +1,3 @@
-import interTightLatinFontUrl from "@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2?url"
 import jetbrainsMonoLatinFontUrl from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url"
 import { Suspense } from "react"
 import {
@@ -92,23 +91,16 @@ const DocsSectionPage = ({ section }: { section: DocumentationSectionKey }) => {
 
 const DocsSectionNotFound = () => (
   <section className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-    <h1 className="text-4xl font-inter-tight font-medium tracking-tight text-balance sm:text-6xl">
+    <h1 className="text-4xl font-medium tracking-tight text-balance sm:text-6xl">
       This documentation page can’t be found.
     </h1>
   </section>
 )
 
 export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
-  // Docs headings render in Inter Tight and code blocks in JetBrains Mono;
-  // preloading the latin subsets keeps first paint from swapping fonts.
+  // Docs code blocks render in JetBrains Mono; preloading the latin subset
+  // keeps first paint from swapping fonts.
   links: () => [
-    {
-      rel: "preload",
-      href: interTightLatinFontUrl,
-      as: "font",
-      type: "font/woff2",
-      crossOrigin: "anonymous",
-    },
     {
       rel: "preload",
       href: jetbrainsMonoLatinFontUrl,

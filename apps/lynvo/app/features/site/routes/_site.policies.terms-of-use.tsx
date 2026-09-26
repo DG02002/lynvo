@@ -1,8 +1,6 @@
 import { TermsOfUseContent } from "../content/terms-of-use-content"
 import type { Route } from "./+types/_site.policies.terms-of-use"
 
-export { policyFontPreloadLinks as links } from "~/components/policy-layout"
-
 export function meta(_: Route.MetaArgs) {
   return [
     { title: "Terms of use | Lynvo" },
