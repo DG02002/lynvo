@@ -71,7 +71,7 @@ const DocsSidebarContents = ({
               value={group.group}
               className="border-b-0 data-open:bg-transparent"
             >
-              <AccordionTrigger className="rounded-lg px-3 py-2.5 text-sm font-medium hover:no-underline">
+              <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium hover:no-underline">
                 {group.group}
               </AccordionTrigger>
               <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
@@ -187,12 +187,12 @@ const PageNavigation = ({
   <Link
     to={page.url}
     prefetch="intent"
-    className={`group flex min-w-0 flex-col gap-1 rounded-lg border border-border p-4 text-sm transition-colors hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+    className={`group flex min-w-0 flex-col gap-1 text-sm transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
       direction === "next" ? "items-end text-right" : "items-start"
     }`}
   >
     <span className="text-xs text-muted-foreground">{label}</span>
-    <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+    <span className="inline-flex min-w-0 items-center gap-2 font-medium text-foreground">
       {direction === "previous" && (
         <HugeiconsIcon
           icon={ArrowRight01Icon}
@@ -267,24 +267,14 @@ export const DocsDocumentLayout = ({
                 </span>
               </nav>
             )}
-            <h1 className="text-3xl font-inter-tight font-medium tracking-tight text-balance md:text-4xl">
+            <h1 className="font-inter-tight text-[2rem] leading-[2.5rem] font-semibold tracking-[-0.06em] text-balance md:text-[2.5rem] md:leading-[3rem]">
               {context.page.title}
             </h1>
             <p className="text-base leading-7 text-muted-foreground text-pretty">
               {context.page.description}
             </p>
-            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-2">
               <DocsPageActions page={context.page} />
-              {lastModified && (
-                <p className="text-sm text-muted-foreground">
-                  Last updated{" "}
-                  <time dateTime={lastModified}>
-                    {lastModifiedDateFormatter.format(
-                      new Date(`${lastModified}T00:00:00Z`)
-                    )}
-                  </time>
-                </p>
-              )}
             </div>
           </header>
         </div>
@@ -303,6 +293,17 @@ export const DocsDocumentLayout = ({
             >
               {children}
             </div>
+
+            {lastModified && (
+              <p className="mt-12 text-xs leading-4 text-muted-foreground">
+                Last updated{" "}
+                <time dateTime={lastModified}>
+                  {lastModifiedDateFormatter.format(
+                    new Date(`${lastModified}T00:00:00Z`)
+                  )}
+                </time>
+              </p>
+            )}
 
             {(context.previous || context.next) && (
               <nav

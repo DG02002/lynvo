@@ -28,16 +28,16 @@
     );
   }
 
-  /* Docs content differs from the site typeset only in its heading face
-     (Inter Tight medium) and its mono face; sizes, leading, and flow stay
-     on the shared scale. */
+  /* Docs content matches the reference docs scale (measured): 16px body at
+     1.7 leading with 20px flow, 48px section turns, and Inter Tight
+     semibold headings at 24px/19.2px. */
   .typeset-docs {
     --typeset-font-body: var(--font-inter);
     --typeset-font-heading: var(--font-inter-tight);
     --typeset-font-mono: var(--font-jetbrains-mono);
     --typeset-size: 1rem;
-    --typeset-leading: 1.75;
-    --typeset-flow: 1rem;
+    --typeset-leading: 1.7;
+    --typeset-flow: 1.25rem;
     font-size: var(--typeset-size);
   }
 
@@ -351,22 +351,24 @@
     h4,
     h5,
     h6 {
-      font-weight: 500;
+      font-weight: 600;
     }
 
     h2 {
-      font-size: 1.875em;
-      line-height: 1.2;
+      font-size: 1.5em;
+      line-height: 1.3333;
+      letter-spacing: -0.04em;
     }
 
     h3 {
-      font-size: 1.25em;
-      line-height: 1.4;
+      font-size: 1.2em;
+      line-height: 1.3542;
+      letter-spacing: -0.02em;
     }
 
     :not(pre) > code {
-      font-size: 0.875em;
-      padding: 0.125rem 0.25rem;
+      font-size: 0.9em;
+      padding: 0.0625em 0.3125em;
     }
 
     ul,

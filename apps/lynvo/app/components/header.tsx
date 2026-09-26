@@ -76,7 +76,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
         <div
           className={
             isDocsRoute
-              ? "flex h-full shrink-0 items-center gap-2 border-r border-border px-3 sm:px-4 lg:w-72 lg:gap-3 lg:px-5 xl:w-80 xl:px-6"
+              ? "flex h-full shrink-0 items-center gap-2 border-r border-border px-6 md:px-8 lg:w-72 lg:gap-3 lg:px-5 xl:w-80 xl:px-6"
               : "flex shrink-0 items-center"
           }
         >

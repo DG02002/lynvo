@@ -192,7 +192,7 @@ export function PageTableOfContents({
       className={cn("flex flex-col", variant === "docs" && "gap-4", className)}
     >
       {variant === "docs" && (
-        <p className="text-sm font-medium text-foreground">On this page</p>
+        <p className="text-sm font-normal text-foreground">On this page</p>
       )}
       {/* The docs list is the positioning context for the rail and keeps zero
           gap so the measured offsets stay continuous; vertical rhythm comes
