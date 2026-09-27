@@ -29,9 +29,7 @@ const DocsSectionSwitcher = ({
   const initialSectionMenuItemIndex = useRef(0)
   const restoreSectionSwitcherFocus = useRef(false)
   const currentSection = getDocumentationSection(sectionKey)
-  const otherSection = getDocumentationSection(
-    sectionKey === "developer" ? "user" : "developer"
-  )
+  const otherSection = getDocumentationSection(currentSection.otherKey)
 
   useEffect(() => {
     if (sectionListOpen) {
@@ -55,6 +53,7 @@ const DocsSectionSwitcher = ({
         type="button"
         aria-haspopup="menu"
         aria-expanded={sectionListOpen}
+        tabIndex={sectionListOpen ? -1 : 0}
         onClick={() => setSectionListOpen(true)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -66,7 +65,7 @@ const DocsSectionSwitcher = ({
         }}
         className={cn(
           "flex items-center gap-1 rounded-sm px-1 text-lg font-normal tracking-tight text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-          sectionListOpen && "invisible"
+          sectionListOpen && "pointer-events-none opacity-0"
         )}
       >
         {currentSection.shortLabel}
@@ -101,10 +100,11 @@ const DocsSectionSwitcher = ({
                 return
               }
 
-              const focusedIndex = sectionMenuItemRefs.current.findIndex(
-                (item) =>
-                  item === event.currentTarget.ownerDocument.activeElement
-              )
+              if (!(event.target instanceof HTMLButtonElement)) {
+                return
+              }
+
+              const focusedIndex = Number(event.target.dataset.sectionIndex)
               let nextIndex: number
 
               if (event.key === "ArrowDown") {
@@ -135,6 +135,7 @@ const DocsSectionSwitcher = ({
                   ref={(element) => {
                     sectionMenuItemRefs.current[index] = element
                   }}
+                  data-section-index={index}
                   type="button"
                   role="menuitemradio"
                   aria-checked={isCurrentSection}

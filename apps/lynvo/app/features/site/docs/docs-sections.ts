@@ -2,6 +2,7 @@ export type DocumentationSectionKey = DocumentationPageContext["section"]
 
 export interface DocumentationSection {
   readonly key: DocumentationSectionKey
+  readonly otherKey: DocumentationSectionKey
   readonly root: "/docs" | "/developer"
   readonly label: string
   readonly shortLabel: string
@@ -12,6 +13,7 @@ export interface DocumentationSection {
 export const documentationSections: readonly DocumentationSection[] = [
   {
     key: "user",
+    otherKey: "developer",
     root: "/docs",
     label: "Documentation",
     shortLabel: "Docs",
@@ -21,6 +23,7 @@ export const documentationSections: readonly DocumentationSection[] = [
   },
   {
     key: "developer",
+    otherKey: "user",
     root: "/developer",
     label: "Developers",
     shortLabel: "Developer",

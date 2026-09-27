@@ -241,7 +241,7 @@ export default function Pricing() {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-8">
             <div className="flex items-baseline gap-2">
-              <span className="text-6xl font-normal tracking-tight">₹0</span>
+              <span className="text-6xl font-normal">₹0</span>
               <span className="text-lg text-muted-foreground">/ month</span>
             </div>
             <Link
