@@ -215,10 +215,12 @@ export function DocsFaq({
       value={open ? [itemId] : []}
       onValueChange={(value) => setUserIntent(value.includes(itemId))}
     >
+      {/* The shared accordion item highlights open items with a background;
+          docs FAQ rows stay plain, separated only by the list divider. */}
       <AccordionItem
         id={itemId}
         value={itemId}
-        className="rounded-none border border-transparent bg-transparent data-open:rounded-lg data-open:border-foreground/15 data-open:bg-muted/30"
+        className="data-open:bg-transparent"
       >
         <AccordionPrimitive.Header className="group/heading flex items-center">
           <AccordionPrimitive.Trigger className="group/accordion-trigger flex flex-1 items-center gap-3 rounded-sm py-4 pr-2 text-left text-sm font-normal outline-none hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
@@ -236,7 +238,7 @@ export function DocsFaq({
             onClick={() => setUserIntent(true)}
           />
         </AccordionPrimitive.Header>
-        <AccordionContent className="pl-3 pb-5 leading-6 text-muted-foreground">
+        <AccordionContent className="pl-3 pb-4 leading-6 text-muted-foreground">
           {children}
         </AccordionContent>
       </AccordionItem>
