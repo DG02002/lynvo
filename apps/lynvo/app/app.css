@@ -708,6 +708,20 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   margin-block-start: 0;
 }
 
+/* FAQ rows carry a divider only between two adjacent rows: no rule above
+   the first row and none below the last. An open row's own box border
+   replaces the dividers it touches, so no line is doubled. The border is
+   reserved on every row and only its color changes, so opening a row
+   never shifts the list. */
+.docs-content .docs-faq + .docs-faq {
+  border-top: 1px solid var(--border);
+}
+
+.docs-content .docs-faq:has(> [data-open]),
+.docs-content .docs-faq:has(> [data-open]) + .docs-faq {
+  border-top-color: transparent;
+}
+
 .docs-content .shiki {
   background-color: transparent !important;
 }

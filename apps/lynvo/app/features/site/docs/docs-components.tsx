@@ -211,14 +211,14 @@ export function DocsFaq({
 
   return (
     <Accordion
-      className="not-typeset rounded-none border-0"
+      className="docs-faq not-typeset rounded-none border-0"
       value={open ? [itemId] : []}
       onValueChange={(value) => setUserIntent(value.includes(itemId))}
     >
       <AccordionItem
         id={itemId}
         value={itemId}
-        className="rounded-none border border-transparent border-b-border bg-transparent data-open:rounded-lg data-open:border-foreground/15 data-open:bg-muted/30"
+        className="rounded-none border border-transparent bg-transparent data-open:rounded-lg data-open:border-foreground/15 data-open:bg-muted/30"
       >
         <AccordionPrimitive.Header className="group/heading flex items-center">
           <AccordionPrimitive.Trigger className="group/accordion-trigger flex flex-1 items-center gap-3 rounded-sm py-4 pr-2 text-left text-sm font-normal outline-none hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
