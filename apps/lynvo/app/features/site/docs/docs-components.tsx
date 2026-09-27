@@ -1,6 +1,8 @@
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   ApiIcon,
+  ArrowDown01Icon,
   ArrowUpRight01Icon,
   CopyIcon,
   FileEmpty01Icon,
@@ -19,6 +21,7 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentProps,
   type ReactNode,
 } from "react"
@@ -28,7 +31,6 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
@@ -177,6 +179,13 @@ function DocSection({ id, children }: { id: string; children: ReactNode }) {
   )
 }
 
+const subscribeToLocationHash = (onHashChange: () => void) => {
+  window.addEventListener("hashchange", onHashChange)
+  return () => window.removeEventListener("hashchange", onHashChange)
+}
+
+const getLocationHash = () => window.location.hash
+
 export function DocsFaq({
   question,
   children,
@@ -184,18 +193,50 @@ export function DocsFaq({
   question: string
   children: ReactNode
 }) {
-  const itemId = useId()
+  const fallbackId = useId().replaceAll(/[^a-zA-Z0-9]/g, "")
+  // A stable slug keeps deep links readable (docs page URL + #faq-slug);
+  // questions without any slugifiable character fall back to useId.
+  const itemId = `faq-${createHeadingId(question) || fallbackId}`
+  const locationHash = useSyncExternalStore(
+    subscribeToLocationHash,
+    getLocationHash,
+    () => ""
+  )
+  // A hash targeting this item is a pointer that opens it — on deep links
+  // and in-page anchor clicks alike. null means the user has not interacted
+  // yet, so the hash alone decides; after a manual toggle the user's choice
+  // wins until navigation changes the hash target again.
+  const [userIntent, setUserIntent] = useState<boolean | null>(null)
+  const open = userIntent ?? locationHash === `#${itemId}`
 
   return (
-    <Accordion className="not-typeset my-3 rounded-none border-0">
+    <Accordion
+      className="not-typeset rounded-none border-0"
+      value={open ? [itemId] : []}
+      onValueChange={(value) => setUserIntent(value.includes(itemId))}
+    >
       <AccordionItem
+        id={itemId}
         value={itemId}
-        className="border-border/50 data-open:bg-transparent"
+        className="rounded-none border border-transparent border-b-border bg-transparent data-open:rounded-lg data-open:border-foreground/15 data-open:bg-muted/30"
       >
-        <AccordionTrigger className="py-5 text-left text-sm font-normal hover:no-underline">
-          {question}
-        </AccordionTrigger>
-        <AccordionContent className="pb-5 leading-6 text-muted-foreground">
+        <AccordionPrimitive.Header className="group/heading flex items-center">
+          <AccordionPrimitive.Trigger className="group/accordion-trigger flex flex-1 items-center gap-3 rounded-sm py-4 pr-2 text-left text-sm font-normal outline-none hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              aria-hidden="true"
+              className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
+              strokeWidth={2}
+            />
+            <span className="min-w-0 flex-1">{question}</span>
+          </AccordionPrimitive.Trigger>
+          <DocsHeadingAnchor
+            headingId={itemId}
+            label={question}
+            onClick={() => setUserIntent(true)}
+          />
+        </AccordionPrimitive.Header>
+        <AccordionContent className="pl-3 pb-5 leading-6 text-muted-foreground">
           {children}
         </AccordionContent>
       </AccordionItem>
@@ -423,12 +464,15 @@ const createHeadingId = (children: ReactNode) =>
 const DocsHeadingAnchor = ({
   headingId,
   label,
+  onClick,
 }: {
   headingId: string
   label: string
+  onClick?: ComponentProps<"a">["onClick"]
 }) => (
   <a
     href={`#${headingId}`}
+    onClick={onClick}
     aria-label={`Link to ${label}`}
     className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-blue-500 opacity-0 transition-[opacity,scale] duration-200 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-400"
   >

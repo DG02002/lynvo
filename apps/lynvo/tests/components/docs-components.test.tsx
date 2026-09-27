@@ -24,6 +24,59 @@ describe("DocsFaq", () => {
     fireEvent.click(question)
     expect(question).toHaveAttribute("aria-expanded", "false")
   })
+
+  it("anchors each question with a stable slug for deep links", () => {
+    render(
+      <DocsFaq question="Why does my device not appear?">
+        Keep Lynvo open on the device.
+      </DocsFaq>
+    )
+
+    expect(
+      document.getElementById("faq-why-does-my-device-not-appear")
+    ).not.toBeNull()
+    expect(
+      screen.getByRole("link", {
+        name: "Link to Why does my device not appear?",
+      })
+    ).toHaveAttribute("href", "#faq-why-does-my-device-not-appear")
+  })
+
+  it("opens the question targeted by the location hash", () => {
+    window.location.hash = "#faq-why-does-my-device-not-appear"
+
+    try {
+      render(
+        <DocsFaq question="Why does my device not appear?">
+          Keep Lynvo open on the device.
+        </DocsFaq>
+      )
+
+      expect(
+        screen.getByRole("button", { name: "Why does my device not appear?" })
+      ).toHaveAttribute("aria-expanded", "true")
+    } finally {
+      window.history.replaceState(null, "", window.location.pathname)
+    }
+  })
+
+  it("opens the question when its anchor link is clicked", () => {
+    render(
+      <DocsFaq question="Why does my device not appear?">
+        Keep Lynvo open on the device.
+      </DocsFaq>
+    )
+
+    fireEvent.click(
+      screen.getByRole("link", {
+        name: "Link to Why does my device not appear?",
+      })
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Why does my device not appear?" })
+    ).toHaveAttribute("aria-expanded", "true")
+  })
 })
 
 describe("DocsScreenshot", () => {

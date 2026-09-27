@@ -698,6 +698,16 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
+/* The docs article owns the gap below the page title through its own
+   padding, so the first flow block never adds top margin of its own. This
+   must stay unlayered: the not-typeset blocks (DocsScreenshot, CodeBlock,
+   DocsFaq) set their margins with utilities, which outrank every
+   components-layer typeset rule. */
+.docs-content > :first-child,
+.docs-content > :first-child > :first-child {
+  margin-block-start: 0;
+}
+
 .docs-content .shiki {
   background-color: transparent !important;
 }
