@@ -29,8 +29,8 @@
   }
 
   /* Docs content matches the reference docs scale (measured): 16px body at
-     1.7 leading with 20px flow. Headings use Inter semibold with the
-     reference's tighter tracking, so no second heading face is needed. */
+     1.7 leading with 20px flow. Headings use Inter semibold and the shared
+     Lynvo heading tracking scale. */
   .typeset-docs {
     --typeset-font-body: var(--font-inter);
     --typeset-font-heading: var(--font-inter);
@@ -122,7 +122,6 @@
     &:where(h6) {
       font-size: 0.875em;
       line-height: 1.5;
-      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--typeset-muted);
       margin-block-start: calc(var(--typeset-flow) / 0.875);
@@ -364,24 +363,20 @@
       font-weight: 600;
     }
 
-    /* Inter adopts the reference heading tracking (-0.04em / -0.02em)
-     instead of a separate tight face. */
     h2 {
       font-size: 1.5em;
       line-height: 1.3333;
-      letter-spacing: -0.04em;
     }
 
     h3 {
       font-size: 1.2em;
       line-height: 1.3542;
-      letter-spacing: -0.02em;
     }
 
     :not(pre) > code {
       font-size: 0.9em;
       padding: 0.0625em 0.3125em;
-      border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
+      border: 1px solid color-mix(in oklab, currentColor 15%, transparent);
     }
 
     ul,

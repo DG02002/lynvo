@@ -18,7 +18,7 @@ const SectionIntro = ({
       centered && "items-center text-center mx-auto"
     )}
   >
-    <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] md:text-5xl lg:text-6xl">
+    <h2 className="text-balance text-4xl font-normal md:text-5xl lg:text-6xl">
       {title}
     </h2>
     <p className="text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
@@ -31,7 +31,7 @@ export const PlayerSection = () => (
   <section className="hidden overflow-hidden bg-background py-24 md:py-32 lg:block">
     <div className="player-showcase">
       <div className="player-showcase__copy">
-        <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
+        <h2 className="text-balance text-4xl font-normal text-foreground md:text-5xl lg:text-6xl">
           Open links in one of four Android players.
         </h2>
         <p className="mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
@@ -50,7 +50,7 @@ export const PlayerSection = () => (
 export const PlayerSectionEdgeToEdge = () => (
   <section className="overflow-hidden bg-background py-24 md:py-32 lg:hidden">
     <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center md:px-8">
-      <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
+      <h2 className="text-balance text-4xl font-normal text-foreground md:text-5xl lg:text-6xl">
         Open links in one of four Android players.
       </h2>
       <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
@@ -145,7 +145,7 @@ export const PlanSection = () => {
   return (
     <section className="relative overflow-hidden bg-background py-32 md:py-48">
       <div className="relative z-10 flex w-full flex-col items-center gap-16 px-6 text-center md:px-8 lg:px-10 xl:px-14">
-        <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-6xl lg:text-8xl">
+        <h2 className="text-balance text-4xl font-normal text-foreground md:text-6xl lg:text-8xl">
           The Free plan is available now.
         </h2>
 

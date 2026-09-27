@@ -43,7 +43,7 @@ const freePlanFeatures = [
 
 const planCardClassName = "self-start rounded-lg"
 const planCardHeaderClassName = "gap-3"
-const planCardTitleClassName = "text-4xl font-normal tracking-tight"
+const planCardTitleClassName = "text-4xl font-normal"
 const planCardDescriptionClassName = "text-sm text-foreground"
 
 interface PlanDetail {

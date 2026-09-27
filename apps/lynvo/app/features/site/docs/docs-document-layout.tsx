@@ -70,7 +70,7 @@ const DocsSidebarContents = ({
             value={group.group}
             className="border-b-0 data-open:bg-transparent"
           >
-            <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium tracking-tight hover:no-underline">
+            <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium hover:no-underline">
               {group.group}
             </AccordionTrigger>
             <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
@@ -242,7 +242,7 @@ export const DocsDocumentLayout = ({
               </nav>
             )}
             <div className="flex items-start justify-between gap-x-4">
-              <h1 className="min-w-0 text-[2rem] leading-[2.5rem] font-semibold tracking-[-0.06em] text-balance md:text-[2.5rem] md:leading-[3rem]">
+              <h1 className="min-w-0 text-[2rem] leading-[2.5rem] font-semibold text-balance md:text-[2.5rem] md:leading-[3rem]">
                 {context.page.title}
               </h1>
               <div className="mt-2.5 shrink-0">

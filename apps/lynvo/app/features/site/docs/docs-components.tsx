@@ -301,9 +301,9 @@ function CodeBlock({
   return (
     <figure
       ref={figureRef}
-      className="not-typeset my-5 overflow-hidden rounded-lg border border-foreground/20"
+      className="not-typeset my-5 overflow-hidden rounded-lg border border-foreground/15"
     >
-      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/20 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
+      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/15 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
         <span className="flex min-w-0 items-center gap-2">
           <span aria-hidden="true" className="size-4 shrink-0">
             <CodeLabelIcon label={label} />
@@ -377,7 +377,7 @@ const AndroidTvRemoteTroubleshooting = () => (
       <div className="min-w-0 flex-1">
         <h3
           id="virtual-remote-troubleshooting-title"
-          className="text-lg font-medium tracking-tight"
+          className="text-lg font-medium"
         >
           Can’t connect the virtual remote?
         </h3>

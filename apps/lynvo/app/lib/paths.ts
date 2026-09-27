@@ -15,11 +15,15 @@ export const sitePaths = {
   settings: "/settings",
 } as const
 
+const isPathnameAtOrBelow = (pathname: string, root: string): boolean =>
+  pathname === root || pathname.startsWith(`${root}/`)
+
+export const isDeveloperDocsRoutePathname = (pathname: string): boolean =>
+  isPathnameAtOrBelow(pathname, sitePaths.developerDocs)
+
 export const isDocsRoutePathname = (pathname: string): boolean =>
-  pathname === sitePaths.docs ||
-  pathname.startsWith(`${sitePaths.docs}/`) ||
-  pathname === sitePaths.developerDocs ||
-  pathname.startsWith(`${sitePaths.developerDocs}/`)
+  isPathnameAtOrBelow(pathname, sitePaths.docs) ||
+  isDeveloperDocsRoutePathname(pathname)
 
 export const policyPaths = {
   cookiePolicy: "/policies/cookie-policy",

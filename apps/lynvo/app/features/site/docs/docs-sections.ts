@@ -4,6 +4,7 @@ export interface DocumentationSection {
   readonly key: DocumentationSectionKey
   readonly root: "/docs" | "/developer"
   readonly label: string
+  readonly shortLabel: string
   readonly homeTitle: string
   readonly homeDescription: string
 }
@@ -13,6 +14,7 @@ export const documentationSections: readonly DocumentationSection[] = [
     key: "user",
     root: "/docs",
     label: "Documentation",
+    shortLabel: "Docs",
     homeTitle: "Lynvo Docs",
     homeDescription:
       "Save supported links and open them in the player you already use.",
@@ -21,6 +23,7 @@ export const documentationSections: readonly DocumentationSection[] = [
     key: "developer",
     root: "/developer",
     label: "Developers",
+    shortLabel: "Developer",
     homeTitle: "Developer Docs",
     homeDescription:
       "Build and connect a Lynvo-compatible Custom Plugin Server for the Sources you support.",

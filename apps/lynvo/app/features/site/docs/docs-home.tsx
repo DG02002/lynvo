@@ -28,9 +28,7 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
 
           {groups.map((group) => (
             <section key={group.group} className="mt-12 flex flex-col gap-4">
-              <h2 className="text-xl font-medium tracking-[-0.02em]">
-                {group.group}
-              </h2>
+              <h2 className="text-xl font-medium">{group.group}</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {group.pages.map((page) => (
                   <Link
@@ -46,14 +44,12 @@ export const DocsHome = ({ section }: { section: DocumentationSectionKey }) => {
                       className="size-7"
                       strokeWidth={1.5}
                     />
-                    <span className="flex min-w-0 flex-col gap-2">
-                      <span className="text-lg tracking-[-0.02em] text-balance">
-                        {page.navLabel}
-                      </span>
+                    <div className="flex min-w-0 flex-col gap-2">
+                      <h3 className="text-lg text-balance">{page.navLabel}</h3>
                       <span className="line-clamp-2 text-sm leading-6 text-muted-foreground">
                         {page.description}
                       </span>
-                    </span>
+                    </div>
                   </Link>
                 ))}
               </div>
