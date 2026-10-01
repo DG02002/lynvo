@@ -2,11 +2,11 @@
 
 This guide captures the changelog and announcement house style. Its
 patterns come from full-body reads of four sources in September and
-October 2026: twenty-five entries from Linear's changelog read through
-its full-text archive, nineteen entries from Vercel's changelog, nine
-posts from Apple's developer news page, and six posts from OpenAI's
-newsroom. The sources established the shape; this guide states it as
-the style to write in.
+October 2026: twenty-five entries from an issue tracker's changelog
+read through its full-text archive, nineteen entries from a deployment
+platform's changelog, nine posts from a platform's developer news
+page, and six posts from an AI company's newsroom. The sources
+established the shape; this guide states it as the style to write in.
 
 Treat the sample examples in this guide as evidence of the style, not as
 content to copy. Do not carry their product names, plans, or feature
@@ -42,8 +42,8 @@ policies follow the product-policy-writing skill.
 Announce changes as accomplished facts. Recurring characteristics:
 
 - "Now" is the signal word. The first sentence states the change and its
-  availability in one breath: "Drives are now available in public beta
-  on Hobby, Pro, and Enterprise."
+  availability in one breath: "Volumes are now available in public
+  beta on Hobby, Pro, and Enterprise."
 - Every sentence carries a behavior, not an adjective. Numbers do the
   celebrating: "cutting costs by up to 85% for high-concurrency
   workloads."
@@ -73,14 +73,14 @@ Pick the shape by the weight of the news:
 ## Titles
 
 - Default: a declarative sentence stating the change as accomplished
-  fact, sentence case. "Claude Sonnet 5.5 now available on AI Gateway."
-  / "Runtime logs now show cache reasons." / "Edge Requests are now
+  fact, sentence case. "Search now available on Business plans." /
+  "Runtime logs now show cache reasons." / "Edge Requests are now
   called CDN Requests."
 - A plain noun phrase names the feature for quiet changes: "Priority
   inbox", "Team initiatives", "Search trace spans from the CLI".
 - "Introducing X" or a benefit clause is reserved for flagship launches:
-  "Introducing Linear Agent", "Passkeys: A fast and secure way to log
-  in".
+  "Introducing the coding agent", "Passkeys: A fast and secure way to
+  log in".
 - Numbers belong in titles when they are the news: "Deployment step now
   10% faster".
 - Four to twelve words, sentence case, no colon subtitles, no emoji, no
@@ -91,19 +91,19 @@ Pick the shape by the weight of the news:
 ### The flat entry
 
 1. First sentence: the change plus availability. "You can now create as
-   many Blob stores as you need. The previous limits of 100 stores on
-   Hobby and 500 on Pro no longer apply."
-2. A definition sentence for a new concept: "A Drive is persistent
+   many stores as you need. The previous limits of 100 stores on Hobby
+   and 500 on Pro no longer apply."
+2. A definition sentence for a new concept: "A Volume is persistent
    storage that you mount as a directory in a sandbox."
-3. Use cases, imperative-led: "Use Drives to preserve an agent's
+3. Use cases, imperative-led: "Use volumes to preserve an agent's
    workspace, or to reuse datasets and dependency trees."
 4. Close with a docs pointer or the availability formula: "Learn more
-   in the Drives documentation."
+   in the volumes documentation."
 
 ### The launch entry
 
 1. Open with one concrete problem sentence, not a market claim:
-   "Customer feedback is often scattered across support tickets, Slack
+   "Customer feedback is often scattered across support tickets, chat
    messages, and calls – outside the product team's workflow and
    sometimes entirely out of reach."
 2. Name the feature and define it in one sentence: "Loops are a new way
@@ -125,13 +125,14 @@ Pick the shape by the weight of the news:
 For launches that need adoption effort:
 
 - A bolded thesis sentence, then the one-sentence product introduction:
-  name plus lineage plus differentiator. "We're introducing **GPT-6.1
-  Sol**, an upgrade to GPT-6 Sol that nearly matches GPT-6 Astra's
+  name plus lineage plus differentiator. "We're introducing **Turbo**,
+  an upgrade to the standard model that nearly matches the flagship's
   intelligence at one-fifth of the price."
 - Benefit-named sections, each grounded in a concrete anecdote: "A bug
-  appears in Slack, and dots immediately start investigating."
+  appears in the team chat, and the agent immediately starts
+  investigating."
 - Quantified claims with a methodology footnote, and one stated
-  limitation: "Dots can still make mistakes, so always review
+  limitation: "Agents can still make mistakes, so always review
   consequential work."
 - "Pricing and availability" as the final section, then one
   forward-looking sentence.
@@ -140,12 +141,12 @@ For launches that need adoption effort:
 
 - Subjectless, past-tense, verb-first outcome bullets:
   - "Fixed the cycle capacity calculation."
-  - "Stopped retrying permanent Slack webhook errors."
+  - "Stopped retrying permanent webhook delivery errors."
   - "Renamed canonical issue duplicate relation labels from 'Duplicated
     by' to 'Duplicates'."
 - Improvements may flip to capability framing: "You can now download
   any comment attachment as a file."
-- Group bullets by surface label (iOS, Desktop, Editor, Slack), then an
+- Group bullets by surface label (iOS, Desktop, Editor, Chat), then an
   ungrouped tail.
 - No media, no contractions, no elaboration. The bullet is the outcome.
 
@@ -161,8 +162,8 @@ For launches that need adoption effort:
   coming weeks" / "coming this fall". Say what a reader without the
   feature should expect: "If you don't see a Teams page yet, stay tuned
   as we roll it out to everyone over the next few weeks."
-- Negative availability is stated explicitly: "GPT-6.1 Sol is not yet
-  available in Chat."
+- Negative availability is stated explicitly: "The model is not yet
+  available in the desktop app."
 - Pricing is concrete, with units and free allowances: "storage costs
   $0.05 per GB-month; Hobby includes 15 GB per month at no additional
   cost."
@@ -197,8 +198,8 @@ A fixed skeleton, whether a section or its own entry:
 For deprecations, deadlines, submission windows, and program changes —
 the terse register:
 
-- Availability-first first sentence: "The beta versions of iOS 27.2,
-  iPadOS 27.2, and macOS 27.2 are now available."
+- Availability-first first sentence: "The beta versions of CLI 3.2 and
+  SDK 3.2 are now available."
 - Checklist paragraphs open with a two-to-four-word imperative:
   "Download the release candidate. Build and test with the latest SDK."
 - What's-new bullets open with a bolded fragment: "**More than 100 new
@@ -218,7 +219,7 @@ the terse register:
   ("we've added", "we'll provide clear advance notice before any pricing
   changes take effect"); the tersest corpus never uses "we" at all.
 - Restrained by default; celebratory only at true launches, and at most
-  one exclamation mark per launch. "Linear Mobile has arrived." is the
+  one exclamation mark per launch. "Mobile has arrived." is the
   ceiling.
 - Contractions are natural in prose and absent from fix bullets.
 - Credit feedback in half a sentence, without flattery: "We've heard
@@ -234,9 +235,9 @@ the terse register:
 - A hero screenshot or silent looping video under the heading for every
   feature section; none for fix lists or notifications.
 - Multi-part launches add one image per section.
-- Alt text is a full descriptive sentence: "Linear Inbox in dark mode,
-  showing Priority and Other tabs with several notifications about issue
-  assignments."
+- Alt text is a full descriptive sentence: "The inbox in dark mode,
+  showing Priority and Other tabs with several notifications about
+  issue assignments."
 - Screenshots contain realistic product data.
 - Code blocks count as media for developer entries, each with a
   one-sentence caption: "Search trace spans in the CLI."
@@ -259,7 +260,9 @@ in-app MDX, a marketing site, GitHub releases, or a feed — how they are
 ordered, permalinked, and dated, what frontmatter or metadata they
 require, and what validation runs against their links. If the project
 has no changelog surface at all, flag that publishing one is pipeline
-work; do not invent a location.
+work; do not invent a location. Follow the project's conventions
+exactly and flag gaps instead of improvising new components or
+frontmatter fields.
 
 Then map the style onto the project's mechanics:
 
@@ -292,6 +295,7 @@ Then map the style onto the project's mechanics:
   migration step, hard date, no-op case.
 - Media present for features, absent for fixes and notifications; alt
   text is a full sentence.
-- Docs links resolve; feature names and plan names match the product.
+- Docs links resolve; feature names and plan names match the product,
+  and no corpus terminology leaked in.
 - The project's components, frontmatter, and conventions are followed;
   gaps are flagged, not improvised.

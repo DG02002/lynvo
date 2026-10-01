@@ -2,11 +2,12 @@
 
 This guide captures the developer documentation house style. Its
 patterns come from full-body reads of two sources in September and
-October 2026: sixteen pages spanning every genre of Vercel's
-documentation — getting started, concepts, how-to guides, CLI reference,
-REST reference, error reference, limits — and Linear's GraphQL
-developer site, read page by page and re-verified live. The sources
-established the shape; this guide states it as the style to write in.
+October 2026: sixteen pages spanning every genre of a large deployment
+platform's documentation — getting started, concepts, how-to guides,
+CLI reference, REST reference, error reference, limits — and a GraphQL
+API's developer site, read page by page and re-verified live. The
+sources established the shape; this guide states it as the style to
+write in.
 
 Treat the sample examples in this guide as evidence of the style, not as
 content to copy. Do not carry their product names, endpoints, options, or
@@ -102,8 +103,8 @@ sentence directly under the title, before any heading. Patterns:
 - Reference: "All list responses from queries return paginated results."
 - Integration: "Webhooks allow you to receive HTTP push notifications
   whenever data is created, updated or removed."
-- New concept, named: "A Drive is persistent storage that you mount as a
-  directory in a sandbox."
+- New concept, named: "A Volume is persistent storage that you mount as
+  a directory in a sandbox."
 
 Overview pages add a second sentence stating scope: "This guide explains
 what happens during that transformation, from the moment the platform
@@ -314,9 +315,9 @@ partial-success semantics explicitly where they exist.
 
 - Convention pages (pagination, filtering, rate limits, deprecations)
   are prose plus samples, organized by concern, and anchor new notation
-  to a famous precedent: "Relay style cursor-based pagination",
-  "similar to GitHub's GraphQL API", ISO 8601 durations. Never invent
-  notation when the reader already has a mental model.
+  to a precedent the reader already knows: "Relay style cursor-based
+  pagination", ISO 8601 durations. Never invent notation when the
+  reader already has a mental model.
 - Teach loops as narrative, not tables: query the first page, pass
   `pageInfo.endCursor` as `after`, repeat while `hasNextPage` is true.
   State defaults as facts: "The first 50 results are returned by
@@ -347,6 +348,8 @@ Then map the style onto the project's mechanics:
   otherwise paired sibling blocks stay.
 - Code, terminal output, and HTTP exchanges go in the project's labeled
   code figure; never bare fences if a figure component exists.
+- Notes and caveats become the project's callout component; if none
+  exists, use the closest equivalent and flag the gap.
 - Endpoints, options, fields, and error codes appear exactly as the
   source emits them, and product terms follow the project's glossary.
 - If the project generates a reference from its schema, link it instead
