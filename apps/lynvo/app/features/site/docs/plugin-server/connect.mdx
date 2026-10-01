@@ -7,26 +7,24 @@ contentType: Tutorial
 
 <DocSection id="connect">
 
-This page is the handoff from user setup to server deployment: start with [Plugins in Lynvo](/docs/plugins), then register the deployed Custom Plugin Server in [**Settings > Plugins**](/settings/plugins). Finish [testing the protocol contract](/developer/testing) before connecting it.
+Connecting a Custom Plugin Server registers its origin and API key with Lynvo, and makes its Plugins available to your Saved links. Finish [testing the protocol contract](/developer/testing) first; for the user-facing side of this flow, see [Plugins in Lynvo](/docs/plugins).
 
-Add the Plugin Server after its production contract checks pass:
+To add the Plugin Server after its production contract checks pass:
 
-1. Open [**Settings**](/settings/plugins) in Lynvo
-2. Find **Custom Plugin Servers**
-3. Select **Add Custom Plugin Server**
-4. Enter the deployed origin in **Server URL**, without `/manifest`
-5. Enter the production bearer key in **API key**
-6. Select **Add Custom Plugin Server**
+1. Open [**Settings > Plugins**](/settings/plugins) in Lynvo
+2. Find **Custom Plugin Servers** and select the **Add Custom Plugin Server** button (the **+** icon)
+3. Enter the deployed origin in **Server URL**, without `/manifest`
+4. Enter the production bearer key in **API key**
+5. Select **Add Custom Plugin Server**
 
-Lynvo fetches `GET /manifest` and checks protocol version `1.0`. It calls
-`POST /verify` and stores the Plugin Server only when both responses pass
-validation.
+Lynvo fetches `GET /manifest` and validates it, including the protocol version — any `1.x` manifest is accepted. It then calls `POST /verify` with the bearer key and `GET /usage`, and stores the Plugin Server only when all three responses pass validation. A failed step surfaces the Worker's message in the dialog, such as `API key verification failed.` or `Plugin Server Manifest does not match protocol v1.`
 
-Production and remote Plugin Server origins must use HTTPS. For local
-development on the same machine, use an origin whose hostname is exactly
-`localhost`, such as `http://localhost:8787`. Lynvo rejects plain HTTP origins
-that use `127.0.0.1`, a LAN address, or any other hostname.
+## Origin requirements
 
-Test one URL for every declared Source. Open one unresolved item to confirm that Lynvo sends the follow-up request to the same Plugin Server.
+Production and remote Plugin Server origins must use HTTPS. For local development against a development build of Lynvo on the same machine, use an origin whose hostname is exactly `localhost`, such as `http://localhost:8787`. Lynvo rejects plain HTTP origins that use `127.0.0.1`, a LAN address, or any other hostname.
+
+## Confirm the Sources work
+
+Test one URL for every declared Source. Open one unresolved item to confirm that Lynvo sends the follow-up request to the same Plugin Server — the server that emitted a Node identity is the only server that resolves it.
 
 </DocSection>

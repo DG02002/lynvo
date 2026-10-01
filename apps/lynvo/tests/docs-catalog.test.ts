@@ -9,6 +9,7 @@ import {
   getDocumentationPageUrl,
   getDocumentationSectionKeyForPath,
   getDocumentationSlug,
+  getDeveloperDocsRedirectSlugForSection,
 } from "~/features/site/docs/docs-sections"
 
 describe("documentation heading IDs", () => {
@@ -50,4 +51,30 @@ describe("documentation sections", () => {
 
     expect(new Set(roots).size).toBe(documentationSections.length)
   })
+
+  it("dispatches redirects by documentation section", () => {
+    expect(
+      getDeveloperDocsRedirectSlugForSection("user", "plugin-server")
+    ).toBe("")
+    expect(
+      getDeveloperDocsRedirectSlugForSection(
+        "user",
+        "plugin-server/media-nodes"
+      )
+    ).toBe("media-nodes")
+  })
+
+  it.each([
+    ["extraction-requests", "extract"],
+    ["media-nodes", "extract"],
+    ["success-responses", "extract"],
+    ["extract", undefined],
+  ] as const)(
+    "dispatches %s to the expected developer slug",
+    (slug, expectedSlug) => {
+      expect(getDeveloperDocsRedirectSlugForSection("developer", slug)).toBe(
+        expectedSlug
+      )
+    }
+  )
 })

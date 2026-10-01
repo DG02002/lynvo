@@ -7,12 +7,9 @@ contentType: Tutorial
 
 <DocSection id="testing">
 
-Run these checks after implementing the Plugin and before deploying the Worker. Use the [protocol overview](/developer/protocol-overview) to cover each endpoint, then follow [deployment](/developer/deployment) and [connection setup](/developer/connect).
+The generated checks prove the protocol contract — types, endpoint behavior, and the Wrangler bundle — without a live Cloudflare Worker. Run them after implementing the Plugin and before deploying the Worker.
 
-Run the generated checks before deployment. The starter checks types, contract
-behavior, and the Wrangler bundle without requiring a live Cloudflare Worker.
-
-Run the local checks:
+To run the local checks, use:
 
 <CodeBlock label="Terminal">
 
@@ -24,17 +21,11 @@ pnpm build
 
 </CodeBlock>
 
-Start the Worker in a separate terminal:
+To start the Worker, run `pnpm dev` in a separate terminal. The local Worker serves `http://localhost:8787`.
 
-<CodeBlock label="Terminal">
+## Exercise the endpoints with curl
 
-```sh
-pnpm dev
-```
-
-</CodeBlock>
-
-Inspect the public manifest:
+To inspect the public manifest, call:
 
 <CodeBlock label="Terminal">
 
@@ -44,47 +35,35 @@ curl http://localhost:8787/manifest
 
 </CodeBlock>
 
-Use `http://localhost:8787` when Lynvo and the Plugin Server run on the same
-machine. Lynvo allows local HTTP only when the hostname is exactly
-`localhost`; loopback IP addresses, LAN addresses, and other hosts must use
-HTTPS.
-
-To test with a remotely hosted Lynvo instance, expose the local Worker through
-an HTTPS tunnel. Wrangler's interactive development server can start one with
-the `t` shortcut. Verify the public origin before connecting it:
-
-<CodeBlock label="Terminal">
-
-```sh
-curl https://your-tunnel.example/manifest
-```
-
-</CodeBlock>
-
-The response must succeed. Every absolute manifest URL, including Plugin icon
-URLs, must use the public HTTPS origin. A tunnel commonly terminates TLS before
-forwarding HTTP to the Worker. If the manifest generates absolute URLs from the
-request, honor `X-Forwarded-Proto: https` or configure the public origin
-explicitly. Never hardcode a temporary tunnel hostname.
-
-Verify the local bearer key:
+To verify the local bearer key, call:
 
 <CodeBlock label="Terminal">
 
 ```sh
 curl -X POST http://localhost:8787/verify \
-  -H "Authorization: Bearer your_local_plugin_server_api_key_here"
+  -H "Authorization: Bearer YOUR_LOCAL_PLUGIN_SERVER_API_KEY"
 ```
 
 </CodeBlock>
 
-Test a Source Extraction:
+Lynvo also reads usage when it connects a server, so confirm the usage response passes the same validation:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl http://localhost:8787/usage \
+  -H "Authorization: Bearer YOUR_LOCAL_PLUGIN_SERVER_API_KEY"
+```
+
+</CodeBlock>
+
+To test a Source Extraction, send a request like:
 
 <CodeBlock label="Terminal">
 
 ```sh
 curl -X POST http://localhost:8787/extract \
-  -H "Authorization: Bearer your_local_plugin_server_api_key_here" \
+  -H "Authorization: Bearer YOUR_LOCAL_PLUGIN_SERVER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
@@ -96,7 +75,25 @@ curl -X POST http://localhost:8787/extract \
 
 </CodeBlock>
 
-Extend the contract suite as you add Source behavior. Test these cases:
+## Local origins and tunnels
+
+Use `http://localhost:8787` when Lynvo and the Plugin Server run on the same machine. Lynvo accepts local HTTP only when the hostname is exactly `localhost`; loopback IP addresses such as `127.0.0.1`, LAN addresses, and every other host must use HTTPS.
+
+To test against a remotely hosted Lynvo instance, expose the local Worker through an HTTPS tunnel. Wrangler's interactive development server starts one with the `t` shortcut. To verify the public origin before connecting it, call:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl https://<your-tunnel-hostname>/manifest
+```
+
+</CodeBlock>
+
+The response must succeed, and every absolute manifest URL, including Plugin icon URLs, must use the public HTTPS origin. A tunnel commonly terminates TLS before forwarding HTTP to the Worker: if the manifest generates absolute URLs from the request, honor `X-Forwarded-Proto: https` or configure the public origin explicitly. Never hardcode a temporary tunnel hostname.
+
+## Grow the contract suite
+
+The starter's five checks cover a valid manifest, rejected invalid bearer credentials, finite usage, a valid Extraction envelope, and the error for opaque resource-ID targets. Extend `tests/contract.test.ts` as you add Source behavior, and cover:
 
 - Valid and invalid manifest metadata
 - Missing, invalid, and valid bearer credentials
@@ -109,7 +106,6 @@ Extend the contract suite as you add Source behavior. Test these cases:
 - Exhausted usage before upstream work starts
 - Safe temporary and permanent failure responses
 
-The starter includes the first four contract checks in `tests/contract.test.ts`.
-Add Source fixtures before you deploy a real Source implementation.
+Add Source fixtures before you deploy a real Source implementation, then continue with [deployment](/developer/deployment) and [connecting the server to Lynvo](/developer/connect).
 
 </DocSection>

@@ -1,5 +1,5 @@
 ---
-title: Define and enforce usage limits
+title: Usage limits
 description: Report finite usage and prevent concurrent requests from exceeding a limit.
 navLabel: Usage limits
 contentType: Reference
@@ -7,47 +7,13 @@ contentType: Reference
 
 <DocSection id="usage-schema">
 
-Usage limits are part of the Plugin Server Protocol: report each finite metric and enforce it before work exceeds the limit. See [bearer authentication](/developer/authentication) and the [protocol endpoint overview](/developer/protocol-overview) for the surrounding server contract.
+Usage limits are the finite metrics a Plugin Server reports at `GET /usage` and enforces before its work exceeds them. Every connected credential has at least one finite metric, and the server must enforce the limits it reports.
 
-Every connected credential must have at least one finite usage metric. The
-Plugin Server must enforce the limits it reports.
-
-Define the response schema:
-
-<CodeBlock label="src/protocol.ts">
-
-```ts {3-11}
-import { Schema } from "effect"
-
-export const usageResponseSchema = Schema.Struct({
-  metrics: Schema.NonEmptyArray(
-    Schema.Struct({
-      id: Schema.NonEmptyString,
-      label: Schema.NonEmptyString,
-      used: Schema.Number.pipe(
-        Schema.check(Schema.isNonNegative()),
-        Schema.check(Schema.isFinite())
-      ),
-      limit: Schema.Number.pipe(
-        Schema.check(Schema.isPositive()),
-        Schema.check(Schema.isFinite())
-      ),
-      unit: Schema.NonEmptyString,
-      period: Schema.Literals(["daily", "monthly"]),
-      resetsAt: Schema.String,
-      pluginId: Schema.optional(Schema.NonEmptyString),
-    })
-  ),
-})
-```
-
-</CodeBlock>
-
-Return one record for each independently enforced limit:
+To report each independently enforced limit, return one metric record:
 
 <CodeBlock label="GET /usage">
 
-```json {3-11}
+```json
 {
   "metrics": [
     {
@@ -65,24 +31,40 @@ Return one record for each independently enforced limit:
 
 </CodeBlock>
 
-Each metric must satisfy these invariants:
+Each metric must satisfy these invariants, which the protocol package's `validateUsageContract` and `parseUsageResponseContract` helpers check:
 
 - `id` is unique within the response
-- `limit` is positive and finite
-- `used` is non-negative, finite, and no greater than `limit`
+- `used` is non-negative and no greater than `limit`
+- `limit` is positive
 - `period` is `daily` or `monthly`
 - `resetsAt` is an ISO 8601 timestamp
-- `pluginId` identifies a Plugin-specific allowance
+- `pluginId` optionally scopes the metric to one Plugin's allowance
 
-Use a Cloudflare Durable Object for atomic reservations. Reserve capacity before
-the adapter performs upstream work. Return `RATE_LIMITED` when no capacity
-remains. Settle the reservation after the adapter finishes. Release it when
-your accounting policy does not charge failed work.
+## Enforce the reported limits
+
+Report the same allowances you enforce. Use a Cloudflare Durable Object for atomic reservations: reserve capacity before the adapter performs upstream work, settle the reservation after the adapter finishes, and release it when your accounting policy does not charge failed work.
+
+When no capacity remains, return `RATE_LIMITED` from `/extract` with `error.retryAfterSeconds` and a matching `Retry-After` header so clients can wait until the limit resets:
+
+<CodeBlock label="429 response">
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Monthly extract request limit reached.",
+    "retryAfterSeconds": 3600
+  },
+  "extensions": {}
+}
+```
+
+</CodeBlock>
 
 <DocsNote title="Use the reported limits">
 
-Report the same allowances you enforce. Lynvo renders the metrics returned by
-your Plugin Server and does not own third-party accounting.
+Lynvo renders the metrics returned by your Plugin Server in [**Settings > Usage**](/settings/usage) and does not own third-party accounting. The message text above is an example; Lynvo maps the code to its own copy.
 
 </DocsNote>
 

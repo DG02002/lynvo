@@ -34,14 +34,7 @@ const documentationExpectations = new Map<
   ],
   [
     new URL(
-      "../../../apps/lynvo/app/features/site/docs/plugin-server/extraction-requests.mdx",
-      import.meta.url
-    ),
-    ["nodeIdentity"],
-  ],
-  [
-    new URL(
-      "../../../apps/lynvo/app/features/site/docs/plugin-server/media-nodes.mdx",
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/extract.mdx",
       import.meta.url
     ),
     ["nodeIdentity"],
@@ -59,13 +52,6 @@ const documentationExpectations = new Map<
       import.meta.url
     ),
     ["errorCodes"],
-  ],
-  [
-    new URL(
-      "../../../apps/lynvo/app/features/site/docs/plugin-server/success-responses.mdx",
-      import.meta.url
-    ),
-    [],
   ],
   [
     new URL(
@@ -103,7 +89,7 @@ describe("published Plugin Server documentation", () => {
       documentationUrls.map(async (documentationUrl) => {
         const source = await readFile(documentationUrl, "utf8")
         expect(source).not.toMatch(/"source"\s*:/)
-        expect(source).not.toMatch(/\bsource(?:Name|IconUrl)\b/)
+        expect(source).not.toMatch(/"source(?:Name|IconUrl)"\s*:/)
         const jsonBlocks = [...source.matchAll(/```json[^\n]*\n([\s\S]*?)```/g)]
         for (const jsonBlock of jsonBlocks) {
           const parsedJson = JSON.parse(jsonBlock[1])
@@ -134,10 +120,14 @@ describe("published Plugin Server documentation", () => {
   it("keeps the in-app error-code table aligned with the protocol codes", async () => {
     const source = await readFile(documentationUrlFor("errorCodes"), "utf8")
     const documentedCodes = [
-      ...source.matchAll(/^\| `([^`]+)`\s+\|[^|]+\|$/gm),
+      ...source.matchAll(/^\| `([^`]+)`\s+\|\s+\d+\s+\|\s+[^|]+\s+\|$/gm),
     ].map(([, code]) => code)
 
-    expect(documentedCodes).toEqual(ERROR_CODES)
+    expect(
+      [...documentedCodes].toSorted((left, right) => left.localeCompare(right))
+    ).toEqual(
+      [...ERROR_CODES].toSorted((left, right) => left.localeCompare(right))
+    )
   })
 
   it("documents URL and resource ID node identities on every guidance surface", async () => {

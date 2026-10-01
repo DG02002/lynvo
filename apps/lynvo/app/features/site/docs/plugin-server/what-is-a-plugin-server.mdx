@@ -1,43 +1,42 @@
 ---
-title: What is a Plugin Server?
+title: Plugin Servers
 description: Understand the service that connects Lynvo to Source-specific Plugins.
-navLabel: What is a Plugin Server?
+navLabel: Plugin Servers
 contentType: Conceptual
 ---
 
 <DocSection id="what-is-a-plugin-server">
 
-A Plugin Server is the deployed service that runs one or more Source-specific Plugins and follows the Plugin Server Protocol. Continue with [what a Plugin does](/developer/what-is-a-plugin), [generating the project](/developer/create-plugin-server), or [connecting it to Lynvo](/developer/connect).
+A Plugin Server is a deployed service that runs one or more Plugins and follows the Plugin Server Protocol. Lynvo never talks to a Source directly — it hands the server a Source URL or an unresolved item and renders the Media Nodes that come back over HTTPS and JSON.
 
-A Plugin Server is a deployed HTTPS service that turns Source pages into
-normalized Media Nodes. Lynvo sends it a URL, and the server returns Media
-Nodes: playable items, folders, groups, and unresolved items.
-
-The Plugin Server handles the work shared by every Source integration:
+Splitting the work this way keeps every Source integration on the same contract. The Plugin Server owns:
 
 - The public manifest at `GET /manifest`
 - Bearer authentication for protected endpoints
-- URL routing to the correct Plugin
+- Routing each request to the matching Plugin
 - Request and response validation
-- Finite usage limits
+- Finite usage limits and their enforcement
 - Protocol error responses
 - Deployment, logs, and operational status
 
-Lynvo handles the product behavior around that service. It registers the Plugin
-Server, selects it for matching URLs, saves extracted nodes, tracks opened
-markers and selected links, and sends URLs to an external Android player. An
-opened marker records only that an item was opened. Neither Lynvo nor the
-Plugin Server stores a playback position or resume state.
+Lynvo owns everything product-side: registering the Plugin Server, selecting it for matching URLs, saving extracted nodes, tracking opened markers and selected links, and handing the final URL to an external Android player. The split is strict — an opened marker records only that an item was opened, and neither side stores a playback position or resume state.
 
-One Plugin Server can contain one Plugin or several Plugins. Deploy and connect
-the server once, then publish each Plugin in its manifest.
+## Lynvo Plugin Servers and Custom Plugin Servers
 
-<DocsNote title="Direct Media links">
+Lynvo talks to two kinds of Plugin Server, and they differ only in who operates them. The Lynvo Plugin Server is the server Lynvo runs for its own Plugins. A Custom Plugin Server is one you connect and manage yourself — generated from the starter project, deployed to your own origin, and registered in [Settings](/settings/plugins).
 
-Direct Media is a first-party Plugin hosted by the Lynvo Plugin Server. Lynvo
-asks the Plugin whether it can handle a link after checking the domains
-configured for it.
+One Plugin Server can host one Plugin or several. Deploy and connect the server once, then publish each Plugin in its manifest.
+
+<DocsNote title="Direct Media">
+
+Direct Media is a first-party Plugin hosted on the Lynvo Plugin Server. Lynvo asks the Plugin whether it can handle a link after checking the domains configured for it.
 
 </DocsNote>
+
+## Next steps
+
+- [Plugins](/developer/what-is-a-plugin) – The Source-specific code that runs inside the server
+- [Generate your Plugin Server](/developer/create-plugin-server) – Create the starter Cloudflare Worker project
+- [Connect the Plugin Server to Lynvo](/developer/connect) – Register the deployed origin and API key
 
 </DocSection>

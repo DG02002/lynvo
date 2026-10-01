@@ -7,22 +7,24 @@ contentType: Reference
 
 <DocSection id="routes">
 
-The shared route runtime keeps authentication, validation, usage, and protocol responses outside Source-specific code. Start with [the protocol overview](/developer/protocol-overview), then adapt the generated route wiring when you [add a Plugin](/developer/plugins).
-
-The generated `src/index.ts` sends each required endpoint through
-`createPluginServerRuntime`. Keep authentication, validation, usage, and
-response serialization in that runtime.
-
-The generated route layer looks like this:
+The shared route runtime owns authentication, request validation, usage, and protocol response serialization, keeping all of it outside Source-specific code. The generated `src/index.ts` routes every required endpoint through `createPluginServerRuntime`:
 
 <CodeBlock label="src/index.ts">
 
 ```ts
-import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  createPluginServerRuntime,
+  ProtocolError,
+  validUsageResponseFixture,
+  validateBearerCredential,
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 const runtime = createPluginServerRuntime<Env>({
   manifest,
-  auth: { validate: ({ request, env }) => hasValidBearer(request, env) },
+  auth: {
+    validate: ({ request, env }) =>
+      validateBearerCredential(request, env.LYNVO_PLUGIN_SERVER_API_KEY),
+  },
   usage: () => validUsageResponseFixture,
   extract: ({ target }) => {
     if (target.kind !== "url") {
@@ -52,13 +54,20 @@ app.post("/extract", (context) =>
 
 </CodeBlock>
 
-Replace the manifest, authentication function, usage accounting, and Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension.
+Replace the manifest, the authentication function, usage accounting, and the Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension; when the manifest sets `features.discovery`, wire `runtime.handleDiscover` the same way.
 
-The extraction callback receives a URL target or an opaque `resourceId` target.
-This starter handles URL targets; add the Source-specific resource-ID branch if
-your Plugin emits Resolvable links with `resourceId`.
+## What the runtime maps for you
 
-The starter returns a finite usage fixture so its contract tests can run without
-a database. Replace that fixture with durable accounting before deployment.
+The runtime turns failures into protocol responses before and after your Plugin runs. An unexpected throw inside `extract` becomes a `TEMPORARY_FAILURE` with HTTP status 500, and a thrown `ProtocolError` becomes its documented status and a `Retry-After` header when it carries `retryAfterSeconds`. Before your Plugin runs, the runtime rejects:
+
+- A rejected bearer key, as `AUTH_INVALID` 401 with the message `API key was rejected.`
+- An unparseable JSON body, as `BAD_REQUEST` 400 with the message `Invalid JSON body.`
+- A body that fails the request schema, as `BAD_REQUEST` 400 with the message `Invalid request body.`
+- A URL or resource-ID target no matcher or Plugin accepts, as `UNSUPPORTED_URL` or `UNSUPPORTED_TARGET` 400 with the message `Unsupported extraction target by this Plugin Server: <target>`
+- A manifest that fails validation, as `PROTOCOL_MISMATCH` 500 with the message `Plugin Server Manifest does not match protocol v1.`
+
+The extraction callback receives a URL target or an opaque `resourceId` target. The starter handles URL targets only; add the Source-specific resource-ID branch if your Plugin emits unresolved items with `resourceId`.
+
+The starter returns a finite usage fixture so its contract tests run without a database. Replace that fixture with durable accounting before deployment — see [usage limits](/developer/usage-limits).
 
 </DocSection>
