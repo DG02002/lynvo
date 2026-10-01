@@ -25,9 +25,14 @@ describe("PageTableOfContents", () => {
   it("renders nothing when the page has no headings", () => {
     const { container } = render(<PageTableOfContents headings={[]} />)
 
-    expect(
-      screen.queryByRole("navigation", { name: "On this page" })
-    ).not.toBeInTheDocument()
+    expect(container.firstChild).toBeNull()
+  })
+
+  it("renders nothing for a policy page without headings", () => {
+    const { container } = render(
+      <PageTableOfContents headings={[]} variant="policy" />
+    )
+
     expect(container.firstChild).toBeNull()
   })
 })

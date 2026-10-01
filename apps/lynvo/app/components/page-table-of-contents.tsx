@@ -185,9 +185,7 @@ export function PageTableOfContents({
     activeHeadingId,
   ])
 
-  // A page without headings has no table of contents to offer, so the
-  // whole rail — label included — stays hidden, mirroring
-  // MobilePageOutline's empty guard.
+  // Match MobilePageOutline's empty-heading behavior.
   if (headings.length === 0) {
     return null
   }
