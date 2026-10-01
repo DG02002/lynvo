@@ -3,7 +3,8 @@ name: product-docs-writing
 description: >-
   Draft or review product documentation pages in the task-first product
   docs voice: plain confident sentences, fixed page anatomy, verified
-  settings paths, screenshots for UI features, and FAQ blocks. Project
+  settings paths, screenshots for UI features, and FAQ blocks. Not for
+  developer documentation, changelog entries, or release notes. Project
   mechanics are derived from the repository being documented.
 ---
 

@@ -1,11 +1,11 @@
 # Developer docs writing guidelines
 
 This guide captures the developer documentation house style. Its
-patterns come from full-body reads of two corpora in September and
-October 2026: sixteen pages spanning every genre of a deployment
-platform's docs — getting started, concepts, how-to guides, CLI
-reference, REST reference, error reference, limits — and a GraphQL API's
-developer site, read page by page and re-verified live. The corpora
+patterns come from full-body reads of two sources in September and
+October 2026: sixteen pages spanning every genre of Vercel's
+documentation — getting started, concepts, how-to guides, CLI reference,
+REST reference, error reference, limits — and Linear's GraphQL
+developer site, read page by page and re-verified live. The sources
 established the shape; this guide states it as the style to write in.
 
 Treat the sample examples in this guide as evidence of the style, not as
@@ -334,50 +334,26 @@ partial-success semantics explicitly where they exist.
 
 ## Project adaptation rules
 
-The patterns above are rendering-agnostic. Before writing, learn the
-target project's mechanics and map every pattern onto them.
+The patterns above are rendering-agnostic. Before writing, learn how the
+repository being documented publishes developer docs: where pages live
+and how navigation orders them, which frontmatter fields are required or
+validated, which components render callouts, code figures, and tabs, and
+what link validation runs and when. Follow those conventions exactly and
+flag gaps instead of improvising new components or frontmatter fields.
 
-### Discover the docs pipeline
+Then map the style onto the project's mechanics:
 
-Find and read, in the repository being documented:
-
-- The docs directory and its pages, plus the navigation or sidebar
-  configuration that defines groups, ordering, and prev/next.
-- The MDX or Markdown pipeline in the build configuration: which plugins
-  run, which frontmatter fields are required or validated.
-- The docs component set: note or callout components, code figure
-  components, tabs, response blocks.
-- The link and anchor validation the project runs, and when it runs.
-
-Follow the project's existing conventions exactly; do not introduce new
-components or frontmatter fields without flagging it.
-
-### Map the corpus patterns
-
-- Colon lead-ins, tables, and skeletons apply unchanged.
-- Variant blocks become the project's tab component if it has one;
-  otherwise paired sibling blocks.
-- Notes and caveats become the project's callout component; if none
-  exists, use the closest equivalent and flag the gap.
+- Variant code blocks use the project's tab component if one exists;
+  otherwise paired sibling blocks stay.
 - Code, terminal output, and HTTP exchanges go in the project's labeled
   code figure; never bare fences if a figure component exists.
-
-### Use the project's language
-
-- Use the project's product terms exactly as its glossary or agent
-  instructions define them.
 - Endpoints, options, fields, and error codes appear exactly as the
-  source emits them, verified against routes, schemas, and protocol
-  definitions.
-
-### Honor the project's invariants
-
-- Schema ownership: if the project generates a reference from its
-  schema, link it instead of restating fields.
-- Coverage: every documented endpoint, error, and option traces to
-  source; if the repo tests its docs samples, run those tests.
-- Navigation: place the page in the configuration as the project
-  requires, and pass its link validation.
+  source emits them, and product terms follow the project's glossary.
+- If the project generates a reference from its schema, link it instead
+  of restating fields.
+- Every documented endpoint, error, and option traces to source; if the
+  repository tests its documentation samples, run those tests and keep
+  every sample passing.
 
 ## Review checklist
 

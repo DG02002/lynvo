@@ -1,12 +1,12 @@
 # Changelog writing guidelines
 
 This guide captures the changelog and announcement house style. Its
-patterns come from full-body reads of four corpora in September and
-October 2026: twenty-five entries from an issue tracker's changelog read
-through its full-text archive, nineteen entries from a deployment
-platform's changelog, nine posts from a platform's developer news page,
-and six posts from an AI company's newsroom. The corpora established
-the shape; this guide states it as the style to write in.
+patterns come from full-body reads of four sources in September and
+October 2026: twenty-five entries from Linear's changelog read through
+its full-text archive, nineteen entries from Vercel's changelog, nine
+posts from Apple's developer news page, and six posts from OpenAI's
+newsroom. The sources established the shape; this guide states it as
+the style to write in.
 
 Treat the sample examples in this guide as evidence of the style, not as
 content to copy. Do not carry their product names, plans, or feature
@@ -253,47 +253,28 @@ the terse register:
 
 ## Project adaptation rules
 
-The patterns above are rendering-agnostic. Before writing, learn the
-target project's mechanics and map every pattern onto them.
+The patterns above are rendering-agnostic. Before writing, learn how the
+repository being documented ships release notes: where entries live —
+in-app MDX, a marketing site, GitHub releases, or a feed — how they are
+ordered, permalinked, and dated, what frontmatter or metadata they
+require, and what validation runs against their links. If the project
+has no changelog surface at all, flag that publishing one is pipeline
+work; do not invent a location.
 
-### Discover the changelog pipeline
+Then map the style onto the project's mechanics:
 
-Find and read, in the repository being documented:
-
-- Where changelog entries live: in-app MDX, a marketing site, GitHub
-  releases, or a feed — and how they are ordered, permalinked, and
-  dated.
-- The frontmatter or metadata each entry requires, and any validation
-  it passes.
-- The component set available to entries: callouts, image and video
-  pipelines, code figures.
-- The link validation that runs against entry links.
-
-Follow the project's existing conventions exactly; do not introduce new
-components or frontmatter fields without flagging it.
-
-### Map the corpus patterns
-
-- The register rules, skeletons, and fix-list grammar apply unchanged.
-- Notes and updates become the project's callout component; if none
-  exists, use the closest equivalent and flag the gap.
+- Register rules, skeletons, and fix-list grammar apply unchanged;
+  notes and updates use the project's callout component, or the closest
+  equivalent with the gap flagged.
 - Hero media uses the project's image pipeline; if none exists, flag
   that a screenshot requires pipeline work rather than silently
   omitting it.
-
-### Use the project's language
-
-- Feature names appear exactly as the product renders them, and product
-  terms follow the project's glossary.
-- Plan names match the pricing page verbatim.
-
-### Honor the project's invariants
-
+- Feature names appear exactly as the product renders them, product
+  terms follow the project's glossary, and plan names match the pricing
+  page verbatim.
 - Every behavioral claim, plan, and date is verified against the merged
-  change and the actual rollout.
-- Links resolve to docs pages that exist at publish time.
-- Entries are placed and dated as the project's changelog configuration
-  requires.
+  change and the actual rollout, and links resolve to docs pages that
+  exist at publish time.
 
 ## Review checklist
 
