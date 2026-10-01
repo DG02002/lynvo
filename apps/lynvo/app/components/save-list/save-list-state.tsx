@@ -37,10 +37,7 @@ const SaveListState = ({
       <HugeiconsIcon icon={icon} strokeWidth={1.8} className="size-7" />
     </div>
     <div className="flex max-w-md flex-col items-center gap-2">
-      <h2
-        id={titleId}
-        className="font-heading text-xl font-semibold tracking-tight"
-      >
+      <h2 id={titleId} className="font-heading text-xl font-semibold">
         {title}
       </h2>
       <p className="max-w-sm text-sm leading-6 text-muted-foreground text-pretty">

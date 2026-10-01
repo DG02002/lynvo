@@ -115,7 +115,7 @@ export default function SettingsLayout() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-6 md:px-8 md:py-10">
       <div className="mb-6 text-center md:mb-10">
-        <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
+        <h1 className="py-4 text-4xl font-normal text-balance md:py-6 md:text-6xl">
           Settings
         </h1>
       </div>

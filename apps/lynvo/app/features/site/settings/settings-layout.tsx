@@ -163,10 +163,7 @@ export function SectionHeading({
   return (
     <div className="flex flex-col gap-1">
       <h2
-        className={cn(
-          "text-lg font-normal tracking-tight",
-          destructive && "text-destructive"
-        )}
+        className={cn("text-lg font-normal", destructive && "text-destructive")}
       >
         {title}
       </h2>

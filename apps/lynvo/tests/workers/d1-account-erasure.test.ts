@@ -70,12 +70,7 @@ const seedErasableAccount = async () => {
      VALUES (?1, 'digest', 'pending', 'Erasure TV', ?2, ?3, ?4)`
   )
     .bind(
-      `ERASUR${
-        suffix
-          .replaceAll(/[^A-Z]/gi, "")
-          .toUpperCase()
-          .slice(0, 6) || "ABCDEF"
-      }`,
+      `ERASUR${suffix.slice(0, 8).toUpperCase()}`,
       user.id,
       NOW + 600_000,
       NOW

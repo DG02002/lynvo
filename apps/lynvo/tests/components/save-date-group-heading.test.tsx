@@ -13,12 +13,7 @@ describe("SaveDateGroupSection", () => {
 
     const heading = screen.getByRole("heading", { name: "Older" })
     expect(heading).toHaveAttribute("id", "save-section-older")
-    expect(heading).toHaveClass(
-      "font-heading",
-      "text-2xl",
-      "font-bold",
-      "tracking-tight"
-    )
+    expect(heading).toHaveClass("font-heading", "text-2xl", "font-bold")
     expect(screen.getByText("Saved links")).toBeInTheDocument()
   })
 })

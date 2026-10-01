@@ -41,7 +41,7 @@ export default function SecuritySettingsRoute() {
             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
           </Button>
         )}
-        <h1 className="text-2xl font-normal tracking-tight">
+        <h1 className="text-2xl font-normal">
           {showActiveSessions ? "Active sessions" : "Security and sign-in"}
         </h1>
       </header>

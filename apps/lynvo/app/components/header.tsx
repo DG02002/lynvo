@@ -1,22 +1,177 @@
-import { ChevronRightIcon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useState } from "react"
-import {
-  Link,
-  useLocation,
-  useNavigate,
-  useRouteLoaderData,
-} from "react-router"
+import { useEffect, useRef, useState } from "react"
+import { useLocation, useNavigate, useRouteLoaderData } from "react-router"
 
 import { LogoLink } from "~/components/logo"
-import { useDocsBreadcrumb } from "~/features/site/docs/docs-breadcrumb"
+import {
+  getDocumentationSection,
+  type DocumentationSectionKey,
+} from "~/features/site/docs/docs-sections"
 import { useViewTransition } from "~/lib/client-profile"
-import { isDocsRoutePathname, sitePaths } from "~/lib/paths"
+import { isDeveloperDocsRoutePathname, isDocsRoutePathname } from "~/lib/paths"
 import { signOut } from "~/lib/session-http"
+import { cn } from "~/lib/utils"
 
 import { GuestNavActions } from "./header/guest-nav-actions"
 import { LogoutDialog } from "./header/logout-dialog"
 import { UserNavActions } from "./header/user-nav-actions"
+
+const DocsSectionSwitcher = ({
+  sectionKey,
+}: {
+  sectionKey: DocumentationSectionKey
+}) => {
+  const navigate = useNavigate()
+  const [sectionListOpen, setSectionListOpen] = useState(false)
+  const sectionSwitcherRef = useRef<HTMLButtonElement>(null)
+  const sectionMenuItemRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const initialSectionMenuItemIndex = useRef(0)
+  const restoreSectionSwitcherFocus = useRef(false)
+  const currentSection = getDocumentationSection(sectionKey)
+  const otherSection = getDocumentationSection(currentSection.otherKey)
+
+  useEffect(() => {
+    if (sectionListOpen) {
+      sectionMenuItemRefs.current[initialSectionMenuItemIndex.current]?.focus()
+      initialSectionMenuItemIndex.current = 0
+    } else if (restoreSectionSwitcherFocus.current) {
+      sectionSwitcherRef.current?.focus()
+      restoreSectionSwitcherFocus.current = false
+    }
+  }, [sectionListOpen])
+
+  const closeSectionList = (restoreFocus: boolean) => {
+    restoreSectionSwitcherFocus.current = restoreFocus
+    setSectionListOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <button
+        ref={sectionSwitcherRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={sectionListOpen}
+        tabIndex={sectionListOpen ? -1 : 0}
+        onClick={() => setSectionListOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault()
+            initialSectionMenuItemIndex.current =
+              event.key === "ArrowUp" ? 1 : 0
+            setSectionListOpen(true)
+          }
+        }}
+        className={cn(
+          "flex items-center gap-1 rounded-sm px-1 text-lg font-normal tracking-tight text-muted-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          sectionListOpen && "pointer-events-none opacity-0"
+        )}
+      >
+        {currentSection.shortLabel}
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          aria-hidden="true"
+          className="size-4"
+          strokeWidth={2}
+        />
+      </button>
+      {sectionListOpen && (
+        <>
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => closeSectionList(true)}
+          />
+          <div
+            id="docs-section-menu"
+            role="menu"
+            aria-label="Documentation sections"
+            className="docs-section-switcher absolute -top-[5px] -left-[5px] z-50 flex flex-col rounded-lg border border-foreground/15 bg-background p-1 shadow-lg"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault()
+                closeSectionList(true)
+                return
+              }
+
+              if (event.key === "Tab") {
+                closeSectionList(false)
+                return
+              }
+
+              if (!(event.target instanceof HTMLButtonElement)) {
+                return
+              }
+
+              const focusedIndex = Number(event.target.dataset.sectionIndex)
+              let nextIndex: number
+
+              if (event.key === "ArrowDown") {
+                nextIndex =
+                  (focusedIndex + 1) % sectionMenuItemRefs.current.length
+              } else if (event.key === "ArrowUp") {
+                nextIndex =
+                  (focusedIndex - 1 + sectionMenuItemRefs.current.length) %
+                  sectionMenuItemRefs.current.length
+              } else if (event.key === "Home") {
+                nextIndex = 0
+              } else if (event.key === "End") {
+                nextIndex = sectionMenuItemRefs.current.length - 1
+              } else {
+                return
+              }
+
+              event.preventDefault()
+              sectionMenuItemRefs.current[nextIndex]?.focus()
+            }}
+          >
+            {[currentSection, otherSection].map((candidate, index) => {
+              const isCurrentSection = candidate.key === currentSection.key
+
+              return (
+                <button
+                  key={candidate.key}
+                  ref={(element) => {
+                    sectionMenuItemRefs.current[index] = element
+                  }}
+                  data-section-index={index}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={isCurrentSection}
+                  tabIndex={-1}
+                  onClick={() => {
+                    closeSectionList(true)
+                    if (!isCurrentSection) {
+                      void navigate(candidate.root)
+                    }
+                  }}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-4 rounded-sm px-1 text-lg font-normal tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    isCurrentSection
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {candidate.shortLabel}
+                  <HugeiconsIcon
+                    icon={Tick02Icon}
+                    aria-hidden="true"
+                    className={cn(
+                      "size-4 shrink-0",
+                      !isCurrentSection && "invisible"
+                    )}
+                    strokeWidth={2}
+                  />
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const navigate = useNavigate()
@@ -29,7 +184,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const viewTransition = useViewTransition()
   const isDocsRoute = isDocsRoutePathname(pathname)
-  const breadcrumb = useDocsBreadcrumb()
+  const isDeveloperRoute = isDeveloperDocsRoutePathname(pathname)
 
   const handleLogout = async () => {
     try {
@@ -80,7 +235,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
         <div
           className={
             isDocsRoute
-              ? "flex h-full shrink-0 items-center gap-2 border-r border-border px-3 sm:px-4 lg:w-72 lg:gap-3 lg:px-5 xl:w-80 xl:px-6"
+              ? "flex h-full shrink-0 items-center gap-2 border-r border-border px-6 md:px-8 lg:w-72 lg:gap-3 lg:px-5 xl:w-80 xl:px-6"
               : "flex shrink-0 items-center"
           }
         >
@@ -91,45 +246,17 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
           />
           {isDocsRoute && (
             <>
-              <span aria-hidden="true" className="h-5 w-px bg-border" />
-              <Link
-                to={sitePaths.docs}
-                prefetch="intent"
-                aria-current={pathname === sitePaths.docs ? "page" : undefined}
-                className="rounded-sm text-sm font-medium text-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                Docs
-              </Link>
+              <span aria-hidden="true" className="h-5 w-0.5 bg-foreground/25" />
+              <DocsSectionSwitcher
+                sectionKey={isDeveloperRoute ? "developer" : "user"}
+              />
             </>
           )}
         </div>
 
         {isDocsRoute ? (
           <div className="min-w-0 flex-1">
-            <div className="mx-auto flex h-full w-full max-w-[80rem] items-center gap-2 px-3 sm:px-4 lg:px-8 xl:px-10">
-              {breadcrumb && (
-                <nav
-                  aria-label="Breadcrumb"
-                  className="flex min-w-0 items-center gap-2 overflow-hidden text-sm"
-                >
-                  <span className="sr-only sm:not-sr-only sm:shrink-0 sm:text-muted-foreground">
-                    {breadcrumb.group}
-                  </span>
-                  <HugeiconsIcon
-                    icon={ChevronRightIcon}
-                    aria-hidden="true"
-                    className="hidden size-3.5 shrink-0 text-muted-foreground sm:block"
-                    strokeWidth={1.5}
-                  />
-                  <span
-                    aria-current="page"
-                    className="truncate font-medium text-foreground"
-                  >
-                    {breadcrumb.pageLabel}
-                  </span>
-                </nav>
-              )}
-              <div className="min-w-0 flex-1" />
+            <div className="mx-auto flex h-full w-full max-w-[80rem] items-center justify-end px-6 md:px-8 xl:px-10">
               {navigationActions}
             </div>
           </div>

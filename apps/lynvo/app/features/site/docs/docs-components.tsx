@@ -1,6 +1,8 @@
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   ApiIcon,
+  ArrowDown01Icon,
   ArrowUpRight01Icon,
   CopyIcon,
   FileEmpty01Icon,
@@ -19,6 +21,7 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentProps,
   type ReactNode,
 } from "react"
@@ -28,7 +31,6 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
@@ -177,6 +179,13 @@ function DocSection({ id, children }: { id: string; children: ReactNode }) {
   )
 }
 
+const subscribeToLocationHash = (onHashChange: () => void) => {
+  window.addEventListener("hashchange", onHashChange)
+  return () => window.removeEventListener("hashchange", onHashChange)
+}
+
+const getLocationHash = () => window.location.hash
+
 export function DocsFaq({
   question,
   children,
@@ -184,18 +193,52 @@ export function DocsFaq({
   question: string
   children: ReactNode
 }) {
-  const itemId = useId()
+  const fallbackId = useId().replaceAll(/[^a-zA-Z0-9]/g, "")
+  // A stable slug keeps deep links readable (docs page URL + #faq-slug);
+  // questions without any slugifiable character fall back to useId.
+  const itemId = `faq-${createHeadingId(question) || fallbackId}`
+  const locationHash = useSyncExternalStore(
+    subscribeToLocationHash,
+    getLocationHash,
+    () => ""
+  )
+  // A hash targeting this item is a pointer that opens it — on deep links
+  // and in-page anchor clicks alike. null means the user has not interacted
+  // yet, so the hash alone decides; after a manual toggle the user's choice
+  // wins until navigation changes the hash target again.
+  const [userIntent, setUserIntent] = useState<boolean | null>(null)
+  const open = userIntent ?? locationHash === `#${itemId}`
 
   return (
-    <Accordion className="not-typeset my-3 rounded-none border-0">
+    <Accordion
+      className="docs-faq not-typeset rounded-none border-0"
+      value={open ? [itemId] : []}
+      onValueChange={(value) => setUserIntent(value.includes(itemId))}
+    >
+      {/* The shared accordion item highlights open items with a background;
+          docs FAQ rows stay plain, separated only by the list divider. */}
       <AccordionItem
+        id={itemId}
         value={itemId}
-        className="border-border/50 data-open:bg-transparent"
+        className="data-open:bg-transparent"
       >
-        <AccordionTrigger className="py-5 text-left text-sm font-normal hover:no-underline">
-          {question}
-        </AccordionTrigger>
-        <AccordionContent className="pb-5 leading-6 text-muted-foreground">
+        <AccordionPrimitive.Header className="group/heading flex items-center">
+          <AccordionPrimitive.Trigger className="group/accordion-trigger flex flex-1 items-center gap-3 rounded-sm py-4 pr-2 text-left text-sm font-normal outline-none hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              aria-hidden="true"
+              className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
+              strokeWidth={2}
+            />
+            <span className="min-w-0 flex-1">{question}</span>
+          </AccordionPrimitive.Trigger>
+          <DocsHeadingAnchor
+            headingId={itemId}
+            label={question}
+            onClick={() => setUserIntent(true)}
+          />
+        </AccordionPrimitive.Header>
+        <AccordionContent className="pl-3 pb-4 leading-6 text-muted-foreground">
           {children}
         </AccordionContent>
       </AccordionItem>
@@ -212,7 +255,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   }
 
   return (
-    <figure className="not-typeset my-6">
+    <figure className="not-typeset my-10">
       <button
         type="button"
         onClick={() => setZoomOpen(true)}
@@ -234,10 +277,10 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
           the shared DialogContent always renders a blurred overlay. */}
       <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Backdrop className="docs-image-backdrop fixed inset-0 isolate z-50 bg-white dark:bg-black" />
+          <DialogPrimitive.Backdrop className="fixed inset-0 isolate z-50 bg-white data-open:animate-in data-open:fade-in-0 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-200 dark:bg-black motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none" />
           <DialogPrimitive.Popup
             aria-label={alt}
-            className="docs-image-popup fixed top-1/2 left-1/2 z-50 outline-none"
+            className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
           >
             <img
               src={image.source}
@@ -301,9 +344,9 @@ function CodeBlock({
   return (
     <figure
       ref={figureRef}
-      className="not-typeset my-2 overflow-hidden rounded-lg border"
+      className="not-typeset my-5 overflow-hidden rounded-lg border border-foreground/15"
     >
-      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b bg-muted/30 pl-4 pr-1 text-sm text-foreground">
+      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/15 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
         <span className="flex min-w-0 items-center gap-2">
           <span aria-hidden="true" className="size-4 shrink-0">
             <CodeLabelIcon label={label} />
@@ -377,7 +420,7 @@ const AndroidTvRemoteTroubleshooting = () => (
       <div className="min-w-0 flex-1">
         <h3
           id="virtual-remote-troubleshooting-title"
-          className="text-lg font-medium tracking-tight"
+          className="text-lg font-medium"
         >
           Can’t connect the virtual remote?
         </h3>
@@ -423,12 +466,15 @@ const createHeadingId = (children: ReactNode) =>
 const DocsHeadingAnchor = ({
   headingId,
   label,
+  onClick,
 }: {
   headingId: string
   label: string
+  onClick?: ComponentProps<"a">["onClick"]
 }) => (
   <a
     href={`#${headingId}`}
+    onClick={onClick}
     aria-label={`Link to ${label}`}
     className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-blue-500 opacity-0 transition-[opacity,scale] duration-200 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-400"
   >
@@ -525,7 +571,7 @@ export const docsComponents: MDXComponents = {
     <pre
       {...props}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 text-[0.8125rem] leading-6",
+        "overflow-x-auto bg-transparent p-4 font-jetbrains-mono text-[0.8125rem] font-medium leading-6",
         className
       )}
     />

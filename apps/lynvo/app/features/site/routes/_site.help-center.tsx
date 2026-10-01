@@ -82,7 +82,7 @@ const HelpCenter = () => (
   <div className="w-full px-6 py-12 md:px-8 lg:px-10 xl:px-14">
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 sm:gap-12">
       <header className="flex flex-col items-center gap-4 text-center">
-        <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
+        <h1 className="py-4 text-4xl font-normal text-balance md:py-6 md:text-6xl">
           Help center
         </h1>
       </header>
@@ -99,7 +99,7 @@ const HelpCenter = () => (
             <div className="row-start-1 flex items-center sm:row-span-2 sm:self-center">
               <option.logo />
             </div>
-            <h2 className="col-start-2 row-start-1 self-center text-xl font-normal tracking-tight">
+            <h2 className="col-start-2 row-start-1 self-center text-xl font-normal">
               {option.title}
             </h2>
             <p className="col-span-2 row-start-2 max-w-md text-sm leading-6 text-muted-foreground text-pretty sm:col-span-1 sm:col-start-2">

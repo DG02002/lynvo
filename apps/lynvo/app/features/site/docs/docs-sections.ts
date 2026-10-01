@@ -2,8 +2,10 @@ export type DocumentationSectionKey = DocumentationPageContext["section"]
 
 export interface DocumentationSection {
   readonly key: DocumentationSectionKey
+  readonly otherKey: DocumentationSectionKey
   readonly root: "/docs" | "/developer"
   readonly label: string
+  readonly shortLabel: string
   readonly homeTitle: string
   readonly homeDescription: string
 }
@@ -11,17 +13,21 @@ export interface DocumentationSection {
 export const documentationSections: readonly DocumentationSection[] = [
   {
     key: "user",
+    otherKey: "developer",
     root: "/docs",
     label: "Documentation",
-    homeTitle: "Lynvo documentation",
+    shortLabel: "Docs",
+    homeTitle: "Lynvo Docs",
     homeDescription:
       "Save supported links and open them in the player you already use.",
   },
   {
     key: "developer",
+    otherKey: "user",
     root: "/developer",
     label: "Developers",
-    homeTitle: "Developer documentation",
+    shortLabel: "Developer",
+    homeTitle: "Developer Docs",
     homeDescription:
       "Build and connect a Lynvo-compatible Custom Plugin Server for the Sources you support.",
   },

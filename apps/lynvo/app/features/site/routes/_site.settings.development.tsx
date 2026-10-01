@@ -4,7 +4,7 @@ export default function DevelopmentSettingsRoute() {
   return (
     <section className="flex flex-col">
       <header className="pb-4">
-        <h1 className="text-2xl font-normal tracking-tight">Development</h1>
+        <h1 className="text-2xl font-normal">Development</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Testing controls for local development. These settings apply only to
           this browser.

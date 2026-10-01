@@ -59,7 +59,7 @@ const SignIn = () => {
           className="mx-auto flex w-full max-w-sm flex-col gap-6 text-center"
         >
           <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
-          <h1 className="mb-4 text-4xl font-normal tracking-tight">
+          <h1 className="mb-4 text-4xl font-normal">
             {authCopy.signin.pageHeading}
           </h1>
           {errorMessage ? <AuthFormAlert message={errorMessage} /> : null}

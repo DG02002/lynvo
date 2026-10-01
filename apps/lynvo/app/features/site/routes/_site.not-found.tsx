@@ -15,7 +15,7 @@ export const meta = (_: Route.MetaArgs) => [
 
 const NotFound = () => (
   <section className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-    <h1 className="text-4xl font-normal tracking-tight text-balance sm:text-6xl">
+    <h1 className="text-4xl font-normal text-balance sm:text-6xl">
       The page you’re looking for can’t be found.
     </h1>
     <div className="mt-8 flex flex-wrap justify-center gap-3">
