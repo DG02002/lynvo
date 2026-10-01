@@ -234,6 +234,8 @@ When work cannot finish inside one request, return empty `nodes` with a `pending
 
 A response may also carry `usageDelta`: an array of `{ "id", "used", "unit?" }` entries reporting the units this Extraction consumed, with `id` matching a `/usage` metric id. It is advisory; it never replaces the [usage response](/developer/usage-limits).
 
+Lynvo owns layout, opened markers, selected links, and link caching. An opened marker only records that an item was opened; Lynvo does not store playback positions or resume state. Do not return interface instructions.
+
 ## Responses
 
 ### 200: The Extraction succeeded or is pending
@@ -243,7 +245,5 @@ The body is the success envelope above. An empty `nodes` array with `pending` me
 ### 400: The target is unsupported or the body is malformed
 
 `UNSUPPORTED_URL` when no matcher or Plugin accepts a URL target, `UNSUPPORTED_TARGET` for an unsupported target kind, `BAD_REQUEST` for an unparseable or invalid body. See [protocol errors](/developer/errors) for every code, its HTTP status, and the failures the runtime maps before your Plugin runs.
-
-Lynvo owns layout, opened markers, selected links, and link caching. An opened marker only records that an item was opened; Lynvo does not store playback positions or resume state. Do not return interface instructions.
 
 </DocSection>

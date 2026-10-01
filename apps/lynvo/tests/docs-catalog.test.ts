@@ -9,6 +9,7 @@ import {
   getDocumentationPageUrl,
   getDocumentationSectionKeyForPath,
   getDocumentationSlug,
+  getDeveloperDocsRedirectSlugForSection,
   getMergedDeveloperDocsSlug,
 } from "~/features/site/docs/docs-sections"
 
@@ -57,5 +58,38 @@ describe("documentation sections", () => {
     expect(getMergedDeveloperDocsSlug("media-nodes")).toBe("extract")
     expect(getMergedDeveloperDocsSlug("success-responses")).toBe("extract")
     expect(getMergedDeveloperDocsSlug("extract")).toBeUndefined()
+  })
+
+  it("dispatches redirects by documentation section", () => {
+    expect(
+      getDeveloperDocsRedirectSlugForSection("user", "plugin-server")
+    ).toBe("")
+    expect(
+      getDeveloperDocsRedirectSlugForSection(
+        "user",
+        "plugin-server/media-nodes"
+      )
+    ).toBe("media-nodes")
+    expect(
+      getDeveloperDocsRedirectSlugForSection("developer", "media-nodes")
+    ).toBe("extract")
+    expect(
+      getDeveloperDocsRedirectSlugForSection("developer", "extract")
+    ).toBeUndefined()
+  })
+
+  it.each(["extraction-requests", "media-nodes", "success-responses"])(
+    "redirects the merged %s page to extract",
+    (slug) => {
+      expect(getDeveloperDocsRedirectSlugForSection("developer", slug)).toBe(
+        "extract"
+      )
+    }
+  )
+
+  it("leaves current pages without a redirect slug", () => {
+    expect(
+      getDeveloperDocsRedirectSlugForSection("developer", "extract")
+    ).toBeUndefined()
   })
 })

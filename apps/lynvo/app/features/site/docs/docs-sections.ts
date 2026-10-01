@@ -58,9 +58,7 @@ export const getDocumentationContentPath = (
   slug: string
 ) => `./${key === "developer" ? developerContentPrefix : ""}${slug}.mdx`
 
-export const getDeveloperDocsRedirectSlug = (
-  slug: string
-): string | undefined => {
+const getDeveloperDocsRedirectSlug = (slug: string): string | undefined => {
   if (slug === legacyDeveloperSlug) {
     return ""
   }
@@ -74,14 +72,22 @@ export const getDeveloperDocsRedirectSlug = (
 
 // Slugs whose pages were merged into another page. The mapping keeps already
 // published URLs as redirects instead of 404s.
-const mergedDeveloperSlugs = new Map([
-  ["extraction-requests", "extract"],
-  ["media-nodes", "extract"],
-  ["success-responses", "extract"],
+const mergedDeveloperSlugs = new Set([
+  "extraction-requests",
+  "media-nodes",
+  "success-responses",
 ])
 
 export const getMergedDeveloperDocsSlug = (slug: string): string | undefined =>
-  mergedDeveloperSlugs.get(slug)
+  mergedDeveloperSlugs.has(slug) ? "extract" : undefined
+
+export const getDeveloperDocsRedirectSlugForSection = (
+  section: DocumentationSectionKey,
+  slug: string
+): string | undefined =>
+  section === "user"
+    ? getDeveloperDocsRedirectSlug(slug)
+    : getMergedDeveloperDocsSlug(slug)
 
 export const getDocumentationSection = (key: DocumentationSectionKey) => {
   const section = documentationSections.find((item) => item.key === key)

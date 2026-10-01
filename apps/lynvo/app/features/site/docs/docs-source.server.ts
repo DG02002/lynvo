@@ -7,9 +7,8 @@ import { getDocumentationImageExtension } from "./docs-image-assets"
 import { cleanDocumentationMarkdown } from "./docs-markdown"
 import type { DocsLoaderData, DocsRouteParams } from "./docs-section-routes"
 import {
-  getDeveloperDocsRedirectSlug,
+  getDeveloperDocsRedirectSlugForSection,
   getDocumentationContentPath,
-  getMergedDeveloperDocsSlug,
   type DocumentationSectionKey,
 } from "./docs-sections"
 
@@ -241,10 +240,10 @@ export const createDocsMarkdownLoader =
     const slug = params["*"]
 
     if (slug) {
-      const redirectedSlug =
-        section === "user"
-          ? getDeveloperDocsRedirectSlug(slug)
-          : getMergedDeveloperDocsSlug(slug)
+      const redirectedSlug = getDeveloperDocsRedirectSlugForSection(
+        section,
+        slug
+      )
       if (redirectedSlug !== undefined) {
         return redirect(
           redirectedSlug
