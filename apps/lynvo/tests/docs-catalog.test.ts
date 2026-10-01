@@ -9,6 +9,7 @@ import {
   getDocumentationPageUrl,
   getDocumentationSectionKeyForPath,
   getDocumentationSlug,
+  getMergedDeveloperDocsSlug,
 } from "~/features/site/docs/docs-sections"
 
 describe("documentation heading IDs", () => {
@@ -49,5 +50,12 @@ describe("documentation sections", () => {
     const roots = documentationSections.map((section) => section.root)
 
     expect(new Set(roots).size).toBe(documentationSections.length)
+  })
+
+  it("redirects every merged developer slug to its replacement page", () => {
+    expect(getMergedDeveloperDocsSlug("extraction-requests")).toBe("extract")
+    expect(getMergedDeveloperDocsSlug("media-nodes")).toBe("extract")
+    expect(getMergedDeveloperDocsSlug("success-responses")).toBe("extract")
+    expect(getMergedDeveloperDocsSlug("extract")).toBeUndefined()
   })
 })

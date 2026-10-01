@@ -1,0 +1,249 @@
+---
+title: Extraction
+description: The POST /extract operation, its request targets, Media Nodes, and the success envelope.
+navLabel: Extraction
+contentType: Reference
+---
+
+<DocSection id="extract">
+
+`POST /extract` resolves a Source URL or a previously emitted unresolved item into Media Nodes. It is the only endpoint that runs Source code: the runtime authenticates and validates the request, your Plugin maps the Source data to nodes, and the runtime validates and returns the response.
+
+<CodeBlock label="POST /extract">
+
+```http
+POST /extract
+Authorization: Bearer YOUR_PLUGIN_SERVER_API_KEY
+Content-Type: application/json
+```
+
+</CodeBlock>
+
+The request authenticates with the Plugin Server API key in the `Authorization` header. See [bearer authentication](/developer/authentication) for how the key is validated and stored.
+
+## Request body
+
+The request envelope supports these fields:
+
+| Name        | Type   | Required | Description                                                                                                         |
+| ----------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `input`     | object | Yes      | A `source` input or a `node` input; see below                                                                       |
+| `pluginId`  | string | No       | Selects a specific Plugin from the manifest catalog                                                                 |
+| `password`  | string | No       | Content password for the Source; attempt-scoped, never persisted by Lynvo                                           |
+| `basicAuth` | object | No       | `{ "username", "password" }` for source-side HTTP Basic Auth; sent only when the manifest sets `features.basicAuth` |
+| `proxy`     | object | No       | `{ "provider", "token" }` carrying the user's own proxy token for this request's upstream calls                     |
+
+A `source` input carries one field, `sourceUrl`. A `node` input carries `nodeUrl`, `resourceId`, or both; a node input with neither fails with the schema message `Node requires nodeUrl or resourceId`. The protocol package exports `createSourceExtractRequest` and `createNodeExtractRequest` helpers that build these envelopes with the optional fields.
+
+To request the first Extraction of a Source URL, send a `source` input:
+
+<CodeBlock label="POST /extract">
+
+```json
+{
+  "input": {
+    "kind": "source",
+    "sourceUrl": "https://media.example.com/watch/123"
+  }
+}
+```
+
+</CodeBlock>
+
+To follow up on an unresolved item, send the Node identity returned by the same Plugin Server:
+
+<CodeBlock label="POST /extract">
+
+```json
+{
+  "pluginId": "example-media",
+  "input": {
+    "kind": "node",
+    "nodeUrl": "https://media.example.com/folders/bonus",
+    "resourceId": "bonus_v1"
+  }
+}
+```
+
+</CodeBlock>
+
+Two separate credentials can ride an Extraction request, and they authenticate different hops. The bearer key in the `Authorization` header authenticates Lynvo to the Plugin Server. The `basicAuth` and `password` fields authenticate the Plugin Server to the Source. Lynvo removes URL userinfo before forwarding a target and does not send the original top-level Source URL on unresolved item follow-up requests. A `proxy` token must be used for that request's upstream proxy calls instead of the server's shared proxy credits, and must never be logged.
+
+## Response nodes
+
+A Media Node is a normalized playable item, folder, group, or unresolved item. Plugins return four product-level node types, which protocol version `1.0` represents with three `kind` values:
+
+| Product item       | Protocol kind | Required fields                         |
+| ------------------ | ------------- | --------------------------------------- |
+| Playable item      | `playable`    | `label`, `url`                          |
+| Display-only group | `group`       | `label`, `children`                     |
+| Selectable folder  | `group`       | `label`, `selectable: true`, `children` |
+| Unresolved item    | `resolvable`  | `label`, `nodeUrl` or `resourceId`      |
+
+Every node also accepts an optional `id` (a stable identifier, recommended), `badge`, `size`, `sourceName`, and a vendor-scoped `extensions` object.
+
+### Return a playable item
+
+Use `playable` when the URL points directly to a video or audio file. Lynvo can send this URL to the selected media player without another Extraction request:
+
+<CodeBlock label="Playable node">
+
+```ts
+const playableItem = {
+  kind: "playable",
+  id: "episode-1",
+  label: "Episode 1",
+  url: "https://cdn.example.com/episode-1.mp4",
+  badge: "1080p",
+  size: "1.4 GB",
+  expiry: 1767225600000,
+  status: "up",
+}
+```
+
+</CodeBlock>
+
+`status` is `up` only when a bounded probe returned a usable non-HTML response, `down` for failed statuses or HTML responses, and `unknown` when the probe established neither. `expiry` is an optional Unix timestamp in milliseconds, with `expirySource` identifying where it came from: `signed-url`, `cache-control`, or `expires-header`. Response-header-derived expiry is an estimate, not a cryptographic guarantee.
+
+`rangeRequest` reports whether the media endpoint honored a `Range: bytes=0-0` probe: `supported` when it returned `206` with `Content-Range`, `unsupported` when it returned `200`, and `unknown` otherwise. Cancel the probe's response body after reading headers so a probe never downloads the media file, and omit health metadata entirely when a final endpoint requires credentials the Plugin Server cannot reproduce for a safe probe.
+
+### Return a display-only group
+
+Use a non-selectable `group` to label and organize child nodes. A group cannot be selected as a playable item or folder, and it carries no `url` or `nodeUrl`:
+
+<CodeBlock label="Group node">
+
+```ts
+const seasonGroup = {
+  kind: "group",
+  id: "season-1",
+  label: "Season 1",
+  selectable: false,
+  children: [playableItem],
+}
+```
+
+</CodeBlock>
+
+### Return a selectable folder
+
+Set `selectable` to `true` when the group represents a whole folder. The folder includes its children in the current response:
+
+<CodeBlock label="Folder node">
+
+```ts
+const selectableFolder = {
+  kind: "group",
+  id: "all-seasons",
+  label: "All seasons",
+  selectable: true,
+  children: [seasonGroup],
+}
+```
+
+</CodeBlock>
+
+`selectable` defaults to `false`.
+
+### Return an unresolved item
+
+Use `resolvable` when loading a folder or playable item requires another request. Include a `nodeUrl`, a `resourceId`, or both — a node with neither fails with the schema message `Node requires nodeUrl or resourceId`:
+
+<CodeBlock label="Unresolved item node">
+
+```ts
+const unresolvedItem = {
+  kind: "resolvable",
+  id: "bonus-content",
+  label: "Bonus content",
+  badge: "Open folder",
+  nodeUrl: "https://media.example.com/folders/bonus",
+  resourceId: "bonus_v1",
+}
+```
+
+</CodeBlock>
+
+`resolutionKind` may state what the item resolves to: `folder` for unresolved folder contents or `mirrors` for alternative playable routes. Lynvo interprets an omitted `resolutionKind` as `mirrors`.
+
+The same Plugin Server must resolve every Node identity it emits, and Lynvo sends that identity back to the same server when someone opens the item. Never include credentials in `nodeUrl`, `resourceId`, labels, or metadata.
+
+## Successful responses
+
+A successful response carries Plugin metadata, the array of Media Nodes, and a vendor extensions object:
+
+<CodeBlock label="Successful response">
+
+```json
+{
+  "plugin": {
+    "pluginServerId": "com.example.my-plugin-server",
+    "displayName": "My Plugin Server",
+    "pluginId": "example-media",
+    "pluginName": "Example Media",
+    "pageTitle": "Example collection"
+  },
+  "nodes": [
+    {
+      "kind": "playable",
+      "id": "episode-1",
+      "label": "Episode 1",
+      "url": "https://cdn.example.com/episode-1.mp4"
+    }
+  ],
+  "extensions": {}
+}
+```
+
+</CodeBlock>
+
+The `plugin` object supports:
+
+| Field            | Required | Purpose                                                |
+| ---------------- | -------- | ------------------------------------------------------ |
+| `pluginServerId` | Yes      | Matches the manifest                                   |
+| `displayName`    | Yes      | Plugin Server display name                             |
+| `iconUrl`        | No       | Plugin Server icon; direct HTTPS WebP, PNG, or SVG URL |
+| `pluginId`       | No       | Matches a declared Plugin                              |
+| `pluginName`     | No       | Plugin display name                                    |
+| `pluginIconUrl`  | No       | Plugin icon; direct HTTPS WebP, PNG, or SVG URL        |
+| `pageTitle`      | No       | Extracted page title                                   |
+| `audio`          | No       | Audio-language summary                                 |
+
+`nodes` is a required array, and `extensions` defaults to an empty object.
+
+When work cannot finish inside one request, return empty `nodes` with a `pending` object instead of holding the request open:
+
+<CodeBlock label="Pending response">
+
+```json
+{
+  "plugin": {
+    "pluginServerId": "com.example.my-plugin-server",
+    "displayName": "My Plugin Server"
+  },
+  "nodes": [],
+  "extensions": {},
+  "pending": { "retryAfterSeconds": 30, "resumeNodeId": "task-42" }
+}
+```
+
+</CodeBlock>
+
+`retryAfterSeconds` is a positive number of seconds after which Lynvo re-issues the same request; keep it under 300. `resumeNodeId` is an optional opaque handle Lynvo echoes back untouched as the node input's `resourceId` on the retry. A pending response is not an error and not an empty success — the server must eventually resolve a retry into nodes or an error.
+
+A response may also carry `usageDelta`: an array of `{ "id", "used", "unit?" }` entries reporting the units this Extraction consumed, with `id` matching a `/usage` metric id. It is advisory; it never replaces the [usage response](/developer/usage-limits).
+
+## Responses
+
+### 200: The Extraction succeeded or is pending
+
+The body is the success envelope above. An empty `nodes` array with `pending` means the client must retry, not that the Source has no items.
+
+### 400: The target is unsupported or the body is malformed
+
+`UNSUPPORTED_URL` when no matcher or Plugin accepts a URL target, `UNSUPPORTED_TARGET` for an unsupported target kind, `BAD_REQUEST` for an unparseable or invalid body. See [protocol errors](/developer/errors) for every code, its HTTP status, and the failures the runtime maps before your Plugin runs.
+
+Lynvo owns layout, opened markers, selected links, and link caching. An opened marker only records that an item was opened; Lynvo does not store playback positions or resume state. Do not return interface instructions.
+
+</DocSection>

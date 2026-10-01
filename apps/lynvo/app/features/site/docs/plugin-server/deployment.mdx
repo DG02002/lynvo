@@ -7,7 +7,7 @@ contentType: Tutorial
 
 <DocSection id="deployment">
 
-Deploy the Worker only after the local [contract checks](/developer/testing) pass and the production Plugin Server API key is configured as a Cloudflare secret.
+Deploying publishes the Worker to a public HTTPS origin and switches it from your local key to a production secret. Do it only after the local [contract checks](/developer/testing) pass — the deploy command does not run them for you.
 
 To sign in to Wrangler and store the production bearer key, run:
 
@@ -33,13 +33,13 @@ pnpm deploy
 
 </CodeBlock>
 
-`pnpm build` optimizes Plugin icons and runs a Wrangler dry run; `pnpm deploy` runs the same image pass and creates or updates the Worker.
+`pnpm build` optimizes Plugin icons and bundles the Worker with a Wrangler dry run; `pnpm deploy` runs the same image pass and creates or updates the Worker for real.
 
 ## Verify the deployment
 
-Call the four required endpoints at the deployed HTTPS origin — `/manifest`, `/verify`, `/usage`, and `/extract`. If the manifest enables discovery, call `POST /discover` too. Confirm the production secret works and the manifest contains only production URLs.
+A green deploy is not a working server — confirm it from the outside. Call the four required endpoints at the deployed HTTPS origin: `/manifest`, `/verify`, `/usage`, and `/extract`. If the manifest enables discovery, call `POST /discover` too. The production secret must work, and the manifest must contain only production URLs, with nothing pointing back at `localhost` or a tunnel hostname.
 
-Keep the deployment origin stable after users connect it. Bound upstream requests, reject unsupported hosts, and record structured logs without credentials.
+Two rules outlive deployment. Keep the origin stable: users connect it once, and Lynvo keeps sending Extraction requests to that origin. And keep the operational hygiene you tested locally — bounded upstream requests, rejected unsupported hosts, structured logs without credentials.
 
 When the deployed origin responds correctly, [connect the Plugin Server to Lynvo](/developer/connect).
 

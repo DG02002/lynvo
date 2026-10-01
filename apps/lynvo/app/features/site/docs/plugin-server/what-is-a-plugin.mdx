@@ -1,19 +1,17 @@
 ---
-title: What is a Plugin?
+title: Plugins
 description: Learn how a Plugin recognizes one Source and converts its pages into Media Nodes.
-navLabel: What is a Plugin?
+navLabel: Plugins
 contentType: Conceptual
 ---
 
 <DocSection id="what-is-a-plugin">
 
-A Plugin is a Source-specific implementation hosted by a Plugin Server. It recognizes URLs from one Source, fetches the Source's data, and converts it into Media Nodes: playable items, folders, groups, and unresolved items.
+A Plugin is a Source-specific implementation hosted by a Plugin Server. Where the server carries the protocol, the Plugin carries the Source: it recognizes one site's URLs, fetches the Source's data, and maps that data to Media Nodes.
 
-For example, a Plugin may support a self-hosted file index. It matches that index's domain, handles its authentication rules, reads its folders and files, and returns playable items and unresolved items. The Plugin Server handles the shared protocol around that work.
+A Plugin for a self-hosted file index shows the shape of the job. It matches the index's domain, follows the index's authentication rules, reads its folders and files, and returns playable items and unresolved items. Everything protocol-shaped — bearer authentication, request validation, usage enforcement — stays in the [Plugin Server runtime](/developer/what-is-a-plugin-server), so every Plugin follows the same contract.
 
 ## What a Plugin owns
-
-A Plugin owns everything specific to its Source:
 
 - Its stable Plugin ID, display name, version, status, and icon
 - Host and path matchers
@@ -22,13 +20,13 @@ A Plugin owns everything specific to its Source:
 - Playable item, folder, group, and unresolved item creation
 - Source-specific errors and test fixtures
 
-A Plugin does not implement bearer authentication, protocol routes, global usage enforcement, or Lynvo interface behavior. Those concerns stay in the Plugin Server runtime so every Plugin follows the same contract.
+What it does not own is just as important. A Plugin implements no bearer authentication, no protocol routes, no global usage enforcement, and no Lynvo interface behavior. Keep those in the runtime.
 
 Register every user-visible Plugin under `extensions.lynvo.plugins` in the [manifest](/developer/manifest). Lynvo reads this catalog to show the Plugin in [Settings](/settings/plugins) and route supported URLs to the Plugin Server.
 
 ## How an Extraction flows
 
-The Plugin Server is the deployed service. Plugins are the Source integrations that run inside it:
+One request passes through both layers, server first:
 
 1. Lynvo matches a URL against the Plugin Server manifest
 2. Lynvo sends the Extraction request to the Plugin Server
@@ -37,6 +35,6 @@ The Plugin Server is the deployed service. Plugins are the Source integrations t
 5. The Plugin converts the Source response into Media Nodes
 6. The Plugin Server validates and returns the protocol response
 
-To go deeper, use the [Media Node reference](/developer/media-nodes) when you replace the generated example, and the [route runtime reference](/developer/hono-routes) for the wiring around your Plugin.
+To go deeper, use the [Extraction reference](/developer/extract) when you replace the generated example, and the [route runtime reference](/developer/hono-routes) for the wiring around your Plugin.
 
 </DocSection>

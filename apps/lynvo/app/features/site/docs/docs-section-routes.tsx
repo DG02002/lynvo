@@ -14,6 +14,7 @@ import { DocsHome } from "./docs-home"
 import {
   getDeveloperDocsRedirectSlug,
   getDocumentationSection,
+  getMergedDeveloperDocsSlug,
   type DocumentationSectionKey,
 } from "./docs-sections"
 
@@ -125,7 +126,7 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
     const redirectedSlug =
       section === "user"
         ? getDeveloperDocsRedirectSlug(requestedSlug)
-        : undefined
+        : getMergedDeveloperDocsSlug(requestedSlug)
     if (redirectedSlug !== undefined) {
       return redirect(
         redirectedSlug ? `/developer/${redirectedSlug}` : "/developer"

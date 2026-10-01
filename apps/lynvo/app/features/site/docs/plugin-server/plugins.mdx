@@ -69,6 +69,6 @@ A statically matched Plugin must declare `hosts` or `matchers`. A `probe` Plugin
 
 The Plugin owns Source credentials, upstream requests, response parsing, Media Node creation, and Source-specific errors. The shared runtime owns bearer authentication, protocol validation, usage enforcement, and response serialization.
 
-For multiple Plugins, keep one catalog for manifest metadata and request dispatch. Do not add Source-specific conditions to the Hono route layer — see the [route runtime reference](/developer/hono-routes) for the wiring, and the [Media Node reference](/developer/media-nodes) for the nodes your Plugin returns.
+For multiple Plugins, keep one catalog for manifest metadata and request dispatch. Do not add Source-specific conditions to the Hono route layer — see the [route runtime reference](/developer/hono-routes) for the wiring, and the [Extraction reference](/developer/extract) for the nodes your Plugin returns.
 
 </DocSection>

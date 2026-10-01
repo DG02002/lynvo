@@ -49,6 +49,6 @@ JSON endpoints use `Content-Type: application/json`, and failures return protoco
 
 The response is either `{"matched": false}` or a Plugin match with `confidence` set to `pattern` or `verified`. Discovery must stay bounded, safe against SSRF, and must not persist credentials.
 
-The remaining endpoints have their own references: [authentication](/developer/authentication) for the bearer key, the [manifest](/developer/manifest) for identity and matchers, [Extraction requests](/developer/extraction-requests) and [Media Nodes](/developer/media-nodes) for `/extract`, and [usage limits](/developer/usage-limits) for `/usage`.
+The remaining endpoints have their own references: [authentication](/developer/authentication) for the bearer key, the [manifest](/developer/manifest) for identity and matchers, the [Extraction reference](/developer/extract) for `/extract`, and [usage limits](/developer/usage-limits) for `/usage`.
 
 </DocSection>

@@ -72,6 +72,17 @@ export const getDeveloperDocsRedirectSlug = (
   return undefined
 }
 
+// Slugs whose pages were merged into another page. The mapping keeps already
+// published URLs as redirects instead of 404s.
+const mergedDeveloperSlugs = new Map([
+  ["extraction-requests", "extract"],
+  ["media-nodes", "extract"],
+  ["success-responses", "extract"],
+])
+
+export const getMergedDeveloperDocsSlug = (slug: string): string | undefined =>
+  mergedDeveloperSlugs.get(slug)
+
 export const getDocumentationSection = (key: DocumentationSectionKey) => {
   const section = documentationSections.find((item) => item.key === key)
   if (!section) {

@@ -1,20 +1,26 @@
 {
   "groups": [
     {
-      "title": "Getting started",
+      "title": "Concepts",
       "pages": [
         "plugin-server/what-is-a-plugin-server",
-        "plugin-server/what-is-a-plugin",
+        "plugin-server/what-is-a-plugin"
+      ]
+    },
+    {
+      "title": "Getting started",
+      "pages": [
         "plugin-server/prerequisites",
-        "plugin-server/create-plugin-server"
+        "plugin-server/create-plugin-server",
+        "plugin-server/agent-prompt"
       ]
     },
     {
       "title": "Build a Plugin Server",
       "pages": [
         "plugin-server/protocol-overview",
-        "plugin-server/authentication",
         "plugin-server/manifest",
+        "plugin-server/authentication",
         "plugin-server/plugins",
         "plugin-server/hono-routes"
       ]
@@ -22,9 +28,7 @@
     {
       "title": "Protocol reference",
       "pages": [
-        "plugin-server/extraction-requests",
-        "plugin-server/media-nodes",
-        "plugin-server/success-responses",
+        "plugin-server/extract",
         "plugin-server/usage-limits",
         "plugin-server/errors"
       ]
@@ -36,10 +40,6 @@
         "plugin-server/deployment",
         "plugin-server/connect"
       ]
-    },
-    {
-      "title": "Build with an agent",
-      "pages": ["plugin-server/agent-prompt"]
     }
   ]
 }

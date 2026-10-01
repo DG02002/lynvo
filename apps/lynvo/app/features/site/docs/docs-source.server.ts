@@ -9,6 +9,7 @@ import type { DocsLoaderData, DocsRouteParams } from "./docs-section-routes"
 import {
   getDeveloperDocsRedirectSlug,
   getDocumentationContentPath,
+  getMergedDeveloperDocsSlug,
   type DocumentationSectionKey,
 } from "./docs-sections"
 
@@ -239,8 +240,11 @@ export const createDocsMarkdownLoader =
   ({ params }: DocsRouteParams) => {
     const slug = params["*"]
 
-    if (slug && section === "user") {
-      const redirectedSlug = getDeveloperDocsRedirectSlug(slug)
+    if (slug) {
+      const redirectedSlug =
+        section === "user"
+          ? getDeveloperDocsRedirectSlug(slug)
+          : getMergedDeveloperDocsSlug(slug)
       if (redirectedSlug !== undefined) {
         return redirect(
           redirectedSlug
