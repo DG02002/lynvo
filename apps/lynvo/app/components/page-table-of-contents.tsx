@@ -66,7 +66,7 @@ const useOutlineRailGeometry = ({
 
   useEffect(() => {
     const list = listRef.current
-    if (!list || variant !== "docs" || headings.length === 0) {
+    if (!list || variant !== "docs") {
       return undefined
     }
 
@@ -184,6 +184,11 @@ export function PageTableOfContents({
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
     activeHeadingId,
   ])
+
+  // Match MobilePageOutline's empty-heading behavior.
+  if (headings.length === 0) {
+    return null
+  }
 
   return (
     <nav
