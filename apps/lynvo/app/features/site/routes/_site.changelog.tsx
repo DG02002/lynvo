@@ -61,8 +61,8 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Proxy keys now have their own settings tab",
     category: "Product",
     description: [
-      "Supported Custom Plugin Servers can now use your own Scrape.do proxy key, managed from the new Settings > Proxy tab. Only Custom Plugin Servers that declare Scrape.do proxy support appear there.",
-      'Add a key for each supported server, check its remaining Scrape.do balance, refresh the balance without re-entering the key, and turn "Use proxy key" on or off per server. Lynvo stores the key encrypted and sends it only to that server during Extraction while the switch is on.',
+      "Supported Custom Plugin Servers can now use your own Scrape.do proxy key, managed from the new Settings > Proxy tab. A proxy key makes a server use your Scrape.do account for proxy requests instead of its shared proxy credits. Only Custom Plugin Servers that declare Scrape.do proxy support appear there.",
+      'Add a key for each supported server, check its remaining Scrape.do balance, refresh the balance without re-entering the key, and turn "Use proxy key" on or off per server. Lynvo stores the key encrypted and sends it only to that server during Extraction while the switch is on. The Lynvo Plugin Server is not eligible for a user proxy key.',
     ],
   },
   {
@@ -91,7 +91,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Link saving, deletion, and synchronization are now more reliable",
     category: "Product",
     description: [
-      "Saving, deleting, and synchronizing Saved links is now more reliable, including for accounts with larger libraries.",
+      "Saving, deleting, and synchronizing Saved links is now more reliable, including for accounts with larger libraries. The improvements cover saving a new link, removing an existing one, and keeping the Library in sync across signed-in sessions.",
     ],
   },
   {
@@ -102,8 +102,9 @@ const changelogEntries: ChangelogEntry[] = [
       "Bhadoo’s Google Drive Index and OneDrive Vercel Index are now Lynvo Plugins",
     category: "Plugin Server",
     description: [
-      "Bhadoo’s Google Drive Index and Spencerwooo’s OneDrive Vercel Index are now Lynvo Plugins, run by the Lynvo Plugin Server.",
-      "Each Plugin’s usage is shown separately, and saving one of their page URLs extracts its playable files and unresolved items like any other supported Source.",
+      "Bhadoo’s Google Drive Index and Spencerwooo’s OneDrive Vercel Index are now Lynvo Plugins, run by the Lynvo Plugin Server. There is no Custom Plugin Server to connect and manage for them.",
+      "A Google Drive Index or OneDrive Vercel Index page lists the files shared from a drive. Save one of its URLs and Extraction pulls its playable files and unresolved items, like any other supported Source.",
+      "Both sit under the Lynvo Plugin Server’s shared monthly allowance, each with its own usage row. Playable links are the final URLs Lynvo sends to a player; unresolved items resolve first.",
     ],
   },
   {
@@ -113,9 +114,12 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Lynvo is now available",
     category: "Product",
     description: [
-      "Lynvo is now available for saving the links you choose and browsing them by folder, on Android TV, Android phones, and Android tablets.",
-      "Saved links open in Just (Video) Player, VLC for Android, MPV, or MX Player without typing a long media URL with a TV remote.",
+      "Lynvo is now available: a link library that saves the links you choose, keeps them in folders, and opens them on Android TV, Android phones, and Android tablets in the external Android player you already use.",
+      "It started with a concrete Android TV problem: moving a link from a phone or browser to a TV meant typing a long media URL with a remote. Lynvo keeps the link instead. Save it in any browser, find it in your Library on a signed-in session, and send it to the player.",
+      "Paste a supported URL on the Save page and choose Save link; when a Source page needs it, choose the Playable links you want. Source pages such as Bhadoo’s Google Drive Index and Spencerwooo’s OneDrive Vercel Index resolve through Lynvo Plugins, alongside direct media links.",
+      "Opening a link hands its Playable URL to Just (Video) Player, VLC for Android, MPV, or MX Player. Lynvo does not provide videos or play them itself.",
       "Remote Play sends a Playable link from one signed-in session to another, and the receiving session opens it in its external Android player.",
+      "Sign in with Google, open Save, and paste a URL to start. Lynvo works in any browser; the supported external players require Android.",
     ],
   },
 ]
