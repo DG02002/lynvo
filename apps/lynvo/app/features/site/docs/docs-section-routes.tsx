@@ -12,7 +12,7 @@ import { docsComponents } from "./docs-components"
 import { DocsDocumentLayout } from "./docs-document-layout"
 import { DocsHome } from "./docs-home"
 import {
-  getDeveloperDocsRedirectSlug,
+  getDeveloperDocsRedirectSlugForSection,
   getDocumentationSection,
   type DocumentationSectionKey,
 } from "./docs-sections"
@@ -122,10 +122,10 @@ export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
       }
     }
 
-    const redirectedSlug =
-      section === "user"
-        ? getDeveloperDocsRedirectSlug(requestedSlug)
-        : undefined
+    const redirectedSlug = getDeveloperDocsRedirectSlugForSection(
+      section,
+      requestedSlug
+    )
     if (redirectedSlug !== undefined) {
       return redirect(
         redirectedSlug ? `/developer/${redirectedSlug}` : "/developer"

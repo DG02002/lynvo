@@ -7,22 +7,48 @@ contentType: Reference
 
 <DocSection id="protocol-version">
 
-The Plugin Server Protocol defines how Lynvo identifies Plugins, verifies a server, reads its usage, and requests Media Nodes. Use this page as the map for the [authentication](/developer/authentication), [manifest](/developer/manifest), and [request and response references](/developer/extraction-requests).
-
-Lynvo Custom Plugin Servers use Plugin Server Protocol version `1.0` over HTTPS
-and JSON. Version `1.0` defines four required endpoints and one optional
-discovery endpoint:
+The Plugin Server Protocol is the versioned contract every Plugin Server follows when identifying Plugins, reporting usage, and returning Media Nodes. Protocol version `1.0` runs over HTTPS and JSON, and defines four required endpoints plus one optional discovery endpoint:
 
 | Method | Route       | Authentication | Purpose                                            |
 | ------ | ----------- | -------------- | -------------------------------------------------- |
-| `GET`  | `/manifest` | Public         | Declares identity, matchers, features, and Sources |
-| `POST` | `/discover` | Bearer         | Optionally identifies a Plugin for a Source URL    |
+| `GET`  | `/manifest` | Public         | Declares identity, matchers, features, and Plugins |
 | `POST` | `/verify`   | Bearer         | Verifies the API key and Plugin Server readiness   |
 | `GET`  | `/usage`    | Bearer         | Reports finite enforced usage metrics              |
 | `POST` | `/extract`  | Bearer         | Resolves a Source URL or unresolved item           |
+| `POST` | `/discover` | Bearer         | Optionally identifies a Plugin for a Source URL    |
 
-Implement `POST /discover` only when the manifest sets `features.discovery` to
-`true`. Use `Content-Type: application/json` for JSON responses. Return protocol
-error envelopes instead of unstructured error strings.
+Lynvo accepts any `1.x` manifest: minor protocol versions are additive by contract, and a major-version mismatch is reported as `PROTOCOL_MISMATCH`. Lynvo sends its own protocol version on every request in the `X-Lynvo-Protocol-Version` header, so the server can adapt responses if it needs to.
+
+JSON endpoints use `Content-Type: application/json`, and failures return protocol error envelopes instead of unstructured error strings. See the [error reference](/developer/errors) for the codes and their HTTP statuses.
+
+## Endpoint behavior
+
+`POST /verify` takes no required JSON body fields — the API key in the `Authorization` header is the primary input. A successful verification returns:
+
+<CodeBlock label="POST /verify">
+
+```json
+{
+  "ok": true
+}
+```
+
+</CodeBlock>
+
+`POST /discover` is optional. Implement it only when the manifest sets `features.discovery` to `true`. To ask which Plugin handles a URL, send the URL and read the matched Plugin ID:
+
+<CodeBlock label="POST /discover">
+
+```json
+{
+  "url": "https://media.example.com/watch/123"
+}
+```
+
+</CodeBlock>
+
+The response is either `{"matched": false}` or a Plugin match with `confidence` set to `pattern` or `verified`. Discovery must stay bounded, safe against SSRF, and must not persist credentials.
+
+The remaining endpoints have their own references: [authentication](/developer/authentication) for the bearer key, the [manifest](/developer/manifest) for identity and matchers, the [Extraction reference](/developer/extract) for `/extract`, and [usage limits](/developer/usage-limits) for `/usage`.
 
 </DocSection>

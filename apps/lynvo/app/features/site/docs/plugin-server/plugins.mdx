@@ -7,18 +7,15 @@ contentType: Tutorial
 
 <DocSection id="plugins">
 
-A Plugin owns the matching, upstream requests, and Media Node mapping for one Source. Read [what a Plugin Server does](/developer/what-is-a-plugin-server), then define its metadata in the [manifest](/developer/manifest) and choose the right [Media Node types](/developer/media-nodes).
+A Plugin owns the matching, upstream requests, and Media Node mapping for one Source. The generated project ships one deterministic example Plugin; replace it with your Source implementation before deployment.
 
-The generated project includes one deterministic example Plugin. Replace it with
-your Source implementation before deployment.
-
-Start with these files:
+To make the example yours, start with these files:
 
 1. Replace the Source implementation in `src/plugins/example.ts`
 2. Update the matcher and Plugin metadata in `src/index.ts`
 3. Add supported, unsupported, and failure fixtures to `tests/contract.test.ts`
 
-The Source implementation returns a protocol response instead of a framework response:
+The Source implementation returns a protocol response rather than a framework response. The generated example echoes the target URL as a single playable item:
 
 <CodeBlock label="src/plugins/example.ts">
 
@@ -35,34 +32,43 @@ export const extractExampleSource = (
     pluginId: "example-source",
     pluginName: "Example Source",
   },
-  nodes: [{ kind: "playable", label: "Example item", url: targetUrl }],
+  nodes: [
+    {
+      kind: "playable",
+      label: "Example playable item",
+      url: targetUrl,
+    },
+  ],
   extensions: {},
 })
 ```
 
 </CodeBlock>
 
-Plugin metadata supports these fields:
+## Plugin metadata fields
 
-| Field                   | Purpose                                        |
-| ----------------------- | ---------------------------------------------- |
-| `id`                    | Stable Plugin identifier                       |
-| `displayName`           | Name shown by Lynvo                            |
-| `description`           | Short Plugin capability summary                |
-| `homepage`              | HTTPS Plugin project page                      |
-| `hasIcon` and `iconUrl` | Plugin-specific WebP icon                      |
-| `status`                | `active`, `maintenance`, `degraded`, or `down` |
-| `version`               | Your adapter version                           |
-| `routesToPluginId`      | Downstream Plugin in the same manifest         |
-| `hosts` and `matchers`  | Source URLs handled by the Plugin              |
-| `credential`            | Domain password or HTTP Basic Auth capability  |
+Each entry under `extensions.lynvo.plugins` supports:
 
-A Plugin owns Source credentials, upstream requests, response parsing, Media
-Node creation, and Source-specific errors. The shared runtime owns bearer
-authentication, protocol validation, usage enforcement, and response
-serialization.
+| Field                   | Purpose                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `id`                    | Stable Plugin identifier; unique within the catalog                           |
+| `displayName`           | Name shown by Lynvo                                                           |
+| `description`           | Short Plugin capability summary                                               |
+| `homepage`              | HTTPS Plugin project page                                                     |
+| `hasIcon` and `iconUrl` | Plugin-specific WebP, PNG, or SVG icon                                        |
+| `status`                | `active`, `maintenance`, `degraded`, or `down`; required                      |
+| `version`               | Your adapter version; required                                                |
+| `matchStrategy`         | `static` (default) or `probe`                                                 |
+| `usageMultiplier`       | Positive integer: units of the server's metered limit one extraction consumes |
+| `proxyCreditUsage`      | Human-readable description of the Plugin's proxy-credit request pattern       |
+| `routesToPluginId`      | Downstream Plugin in the same manifest                                        |
+| `hosts` and `matchers`  | Source URLs handled by the Plugin; `hosts` defaults to `[]`                   |
+| `credential`            | Domain password or HTTP Basic Auth capability declaration                     |
 
-For multiple Plugins, keep one catalog for manifest metadata and request
-dispatch. Do not add Source-specific conditions to the Hono route layer.
+A statically matched Plugin must declare `hosts` or `matchers`. A `probe` Plugin declares neither and runs only after configured domains and static matches have been considered.
+
+The Plugin owns Source credentials, upstream requests, response parsing, Media Node creation, and Source-specific errors. The shared runtime owns bearer authentication, protocol validation, usage enforcement, and response serialization.
+
+For multiple Plugins, keep one catalog for manifest metadata and request dispatch. Do not add Source-specific conditions to the Hono route layer — see the [route runtime reference](/developer/hono-routes) for the wiring, and the [Extraction reference](/developer/extract) for the nodes your Plugin returns.
 
 </DocSection>

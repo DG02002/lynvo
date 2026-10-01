@@ -7,13 +7,9 @@ contentType: Tutorial
 
 <DocSection id="deployment">
 
-Deploy only after the local contract checks pass and the production Plugin Server API key is configured. Review [testing](/developer/testing) first, then [connect the deployed server to Lynvo](/developer/connect).
+Deploying publishes the Worker to a public HTTPS origin and switches it from your local key to a production secret. Do it only after the local [contract checks](/developer/testing) pass — the deploy command does not run them for you.
 
-Run the local contract checks before you send the Worker to Cloudflare. The
-`pnpm build` command runs a dry run. `pnpm deploy` creates or updates the
-Worker.
-
-Sign in to Wrangler and configure the production bearer key:
+To sign in to Wrangler and store the production bearer key, run:
 
 <CodeBlock label="Terminal">
 
@@ -24,7 +20,7 @@ pnpm wrangler secret put LYNVO_PLUGIN_SERVER_API_KEY
 
 </CodeBlock>
 
-Run the checks and deploy:
+To run the checks and deploy the Worker, use:
 
 <CodeBlock label="Terminal">
 
@@ -37,9 +33,14 @@ pnpm deploy
 
 </CodeBlock>
 
-Call the four required endpoints at the deployed HTTPS origin. If the manifest enables discovery, call `POST /discover` too. Confirm the production secret works and the manifest contains only production URLs.
+`pnpm build` optimizes Plugin icons and bundles the Worker with a Wrangler dry run; `pnpm deploy` runs the same image pass and creates or updates the Worker for real.
 
-Bound upstream requests, reject unsupported hosts, and record structured logs
-without credentials. Keep the deployment origin stable after users connect it.
+## Verify the deployment
+
+A green deploy is not a working server — confirm it from the outside. Call the four required endpoints at the deployed HTTPS origin: `/manifest`, `/verify`, `/usage`, and `/extract`. If the manifest enables discovery, call `POST /discover` too. The production secret must work, and the manifest must contain only production URLs, with nothing pointing back at `localhost` or a tunnel hostname.
+
+Two rules outlive deployment. Keep the origin stable: users connect it once, and Lynvo keeps sending Extraction requests to that origin. And keep the operational hygiene you tested locally — bounded upstream requests, rejected unsupported hosts, structured logs without credentials.
+
+When the deployed origin responds correctly, [connect the Plugin Server to Lynvo](/developer/connect).
 
 </DocSection>

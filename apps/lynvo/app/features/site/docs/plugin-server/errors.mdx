@@ -1,5 +1,5 @@
 ---
-title: Return structured protocol errors
+title: Protocol errors
 description: Return error codes that Lynvo can display or handle.
 navLabel: Errors
 contentType: Reference
@@ -7,14 +7,13 @@ contentType: Reference
 
 <DocSection id="error-schema">
 
-Use protocol error codes to report why an Extraction failed and whether Lynvo can recover. Read [Extraction requests](/developer/extraction-requests) for request validation and [successful responses](/developer/success-responses) for the response shape.
+A protocol error response tells Lynvo why an Extraction failed and whether it can recover. Return a code Lynvo can handle and a message that is safe to display as secondary detail; never expose stack traces, cookies, secret values, or internal network details.
 
-Return an error code Lynvo can handle and a message that is safe to display. Do
-not expose stack traces, cookies, secret values, or internal network details.
+Every error is an envelope with `ok: false`, the code, the message, and optional `retryAfterSeconds`:
 
 <CodeBlock label="Error response">
 
-```json {2-7}
+```json
 {
   "ok": false,
   "error": {
@@ -28,38 +27,48 @@ not expose stack traces, cookies, secret values, or internal network details.
 
 </CodeBlock>
 
-Protocol version `1.0` defines these error codes:
+Throw the packaged `ProtocolError` from an extract implementation and the runtime maps it to the documented HTTP status and a `Retry-After` header:
 
-| Code                 | Use when                                     |
-| -------------------- | -------------------------------------------- |
-| `UNSUPPORTED_URL`    | No Source matcher accepts the URL            |
-| `UNSUPPORTED_TARGET` | The target kind is not supported             |
-| `AUTH_INVALID`       | The Plugin Server bearer key is rejected     |
-| `AUTH_REQUIRED`      | Required Source credentials are missing      |
-| `RATE_LIMITED`       | A finite usage limit is exhausted            |
-| `TEMPORARY_FAILURE`  | A later retry may succeed                    |
-| `PERMANENT_FAILURE`  | The Source cannot complete the request       |
-| `PASSWORD_REQUIRED`  | A content password is required               |
-| `INVALID_PASSWORD`   | The supplied content password failed         |
-| `NODE_EXPIRED`       | An unresolved item target is no longer valid |
-| `PROTOCOL_MISMATCH`  | A request or response violates the contract  |
-| `BAD_REQUEST`        | The JSON body or route input is malformed    |
+<CodeBlock label="src/plugins/example.ts">
+
+```ts
+throw new ProtocolError(
+  "PASSWORD_REQUIRED",
+  "This Source requires a content password."
+)
+```
+
+</CodeBlock>
+
+Protocol version `1.0` defines these error codes and HTTP statuses:
+
+| Code                 | HTTP | Use when                                     |
+| -------------------- | ---- | -------------------------------------------- |
+| `UNSUPPORTED_URL`    | 400  | No Source matcher accepts the URL            |
+| `UNSUPPORTED_TARGET` | 400  | The target kind is not supported             |
+| `BAD_REQUEST`        | 400  | The JSON body or route input is malformed    |
+| `AUTH_INVALID`       | 401  | The Plugin Server bearer key is rejected     |
+| `AUTH_REQUIRED`      | 401  | Required Source credentials are missing      |
+| `PASSWORD_REQUIRED`  | 401  | A content password is required               |
+| `INVALID_PASSWORD`   | 401  | The supplied content password failed         |
+| `NODE_EXPIRED`       | 410  | An unresolved item target is no longer valid |
+| `RATE_LIMITED`       | 429  | A finite usage limit is exhausted            |
+| `TEMPORARY_FAILURE`  | 500  | A later retry may succeed                    |
+| `PERMANENT_FAILURE`  | 500  | The Source cannot complete the request       |
+| `PROTOCOL_MISMATCH`  | 500  | A request or response violates the contract  |
+
+Lynvo prefers the response body's `code` over the HTTP status when classifying a failure, and maps known codes to Lynvo copy at the application seam; your message appears only as secondary debug detail. See the [route runtime reference](/developer/hono-routes) for the failures the runtime maps before your Plugin runs.
 
 </DocSection>
 
 <DocSection id="extraction-recovery">
 
-## When extraction is temporarily unavailable
+## Temporary extraction failures
 
-Lynvo retries a failed extraction when the connection drops or the application
-receives a temporary upstream response such as a 503. Retries are bounded so
-the page does not keep a loading state forever.
+Lynvo retries a failed extraction when the connection drops, a request times out, or it receives a temporary upstream response such as a 503. Retries are bounded — two retries with a 20-second per-attempt timeout — so a page never keeps a loading state forever.
 
-- A rate-limited extraction waits for a short server-provided retry hint when
-  one is available. Longer hints are shown as a rate-limit message instead of
-  keeping the page busy.
+- A rate-limited extraction waits for the server's retry hint when the hint is short. A `RATE_LIMITED` hint longer than about 20 seconds is shown as a rate-limit message instead of keeping the page busy.
 - An expired session asks you to sign in again and does not retry the request.
-- A Plugin Server temporary-failure response asks you to try again later or
-  choose another Plugin Server.
+- A Plugin Server temporary-failure response asks you to try again later or choose another Plugin Server; Lynvo maps `TEMPORARY_FAILURE` to its own message rather than retrying automatically.
 
 </DocSection>
