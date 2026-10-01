@@ -61,6 +61,9 @@ type PluginServerResponseBody =
 const jsonResponse = (body: PluginServerResponseBody, status = 200): Response =>
   Response.json(body, { status })
 
+const protocolMismatchResponse = (message: string): Response =>
+  jsonResponse(createProtocolError("PROTOCOL_MISMATCH", message), 500)
+
 export const createPluginServerRuntime = <Env>(
   options: PluginServerRuntimeOptions<Env>
 ): PluginServerRuntime<Env> => {
@@ -86,9 +89,6 @@ export const createPluginServerRuntime = <Env>(
       options.onError?.(error, { request, env })
     }
   }
-
-  const protocolMismatchResponse = (message: string): Response =>
-    jsonResponse(createProtocolError("PROTOCOL_MISMATCH", message), 500)
 
   const authenticate = async (
     request: Request,
