@@ -16,9 +16,25 @@ This is a user-documentation guide, and it is project-agnostic: the
 project's own mechanics — MDX components, frontmatter contract, navigation
 configuration, link validation, product terminology — are discovered from
 the repository being documented, following the project adaptation rules at
-the end of this guide. Formal policies follow the product-policy-writing
-skill instead. Architecture and maintainer procedures belong wherever the
-project keeps its internal documentation, not in user docs.
+the end of this guide. Developer documentation follows the
+developer-docs-writing skill, release notes and announcements follow the
+product-changelog-writing skill, and formal policies follow the
+product-policy-writing skill. Architecture and maintainer procedures
+belong wherever the project keeps its internal documentation, not in user
+docs.
+
+## Contents
+
+- The docs style
+- Voice and person
+- Title and lede formulas
+- Page anatomy
+- Formatting conventions
+- Cross-linking
+- Page-type templates
+- Information architecture and organization
+- Project adaptation rules
+- Review checklist
 
 ## The docs style
 
@@ -275,17 +291,6 @@ numbered steps, then one H2 per capability the connection gives you, then
 FAQ. State trust and data-flow facts explicitly (where credentials live,
 what the connected service can and cannot reach).
 
-### Reference page
-
-For contracts users implement against: APIs, protocols, webhooks — the
-developer-docs shape rather than the feature skeleton. Organize sections
-by concern ("Endpoint", "Authentication", "Error handling"), show a
-working request sample for every endpoint (HTTP first, SDK second), state
-recommendations inline ("we recommend"), and link deep external references
-instead of duplicating them. Keep pages terse and fielded — tables, labeled
-code blocks, structured errors. Add a one-paragraph Overview at the top and
-cross-links to surrounding tutorial pages; no screenshots.
-
 ### Start guide
 
 One page that takes a new user from zero to a working flow: what the
@@ -347,20 +352,12 @@ Group rules:
 
 ### Developer docs organization
 
-Developer pages keep the same voice but organize by build concern, not by
-the Overview → Configure → Basics skeleton:
-
-- Sidebar groups name the capability you build with: the API,
-  authentication, agent integration, SDKs, and guides.
-- Pages are reference-shaped with concern sections ("Endpoint",
-  "Authentication", "Error handling") and working code samples for every
-  request shown — HTTP first, SDK second.
-- Recommendations are inline and opinionated: "If you're building an
-  application for others to use, we recommend OAuth2."
-- Deep references (the API schema, SDK source) link out with an external
-  marker instead of being duplicated. The developer landing page uses the
-  same card pattern plus a Resources strip (changelog).
-- No screenshots; diagrams only when the flow needs one.
+Developer pages keep the same voice but organize by the thing you build
+with, not by the Overview → Configure → Basics skeleton. Their page style
+follows the developer-docs-writing skill; when planning a product's
+sections, only the split itself is decided here — user docs hold
+everything a person using the product needs, and the developer section
+holds what an implementer needs.
 
 ### Planning a product's sections
 

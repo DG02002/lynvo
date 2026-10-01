@@ -3,14 +3,18 @@ name: product-docs-writing
 description: >-
   Draft or review product documentation pages in the task-first product
   docs voice: plain confident sentences, fixed page anatomy, verified
-  settings paths, screenshots for UI features, and FAQ blocks. Project
+  settings paths, screenshots for UI features, and FAQ blocks. Not for
+  developer documentation, changelog entries, or release notes. Project
   mechanics are derived from the repository being documented.
 ---
 
 # Product docs writing
 
 Create or review product documentation in the docs house style captured in
-this skill's reference. This skill organizes the work. The reference holds
+this skill's reference. Product docs are for people using the product;
+developer documentation follows the developer-docs-writing skill, and
+release notes and announcements follow the product-changelog-writing
+skill. This skill organizes the work. The reference holds
 the detailed, sample-derived style guidance. Project mechanics — MDX
 components, frontmatter, navigation, product terms — come from the
 repository being documented, not from this skill. This skill does not
@@ -20,12 +24,12 @@ decide what features exist; it documents verified product behavior.
 
 1. Define the request.
 
-   Identify the page type (feature how-to, concept, integration or setup,
-   reference), the feature or surface, the audience (new user, operator,
-   integrator), and whether the request is to draft, revise, or review.
-   Decide which section owns the page — user docs for people using the
-   product, developer docs for people implementing against its APIs or
-   protocols — and which navigation group and position, using the
+   Identify the page type (feature how-to, concept, integration or
+   setup, start guide), the feature or surface, the audience (new user,
+   operator, integrator), and whether the request is to draft, revise, or
+   review. Pages for people implementing against the product's APIs or
+   protocols follow the developer-docs-writing skill instead. Decide
+   which navigation group and position the page owns, using the
    information architecture rules in the reference. Check the page against
    the project's surface list from its agent instructions, or the surfaces
    derived from its primary workflows; a change that touches a surface
