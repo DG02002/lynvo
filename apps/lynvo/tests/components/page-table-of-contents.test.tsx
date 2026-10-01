@@ -28,11 +28,21 @@ describe("PageTableOfContents", () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it("renders nothing for a policy page without headings", () => {
-    const { container } = render(
-      <PageTableOfContents headings={[]} variant="policy" />
+  it("renders policy headings without the docs label", () => {
+    render(
+      <PageTableOfContents
+        headings={[{ id: "privacy", label: "Privacy" }]}
+        variant="policy"
+      />
     )
 
-    expect(container.firstChild).toBeNull()
+    const navigation = screen.getByRole("navigation", {
+      name: "On this page",
+    })
+
+    expect(navigation).toHaveTextContent("Privacy")
+    expect(
+      screen.queryByText("On this page", { selector: "p" })
+    ).not.toBeInTheDocument()
   })
 })

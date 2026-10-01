@@ -66,7 +66,7 @@ const useOutlineRailGeometry = ({
 
   useEffect(() => {
     const list = listRef.current
-    if (!list || variant !== "docs" || headings.length === 0) {
+    if (!list || variant !== "docs") {
       return undefined
     }
 
