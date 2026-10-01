@@ -9,7 +9,8 @@ const CurrentLocation = () => {
   return <output aria-label="Current location">{location.search}</output>
 }
 
-const PLUGIN_SERVER_ENTRY_TITLE = "Plugin Server usage is easier to follow"
+const PLUGIN_SERVER_ENTRY_TITLE =
+  "Bhadoo’s Google Drive Index and OneDrive Vercel Index are now Lynvo Plugins"
 const PLUGIN_SERVER_ENTRY_QUERY = {
   level: 2,
   name: PLUGIN_SERVER_ENTRY_TITLE,
@@ -33,9 +34,7 @@ describe("Changelog", () => {
 
     expect(getPluginServerEntryHeading(updates)).toBeVisible()
     expect(
-      within(updates).queryByText(
-        "The library’s grouped presentation is now called Gallery"
-      )
+      within(updates).queryByText("Hybrid view is now called Gallery view")
     ).not.toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Plugin Server" })).toHaveAttribute(
       "aria-selected",
@@ -61,12 +60,12 @@ describe("Changelog", () => {
       "?type=general"
     )
     expect(
-      within(updates).getByText(
-        "The library’s grouped presentation is now called Gallery"
-      )
+      within(updates).getByText("Hybrid view is now called Gallery view")
     ).toBeVisible()
     expect(
-      within(updates).getByText("The library now has List and Gallery views")
+      within(updates).getByText(
+        "The Library now has List view and Gallery view"
+      )
     ).toBeVisible()
     expect(queryPluginServerEntryHeading(updates)).not.toBeInTheDocument()
 
@@ -76,20 +75,18 @@ describe("Changelog", () => {
     )
     expect(getPluginServerEntryHeading(updates)).toBeVisible()
     expect(
-      within(updates).queryByText(
-        "The library’s grouped presentation is now called Gallery"
-      )
+      within(updates).queryByText("Hybrid view is now called Gallery view")
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "All" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(
-      within(updates).getByText(
-        "The library’s grouped presentation is now called Gallery"
-      )
+      within(updates).getByText("Hybrid view is now called Gallery view")
     ).toBeVisible()
     expect(
-      within(updates).getByText("The library now has List and Gallery views")
+      within(updates).getByText(
+        "The Library now has List view and Gallery view"
+      )
     ).toBeVisible()
     expect(getPluginServerEntryHeading(updates)).toBeVisible()
   })
@@ -105,9 +102,7 @@ describe("Changelog", () => {
 
     expect(
       within(updates).getAllByRole("heading", { level: 2 })[0]
-    ).toHaveTextContent(
-      "The library’s grouped presentation is now called Gallery"
-    )
+    ).toHaveTextContent("Hybrid view is now called Gallery view")
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
     fireEvent.click(
@@ -115,8 +110,10 @@ describe("Changelog", () => {
     )
 
     const sortedHeadings = within(updates).getAllByRole("heading", { level: 2 })
-    expect(sortedHeadings[0]).toHaveTextContent("More reliable link management")
+    expect(sortedHeadings[0]).toHaveTextContent(
+      "Link saving, deletion, and synchronization are now more reliable"
+    )
     expect(sortedHeadings[1]).toHaveTextContent(PLUGIN_SERVER_ENTRY_TITLE)
-    expect(sortedHeadings[2]).toHaveTextContent("Product launch")
+    expect(sortedHeadings[2]).toHaveTextContent("Lynvo is now available")
   })
 })
