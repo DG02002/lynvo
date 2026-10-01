@@ -7,11 +7,9 @@ contentType: Tutorial
 
 <DocSection id="create-plugin-server">
 
-Generate a standalone Cloudflare Worker project to start a Custom Plugin Server. Complete the [development prerequisites](/developer/prerequisites), then replace its example Plugin and follow the [agent-assisted path](/developer/agent-prompt) or the [protocol guide](/developer/protocol-overview).
+The creator package generates a standalone Plugin Server project backed by a Cloudflare Worker. Complete the [development prerequisites](/developer/prerequisites) first; the generator does not require a clone of the Lynvo repository.
 
-Run the creator from the directory where you want the project. It creates a
-standalone Plugin Server project backed by a Cloudflare Worker and installs the
-published protocol package.
+To generate the project, run the creator from the directory where you want the project to live:
 
 <CodeBlock label="Terminal">
 
@@ -26,29 +24,36 @@ pnpm build
 
 </CodeBlock>
 
-Set `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`, then run `pnpm dev`. The generator installs dependencies unless you pass `--skip-install`. Run `pnpm install` before the checks when you skip installation.
+`pnpm check` type-checks the project, `pnpm test` runs the contract tests, and `pnpm build` optimizes Plugin icons and bundles the Worker with a Wrangler dry run. None of them require a live Cloudflare Worker.
 
-The generator creates:
+Set `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`, then run `pnpm dev` to start the local Worker. The generator installs dependencies for you; if you pass `--skip-install`, run `pnpm install` before the checks.
+
+## What the generator creates
 
 - `src/index.ts` with the manifest, shared runtime, and Hono routes
 - `src/plugins/example.ts` with a deterministic example Source adapter
 - `scripts/optimize-images.mjs` for Plugin icons in `public/icons/sources/`
-- `tests/contract.test.ts` with the first protocol checks
-- `wrangler.jsonc` and `.dev.vars.example`
-- A semver dependency on `@dg02002/lynvo-plugin-server-protocol`
+- `tests/contract.test.ts` with the first contract checks
+- `wrangler.jsonc`, `.dev.vars.example`, `tsconfig.json`, and `vitest.config.ts`
+- `package.json` with a semver dependency on `@dg02002/lynvo-plugin-server-protocol`
+- A `README.md`, an MIT `LICENSE`, and a `.gitignore`
 
-Edit these files first:
+To make the project yours, edit these files first:
 
 1. Replace the example matcher and Plugin metadata in `src/index.ts`
 2. Replace the example Source adapter in `src/plugins/example.ts`
 3. Add Source fixtures to `tests/contract.test.ts`
 
-The `pnpm build` script runs a Wrangler dry run. Use `pnpm deploy` only after
-the contract checks pass and the production secret is configured.
+The starter includes five contract checks: a valid manifest, rejected invalid bearer credentials, finite usage, a valid Extraction envelope, and the error for opaque resource-ID targets. See [testing](/developer/testing) for the full list the suite should grow to cover.
 
-The example usage response is a finite test fixture. Replace it with durable accounting before production deployment.
+The starter's usage response is a finite test fixture so the checks run without a database. Replace it with durable accounting before production deployment, and use `pnpm deploy` only after the contract checks pass and the production secret is configured.
 
-The generated project has no workspace or local-link dependency, so you can
-copy it to another repository without cloning Lynvo.
+The generated project has no workspace or local-link dependency, so you can copy it to another repository without cloning Lynvo.
+
+## Next steps
+
+- [Protocol overview](/developer/protocol-overview) – The endpoints the generated runtime serves
+- [Add a Plugin](/developer/plugins) – Replace the example Source adapter
+- [Extend with an agent](/developer/agent-prompt) – Delegate the Source work to a coding agent
 
 </DocSection>

@@ -7,10 +7,9 @@ contentType: Tutorial
 
 <DocSection id="authentication">
 
-Bearer authentication protects the Plugin Server endpoints that Lynvo calls. Create and store one Plugin Server API key before you [test the contract](/developer/testing) and [connect the deployed server](/developer/connect).
+Bearer authentication protects the Plugin Server endpoints that Lynvo calls. One Plugin Server API key authenticates every request Lynvo sends to `/verify`, `/usage`, `/extract`, and `/discover`.
 
-The generated starter validates the `Authorization: Bearer` header through the
-shared protocol runtime. Generate a random 32-byte key:
+The generated starter validates the `Authorization: Bearer` header through `validateBearerCredential` from the protocol package, which compares the presented key against the configured key in constant time. To generate a random 32-byte key, run:
 
 <CodeBlock label="Terminal">
 
@@ -20,21 +19,19 @@ openssl rand -base64 32
 
 </CodeBlock>
 
-Copy the generated value. Use the same value in Lynvo and in your Plugin Server environment.
+Use the same value in your Plugin Server environment and in Lynvo when you [connect the server](/developer/connect).
 
-Create the local secret file and set its value:
+To configure the key for local development, set it in `.dev.vars`:
 
 <CodeBlock label=".dev.vars">
 
 ```dotenv
-LYNVO_PLUGIN_SERVER_API_KEY=your_local_plugin_server_api_key_here
+LYNVO_PLUGIN_SERVER_API_KEY=YOUR_LOCAL_PLUGIN_SERVER_API_KEY
 ```
 
 </CodeBlock>
 
-Keep `.dev.vars` out of version control. The template already ignores it.
-
-Store the production key as a Cloudflare secret:
+Keep `.dev.vars` out of version control; the template already ignores it. To configure the production key as a Cloudflare secret, run:
 
 <CodeBlock label="Terminal">
 
@@ -44,11 +41,23 @@ pnpm wrangler secret put LYNVO_PLUGIN_SERVER_API_KEY
 
 </CodeBlock>
 
-Lynvo sends this key in the `Authorization` header for `/verify`, `/usage`, and
-`/extract`. Never place it in a manifest, URL, response, browser bundle, or
-log.
+Never place the key in a manifest, URL, response body, browser bundle, or log. A rejected key produces an `AUTH_INVALID` error with HTTP status 401:
 
-If you replace the generated route layer, authenticate protected requests before
-reserving usage or sending upstream requests.
+<CodeBlock label="401 response">
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "AUTH_INVALID",
+    "message": "API key was rejected."
+  },
+  "extensions": {}
+}
+```
+
+</CodeBlock>
+
+If you replace the generated route layer, authenticate protected requests before reserving usage or sending upstream requests.
 
 </DocSection>

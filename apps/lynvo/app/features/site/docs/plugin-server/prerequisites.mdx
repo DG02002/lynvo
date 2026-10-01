@@ -7,10 +7,7 @@ contentType: Tutorial
 
 <DocSection id="prerequisites">
 
-Prepare these tools and accounts before generating the Cloudflare Worker project. When the environment is ready, [generate a Plugin Server](/developer/create-plugin-server) or follow the [agent-assisted guide](/developer/agent-prompt).
-
-Install Node.js and pnpm before generating the project. You need a Cloudflare
-account for deployment and a Lynvo account for the final connection test.
+Prepare these tools and accounts before generating the Cloudflare Worker project. You need a Cloudflare account to deploy the Worker and a Lynvo account for the final connection test.
 
 Install or prepare:
 
@@ -20,10 +17,19 @@ Install or prepare:
 - A Lynvo account
 - A Source website you are authorized to access and extract
 
-If pnpm is already installed, run `pnpm self-update next-12` to get the latest
-pnpm 12 release.
+To update an existing pnpm installation to the latest pnpm 12 release, run:
 
-After you install these tools and create the accounts, [generate your Plugin
-Server](/developer/create-plugin-server).
+<CodeBlock label="Terminal">
+
+```sh
+pnpm self-update next-12
+```
+
+</CodeBlock>
+
+## Next steps
+
+- [Generate your Plugin Server](/developer/create-plugin-server) – Create the starter project and run its checks
+- [Extend with an agent](/developer/agent-prompt) – The agent-assisted path from the same starting point
 
 </DocSection>

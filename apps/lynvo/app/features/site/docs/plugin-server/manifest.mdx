@@ -7,12 +7,9 @@ contentType: Reference
 
 <DocSection id="manifest">
 
-The manifest declares a Custom Plugin Server's identity, protocol features, and Plugins. Read the [protocol overview](/developer/protocol-overview), then match each Plugin entry to the [Source implementation](/developer/plugins).
+The manifest at `GET /manifest` declares a Plugin Server's identity, protocol features, URL matchers, and Plugin catalog. Lynvo fetches it when you connect the server, validates it on every refresh, and uses its matchers to select the server before sending an Extraction request.
 
-The generated starter declares the manifest in `src/index.ts`. Keep the server
-ID stable after you connect the Worker to Lynvo.
-
-Start with the generated object and replace the example values:
+The generated starter declares the manifest in `src/index.ts`. To start from the fixture and replace the example values, use:
 
 <CodeBlock label="src/index.ts">
 
@@ -45,24 +42,43 @@ export const manifest = {
 
 </CodeBlock>
 
-Replace the `com.example` namespace with an identifier you control. Keep the `pluginServerId` unchanged after users register the Worker.
+Replace the `com.example` namespace with an identifier you control, and keep `pluginServerId` unchanged after users connect the Worker.
 
-Manifest fields follow these rules:
+## Manifest fields
 
-| Field             | Required | Rule                                                             |
-| ----------------- | -------- | ---------------------------------------------------------------- |
-| `protocolVersion` | Yes      | Must use a compatible `1.x` version. Lynvo currently uses `1.0`. |
-| `pluginServerId`  | Yes      | Stable namespaced identifier                                     |
-| `displayName`     | Yes      | Human-readable Plugin Server name                                |
-| `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it                    |
-| `iconUrl`         | No       | HTTPS image URL; loopback HTTP is allowed locally                |
-| `homepage`        | No       | HTTPS project URL                                                |
-| `auth.type`       | Yes      | Must equal `"bearer"`                                            |
-| `usage.endpoint`  | No       | Defaults to `"/usage"`                                           |
-| `matchers`        | Yes      | Non-empty array                                                  |
-| `features`        | Yes      | Declares password, unresolved item, and Basic Auth support       |
-| `extensions`      | No       | Namespaced non-core metadata                                     |
+| Field             | Required | Rule                                                                             |
+| ----------------- | -------- | -------------------------------------------------------------------------------- |
+| `protocolVersion` | Yes      | `MAJOR.MINOR` string. Any `1.x` version is accepted; Lynvo currently uses `1.0`. |
+| `pluginServerId`  | Yes      | Stable identifier with at least one dot, such as `com.example.my_plugin_server`  |
+| `displayName`     | Yes      | Human-readable Plugin Server name                                                |
+| `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it                                    |
+| `iconUrl`         | No       | Direct HTTPS WebP, PNG, or SVG URL; loopback HTTP is allowed locally             |
+| `homepage`        | No       | HTTPS project URL                                                                |
+| `auth.type`       | Yes      | Must equal `"bearer"`                                                            |
+| `usage.endpoint`  | Yes      | Must equal `"/usage"`                                                            |
+| `matchers`        | Yes      | Non-empty array of matchers                                                      |
+| `features`        | Yes      | Declares protocol capabilities; see below                                        |
+| `extensions`      | No       | Namespaced non-core metadata, including the Plugin catalog                       |
 
-Keep `matchers` and `extensions.lynvo.plugins` aligned with the Source code. Lynvo uses the manifest to select the Worker before it sends an Extraction request.
+Each matcher accepts `hosts` (required, non-empty), optional `hostPatterns`, optional `pathPatterns` defaulting to `["/**"]`, and optional `schemes` defaulting to `["https"]`.
+
+The `features` object declares what the server may emit and accept. Every flag defaults to `false`:
+
+- `password` — the server may return `PASSWORD_REQUIRED` and accept password retries
+- `lazyNodes` — the server may return unresolved items
+- `basicAuth` — Lynvo may forward HTTP Basic Auth credentials to the server
+- `discovery` — the server implements `POST /discover`
+
+## Plugin catalog rules
+
+The contract check in the protocol package enforces these rules on `extensions.lynvo.plugins`:
+
+- Plugin `id` values are unique within the catalog
+- `status` is required and one of `active`, `maintenance`, `degraded`, or `down`
+- `version` is required
+- A statically matched Plugin declares `hosts` or `matchers`
+- A `matchStrategy: "probe"` Plugin declares neither; probe matching must not be represented by a wildcard matcher
+
+Keep `matchers` and the Plugin catalog aligned with the Source code. See [Add a Plugin](/developer/plugins) for the full Plugin metadata fields.
 
 </DocSection>

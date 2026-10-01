@@ -7,52 +7,21 @@ contentType: Reference
 
 <DocSection id="request-schema">
 
-Validate each Extraction request before dispatching it to a Plugin. This reference covers Source URLs and unresolved item requests; pair it with [Media Node types](/developer/media-nodes), [success responses](/developer/success-responses), and [structured errors](/developer/errors).
+`POST /extract` accepts a Source URL or the Node identity of a previously emitted unresolved item, and returns Media Nodes. The shared runtime validates the request before your Plugin runs; a body that fails validation never reaches Source code.
 
-`POST /extract` accepts a Source URL or a follow-up request for an unresolved item. Reject malformed bodies before the Plugin runs.
+The request envelope supports these fields:
 
-<CodeBlock label="src/protocol.ts">
+| Name        | Type   | Required | Description                                                                                                         |
+| ----------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `input`     | object | Yes      | A `source` input or a `node` input; see below                                                                       |
+| `pluginId`  | string | No       | Selects a specific Plugin from the manifest catalog                                                                 |
+| `password`  | string | No       | Content password for the Source; attempt-scoped, never persisted by Lynvo                                           |
+| `basicAuth` | object | No       | `{ "username", "password" }` for source-side HTTP Basic Auth; sent only when the manifest sets `features.basicAuth` |
+| `proxy`     | object | No       | `{ "provider", "token" }` carrying the user's own proxy token for this request's upstream calls                     |
 
-```ts {3-11}
-import { Schema } from "effect"
+A `source` input carries one field, `sourceUrl`. A `node` input carries `nodeUrl`, `resourceId`, or both; a node input with neither fails with the schema message `Node requires nodeUrl or resourceId`.
 
-const sourceInput = Schema.Struct({
-  kind: Schema.Literal("source"),
-  sourceUrl: Schema.String,
-})
-
-const nodeInput = Schema.Struct({
-  kind: Schema.Literal("node"),
-  nodeUrl: Schema.optional(Schema.String),
-  resourceId: Schema.optional(Schema.String),
-})
-```
-
-</CodeBlock>
-
-The input must include `nodeUrl`, `resourceId`, or both.
-
-Add optional Plugin selection and credential fields to the request envelope:
-
-<CodeBlock label="src/protocol.ts">
-
-```ts {2,4-8}
-export const extractRequestSchema = Schema.Struct({
-  input: Schema.Union([sourceInput, nodeInput]),
-  pluginId: Schema.optional(Schema.NonEmptyString),
-  password: Schema.optional(Schema.String),
-  basicAuth: Schema.optional(
-    Schema.Struct({
-      username: Schema.String,
-      password: Schema.String,
-    })
-  ),
-})
-```
-
-</CodeBlock>
-
-A Source Extraction request uses `sourceUrl`:
+To request the first Extraction of a Source URL, send a `source` input:
 
 <CodeBlock label="POST /extract">
 
@@ -67,7 +36,7 @@ A Source Extraction request uses `sourceUrl`:
 
 </CodeBlock>
 
-An unresolved item follow-up uses the `nodeUrl` and/or `resourceId` returned by the same Plugin Server:
+To follow up on an unresolved item, send the Node identity returned by the same Plugin Server:
 
 <CodeBlock label="POST /extract">
 
@@ -83,5 +52,15 @@ An unresolved item follow-up uses the `nodeUrl` and/or `resourceId` returned by 
 ```
 
 </CodeBlock>
+
+The protocol package also exports `createSourceExtractRequest` and `createNodeExtractRequest` helpers that build these envelopes with the optional fields.
+
+## Credentials on an Extraction request
+
+Two separate credentials can ride an Extraction request, and they authenticate different hops. The Plugin Server bearer key in the `Authorization` header authenticates Lynvo to the Plugin Server. The `basicAuth` and `password` fields authenticate the Plugin Server to the Source.
+
+Lynvo removes URL userinfo before forwarding a target and does not send the original top-level Source URL on unresolved item follow-up requests. A `proxy` token must be used for that request's upstream proxy calls instead of the server's shared proxy credits, and must never be logged.
+
+Pair this reference with [Media Node types](/developer/media-nodes), [success responses](/developer/success-responses), and [structured errors](/developer/errors).
 
 </DocSection>
