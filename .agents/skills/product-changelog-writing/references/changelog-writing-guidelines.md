@@ -4,9 +4,10 @@ This guide captures the changelog and announcement house style. Its
 patterns come from full-body reads of four sources in September and
 October 2026: twenty-five entries from an issue tracker's changelog
 read through its full-text archive, nineteen entries from a deployment
-platform's changelog, nine posts from a platform's developer news
-page, and six posts from an AI company's newsroom. The sources
-established the shape; this guide states it as the style to write in.
+platform's changelog, nine posts from an operating system vendor's
+developer news page, and six posts from an AI company's newsroom. The
+sources established the shape; this guide states it as the style to
+write in.
 
 Treat the sample examples in this guide as evidence of the style, not as
 content to copy. Do not carry their product names, plans, or feature
@@ -43,7 +44,7 @@ Announce changes as accomplished facts. Recurring characteristics:
 
 - "Now" is the signal word. The first sentence states the change and its
   availability in one breath: "Volumes are now available in public
-  beta on Hobby, Pro, and Enterprise."
+  beta on Free, Pro, and Enterprise."
 - Every sentence carries a behavior, not an adjective. Numbers do the
   celebrating: "cutting costs by up to 85% for high-concurrency
   workloads."
@@ -74,8 +75,8 @@ Pick the shape by the weight of the news:
 
 - Default: a declarative sentence stating the change as accomplished
   fact, sentence case. "Search now available on Business plans." /
-  "Runtime logs now show cache reasons." / "Edge Requests are now
-  called CDN Requests."
+  "Runtime logs now show cache reasons." / "Request logs are now
+  called Network logs."
 - A plain noun phrase names the feature for quiet changes: "Priority
   inbox", "Team initiatives", "Search trace spans from the CLI".
 - "Introducing X" or a benefit clause is reserved for flagship launches:
@@ -91,7 +92,7 @@ Pick the shape by the weight of the news:
 ### The flat entry
 
 1. First sentence: the change plus availability. "You can now create as
-   many stores as you need. The previous limits of 100 stores on Hobby
+   many stores as you need. The previous limits of 100 stores on Free
    and 500 on Pro no longer apply."
 2. A definition sentence for a new concept: "A Volume is persistent
    storage that you mount as a directory in a sandbox."
@@ -126,7 +127,7 @@ For launches that need adoption effort:
 
 - A bolded thesis sentence, then the one-sentence product introduction:
   name plus lineage plus differentiator. "We're introducing **Turbo**,
-  an upgrade to the standard model that nearly matches the flagship's
+  an upgrade to the standard model that nearly matches the top tier's
   intelligence at one-fifth of the price."
 - Benefit-named sections, each grounded in a concrete anecdote: "A bug
   appears in the team chat, and the agent immediately starts
@@ -157,7 +158,7 @@ For launches that need adoption effort:
   for Pro teams".
 - Stage ladder: private beta → public beta or alpha or preview →
   generally available. Promotions are announced as their own entries:
-  "Guided Reviews are now generally available."
+  "Batch editing is now generally available."
 - Rollout tense is graded honestly: "rolling out today" / "over the
   coming weeks" / "coming this fall". Say what a reader without the
   feature should expect: "If you don't see a Teams page yet, stay tuned
@@ -165,8 +166,8 @@ For launches that need adoption effort:
 - Negative availability is stated explicitly: "The model is not yet
   available in the desktop app."
 - Pricing is concrete, with units and free allowances: "storage costs
-  $0.05 per GB-month; Hobby includes 15 GB per month at no additional
-  cost."
+  $0.05 per GB-month; the Free plan includes 15 GB per month at no
+  additional cost."
 - Version and deadline gating: "Starting April 28, 2026, apps uploaded
   need to meet the following minimum requirements" / "requires CLI 44.5.1
   or later".
@@ -175,8 +176,8 @@ For launches that need adoption effort:
 
 A fixed skeleton, whether a section or its own entry:
 
-1. The title states the new state, not the loss: "Edge Requests are now
-   called CDN Requests."
+1. The title states the new state, not the loss: "Request logs are now
+   called Network logs."
 2. Immediately quantify what does not change: "A naming change only:
    pricing, limits, and how usage is measured are unchanged."
 3. The reason, in one sentence.
@@ -260,9 +261,9 @@ in-app MDX, a marketing site, GitHub releases, or a feed — how they are
 ordered, permalinked, and dated, what frontmatter or metadata they
 require, and what validation runs against their links. If the project
 has no changelog surface at all, flag that publishing one is pipeline
-work; do not invent a location. Follow the project's conventions
-exactly and flag gaps instead of improvising new components or
-frontmatter fields.
+work; do not invent a location. Existing entries set the format; follow
+them, and flag gaps rather than inventing new components or frontmatter
+fields.
 
 Then map the style onto the project's mechanics:
 
