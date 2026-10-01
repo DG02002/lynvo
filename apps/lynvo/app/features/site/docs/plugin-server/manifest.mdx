@@ -60,6 +60,8 @@ Replace the `com.example` namespace with an identifier you control, and keep `pl
 | `features`        | Yes      | Declares protocol capabilities; see below                                        |
 | `extensions`      | No       | Namespaced non-core metadata, including the Plugin catalog                       |
 
+Schema decoding supplies `usage: { endpoint: "/usage" }` when the `usage` field is omitted. `validatePluginServerManifestContract` still requires the manifest to declare `usage` explicitly because Lynvo requires the authenticated `/usage` endpoint.
+
 Each matcher accepts `hosts` (required, non-empty), optional `hostPatterns`, optional `pathPatterns` defaulting to `["/**"]`, and optional `schemes` defaulting to `["https"]`.
 
 The `features` object declares what the server may emit and accept. Every flag defaults to `false`:

@@ -78,7 +78,7 @@ const mergedDeveloperSlugs = new Set([
   "success-responses",
 ])
 
-export const getMergedDeveloperDocsSlug = (slug: string): string | undefined =>
+const getMergedDeveloperDocsSlug = (slug: string): string | undefined =>
   mergedDeveloperSlugs.has(slug) ? "extract" : undefined
 
 export const getDeveloperDocsRedirectSlugForSection = (
