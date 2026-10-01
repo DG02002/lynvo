@@ -103,7 +103,7 @@ const changelogEntries: ChangelogEntry[] = [
     category: "Plugin Server",
     description: [
       "Bhadoo’s Google Drive Index and Spencerwooo’s OneDrive Vercel Index are now Lynvo Plugins, run by the Lynvo Plugin Server. There is no Custom Plugin Server to connect and manage for them.",
-      "A Google Drive Index or OneDrive Vercel Index page lists the files shared from a drive. Save one of its URLs and Extraction pulls its playable files and unresolved items, like any other supported Source.",
+      "Save a page URL the same way you save a direct media link: paste it on the Save page, choose Save link, and, if Choose links appears, select the Playable links you want. Extraction pulls its playable files and unresolved items, like any other supported Source.",
       "Both sit under the Lynvo Plugin Server’s shared monthly allowance, each with its own usage row. Playable links are the final URLs Lynvo sends to a player; unresolved items resolve first.",
     ],
   },
@@ -115,7 +115,7 @@ const changelogEntries: ChangelogEntry[] = [
     category: "Product",
     description: [
       "Lynvo is now available: a link library that saves the links you choose, keeps them in folders, and opens them on Android TV, Android phones, and Android tablets in the external Android player you already use.",
-      "It started with a concrete Android TV problem: moving a link from a phone or browser to a TV meant typing a long media URL with a remote. Lynvo keeps the link instead. Save it in any browser, find it in your Library on a signed-in session, and send it to the player.",
+      "It started with a concrete Android TV problem: getting a link to the TV meant typing a long URL with a TV remote. Lynvo keeps the link instead. Save it in a browser, find it in your Library on Android TV after sync, and send it to the player.",
       "Paste a supported URL on the Save page and choose Save link; when a Source page needs it, choose the Playable links you want. Source pages such as Bhadoo’s Google Drive Index and Spencerwooo’s OneDrive Vercel Index resolve through Lynvo Plugins, alongside direct media links.",
       "Opening a link hands its Playable URL to Just (Video) Player, VLC for Android, MPV, or MX Player. Lynvo does not provide videos or play them itself.",
       "Remote Play sends a Playable link from one signed-in session to another, and the receiving session opens it in its external Android player.",
