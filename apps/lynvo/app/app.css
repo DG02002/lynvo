@@ -1209,6 +1209,10 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 .docs-screenshot-zoom__image {
   position: absolute;
   overflow: hidden;
+  /* Matches the thumbnail button's border; the pose sets the width and
+     radius inline, scaled so the collapsed pose renders the thumbnail's
+     exact border and corners. */
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   will-change: transform;
   transition: transform 400ms
