@@ -22,6 +22,7 @@ const STORE_SHOTS = [
   { name: "tv-bro", theme: "aurora-002" },
   { name: "just-player", theme: "aurora-060" },
   { name: "vlc", theme: "aurora-063" },
+  { name: "google-tv", theme: "aurora-061" },
 ]
 
 const main = async () => {

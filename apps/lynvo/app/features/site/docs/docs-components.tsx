@@ -776,15 +776,23 @@ function DocsScreenshotZoom({
 const DOCS_INSTALL_APP_SHOTS = [
   {
     alt: "TV Bro listing on Google Play",
+    name: "tv-bro",
     source: "/images/docs/play-store-tv-bro.webp",
   },
   {
     alt: "Just (Video) Player listing on Google Play",
+    name: "just-player",
     source: "/images/docs/play-store-just-player.webp",
   },
   {
     alt: "VLC for Android listing on Google Play",
+    name: "vlc",
     source: "/images/docs/play-store-vlc.webp",
+  },
+  {
+    alt: "Google TV app listing on Google Play",
+    name: "google-tv",
+    source: "/images/docs/play-store-google-tv.webp",
   },
 ]
 
@@ -832,10 +840,19 @@ function DocsZoomableFigure({
   )
 }
 
-function DocsInstallApps() {
+function DocsInstallApps({ apps }: { apps?: string }) {
+  const selectedApps = apps
+    ? apps.split(" ").flatMap((name) => {
+        const shot = DOCS_INSTALL_APP_SHOTS.find(
+          (candidate) => candidate.name === name
+        )
+        return shot ? [shot] : []
+      })
+    : DOCS_INSTALL_APP_SHOTS
+
   return (
     <div>
-      {DOCS_INSTALL_APP_SHOTS.map((shot) => (
+      {selectedApps.map((shot) => (
         <DocsZoomableFigure
           key={shot.source}
           alt={shot.alt}
