@@ -776,39 +776,29 @@ function DocsScreenshotZoom({
 const DOCS_INSTALL_APP_SHOTS = [
   {
     alt: "TV Bro listing on Google Play",
-    href: "https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser",
     source: "/images/docs/play-store-tv-bro.webp",
   },
   {
     alt: "Just (Video) Player listing on Google Play",
-    href: "https://play.google.com/store/apps/details?id=com.brouken.player",
     source: "/images/docs/play-store-just-player.webp",
   },
   {
     alt: "VLC for Android listing on Google Play",
-    href: "https://play.google.com/store/apps/details?id=org.videolan.vlc",
     source: "/images/docs/play-store-vlc.webp",
   },
 ]
 
 function DocsInstallApps() {
   return (
-    <div className="not-typeset my-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="not-typeset mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
       {DOCS_INSTALL_APP_SHOTS.map((shot) => (
-        <a
-          key={shot.href}
-          href={shot.href}
-          target="_blank"
-          rel="noreferrer"
-          className="block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <img
-            src={shot.source}
-            alt={shot.alt}
-            loading="lazy"
-            className="h-auto w-full"
-          />
-        </a>
+        <img
+          key={shot.source}
+          src={shot.source}
+          alt={shot.alt}
+          loading="lazy"
+          className="h-auto w-full"
+        />
       ))}
     </div>
   )
