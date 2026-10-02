@@ -16,6 +16,7 @@ import { Result, Schema } from "effect"
 import type { MDXComponents } from "mdx/types.js"
 import {
   isValidElement,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -248,90 +249,94 @@ export function DocsFaq({
   )
 }
 
-// Port of the Linear docs image viewer, measured from linear.app/docs:
-// one transform springs the lightbox image between a pose exactly over the
-// thumbnail and a centered fullscreen fit, while scrolling dismisses the
-// viewer instead of locking the page. The lightbox is laid out at its
-// fullscreen fit rect (position and size are set, never animated) and scaled
-// down onto the thumbnail for the collapsed pose, so the layer is rasterized
-// once at full resolution and never re-rasters mid-zoom. The expand duration
-// and both easing curves live in app.css; the collapse constant here must
-// match its transition duration.
+// Port of the Linear docs image viewer, measured from linear.app/docs. The
+// clone keeps the thumbnail's exact rect and a single transform moves it to a
+// centered viewport fit, which keeps the image spatially attached throughout
+// the animation. Motion's 400ms, bounce=0 spring is represented by the same
+// piecewise-linear easing string the reference emits for the Web Animations
+// API. The animation's finished promise owns teardown so an interrupted close
+// cannot reveal the thumbnail before the clone reaches it.
 const DOCS_SCREENSHOT_ZOOM_GUTTER_PX = 24
-const DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS = 285
-// The unmount waits past the collapse transition so a dropped frame can
-// never cut the landing short and reveal the thumbnail early.
-const DOCS_SCREENSHOT_ZOOM_UNMOUNT_BUFFER_MS = 40
+const DOCS_SCREENSHOT_ZOOM_DURATION_MS = 400
+const DOCS_SCREENSHOT_ZOOM_SPRING_EASING =
+  "linear(0, 0.1803, 0.4551, 0.6711, 0.8122, 0.8966, 0.9445, 0.9708, 0.9848, 0.9922, 0.996, 0.998, 1)"
 
 interface ZoomPose {
+  borderRadius: number
   borderWidth: number
   collapsedTransform: string
-  cornerRadius: number
-  fitHeight: number
-  fitLeft: number
-  fitTop: number
-  fitWidth: number
+  expandedTransform: string
+  height: number
+  left: number
+  top: number
+  width: number
 }
 
-const EXPANDED_TRANSFORM = "scale(1) translate(0px, 0px)"
-
-// The translate runs before the scale in the transform chain, so its
-// distance divides by the scale to land the image center on the thumbnail's
-// center once scaled. The thumbnail's own border width and corner radius
-// divide by the collapse scale for the same reason: laid out larger and
-// scaled down, they render at the thumbnail's exact border and radius in
-// the collapsed pose and grow proportionally with the zoom.
-const getZoomPose = ({
+const getExpandedTransform = ({
   thumbnail,
-  thumbnailBorderWidth,
-  thumbnailCornerRadius,
   viewportHeight,
   viewportWidth,
 }: {
-  thumbnail: DOMRect
-  thumbnailBorderWidth: number
-  thumbnailCornerRadius: number
+  thumbnail: Pick<DOMRect, "height" | "left" | "top" | "width">
   viewportHeight: number
   viewportWidth: number
-}): ZoomPose => {
+}) => {
   const fitScale = Math.min(
     (viewportWidth - DOCS_SCREENSHOT_ZOOM_GUTTER_PX * 2) / thumbnail.width,
     (viewportHeight - DOCS_SCREENSHOT_ZOOM_GUTTER_PX * 2) / thumbnail.height
   )
-  const fitWidth = thumbnail.width * fitScale
-  const fitHeight = thumbnail.height * fitScale
-  const fitLeft = (viewportWidth - fitWidth) / 2
-  const fitTop = (viewportHeight - fitHeight) / 2
-  const collapseScale = thumbnail.width / fitWidth
   const translateX =
-    (thumbnail.left + thumbnail.width / 2 - (fitLeft + fitWidth / 2)) /
-    collapseScale
+    (viewportWidth / 2 - (thumbnail.left + thumbnail.width / 2)) / fitScale
   const translateY =
-    (thumbnail.top + thumbnail.height / 2 - (fitTop + fitHeight / 2)) /
-    collapseScale
+    (viewportHeight / 2 - (thumbnail.top + thumbnail.height / 2)) / fitScale
+
+  return `scale(${fitScale}) translate(${translateX}px, ${translateY}px)`
+}
+
+const getZoomPose = ({
+  thumbnail,
+  thumbnailBorderRadius,
+  thumbnailBorderWidth,
+  viewportHeight,
+  viewportWidth,
+}: {
+  thumbnail: DOMRect
+  thumbnailBorderRadius: number
+  thumbnailBorderWidth: number
+  viewportHeight: number
+  viewportWidth: number
+}): ZoomPose | undefined => {
+  if (thumbnail.width <= 0 || thumbnail.height <= 0) {
+    return undefined
+  }
 
   return {
-    borderWidth: thumbnailBorderWidth / collapseScale,
-    collapsedTransform: `scale(${collapseScale}) translate(${translateX}px, ${translateY}px)`,
-    cornerRadius: thumbnailCornerRadius / collapseScale,
-    fitHeight,
-    fitLeft,
-    fitTop,
-    fitWidth,
+    borderRadius: thumbnailBorderRadius,
+    borderWidth: thumbnailBorderWidth,
+    collapsedTransform: "scale(1) translate(0px, 0px)",
+    expandedTransform: getExpandedTransform({
+      thumbnail,
+      viewportHeight,
+      viewportWidth,
+    }),
+    height: thumbnail.height,
+    left: thumbnail.left,
+    top: thumbnail.top,
+    width: thumbnail.width,
   }
 }
 
 const applyZoomPose = (
-  zoomedImage: HTMLDivElement,
+  zoomedImage: HTMLButtonElement,
   pose: ZoomPose,
   transform: string
 ) => {
-  zoomedImage.style.top = `${pose.fitTop}px`
-  zoomedImage.style.left = `${pose.fitLeft}px`
-  zoomedImage.style.width = `${pose.fitWidth}px`
-  zoomedImage.style.height = `${pose.fitHeight}px`
+  zoomedImage.style.top = `${pose.top}px`
+  zoomedImage.style.left = `${pose.left}px`
+  zoomedImage.style.width = `${pose.width}px`
+  zoomedImage.style.height = `${pose.height}px`
   zoomedImage.style.borderWidth = `${pose.borderWidth}px`
-  zoomedImage.style.borderRadius = `${pose.cornerRadius}px`
+  zoomedImage.style.borderRadius = `${pose.borderRadius}px`
   zoomedImage.style.transform = transform
 }
 
@@ -344,72 +349,159 @@ const measureZoomPose = (
   const style = getComputedStyle(thumbnail)
   return getZoomPose({
     thumbnail: thumbnail.getBoundingClientRect(),
+    thumbnailBorderRadius: Number.parseFloat(style.borderTopLeftRadius) || 0,
     thumbnailBorderWidth: Number.parseFloat(style.borderTopWidth) || 0,
-    thumbnailCornerRadius: Number.parseFloat(style.borderTopLeftRadius) || 0,
     viewportHeight: window.innerHeight,
     viewportWidth: window.innerWidth,
   })
 }
 
-// Re-measures and retargets a running collapse so the lightbox tracks the
-// thumbnail while the page scrolls under it, mirroring Linear's exit
-// re-measure window. The unmount timer keeps its original deadline.
-const retargetCollapseToThumbnail = ({
+const getCollapseTransform = ({
+  basePose,
   thumbnail,
-  zoomedImage,
 }: {
-  thumbnail: HTMLButtonElement | null
-  zoomedImage: HTMLDivElement | null
+  basePose: ZoomPose
+  thumbnail: DOMRect
 }) => {
-  const pose = measureZoomPose(thumbnail)
-  if (zoomedImage && pose) {
-    applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
-  }
+  const scale = thumbnail.width / basePose.width
+  const baseCenterX = basePose.left + basePose.width / 2
+  const baseCenterY = basePose.top + basePose.height / 2
+  const thumbnailCenterX = thumbnail.left + thumbnail.width / 2
+  const thumbnailCenterY = thumbnail.top + thumbnail.height / 2
+  const translateX = (thumbnailCenterX - baseCenterX) / scale
+  const translateY = (thumbnailCenterY - baseCenterY) / scale
+
+  return `scale(${scale}) translate(${translateX}px, ${translateY}px)`
 }
 
-const collapseZoomToThumbnail = (
-  {
-    overlay,
-    thumbnail,
-    zoomedImage,
-  }: {
-    overlay: HTMLDivElement | null
-    thumbnail: HTMLButtonElement | null
-    zoomedImage: HTMLDivElement | null
-  },
-  onClose: () => void,
-  closeTimerRef: RefObject<ReturnType<typeof setTimeout> | undefined>
+const getCurrentTransform = (
+  zoomedImage: HTMLButtonElement,
+  fallbackTransform: string
 ) => {
-  clearTimeout(closeTimerRef.current)
-  const pose = measureZoomPose(thumbnail)
-  if (!zoomedImage || !pose) {
-    onClose()
-    return
+  const { transform } = getComputedStyle(zoomedImage)
+  if (transform === "none") {
+    return fallbackTransform
   }
 
-  // A close during the expand transition retargets from wherever the
-  // transform currently is, so interrupting the zoom stays smooth.
-  zoomedImage.dataset.phase = "collapse"
-  applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
-  if (overlay) {
-    overlay.style.opacity = "0"
+  const matrixMatch = transform.match(/^matrix(3d)?\(([-\d.e\s,]+)\)$/u)
+  if (!matrixMatch) {
+    return transform
   }
-  const thumbnailImage = thumbnail?.querySelector("img")
-  if (thumbnailImage) {
-    // Rewarm the thumbnail's decoded bitmap during the collapse so
-    // restoring its visibility at unmount paints in the same frame, even
-    // if the browser evicted the decoded data while it was hidden. The
-    // optional call skips environments without decode.
-    thumbnailImage.decode?.().catch(() => undefined)
+
+  const values = matrixMatch[2].split(",").map((value) => Number(value.trim()))
+  const isThreeDimensional = Boolean(matrixMatch[1])
+  const [scale] = values
+  const translateX = values[isThreeDimensional ? 12 : 4]
+  const translateY = values[isThreeDimensional ? 13 : 5]
+  if (
+    !Number.isFinite(scale) ||
+    scale === 0 ||
+    !Number.isFinite(translateX) ||
+    !Number.isFinite(translateY)
+  ) {
+    return transform
   }
-  closeTimerRef.current = setTimeout(
-    onClose,
-    DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS + DOCS_SCREENSHOT_ZOOM_UNMOUNT_BUFFER_MS
+
+  return `scale(${scale}) translate(${translateX / scale}px, ${translateY / scale}px)`
+}
+
+const cancelAnimation = (animation: Animation | undefined) => {
+  animation?.cancel()
+}
+
+const prefersReducedMotion = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+
+const animateStyle = ({
+  element,
+  from,
+  onFinish,
+  property,
+  to,
+}: {
+  element: HTMLElement
+  from: string
+  onFinish?: () => void
+  property: "opacity" | "transform"
+  to: string
+}): Animation | undefined => {
+  element.style[property] = from
+  if (prefersReducedMotion()) {
+    element.style[property] = to
+    onFinish?.()
+    return undefined
+  }
+
+  const isOverlay = property === "opacity"
+  let animation: Animation
+  try {
+    animation = element.animate([{ [property]: from }, { [property]: to }], {
+      duration: isOverlay ? 250 : DOCS_SCREENSHOT_ZOOM_DURATION_MS,
+      easing: isOverlay
+        ? "cubic-bezier(0, 0, 0.58, 1)"
+        : DOCS_SCREENSHOT_ZOOM_SPRING_EASING,
+      fill: "both",
+    })
+  } catch {
+    // Browsers without WAAPI or with unsupported easing still reach the final pose.
+    element.style[property] = to
+    onFinish?.()
+    return undefined
+  }
+  if (onFinish) {
+    // Cancelling a retargeted animation rejects `finished` by design.
+    void animation.finished.then(onFinish, () => undefined)
+  }
+  return animation
+}
+
+interface CollapseState {
+  collapsedTransform: string
+  currentOpacity: string
+  currentTransform: string
+}
+
+interface MutableAnimationRef {
+  current: Animation | undefined
+}
+
+const getCollapseState = ({
+  basePose,
+  phase,
+  thumbnail,
+  overlay,
+  zoomedImage,
+}: {
+  basePose: ZoomPose | undefined
+  phase: "preparing" | "expanded" | "closing"
+  thumbnail: HTMLButtonElement | null
+  overlay: HTMLDivElement | null
+  zoomedImage: HTMLButtonElement | null
+}): CollapseState | undefined => {
+  if (!thumbnail || !zoomedImage) {
+    return undefined
+  }
+  const pose = measureZoomPose(thumbnail)
+  const resolvedBasePose = basePose ?? pose
+  if (!pose || !resolvedBasePose) {
+    return undefined
+  }
+  const collapsedTransform = getCollapseTransform({
+    basePose: resolvedBasePose,
+    thumbnail: thumbnail.getBoundingClientRect(),
+  })
+  const currentOpacity = overlay ? getComputedStyle(overlay).opacity : "0"
+  const currentTransform = getCurrentTransform(
+    zoomedImage,
+    phase === "expanded"
+      ? resolvedBasePose.expandedTransform
+      : collapsedTransform
   )
+  return { collapsedTransform, currentOpacity, currentTransform }
 }
 
 // The viewer mounts only from a click, never during server rendering, so its
-// layout effect can commit the collapsed pose before the first paint.
+// layout effect can commit the source pose before the first paint.
 function DocsScreenshotZoom({
   alt,
   imageSource,
@@ -422,46 +514,149 @@ function DocsScreenshotZoom({
   onClose: () => void
 }) {
   const overlayRef = useRef<HTMLDivElement>(null)
-  const zoomedImageRef = useRef<HTMLDivElement>(null)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const zoomedImageRef = useRef<HTMLButtonElement>(null)
+  const imageAnimationRef = useRef<Animation | undefined>(undefined)
+  const overlayAnimationRef = useRef<Animation | undefined>(undefined)
+  const basePoseRef = useRef<ZoomPose | undefined>(undefined)
+  const animationGenerationRef = useRef(0)
+  const closeGenerationRef = useRef(0)
+  const closingRef = useRef(false)
+  const phaseRef = useRef<"preparing" | "expanded" | "closing">("preparing")
+  const restoredFocusRef = useRef<HTMLElement | null>(null)
+
+  const finishClose = useCallback(() => {
+    const thumbnail = thumbnailRef.current
+    if (thumbnail) {
+      thumbnail.style.visibility = ""
+    }
+    onClose()
+  }, [onClose, thumbnailRef])
+
+  const startCollapse = useCallback(() => {
+    const zoomedImage = zoomedImageRef.current
+    const overlay = overlayRef.current
+    const collapseState = getCollapseState({
+      basePose: basePoseRef.current,
+      phase: phaseRef.current,
+      thumbnail: thumbnailRef.current,
+      overlay,
+      zoomedImage,
+    })
+    if (!zoomedImage || !collapseState) {
+      finishClose()
+      return
+    }
+
+    cancelAnimation(imageAnimationRef.current)
+    cancelAnimation(overlayAnimationRef.current)
+    animationGenerationRef.current += 1
+    zoomedImage.style.willChange = "transform"
+    phaseRef.current = "closing"
+    zoomedImage.dataset.phase = "collapse"
+    const closeGeneration = closeGenerationRef.current + 1
+    closeGenerationRef.current = closeGeneration
+    const closeFinished = () => {
+      if (closeGeneration === closeGenerationRef.current) {
+        zoomedImage.style.transform = collapseState.collapsedTransform
+        cancelAnimation(imageAnimationRef.current)
+        finishClose()
+      }
+    }
+    imageAnimationRef.current = animateStyle({
+      element: zoomedImage,
+      from: collapseState.currentTransform,
+      onFinish: closeFinished,
+      property: "transform",
+      to: collapseState.collapsedTransform,
+    })
+    if (overlay) {
+      overlayAnimationRef.current = animateStyle({
+        element: overlay,
+        from: collapseState.currentOpacity,
+        property: "opacity",
+        to: "0",
+      })
+    }
+  }, [finishClose, thumbnailRef])
+
+  const collapse = useCallback(() => {
+    if (closingRef.current) {
+      return
+    }
+    closingRef.current = true
+    if (phaseRef.current === "preparing") {
+      finishClose()
+      return
+    }
+    startCollapse()
+  }, [finishClose, startCollapse])
 
   useLayoutEffect(() => {
     const zoomedImage = zoomedImageRef.current
     const lightboxImage = zoomedImage?.querySelector("img")
-    const pose = measureZoomPose(thumbnailRef.current)
+    const thumbnail = thumbnailRef.current
+    const pose = measureZoomPose(thumbnail)
+    let disposed = false
+    restoredFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : thumbnail
+    zoomedImage?.focus({ preventScroll: true })
     if (!zoomedImage || !pose) {
-      return undefined
+      return () => {
+        disposed = true
+      }
     }
 
-    // The collapsed pose is committed before the first paint with the
-    // transition disarmed, so the freshly inserted element can never paint
-    // or start a transition from its transformless default — that default is
-    // the expanded pose, and a frame of it reads as a fullscreen flash.
+    basePoseRef.current = pose
     applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
-    void zoomedImage.offsetHeight
-    zoomedImage.dataset.phase = "expand"
-    void zoomedImage.offsetHeight
-    let cancelled = false
     const expand = () => {
-      if (cancelled) {
+      if (disposed || closingRef.current) {
         return
       }
-      // The thumbnail hides only once the decoded lightbox image covers it.
-      applyZoomPose(zoomedImage, pose, EXPANDED_TRANSFORM)
-      if (overlayRef.current) {
-        overlayRef.current.style.opacity = "1"
+      const expansionPose = basePoseRef.current ?? pose
+      phaseRef.current = "expanded"
+      zoomedImage.dataset.phase = "expand"
+      if (thumbnail) {
+        thumbnail.style.visibility = "hidden"
       }
-      if (thumbnailRef.current) {
-        thumbnailRef.current.style.visibility = "hidden"
+      const animationGeneration = animationGenerationRef.current + 1
+      animationGenerationRef.current = animationGeneration
+      const openAnimationRef: MutableAnimationRef = { current: undefined }
+      const imageAnimation = animateStyle({
+        element: zoomedImage,
+        from: expansionPose.collapsedTransform,
+        onFinish: () => {
+          if (
+            disposed ||
+            closingRef.current ||
+            phaseRef.current !== "expanded" ||
+            animationGeneration !== animationGenerationRef.current
+          ) {
+            return
+          }
+          zoomedImage.style.transform = expansionPose.expandedTransform
+          cancelAnimation(openAnimationRef.current)
+          zoomedImage.style.willChange = "auto"
+        },
+        property: "transform",
+        to: expansionPose.expandedTransform,
+      })
+      openAnimationRef.current = imageAnimation
+      imageAnimationRef.current = imageAnimation
+      if (overlayRef.current) {
+        overlayAnimationRef.current = animateStyle({
+          element: overlayRef.current,
+          from: "0",
+          property: "opacity",
+          to: "1",
+        })
       }
     }
+
     if (lightboxImage instanceof HTMLImageElement) {
-      // decode() resolves immediately for an already-decoded image and
-      // otherwise waits, keeping an undecoded lightbox from expanding as a
-      // blank rectangle. Environments without decode and failed decodes
-      // still expand.
       try {
-        lightboxImage.decode().then(expand, expand)
+        void lightboxImage.decode().then(expand, expand)
       } catch {
         expand()
       }
@@ -469,65 +664,66 @@ function DocsScreenshotZoom({
       expand()
     }
     return () => {
-      cancelled = true
+      disposed = true
     }
   }, [thumbnailRef])
 
   useEffect(
     () => () => {
-      clearTimeout(closeTimerRef.current)
+      cancelAnimation(imageAnimationRef.current)
+      cancelAnimation(overlayAnimationRef.current)
       if (thumbnailRef.current) {
         thumbnailRef.current.style.visibility = ""
       }
+      restoredFocusRef.current?.focus({ preventScroll: true })
     },
     [thumbnailRef]
   )
 
   useEffect(() => {
-    const collapse = () => {
-      collapseZoomToThumbnail(
-        {
-          overlay: overlayRef.current,
-          thumbnail: thumbnailRef.current,
-          zoomedImage: zoomedImageRef.current,
-        },
-        onClose,
-        closeTimerRef
-      )
-    }
     const handleResize = () => {
       const zoomedImage = zoomedImageRef.current
       const pose = measureZoomPose(thumbnailRef.current)
       if (!zoomedImage || !pose) {
         return
       }
-      // A resize re-measures the pose and retargets whatever phase is
-      // running: the collapsed pose while preparing or closing, the
-      // fullscreen fit once expanded.
-      const { phase } = zoomedImage.dataset
-      applyZoomPose(
-        zoomedImage,
-        pose,
-        phase === "expand" ? EXPANDED_TRANSFORM : pose.collapsedTransform
-      )
+      if (phaseRef.current === "expanded") {
+        const basePose = basePoseRef.current ?? pose
+        cancelAnimation(imageAnimationRef.current)
+        animationGenerationRef.current += 1
+        const resizedPose = {
+          ...basePose,
+          expandedTransform: getExpandedTransform({
+            thumbnail: basePose,
+            viewportHeight: window.innerHeight,
+            viewportWidth: window.innerWidth,
+          }),
+        }
+        basePoseRef.current = resizedPose
+        applyZoomPose(zoomedImage, resizedPose, resizedPose.expandedTransform)
+        zoomedImage.style.willChange = "auto"
+      } else if (phaseRef.current === "preparing") {
+        basePoseRef.current = pose
+        applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
+      } else {
+        startCollapse()
+      }
     }
-    // Scrolling the page dismisses the viewer; while a collapse is already
-    // running, scrolling only retargets it so the lightbox tracks the
-    // thumbnail to wherever the page scrolled.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault()
         collapse()
+      } else if (event.key === "Tab") {
+        event.preventDefault()
+        zoomedImageRef.current?.focus({ preventScroll: true })
       }
     }
     const handleScroll = () => {
-      if (zoomedImageRef.current?.dataset.phase === "collapse") {
-        retargetCollapseToThumbnail({
-          thumbnail: thumbnailRef.current,
-          zoomedImage: zoomedImageRef.current,
-        })
-        return
+      if (closingRef.current) {
+        startCollapse()
+      } else {
+        collapse()
       }
-      collapse()
     }
     window.addEventListener("keydown", handleKeyDown)
     window.addEventListener("scroll", handleScroll, { passive: true })
@@ -537,39 +733,41 @@ function DocsScreenshotZoom({
       window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("resize", handleResize)
     }
-  }, [onClose, thumbnailRef])
+  }, [collapse, startCollapse, thumbnailRef])
 
   return createPortal(
-    <div
-      ref={overlayRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label={alt}
-      className="docs-screenshot-zoom__overlay"
-    >
+    <>
       <div
+        ref={overlayRef}
+        aria-hidden="true"
+        className="docs-screenshot-zoom__overlay"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={alt}
         className="docs-screenshot-zoom__stage"
-        onClick={() => {
-          collapseZoomToThumbnail(
-            {
-              overlay: overlayRef.current,
-              thumbnail: thumbnailRef.current,
-              zoomedImage: zoomedImageRef.current,
-            },
-            onClose,
-            closeTimerRef
-          )
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            collapse()
+          }
         }}
       >
-        <div
+        <button
           ref={zoomedImageRef}
-          className="docs-screenshot-zoom__image"
+          type="button"
+          aria-label={`Close image: ${alt}`}
+          className="docs-screenshot-zoom__image outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           data-phase="prepare"
+          onClick={(event) => {
+            event.stopPropagation()
+            collapse()
+          }}
         >
           <img src={imageSource} alt={alt} />
-        </div>
+        </button>
       </div>
-    </div>,
+    </>,
     document.body
   )
 }

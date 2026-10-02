@@ -1181,97 +1181,37 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
-/* Docs screenshot zoom, ported from the Linear docs image viewer. The
-   lightbox image is positioned at the thumbnail's rect (never animated) and
-   a single transform springs between the collapsed pose — exactly over the
-   thumbnail — and a centered fullscreen fit. The easing curves below are
-   frame samples of Linear's spring (expand 400ms, collapse 285ms, overlay
-   fade 250ms); both start at zero so the motion is continuous from the
-   first frame — the measured samples began one frame into the motion. Keep
-   them in sync with the constants in docs-components.tsx. The global
-   reduced-motion override collapses all of it to an instant swap. */
+/* Docs screenshot zoom, ported from the Linear docs image viewer. The clone
+   stays at the thumbnail's rect and the Web Animations API moves only its
+   transform to a centered fullscreen fit. The overlay uses Linear's separate
+   250ms ease-out fade. */
 .docs-screenshot-zoom__overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
   background: var(--background);
   opacity: 0;
-  transition: opacity 250ms cubic-bezier(0, 0, 0.58, 1);
 }
 
 .docs-screenshot-zoom__stage {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 51;
   cursor: zoom-out;
 }
 
 .docs-screenshot-zoom__image {
   position: absolute;
+  appearance: none;
+  padding: 0;
   overflow: hidden;
-  /* Matches the thumbnail button's border; the pose sets the width and
-     radius inline, scaled so the collapsed pose renders the thumbnail's
-     exact border and corners. */
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
   will-change: transform;
-  transition: transform 400ms
-    linear(
-      0 0%,
-      0.136 1%,
-      0.273 4.25%,
-      0.411 8.5%,
-      0.534 12.5%,
-      0.64 16.75%,
-      0.725 21%,
-      0.792 25%,
-      0.845 29.25%,
-      0.885 33.5%,
-      0.915 37.5%,
-      0.938 41.75%,
-      0.955 46%,
-      0.968 50%,
-      0.977 54.25%,
-      0.983 58.5%,
-      0.988 62.5%,
-      0.991 67.5%,
-      0.994 71%,
-      0.996 75%,
-      0.997 79.25%,
-      1 100%
-    );
-}
-
-/* The pose is committed inline before the first paint with the transition
-   disarmed, so the inserted element can never flash or transition from its
-   transformless default — that default is the expanded fullscreen pose. */
-.docs-screenshot-zoom__image[data-phase="prepare"] {
-  transition: none;
-}
-
-.docs-screenshot-zoom__image[data-phase="collapse"] {
-  transition: transform 285ms
-    linear(
-      0 0%,
-      0.147 2%,
-      0.231 5.96%,
-      0.311 17.54%,
-      0.389 18.95%,
-      0.463 23.51%,
-      0.534 29.12%,
-      0.599 35.09%,
-      0.663 41.05%,
-      0.722 46.67%,
-      0.776 52.63%,
-      0.827 58.6%,
-      0.872 64.21%,
-      0.912 70.18%,
-      0.946 76.14%,
-      0.972 81.75%,
-      0.99 87.72%,
-      0.999 93.68%,
-      1 99.65%
-    );
 }
 
 .docs-screenshot-zoom__image img {
