@@ -248,99 +248,109 @@ export function DocsFaq({
   )
 }
 
-// Keep in sync with the transition durations on .docs-screenshot-zoom and
-// .docs-screenshot-zoom__image in app.css.
-const DOCS_SCREENSHOT_ZOOM_DURATION_MS = 300
+// Port of the Linear docs image viewer, measured from linear.app/docs:
+// the lightbox image is laid out at the thumbnail's rect (top/left/width/
+// height are set, never animated) and one transform springs it between
+// scale(1) translate(0, 0) — exactly over the thumbnail — and a centered
+// fullscreen fit. Scrolling dismisses the viewer instead of locking the
+// page. The expand duration and both easing curves live in app.css; the
+// collapse constant here must match its transition duration.
+const DOCS_SCREENSHOT_ZOOM_GUTTER_PX = 24
+const DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS = 285
 
-interface ZoomRect {
+interface ZoomPose {
   height: number
   left: number
   top: number
   width: number
+  transform: string
 }
 
-// FLIP transform that maps the zoomed image's layout rect onto the
-// thumbnail's current on-screen rect, so the overlay can grow out of the
-// figure and collapse back into it.
-const getZoomTransform = (thumbnail: ZoomRect, layout: ZoomRect) => {
-  const translateX =
-    thumbnail.left + thumbnail.width / 2 - (layout.left + layout.width / 2)
-  const translateY =
-    thumbnail.top + thumbnail.height / 2 - (layout.top + layout.height / 2)
+const COLLAPSED_TRANSFORM = "scale(1) translate(0px, 0px)"
 
-  return `translate(${translateX}px, ${translateY}px) scale(${thumbnail.width / layout.width}, ${thumbnail.height / layout.height})`
-}
-
-// offsetLeft/offsetTop report the untransformed layout position inside the
-// fixed backdrop; getBoundingClientRect would include the zoom transform.
-const getZoomedLayoutRect = (zoomedImage: HTMLImageElement): ZoomRect => ({
-  height: zoomedImage.offsetHeight,
-  left: zoomedImage.offsetLeft,
-  top: zoomedImage.offsetTop,
-  width: zoomedImage.offsetWidth,
-})
-
-interface DocsScreenshotZoomElements {
-  backdrop: HTMLDivElement | null
-  thumbnail: HTMLImageElement | null
-  zoomedImage: HTMLImageElement | null
-}
-
-const expandZoomFromThumbnail = ({
-  backdrop,
-  thumbnail,
-  zoomedImage,
-  frameRefs,
-}: DocsScreenshotZoomElements & {
-  frameRefs: RefObject<number[]>
-}) => {
-  if (!backdrop || !thumbnail || !zoomedImage) {
-    return
-  }
-
-  zoomedImage.style.transform = getZoomTransform(
-    thumbnail.getBoundingClientRect(),
-    getZoomedLayoutRect(zoomedImage)
+// The translate runs before the scale in the transform chain, so its
+// distance divides by the scale to land the image center in the viewport
+// center once scaled.
+const getZoomPose = (
+  thumbnail: DOMRect,
+  viewportWidth: number,
+  viewportHeight: number
+): ZoomPose => {
+  const scale = Math.min(
+    (viewportWidth - DOCS_SCREENSHOT_ZOOM_GUTTER_PX * 2) / thumbnail.width,
+    (viewportHeight - DOCS_SCREENSHOT_ZOOM_GUTTER_PX * 2) / thumbnail.height
   )
-  zoomedImage.focus({ preventScroll: true })
+  const translateX =
+    (viewportWidth / 2 - (thumbnail.left + thumbnail.width / 2)) / scale
+  const translateY =
+    (viewportHeight / 2 - (thumbnail.top + thumbnail.height / 2)) / scale
 
-  // Two frames commit the collapsed pose before the transition to the
-  // centered zoom starts; a forced reflow would work too, at a cost.
-  frameRefs.current = [
-    requestAnimationFrame(() => {
-      frameRefs.current.push(
-        requestAnimationFrame(() => {
-          zoomedImage.style.transform = "none"
-          backdrop.style.opacity = "1"
-        })
-      )
-    }),
-  ]
+  return {
+    height: thumbnail.height,
+    left: thumbnail.left,
+    top: thumbnail.top,
+    width: thumbnail.width,
+    transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)`,
+  }
+}
+
+const applyZoomPose = (
+  zoomedImage: HTMLDivElement,
+  pose: ZoomPose,
+  transform: string
+) => {
+  zoomedImage.style.top = `${pose.top}px`
+  zoomedImage.style.left = `${pose.left}px`
+  zoomedImage.style.width = `${pose.width}px`
+  zoomedImage.style.height = `${pose.height}px`
+  zoomedImage.style.transform = transform
+}
+
+const measureZoomPose = (
+  thumbnail: HTMLImageElement | null
+): ZoomPose | undefined => {
+  if (!thumbnail) {
+    return undefined
+  }
+  return getZoomPose(
+    thumbnail.getBoundingClientRect(),
+    window.innerWidth,
+    window.innerHeight
+  )
 }
 
 const collapseZoomToThumbnail = (
-  { backdrop, thumbnail, zoomedImage }: DocsScreenshotZoomElements,
+  {
+    overlay,
+    thumbnail,
+    zoomedImage,
+  }: {
+    overlay: HTMLDivElement | null
+    thumbnail: HTMLImageElement | null
+    zoomedImage: HTMLDivElement | null
+  },
   onClose: () => void,
   closeTimerRef: RefObject<ReturnType<typeof setTimeout> | undefined>
 ) => {
-  if (!backdrop || !thumbnail || !zoomedImage) {
+  clearTimeout(closeTimerRef.current)
+  const pose = measureZoomPose(thumbnail)
+  if (!zoomedImage || !pose) {
     onClose()
     return
   }
 
-  // A close during the expand transition retargets the CSS transition from
-  // its current value, so interrupting the zoom stays smooth.
-  zoomedImage.style.transform = getZoomTransform(
-    thumbnail.getBoundingClientRect(),
-    getZoomedLayoutRect(zoomedImage)
-  )
-  backdrop.style.opacity = "0"
-  clearTimeout(closeTimerRef.current)
-  closeTimerRef.current = setTimeout(onClose, DOCS_SCREENSHOT_ZOOM_DURATION_MS)
+  // A close during the expand transition retargets from wherever the
+  // transform currently is, so interrupting the zoom stays smooth.
+  zoomedImage.dataset.phase = "collapse"
+  applyZoomPose(zoomedImage, pose, COLLAPSED_TRANSFORM)
+  if (overlay) {
+    overlay.style.opacity = "0"
+  }
+  closeTimerRef.current = setTimeout(onClose, DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS)
 }
 
 // The viewer mounts only from a click, never during server rendering, so its
-// layout effect can position the collapsed pose before the first paint.
+// layout effect can commit the collapsed pose before the first paint.
 function DocsScreenshotZoom({
   alt,
   imageSource,
@@ -352,90 +362,96 @@ function DocsScreenshotZoom({
   thumbnailImageRef: RefObject<HTMLImageElement | null>
   onClose: () => void
 }) {
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const zoomedImageRef = useRef<HTMLImageElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const zoomedImageRef = useRef<HTMLDivElement>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const frameRefs = useRef<number[]>([])
 
-  useEffect(() => {
-    const root = document.documentElement
-    const previousOverflow = root.style.overflow
-    const previousPaddingRight = root.style.paddingRight
-    const scrollbarWidth = window.innerWidth - root.clientWidth
-    root.style.overflow = "hidden"
-    if (scrollbarWidth > 0) {
-      root.style.paddingRight = `${scrollbarWidth}px`
+  useLayoutEffect(() => {
+    const zoomedImage = zoomedImageRef.current
+    const pose = measureZoomPose(thumbnailImageRef.current)
+    if (!zoomedImage || !pose) {
+      return
     }
 
-    return () => {
-      root.style.overflow = previousOverflow
-      root.style.paddingRight = previousPaddingRight
+    applyZoomPose(zoomedImage, pose, COLLAPSED_TRANSFORM)
+    // Commit the collapsed pose with a reflow before swapping in the
+    // expanded transform, so the transition runs between the two.
+    void zoomedImage.offsetHeight
+    applyZoomPose(zoomedImage, pose, pose.transform)
+    if (overlayRef.current) {
+      overlayRef.current.style.opacity = "1"
     }
-  }, [])
+  }, [thumbnailImageRef])
 
   useEffect(
     () => () => {
       clearTimeout(closeTimerRef.current)
-      for (const frame of frameRefs.current) {
-        cancelAnimationFrame(frame)
-      }
     },
     []
   )
 
   useEffect(() => {
+    const collapse = () => {
+      collapseZoomToThumbnail(
+        {
+          overlay: overlayRef.current,
+          thumbnail: thumbnailImageRef.current,
+          zoomedImage: zoomedImageRef.current,
+        },
+        onClose,
+        closeTimerRef
+      )
+    }
+    const handleResize = () => {
+      const zoomedImage = zoomedImageRef.current
+      const pose = measureZoomPose(thumbnailImageRef.current)
+      if (zoomedImage && pose) {
+        applyZoomPose(zoomedImage, pose, pose.transform)
+      }
+    }
+    // Scrolling the page dismisses the viewer; the collapse re-measures the
+    // thumbnail, so it lands wherever the page scrolled.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        collapseZoomToThumbnail(
-          {
-            backdrop: backdropRef.current,
-            thumbnail: thumbnailImageRef.current,
-            zoomedImage: zoomedImageRef.current,
-          },
-          onClose,
-          closeTimerRef
-        )
+        collapse()
       }
     }
     window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    window.addEventListener("scroll", collapse, { passive: true })
+    window.addEventListener("resize", handleResize, { passive: true })
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("scroll", collapse)
+      window.removeEventListener("resize", handleResize)
+    }
   }, [onClose, thumbnailImageRef])
-
-  useLayoutEffect(() => {
-    expandZoomFromThumbnail({
-      backdrop: backdropRef.current,
-      thumbnail: thumbnailImageRef.current,
-      zoomedImage: zoomedImageRef.current,
-      frameRefs,
-    })
-  }, [thumbnailImageRef])
 
   return createPortal(
     <div
-      ref={backdropRef}
+      ref={overlayRef}
       role="dialog"
       aria-modal="true"
       aria-label={alt}
-      onClick={() =>
-        collapseZoomToThumbnail(
-          {
-            backdrop: backdropRef.current,
-            thumbnail: thumbnailImageRef.current,
-            zoomedImage: zoomedImageRef.current,
-          },
-          onClose,
-          closeTimerRef
-        )
-      }
-      className="docs-screenshot-zoom fixed inset-0 z-50 flex items-center justify-center bg-white opacity-0 dark:bg-black"
+      className="docs-screenshot-zoom__overlay"
     >
-      <img
-        ref={zoomedImageRef}
-        src={imageSource}
-        alt={alt}
-        tabIndex={-1}
-        className="docs-screenshot-zoom__image max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md outline-none"
-      />
+      <div
+        className="docs-screenshot-zoom__stage"
+        onClick={() => {
+          collapseZoomToThumbnail(
+            {
+              overlay: overlayRef.current,
+              thumbnail: thumbnailImageRef.current,
+              zoomedImage: zoomedImageRef.current,
+            },
+            onClose,
+            closeTimerRef
+          )
+        }}
+      >
+        <div ref={zoomedImageRef} className="docs-screenshot-zoom__image">
+          <img src={imageSource} alt={alt} />
+        </div>
+      </div>
     </div>,
     document.body
   )
@@ -443,7 +459,6 @@ function DocsScreenshotZoom({
 
 export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   const image = getDocumentationImageAsset(name)
-  const thumbnailButtonRef = useRef<HTMLButtonElement>(null)
   const thumbnailImageRef = useRef<HTMLImageElement>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
 
@@ -452,13 +467,16 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   }
 
   return (
-    <figure className="not-typeset my-10">
+    <figure
+      className="docs-screenshot-zoom__figure not-typeset my-10"
+      data-zoom-open={zoomOpen || undefined}
+    >
       <button
-        ref={thumbnailButtonRef}
         type="button"
         onClick={() => setZoomOpen(true)}
         aria-label={`Open image: ${alt}`}
-        className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        aria-expanded={zoomOpen}
+        className="docs-screenshot-zoom__thumb mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {/* Framed docs screenshots share one fixed canvas, so full-width
             rendering keeps every figure the same size. */}
@@ -476,10 +494,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
           alt={alt}
           imageSource={image.source}
           thumbnailImageRef={thumbnailImageRef}
-          onClose={() => {
-            setZoomOpen(false)
-            thumbnailButtonRef.current?.focus()
-          }}
+          onClose={() => setZoomOpen(false)}
         />
       )}
     </figure>
