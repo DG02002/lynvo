@@ -36,7 +36,7 @@
       "viewport": {
         "width": 960,
         "height": 540,
-        "deviceScaleFactor": 1
+        "deviceScaleFactor": 2
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -83,7 +83,7 @@
       "viewport": {
         "width": 960,
         "height": 540,
-        "deviceScaleFactor": 1
+        "deviceScaleFactor": 2
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -885,7 +885,7 @@
       "viewport": {
         "width": 960,
         "height": 540,
-        "deviceScaleFactor": 1
+        "deviceScaleFactor": 2
       },
       "userAgent": "TV Bro/1.0 Mozilla/5.0 (Linux; Android 11; Android TV)",
       "steps": [
@@ -919,7 +919,66 @@
         }
       ],
       "output": "app/features/site/docs/images/start-guide-tv-library.webp",
-      "framing": false
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-062"
+      }
+    },
+    {
+      "name": "remote-play-connect",
+      "seedScenario": "docs",
+      "route": "/save",
+      "context": "desktop",
+      "companionReceiver": {
+        "route": "/save",
+        "expectVisible": {
+          "text": "Today",
+          "exact": true
+        }
+      },
+      "viewport": {
+        "width": 1470,
+        "height": 836,
+        "deviceScaleFactor": 2
+      },
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "steps": [
+        {
+          "action": "navigate",
+          "path": "/save",
+          "expectVisible": {
+            "text": "Today",
+            "exact": true
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Local development user"
+          },
+          "expectVisible": {
+            "role": "menuitem",
+            "name": "Remote Play"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "menuitem",
+            "name": "Remote Play"
+          },
+          "expectVisible": {
+            "text": "Chrome on Linux",
+            "exact": true
+          }
+        }
+      ],
+      "output": "app/features/site/docs/images/remote-play-connect.webp",
+      "framing": {
+        "mode": "postprocess",
+        "theme": "aurora-063"
+      }
     },
     {
       "name": "settings-storage",

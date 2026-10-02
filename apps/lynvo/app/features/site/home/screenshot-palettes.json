@@ -229,5 +229,19 @@
     "baseStart": "#001208",
     "baseMiddle": "#012417",
     "baseEnd": "#063A2A"
+  },
+  "aurora-062": {
+    "upperRight": "#FFB25E",
+    "lowerLeft": "#FF6F91",
+    "baseStart": "#1C0A10",
+    "baseMiddle": "#3B1524",
+    "baseEnd": "#5A2038"
+  },
+  "aurora-063": {
+    "upperRight": "#C77DFF",
+    "lowerLeft": "#7B68FF",
+    "baseStart": "#100526",
+    "baseMiddle": "#241048",
+    "baseEnd": "#391B6B"
   }
 }
