@@ -788,33 +788,20 @@ const DOCS_INSTALL_APP_SHOTS = [
   },
 ]
 
-function DocsInstallApps() {
-  return (
-    <div className="not-typeset mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {DOCS_INSTALL_APP_SHOTS.map((shot) => (
-        <img
-          key={shot.source}
-          src={shot.source}
-          alt={shot.alt}
-          loading="lazy"
-          className="h-auto w-full"
-        />
-      ))}
-    </div>
-  )
-}
-
-export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
-  const image = getDocumentationImageAsset(name)
+function DocsZoomableFigure({
+  alt,
+  className,
+  source,
+}: {
+  alt: string
+  className?: string
+  source: string
+}) {
   const thumbnailRef = useRef<HTMLButtonElement>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
 
-  if (!image) {
-    throw new Error(`Documentation screenshot asset is missing: ${name}`)
-  }
-
   return (
-    <figure className="not-typeset my-10">
+    <figure className={cn("not-typeset my-10", className)}>
       <button
         ref={thumbnailRef}
         type="button"
@@ -823,10 +810,10 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
         aria-expanded={zoomOpen}
         className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        {/* Framed docs screenshots share one fixed canvas, so full-width
-            rendering keeps every figure the same size. */}
+        {/* Framed captures share one canvas per set, so full-width
+            rendering keeps every figure in a set the same size. */}
         <img
-          src={image.source}
+          src={source}
           alt={alt}
           loading="lazy"
           className="h-auto w-full object-cover"
@@ -836,13 +823,38 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
       {zoomOpen && (
         <DocsScreenshotZoom
           alt={alt}
-          imageSource={image.source}
+          imageSource={source}
           thumbnailRef={thumbnailRef}
           onClose={() => setZoomOpen(false)}
         />
       )}
     </figure>
   )
+}
+
+function DocsInstallApps() {
+  return (
+    <div>
+      {DOCS_INSTALL_APP_SHOTS.map((shot) => (
+        <DocsZoomableFigure
+          key={shot.source}
+          alt={shot.alt}
+          className="my-4 first:mt-2 last:mb-0"
+          source={shot.source}
+        />
+      ))}
+    </div>
+  )
+}
+
+export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
+  const image = getDocumentationImageAsset(name)
+
+  if (!image) {
+    throw new Error(`Documentation screenshot asset is missing: ${name}`)
+  }
+
+  return <DocsZoomableFigure alt={alt} source={image.source} />
 }
 
 function CodeBlock({
