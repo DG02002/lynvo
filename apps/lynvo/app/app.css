@@ -1186,9 +1186,10 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
    a single transform springs between the collapsed pose — exactly over the
    thumbnail — and a centered fullscreen fit. The easing curves below are
    frame samples of Linear's spring (expand 400ms, collapse 285ms, overlay
-   fade 250ms); keep them in sync with the constants in docs-components.tsx.
-   The global reduced-motion override collapses all of it to an instant
-   swap. */
+   fade 250ms); both start at zero so the motion is continuous from the
+   first frame — the measured samples began one frame into the motion. Keep
+   them in sync with the constants in docs-components.tsx. The global
+   reduced-motion override collapses all of it to an instant swap. */
 .docs-screenshot-zoom__overlay {
   position: fixed;
   inset: 0;
@@ -1213,7 +1214,8 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   transform: scale(1) translate(0px, 0px);
   transition: transform 400ms
     linear(
-      0.136,
+      0 0%,
+      0.136 1%,
       0.273 4.25%,
       0.411 8.5%,
       0.534 12.5%,
@@ -1240,7 +1242,8 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 .docs-screenshot-zoom__image[data-phase="collapse"] {
   transition: transform 285ms
     linear(
-      0.147,
+      0 0%,
+      0.147 2%,
       0.231 5.96%,
       0.311 17.54%,
       0.389 18.95%,
@@ -1265,13 +1268,6 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-/* The lightbox image covers the thumbnail during expand and collapse, so the
-   thumbnail stays hidden until the viewer unmounts. */
-.docs-screenshot-zoom__figure[data-zoom-open="true"]
-  .docs-screenshot-zoom__thumb {
-  visibility: hidden;
 }
 
 /* The header section switcher expands from its trigger like a native

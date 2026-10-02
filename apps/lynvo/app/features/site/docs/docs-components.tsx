@@ -257,6 +257,9 @@ export function DocsFaq({
 // collapse constant here must match its transition duration.
 const DOCS_SCREENSHOT_ZOOM_GUTTER_PX = 24
 const DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS = 285
+// The unmount waits past the collapse transition so a dropped frame can
+// never cut the landing short and reveal the thumbnail early.
+const DOCS_SCREENSHOT_ZOOM_UNMOUNT_BUFFER_MS = 40
 
 interface ZoomPose {
   height: number
@@ -346,7 +349,10 @@ const collapseZoomToThumbnail = (
   if (overlay) {
     overlay.style.opacity = "0"
   }
-  closeTimerRef.current = setTimeout(onClose, DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS)
+  closeTimerRef.current = setTimeout(
+    onClose,
+    DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS + DOCS_SCREENSHOT_ZOOM_UNMOUNT_BUFFER_MS
+  )
 }
 
 // The viewer mounts only from a click, never during server rendering, so its
@@ -368,26 +374,58 @@ function DocsScreenshotZoom({
 
   useLayoutEffect(() => {
     const zoomedImage = zoomedImageRef.current
+    const lightboxImage = zoomedImage?.querySelector("img")
     const pose = measureZoomPose(thumbnailImageRef.current)
     if (!zoomedImage || !pose) {
-      return
+      return undefined
     }
 
+    // The collapsed pose is committed before the first paint, covering the
+    // thumbnail exactly, so mounting the viewer never shows a state change.
     applyZoomPose(zoomedImage, pose, COLLAPSED_TRANSFORM)
-    // Commit the collapsed pose with a reflow before swapping in the
-    // expanded transform, so the transition runs between the two.
-    void zoomedImage.offsetHeight
-    applyZoomPose(zoomedImage, pose, pose.transform)
-    if (overlayRef.current) {
-      overlayRef.current.style.opacity = "1"
+    let cancelled = false
+    const expand = () => {
+      if (cancelled) {
+        return
+      }
+      // Commit the collapsed pose with a reflow before swapping in the
+      // expanded transform, so the transition runs between the two. The
+      // thumbnail hides only once the decoded lightbox image covers it.
+      void zoomedImage.offsetHeight
+      applyZoomPose(zoomedImage, pose, pose.transform)
+      if (overlayRef.current) {
+        overlayRef.current.style.opacity = "1"
+      }
+      if (thumbnailImageRef.current) {
+        thumbnailImageRef.current.style.visibility = "hidden"
+      }
+    }
+    if (lightboxImage instanceof HTMLImageElement) {
+      // decode() resolves immediately for an already-decoded image and
+      // otherwise waits, keeping an undecoded lightbox from expanding as a
+      // blank rectangle. Environments without decode and failed decodes
+      // still expand.
+      try {
+        lightboxImage.decode().then(expand, expand)
+      } catch {
+        expand()
+      }
+    } else {
+      expand()
+    }
+    return () => {
+      cancelled = true
     }
   }, [thumbnailImageRef])
 
   useEffect(
     () => () => {
       clearTimeout(closeTimerRef.current)
+      if (thumbnailImageRef.current) {
+        thumbnailImageRef.current.style.visibility = ""
+      }
     },
-    []
+    [thumbnailImageRef]
   )
 
   useEffect(() => {
@@ -467,16 +505,13 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   }
 
   return (
-    <figure
-      className="docs-screenshot-zoom__figure not-typeset my-10"
-      data-zoom-open={zoomOpen || undefined}
-    >
+    <figure className="not-typeset my-10">
       <button
         type="button"
         onClick={() => setZoomOpen(true)}
         aria-label={`Open image: ${alt}`}
         aria-expanded={zoomOpen}
-        className="docs-screenshot-zoom__thumb mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="mx-auto block w-full cursor-zoom-in overflow-hidden rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {/* Framed docs screenshots share one fixed canvas, so full-width
             rendering keeps every figure the same size. */}
