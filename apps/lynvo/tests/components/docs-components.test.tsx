@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { DocsFaq, DocsScreenshot } from "~/features/site/docs/docs-components"
@@ -93,7 +93,7 @@ describe("DocsScreenshot", () => {
     )
   })
 
-  it("opens the screenshot zoomed in and closes it again", () => {
+  it("opens the screenshot zoomed in and closes it again", async () => {
     render(<DocsScreenshot name="settings-general" alt="Settings > General" />)
 
     fireEvent.click(
@@ -104,6 +104,23 @@ describe("DocsScreenshot", () => {
 
     fireEvent.click(screen.getAllByAltText("Settings > General")[1])
 
-    expect(screen.getAllByAltText("Settings > General")).toHaveLength(1)
+    // The collapse transition runs before the viewer unmounts.
+    await waitFor(() =>
+      expect(screen.getAllByAltText("Settings > General")).toHaveLength(1)
+    )
+  })
+
+  it("closes the zoomed screenshot from the keyboard", async () => {
+    render(<DocsScreenshot name="settings-general" alt="Settings > General" />)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open image: Settings > General" })
+    )
+
+    fireEvent.keyDown(window, { key: "Escape" })
+
+    await waitFor(() =>
+      expect(screen.getAllByAltText("Settings > General")).toHaveLength(1)
+    )
   })
 })

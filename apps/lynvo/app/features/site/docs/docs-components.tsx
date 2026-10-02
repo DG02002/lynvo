@@ -1,5 +1,4 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   ApiIcon,
   ArrowDown01Icon,
@@ -19,12 +18,15 @@ import {
   isValidElement,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
   type ComponentProps,
   type ReactNode,
+  type RefObject,
 } from "react"
+import { createPortal } from "react-dom"
 import { Link } from "react-router"
 
 import {
@@ -246,8 +248,203 @@ export function DocsFaq({
   )
 }
 
+// Keep in sync with the transition durations on .docs-screenshot-zoom and
+// .docs-screenshot-zoom__image in app.css.
+const DOCS_SCREENSHOT_ZOOM_DURATION_MS = 300
+
+interface ZoomRect {
+  height: number
+  left: number
+  top: number
+  width: number
+}
+
+// FLIP transform that maps the zoomed image's layout rect onto the
+// thumbnail's current on-screen rect, so the overlay can grow out of the
+// figure and collapse back into it.
+const getZoomTransform = (thumbnail: ZoomRect, layout: ZoomRect) => {
+  const translateX =
+    thumbnail.left + thumbnail.width / 2 - (layout.left + layout.width / 2)
+  const translateY =
+    thumbnail.top + thumbnail.height / 2 - (layout.top + layout.height / 2)
+
+  return `translate(${translateX}px, ${translateY}px) scale(${thumbnail.width / layout.width}, ${thumbnail.height / layout.height})`
+}
+
+// offsetLeft/offsetTop report the untransformed layout position inside the
+// fixed backdrop; getBoundingClientRect would include the zoom transform.
+const getZoomedLayoutRect = (zoomedImage: HTMLImageElement): ZoomRect => ({
+  height: zoomedImage.offsetHeight,
+  left: zoomedImage.offsetLeft,
+  top: zoomedImage.offsetTop,
+  width: zoomedImage.offsetWidth,
+})
+
+interface DocsScreenshotZoomElements {
+  backdrop: HTMLDivElement | null
+  thumbnail: HTMLImageElement | null
+  zoomedImage: HTMLImageElement | null
+}
+
+const expandZoomFromThumbnail = ({
+  backdrop,
+  thumbnail,
+  zoomedImage,
+  frameRefs,
+}: DocsScreenshotZoomElements & {
+  frameRefs: RefObject<number[]>
+}) => {
+  if (!backdrop || !thumbnail || !zoomedImage) {
+    return
+  }
+
+  zoomedImage.style.transform = getZoomTransform(
+    thumbnail.getBoundingClientRect(),
+    getZoomedLayoutRect(zoomedImage)
+  )
+  zoomedImage.focus({ preventScroll: true })
+
+  // Two frames commit the collapsed pose before the transition to the
+  // centered zoom starts; a forced reflow would work too, at a cost.
+  frameRefs.current = [
+    requestAnimationFrame(() => {
+      frameRefs.current.push(
+        requestAnimationFrame(() => {
+          zoomedImage.style.transform = "none"
+          backdrop.style.opacity = "1"
+        })
+      )
+    }),
+  ]
+}
+
+const collapseZoomToThumbnail = (
+  { backdrop, thumbnail, zoomedImage }: DocsScreenshotZoomElements,
+  onClose: () => void,
+  closeTimerRef: RefObject<ReturnType<typeof setTimeout> | undefined>
+) => {
+  if (!backdrop || !thumbnail || !zoomedImage) {
+    onClose()
+    return
+  }
+
+  // A close during the expand transition retargets the CSS transition from
+  // its current value, so interrupting the zoom stays smooth.
+  zoomedImage.style.transform = getZoomTransform(
+    thumbnail.getBoundingClientRect(),
+    getZoomedLayoutRect(zoomedImage)
+  )
+  backdrop.style.opacity = "0"
+  clearTimeout(closeTimerRef.current)
+  closeTimerRef.current = setTimeout(onClose, DOCS_SCREENSHOT_ZOOM_DURATION_MS)
+}
+
+// The viewer mounts only from a click, never during server rendering, so its
+// layout effect can position the collapsed pose before the first paint.
+function DocsScreenshotZoom({
+  alt,
+  imageSource,
+  thumbnailImageRef,
+  onClose,
+}: {
+  alt: string
+  imageSource: string
+  thumbnailImageRef: RefObject<HTMLImageElement | null>
+  onClose: () => void
+}) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+  const zoomedImageRef = useRef<HTMLImageElement>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const frameRefs = useRef<number[]>([])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const previousOverflow = root.style.overflow
+    const previousPaddingRight = root.style.paddingRight
+    const scrollbarWidth = window.innerWidth - root.clientWidth
+    root.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      root.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    return () => {
+      root.style.overflow = previousOverflow
+      root.style.paddingRight = previousPaddingRight
+    }
+  }, [])
+
+  useEffect(
+    () => () => {
+      clearTimeout(closeTimerRef.current)
+      for (const frame of frameRefs.current) {
+        cancelAnimationFrame(frame)
+      }
+    },
+    []
+  )
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        collapseZoomToThumbnail(
+          {
+            backdrop: backdropRef.current,
+            thumbnail: thumbnailImageRef.current,
+            zoomedImage: zoomedImageRef.current,
+          },
+          onClose,
+          closeTimerRef
+        )
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [onClose, thumbnailImageRef])
+
+  useLayoutEffect(() => {
+    expandZoomFromThumbnail({
+      backdrop: backdropRef.current,
+      thumbnail: thumbnailImageRef.current,
+      zoomedImage: zoomedImageRef.current,
+      frameRefs,
+    })
+  }, [thumbnailImageRef])
+
+  return createPortal(
+    <div
+      ref={backdropRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt}
+      onClick={() =>
+        collapseZoomToThumbnail(
+          {
+            backdrop: backdropRef.current,
+            thumbnail: thumbnailImageRef.current,
+            zoomedImage: zoomedImageRef.current,
+          },
+          onClose,
+          closeTimerRef
+        )
+      }
+      className="docs-screenshot-zoom fixed inset-0 z-50 flex items-center justify-center bg-white opacity-0 dark:bg-black"
+    >
+      <img
+        ref={zoomedImageRef}
+        src={imageSource}
+        alt={alt}
+        tabIndex={-1}
+        className="docs-screenshot-zoom__image max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md outline-none"
+      />
+    </div>,
+    document.body
+  )
+}
+
 export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   const image = getDocumentationImageAsset(name)
+  const thumbnailButtonRef = useRef<HTMLButtonElement>(null)
+  const thumbnailImageRef = useRef<HTMLImageElement>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
 
   if (!image) {
@@ -257,6 +454,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   return (
     <figure className="not-typeset my-10">
       <button
+        ref={thumbnailButtonRef}
         type="button"
         onClick={() => setZoomOpen(true)}
         aria-label={`Open image: ${alt}`}
@@ -265,6 +463,7 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
         {/* Framed docs screenshots share one fixed canvas, so full-width
             rendering keeps every figure the same size. */}
         <img
+          ref={thumbnailImageRef}
           src={image.source}
           alt={alt}
           loading="lazy"
@@ -272,25 +471,17 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
         />
       </button>
 
-      {/* Composed from the Base UI primitives directly because the zoom
-          dialog needs a solid backdrop and a pure zoom animation, while
-          the shared DialogContent always renders a blurred overlay. */}
-      <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Backdrop className="fixed inset-0 isolate z-50 bg-white data-open:animate-in data-open:fade-in-0 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-200 dark:bg-black motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none" />
-          <DialogPrimitive.Popup
-            aria-label={alt}
-            className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
-          >
-            <img
-              src={image.source}
-              alt={alt}
-              onClick={() => setZoomOpen(false)}
-              className="max-h-[86svh] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-out rounded-md"
-            />
-          </DialogPrimitive.Popup>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
+      {zoomOpen && (
+        <DocsScreenshotZoom
+          alt={alt}
+          imageSource={image.source}
+          thumbnailImageRef={thumbnailImageRef}
+          onClose={() => {
+            setZoomOpen(false)
+            thumbnailButtonRef.current?.focus()
+          }}
+        />
+      )}
     </figure>
   )
 }
@@ -571,7 +762,7 @@ export const docsComponents: MDXComponents = {
     <pre
       {...props}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 font-jetbrains-mono text-[0.8125rem] font-medium leading-6",
+        "overflow-x-auto bg-transparent p-4 font-mono text-[0.8125rem] font-medium leading-6",
         className
       )}
     />

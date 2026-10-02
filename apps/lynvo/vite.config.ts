@@ -68,8 +68,8 @@ const loadRawDocumentation = async (
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
-    import("@shikijs/themes/github-light-default"),
-    import("@shikijs/themes/github-dark"),
+    import("@shikijs/themes/one-light"),
+    import("@shikijs/themes/one-dark-pro"),
   ],
   langs: [
     import("@shikijs/langs/typescript"),
@@ -162,8 +162,8 @@ export default defineConfig({
       "@hugeicons/core-free-icons",
       "@hugeicons/react",
       "@shikijs/langs/json",
-      "@shikijs/themes/github-dark",
-      "@shikijs/themes/github-light-default",
+      "@shikijs/themes/one-dark-pro",
+      "@shikijs/themes/one-light",
       "@tanstack/react-form",
       "class-variance-authority",
       "effect",
@@ -187,8 +187,8 @@ export default defineConfig({
             docsHighlighter,
             {
               themes: {
-                light: "github-light-default",
-                dark: "github-dark",
+                light: "one-light",
+                dark: "one-dark-pro",
               },
               transformers: [transformerMetaHighlight()],
             },

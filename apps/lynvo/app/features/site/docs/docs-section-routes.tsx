@@ -1,4 +1,3 @@
-import jetbrainsMonoLatinFontUrl from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url"
 import { Suspense } from "react"
 import {
   data,
@@ -98,18 +97,6 @@ const DocsSectionNotFound = () => (
 )
 
 export const createDocsSectionRoute = (section: DocumentationSectionKey) => ({
-  // Docs code blocks render in JetBrains Mono; preloading the latin subset
-  // keeps first paint from swapping fonts.
-  links: () => [
-    {
-      rel: "preload",
-      href: jetbrainsMonoLatinFontUrl,
-      as: "font",
-      type: "font/woff2",
-      crossOrigin: "anonymous",
-    },
-  ],
-
   loader: ({ params }: DocsRouteParams) => {
     const requestedSlug = params["*"]
 

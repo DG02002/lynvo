@@ -34,7 +34,7 @@
   .typeset-docs {
     --typeset-font-body: var(--font-inter);
     --typeset-font-heading: var(--font-inter);
-    --typeset-font-mono: var(--font-jetbrains-mono);
+    --typeset-font-mono: var(--font-mono);
     --typeset-size: 1rem;
     --typeset-leading: 1.7;
     --typeset-flow: 1.25rem;

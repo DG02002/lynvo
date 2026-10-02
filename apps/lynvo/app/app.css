@@ -3,15 +3,11 @@
 @import "shadcn/tailwind.css";
 @import "./typeset.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/jetbrains-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-inter: "Inter Variable", sans-serif;
-  --font-jetbrains-mono:
-    "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
   --font-heading: var(--font-sans);
   --font-sans: var(--font-inter);
   --font-mono:
@@ -1185,8 +1181,20 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
-/* The screenshot viewer zooms with the shared data-open/data-closed dialog
-   animation utilities; Base UI keeps it mounted through the exit animation. */
+/* Docs screenshots expand from their in-page rect into a fullscreen viewer
+   and collapse back into it through an inline FLIP transform. Riding CSS
+   transitions (not keyframes) lets an interrupting close retarget from
+   wherever the zoom currently is; the global reduced-motion override
+   collapses both to an instant swap. Keep the durations in sync with
+   DOCS_SCREENSHOT_ZOOM_DURATION_MS in docs-components.tsx. */
+.docs-screenshot-zoom {
+  transition: opacity 200ms var(--ease-out-strong);
+}
+
+.docs-screenshot-zoom__image {
+  transition: transform 300ms var(--ease-in-out-strong);
+  will-change: transform;
+}
 
 /* The header section switcher expands from its trigger like a native
    select: fade and scale from the trigger corner on the project's strong
