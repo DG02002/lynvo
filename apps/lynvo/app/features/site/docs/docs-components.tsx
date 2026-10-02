@@ -249,12 +249,14 @@ export function DocsFaq({
 }
 
 // Port of the Linear docs image viewer, measured from linear.app/docs:
-// the lightbox image is laid out at the thumbnail's rect (top/left/width/
-// height are set, never animated) and one transform springs it between
-// scale(1) translate(0, 0) — exactly over the thumbnail — and a centered
-// fullscreen fit. Scrolling dismisses the viewer instead of locking the
-// page. The expand duration and both easing curves live in app.css; the
-// collapse constant here must match its transition duration.
+// one transform springs the lightbox image between a pose exactly over the
+// thumbnail and a centered fullscreen fit, while scrolling dismisses the
+// viewer instead of locking the page. The lightbox is laid out at its
+// fullscreen fit rect (position and size are set, never animated) and scaled
+// down onto the thumbnail for the collapsed pose, so the layer is rasterized
+// once at full resolution and never re-rasters mid-zoom. The expand duration
+// and both easing curves live in app.css; the collapse constant here must
+// match its transition duration.
 const DOCS_SCREENSHOT_ZOOM_GUTTER_PX = 24
 const DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS = 285
 // The unmount waits past the collapse transition so a dropped frame can
@@ -262,38 +264,45 @@ const DOCS_SCREENSHOT_ZOOM_COLLAPSE_MS = 285
 const DOCS_SCREENSHOT_ZOOM_UNMOUNT_BUFFER_MS = 40
 
 interface ZoomPose {
-  height: number
-  left: number
-  top: number
-  width: number
-  transform: string
+  fitHeight: number
+  fitLeft: number
+  fitTop: number
+  fitWidth: number
+  collapsedTransform: string
 }
 
-const COLLAPSED_TRANSFORM = "scale(1) translate(0px, 0px)"
+const EXPANDED_TRANSFORM = "scale(1) translate(0px, 0px)"
 
 // The translate runs before the scale in the transform chain, so its
-// distance divides by the scale to land the image center in the viewport
+// distance divides by the scale to land the image center on the thumbnail's
 // center once scaled.
 const getZoomPose = (
   thumbnail: DOMRect,
   viewportWidth: number,
   viewportHeight: number
 ): ZoomPose => {
-  const scale = Math.min(
+  const fitScale = Math.min(
     (viewportWidth - DOCS_SCREENSHOT_ZOOM_GUTTER_PX * 2) / thumbnail.width,
     (viewportHeight - DOCS_SCREENSHOT_ZOOM_GUTTER_PX * 2) / thumbnail.height
   )
+  const fitWidth = thumbnail.width * fitScale
+  const fitHeight = thumbnail.height * fitScale
+  const fitLeft = (viewportWidth - fitWidth) / 2
+  const fitTop = (viewportHeight - fitHeight) / 2
+  const collapseScale = thumbnail.width / fitWidth
   const translateX =
-    (viewportWidth / 2 - (thumbnail.left + thumbnail.width / 2)) / scale
+    (thumbnail.left + thumbnail.width / 2 - (fitLeft + fitWidth / 2)) /
+    collapseScale
   const translateY =
-    (viewportHeight / 2 - (thumbnail.top + thumbnail.height / 2)) / scale
+    (thumbnail.top + thumbnail.height / 2 - (fitTop + fitHeight / 2)) /
+    collapseScale
 
   return {
-    height: thumbnail.height,
-    left: thumbnail.left,
-    top: thumbnail.top,
-    width: thumbnail.width,
-    transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)`,
+    fitHeight,
+    fitLeft,
+    fitTop,
+    fitWidth,
+    collapsedTransform: `scale(${collapseScale}) translate(${translateX}px, ${translateY}px)`,
   }
 }
 
@@ -302,10 +311,10 @@ const applyZoomPose = (
   pose: ZoomPose,
   transform: string
 ) => {
-  zoomedImage.style.top = `${pose.top}px`
-  zoomedImage.style.left = `${pose.left}px`
-  zoomedImage.style.width = `${pose.width}px`
-  zoomedImage.style.height = `${pose.height}px`
+  zoomedImage.style.top = `${pose.fitTop}px`
+  zoomedImage.style.left = `${pose.fitLeft}px`
+  zoomedImage.style.width = `${pose.fitWidth}px`
+  zoomedImage.style.height = `${pose.fitHeight}px`
   zoomedImage.style.transform = transform
 }
 
@@ -320,6 +329,22 @@ const measureZoomPose = (
     window.innerWidth,
     window.innerHeight
   )
+}
+
+// Re-measures and retargets a running collapse so the lightbox tracks the
+// thumbnail while the page scrolls under it, mirroring Linear's exit
+// re-measure window. The unmount timer keeps its original deadline.
+const retargetCollapseToThumbnail = ({
+  thumbnail,
+  zoomedImage,
+}: {
+  thumbnail: HTMLImageElement | null
+  zoomedImage: HTMLDivElement | null
+}) => {
+  const pose = measureZoomPose(thumbnail)
+  if (zoomedImage && pose) {
+    applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
+  }
 }
 
 const collapseZoomToThumbnail = (
@@ -345,9 +370,16 @@ const collapseZoomToThumbnail = (
   // A close during the expand transition retargets from wherever the
   // transform currently is, so interrupting the zoom stays smooth.
   zoomedImage.dataset.phase = "collapse"
-  applyZoomPose(zoomedImage, pose, COLLAPSED_TRANSFORM)
+  applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
   if (overlay) {
     overlay.style.opacity = "0"
+  }
+  if (thumbnail) {
+    // Rewarm the thumbnail's decoded bitmap during the collapse so
+    // restoring its visibility at unmount paints in the same frame, even
+    // if the browser evicted the decoded data while it was hidden. The
+    // optional call skips environments without decode.
+    thumbnail.decode?.().catch(() => undefined)
   }
   closeTimerRef.current = setTimeout(
     onClose,
@@ -380,19 +412,21 @@ function DocsScreenshotZoom({
       return undefined
     }
 
-    // The collapsed pose is committed before the first paint, covering the
-    // thumbnail exactly, so mounting the viewer never shows a state change.
-    applyZoomPose(zoomedImage, pose, COLLAPSED_TRANSFORM)
+    // The collapsed pose is committed before the first paint with the
+    // transition disarmed, so the freshly inserted element can never paint
+    // or start a transition from its transformless default — that default is
+    // the expanded pose, and a frame of it reads as a fullscreen flash.
+    applyZoomPose(zoomedImage, pose, pose.collapsedTransform)
+    void zoomedImage.offsetHeight
+    zoomedImage.dataset.phase = "expand"
+    void zoomedImage.offsetHeight
     let cancelled = false
     const expand = () => {
       if (cancelled) {
         return
       }
-      // Commit the collapsed pose with a reflow before swapping in the
-      // expanded transform, so the transition runs between the two. The
-      // thumbnail hides only once the decoded lightbox image covers it.
-      void zoomedImage.offsetHeight
-      applyZoomPose(zoomedImage, pose, pose.transform)
+      // The thumbnail hides only once the decoded lightbox image covers it.
+      applyZoomPose(zoomedImage, pose, EXPANDED_TRANSFORM)
       if (overlayRef.current) {
         overlayRef.current.style.opacity = "1"
       }
@@ -443,23 +477,43 @@ function DocsScreenshotZoom({
     const handleResize = () => {
       const zoomedImage = zoomedImageRef.current
       const pose = measureZoomPose(thumbnailImageRef.current)
-      if (zoomedImage && pose) {
-        applyZoomPose(zoomedImage, pose, pose.transform)
+      if (!zoomedImage || !pose) {
+        return
       }
+      // A resize re-measures the pose and retargets whatever phase is
+      // running: the collapsed pose while preparing or closing, the
+      // fullscreen fit once expanded.
+      const { phase } = zoomedImage.dataset
+      applyZoomPose(
+        zoomedImage,
+        pose,
+        phase === "expand" ? EXPANDED_TRANSFORM : pose.collapsedTransform
+      )
     }
-    // Scrolling the page dismisses the viewer; the collapse re-measures the
-    // thumbnail, so it lands wherever the page scrolled.
+    // Scrolling the page dismisses the viewer; while a collapse is already
+    // running, scrolling only retargets it so the lightbox tracks the
+    // thumbnail to wherever the page scrolled.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         collapse()
       }
     }
+    const handleScroll = () => {
+      if (zoomedImageRef.current?.dataset.phase === "collapse") {
+        retargetCollapseToThumbnail({
+          thumbnail: thumbnailImageRef.current,
+          zoomedImage: zoomedImageRef.current,
+        })
+        return
+      }
+      collapse()
+    }
     window.addEventListener("keydown", handleKeyDown)
-    window.addEventListener("scroll", collapse, { passive: true })
+    window.addEventListener("scroll", handleScroll, { passive: true })
     window.addEventListener("resize", handleResize, { passive: true })
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("scroll", collapse)
+      window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("resize", handleResize)
     }
   }, [onClose, thumbnailImageRef])
@@ -486,12 +540,58 @@ function DocsScreenshotZoom({
           )
         }}
       >
-        <div ref={zoomedImageRef} className="docs-screenshot-zoom__image">
+        <div
+          ref={zoomedImageRef}
+          className="docs-screenshot-zoom__image"
+          data-phase="prepare"
+        >
           <img src={imageSource} alt={alt} />
         </div>
       </div>
     </div>,
     document.body
+  )
+}
+
+// Google Play listing captures framed by scripts/frame-store-screenshots.mjs.
+const DOCS_INSTALL_APP_SHOTS = [
+  {
+    alt: "TV Bro listing on Google Play",
+    href: "https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser",
+    source: "/images/docs/play-store-tv-bro.webp",
+  },
+  {
+    alt: "Just (Video) Player listing on Google Play",
+    href: "https://play.google.com/store/apps/details?id=com.brouken.player",
+    source: "/images/docs/play-store-just-player.webp",
+  },
+  {
+    alt: "VLC for Android listing on Google Play",
+    href: "https://play.google.com/store/apps/details?id=org.videolan.vlc",
+    source: "/images/docs/play-store-vlc.webp",
+  },
+]
+
+function DocsInstallApps() {
+  return (
+    <div className="not-typeset my-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {DOCS_INSTALL_APP_SHOTS.map((shot) => (
+        <a
+          key={shot.href}
+          href={shot.href}
+          target="_blank"
+          rel="noreferrer"
+          className="block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <img
+            src={shot.source}
+            alt={shot.alt}
+            loading="lazy"
+            className="h-auto w-full"
+          />
+        </a>
+      ))}
+    </div>
   )
 }
 
@@ -770,6 +870,7 @@ export const docsComponents: MDXComponents = {
   AndroidTvRemoteTroubleshooting,
   DocSection,
   CodeBlock,
+  DocsInstallApps,
   DocsNote,
   DocsFaq,
   DocsScreenshot,

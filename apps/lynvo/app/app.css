@@ -1211,7 +1211,6 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   overflow: hidden;
   border-radius: var(--radius-md);
   will-change: transform;
-  transform: scale(1) translate(0px, 0px);
   transition: transform 400ms
     linear(
       0 0%,
@@ -1237,6 +1236,13 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
       0.997 79.25%,
       1 100%
     );
+}
+
+/* The pose is committed inline before the first paint with the transition
+   disarmed, so the inserted element can never flash or transition from its
+   transformless default — that default is the expanded fullscreen pose. */
+.docs-screenshot-zoom__image[data-phase="prepare"] {
+  transition: none;
 }
 
 .docs-screenshot-zoom__image[data-phase="collapse"] {
