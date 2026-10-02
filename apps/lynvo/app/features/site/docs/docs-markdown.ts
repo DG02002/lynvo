@@ -57,6 +57,9 @@ export const cleanDocumentationMarkdown = (
   )
     .replaceAll(/^<\/?DocSection(?:\s[^>]*)?>\s*$/gm, "")
     .replaceAll(/^<\/?CodeBlock(?:\s[^>]*)?>\s*$/gm, "")
-    .replaceAll(/^<\/?(?:DocsFaq|DocsScreenshot)(?:\s[^>]*)?>\s*$/gm, "")
+    .replaceAll(
+      /^<\/?(?:DocsFaq|DocsInstallApps|DocsScreenshot)(?:\s[^>]*)?>\s*$/gm,
+      ""
+    )
     .replaceAll(/\n{3,}/g, "\n\n")
     .trim()

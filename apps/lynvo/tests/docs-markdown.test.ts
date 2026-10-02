@@ -29,6 +29,14 @@ Trust the server response.
     ).toBe("")
   })
 
+  it("drops the install app grid from the Markdown export", () => {
+    expect(
+      cleanDocumentationMarkdown(
+        "Install these apps before you begin:\n\n<DocsInstallApps />\n\nThen continue."
+      )
+    ).toBe("Install these apps before you begin:\n\nThen continue.")
+  })
+
   it("uses the available WebP extension in screenshot links", () => {
     expect(
       cleanDocumentationMarkdown(

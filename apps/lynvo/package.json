@@ -10,6 +10,7 @@
     "preview": "pnpm run build && vite preview",
     "seed": "tsx scripts/seed.ts",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
+    "frame:store": "node scripts/frame-store-screenshots.mjs",
     "test": "pnpm run prepare:protocol && vitest",
     "test:workers": "vitest -c vitest.workers.config.ts --run",
     "lint": "oxlint app workers scripts tests",
