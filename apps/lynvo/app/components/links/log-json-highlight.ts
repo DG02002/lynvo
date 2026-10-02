@@ -1,5 +1,7 @@
 import type { HighlighterCore } from "shiki/core"
 
+import { DOCS_SHIKI_THEMES } from "~/lib/shiki-theme-names"
+
 let highlighterPromise: Promise<HighlighterCore> | undefined
 
 // The dialog renders rarely and off the critical path, so the highlighter
@@ -40,10 +42,7 @@ export const highlightLogJson = async (
     const highlighter = await getLogJsonHighlighter()
     return highlighter.codeToHtml(code, {
       lang: "json",
-      themes: {
-        light: "one-light",
-        dark: "one-dark-pro",
-      },
+      themes: DOCS_SHIKI_THEMES,
     })
   } catch {
     return undefined

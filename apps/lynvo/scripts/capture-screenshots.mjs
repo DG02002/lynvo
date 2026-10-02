@@ -582,6 +582,26 @@ const resetScrollForCapture = async (page, shot) => {
 // waitForFunction in this Playwright version resolves an async predicate on
 // its Promise object instead of its value, so these gates must stay
 // synchronous; the decode pass runs in a plain evaluate afterwards.
+const installRequiredImagesReadyGate = (page) =>
+  page.evaluate(() => {
+    window.lynvoRequiredImagesReady = (expectedAlts) => {
+      const imagesByAlt = new Map(
+        [...document.images].map((image) => [image.alt, image])
+      )
+      const images = expectedAlts.map((alt) => imagesByAlt.get(alt))
+      if (images.some((image) => image === undefined)) {
+        return null
+      }
+      for (const image of images) {
+        image.loading = "eager"
+      }
+      if (images.some((image) => !image.complete || image.naturalWidth < 1)) {
+        return null
+      }
+      return images
+    }
+  })
+
 const waitForRequiredImages = async (page, shot) => {
   const requiredImageAlts = shot.requiredImages ?? []
   if (requiredImageAlts.length === 0) {
@@ -589,33 +609,15 @@ const waitForRequiredImages = async (page, shot) => {
   }
 
   try {
+    await installRequiredImagesReadyGate(page)
     await page.waitForFunction(
-      (expectedAlts) => {
-        const imagesByAlt = new Map(
-          [...document.images].map((image) => [image.alt, image])
-        )
-        const images = expectedAlts.map((alt) => imagesByAlt.get(alt))
-        if (images.some((image) => image === undefined)) {
-          return false
-        }
-        for (const image of images) {
-          image.loading = "eager"
-        }
-        return images.every((image) => image.complete && image.naturalWidth > 0)
-      },
+      (expectedAlts) => window.lynvoRequiredImagesReady(expectedAlts) !== null,
       requiredImageAlts,
       { timeout: IMAGE_TIMEOUT_MS }
     )
     await page.evaluate(async (expectedAlts) => {
-      const imagesByAlt = new Map(
-        [...document.images].map((image) => [image.alt, image])
-      )
-      await Promise.all(
-        expectedAlts
-          .map((alt) => imagesByAlt.get(alt))
-          .filter((image) => image !== undefined)
-          .map((image) => image.decode())
-      )
+      const images = window.lynvoRequiredImagesReady(expectedAlts) ?? []
+      await Promise.all(images.map((image) => image.decode()))
     }, requiredImageAlts)
   } catch (error) {
     throw new Error(

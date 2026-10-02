@@ -383,16 +383,15 @@ const getCurrentTransform = (
     return fallbackTransform
   }
 
-  const matrixMatch = transform.match(/^matrix(3d)?\(([-\d.e\s,]+)\)$/u)
+  const matrixMatch = transform.match(/^matrix\(([-\d.e\s,]+)\)$/u)
   if (!matrixMatch) {
     return transform
   }
 
-  const values = matrixMatch[2].split(",").map((value) => Number(value.trim()))
-  const isThreeDimensional = Boolean(matrixMatch[1])
-  const [scale] = values
-  const translateX = values[isThreeDimensional ? 12 : 4]
-  const translateY = values[isThreeDimensional ? 13 : 5]
+  const [, matrixValues] = matrixMatch
+  const [scale, , , , translateX, translateY] = matrixValues
+    .split(",")
+    .map((value) => Number(value.trim()))
   if (
     !Number.isFinite(scale) ||
     scale === 0 ||
@@ -421,14 +420,14 @@ const animateStyle = ({
 }: {
   element: HTMLElement
   from: string
-  onFinish?: () => void
+  onFinish?: (animation: Animation | undefined) => void
   property: "opacity" | "transform"
   to: string
 }): Animation | undefined => {
   element.style[property] = from
   if (prefersReducedMotion()) {
     element.style[property] = to
-    onFinish?.()
+    onFinish?.(undefined)
     return undefined
   }
 
@@ -445,12 +444,15 @@ const animateStyle = ({
   } catch {
     // Browsers without WAAPI or with unsupported easing still reach the final pose.
     element.style[property] = to
-    onFinish?.()
+    onFinish?.(undefined)
     return undefined
   }
   if (onFinish) {
     // Cancelling a retargeted animation rejects `finished` by design.
-    void animation.finished.then(onFinish, () => undefined)
+    void animation.finished.then(
+      () => onFinish(animation),
+      () => undefined
+    )
   }
   return animation
 }
@@ -459,10 +461,6 @@ interface CollapseState {
   collapsedTransform: string
   currentOpacity: string
   currentTransform: string
-}
-
-interface MutableAnimationRef {
-  current: Animation | undefined
 }
 
 const getCollapseState = ({
@@ -622,11 +620,10 @@ function DocsScreenshotZoom({
       }
       const animationGeneration = animationGenerationRef.current + 1
       animationGenerationRef.current = animationGeneration
-      const openAnimationRef: MutableAnimationRef = { current: undefined }
       const imageAnimation = animateStyle({
         element: zoomedImage,
         from: expansionPose.collapsedTransform,
-        onFinish: () => {
+        onFinish: (animation) => {
           if (
             disposed ||
             closingRef.current ||
@@ -636,13 +633,12 @@ function DocsScreenshotZoom({
             return
           }
           zoomedImage.style.transform = expansionPose.expandedTransform
-          cancelAnimation(openAnimationRef.current)
+          cancelAnimation(animation)
           zoomedImage.style.willChange = "auto"
         },
         property: "transform",
         to: expansionPose.expandedTransform,
       })
-      openAnimationRef.current = imageAnimation
       imageAnimationRef.current = imageAnimation
       if (overlayRef.current) {
         overlayAnimationRef.current = animateStyle({
@@ -655,6 +651,7 @@ function DocsScreenshotZoom({
     }
 
     if (lightboxImage instanceof HTMLImageElement) {
+      // Decoding improves the opening transition, but a decode failure must not block the viewer.
       try {
         void lightboxImage.decode().then(expand, expand)
       } catch {
@@ -775,24 +772,35 @@ function DocsScreenshotZoom({
 // Google Play listing captures framed by scripts/frame-store-screenshots.mjs.
 const DOCS_INSTALL_APP_SHOTS = [
   {
+    appName: "TV Bro",
     alt: "TV Bro listing on Google Play",
     name: "tv-bro",
     source: "/images/docs/play-store-tv-bro.webp",
+    storeUrl:
+      "https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser",
   },
   {
+    appName: "Just (Video) Player",
     alt: "Just (Video) Player listing on Google Play",
     name: "just-player",
     source: "/images/docs/play-store-just-player.webp",
+    storeUrl:
+      "https://play.google.com/store/apps/details?id=com.brouken.player",
   },
   {
+    appName: "VLC for Android",
     alt: "VLC for Android listing on Google Play",
     name: "vlc",
     source: "/images/docs/play-store-vlc.webp",
+    storeUrl: "https://play.google.com/store/apps/details?id=org.videolan.vlc",
   },
   {
+    appName: "Google TV",
     alt: "Google TV app listing on Google Play",
     name: "google-tv",
     source: "/images/docs/play-store-google-tv.webp",
+    storeUrl:
+      "https://play.google.com/store/apps/details?id=com.google.android.videos",
   },
 ]
 
@@ -851,16 +859,25 @@ function DocsInstallApps({ apps }: { apps?: string }) {
     : DOCS_INSTALL_APP_SHOTS
 
   return (
-    <div>
+    <ul className="not-typeset m-0 grid list-none gap-4 p-0 sm:grid-cols-2">
       {selectedApps.map((shot) => (
-        <DocsZoomableFigure
-          key={shot.source}
-          alt={shot.alt}
-          className="my-4 first:mt-2 last:mb-0"
-          source={shot.source}
-        />
+        <li key={shot.name} className="min-w-0">
+          <DocsZoomableFigure
+            alt={shot.alt}
+            className="my-0"
+            source={shot.source}
+          />
+          <div className="mt-2">
+            <DocsLink
+              href={shot.storeUrl}
+              className="text-sm font-medium underline-offset-4"
+            >
+              View {shot.appName} on Google Play
+            </DocsLink>
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }
 

@@ -1,7 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
+import type { ComponentType } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DocsFaq, DocsScreenshot } from "~/features/site/docs/docs-components"
+import {
+  docsComponents,
+  DocsFaq,
+  DocsScreenshot,
+} from "~/features/site/docs/docs-components"
 
 type PendingAnimation = {
   cancel: ReturnType<typeof vi.fn>
@@ -9,7 +14,9 @@ type PendingAnimation = {
   finished: Promise<void>
 }
 
-type PropertyOwner = HTMLElement | HTMLImageElement
+type DOMElementPrototype =
+  | typeof HTMLElement.prototype
+  | typeof HTMLImageElement.prototype
 
 const pendingAnimations: PendingAnimation[] = []
 const originalAnimateDescriptor = Object.getOwnPropertyDescriptor(
@@ -58,7 +65,7 @@ const stubImageDecode = (decode: () => Promise<void>) => {
 }
 
 const restoreDescriptor = (
-  prototype: PropertyOwner,
+  prototype: DOMElementPrototype,
   property: string,
   descriptor: PropertyDescriptor | undefined
 ) => {
@@ -156,6 +163,60 @@ describe("DocsFaq", () => {
     expect(
       screen.getByRole("button", { name: "Why does my device not appear?" })
     ).toHaveAttribute("aria-expanded", "true")
+  })
+})
+
+describe("DocsInstallApps", () => {
+  // SAFETY: this MDX key is registered with the DocsInstallApps component below.
+  const InstallApps = docsComponents.DocsInstallApps as ComponentType<{
+    apps?: string
+  }>
+
+  it("renders each store listing in the grid with its Google Play link", () => {
+    render(<InstallApps />)
+
+    expect(screen.getByRole("list")).toHaveClass("grid", "sm:grid-cols-2")
+    expect(screen.getAllByRole("listitem")).toHaveLength(4)
+    expect(
+      screen.getByRole("link", { name: "View TV Bro on Google Play" })
+    ).toHaveAttribute(
+      "href",
+      "https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser"
+    )
+    expect(
+      screen.getByRole("link", {
+        name: "View Just (Video) Player on Google Play",
+      })
+    ).toHaveAttribute(
+      "href",
+      "https://play.google.com/store/apps/details?id=com.brouken.player"
+    )
+    expect(
+      screen.getByRole("link", { name: "View VLC for Android on Google Play" })
+    ).toHaveAttribute(
+      "href",
+      "https://play.google.com/store/apps/details?id=org.videolan.vlc"
+    )
+    expect(
+      screen.getByRole("link", { name: "View Google TV on Google Play" })
+    ).toHaveAttribute(
+      "href",
+      "https://play.google.com/store/apps/details?id=com.google.android.videos"
+    )
+  })
+
+  it("renders only the requested store listings", () => {
+    render(<InstallApps apps="just-player vlc" />)
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2)
+    expect(
+      screen.getByRole("link", {
+        name: "View Just (Video) Player on Google Play",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "View VLC for Android on Google Play" })
+    ).toBeInTheDocument()
   })
 })
 
