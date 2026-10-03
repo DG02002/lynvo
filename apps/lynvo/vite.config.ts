@@ -16,6 +16,7 @@ import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 import { defineConfig, type Plugin, type ViteDevServer } from "vite"
 
 import { parseDocumentationFrontmatter } from "./app/features/site/docs/docs-frontmatter.ts"
+import { DOCS_SHIKI_THEMES } from "./app/lib/shiki-theme-names.ts"
 
 // Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
 const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
@@ -68,8 +69,8 @@ const loadRawDocumentation = async (
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
-    import("@shikijs/themes/github-light-default"),
-    import("@shikijs/themes/github-dark"),
+    import("@shikijs/themes/night-owl-light"),
+    import("@shikijs/themes/houston"),
   ],
   langs: [
     import("@shikijs/langs/typescript"),
@@ -162,8 +163,8 @@ export default defineConfig({
       "@hugeicons/core-free-icons",
       "@hugeicons/react",
       "@shikijs/langs/json",
-      "@shikijs/themes/github-dark",
-      "@shikijs/themes/github-light-default",
+      "@shikijs/themes/houston",
+      "@shikijs/themes/night-owl-light",
       "@tanstack/react-form",
       "class-variance-authority",
       "effect",
@@ -186,10 +187,7 @@ export default defineConfig({
             rehypeShikiFromHighlighter,
             docsHighlighter,
             {
-              themes: {
-                light: "github-light-default",
-                dark: "github-dark",
-              },
+              themes: DOCS_SHIKI_THEMES,
               transformers: [transformerMetaHighlight()],
             },
           ],

@@ -14,34 +14,73 @@ To brief the agent, run the prompt below from the generated project directory, r
 <CodeBlock label="Agent prompt">
 
 ```text
-Open this existing Lynvo-compatible Plugin Server project.
+# Role
 
-Project rules:
-- Keep the generated Hono Worker, Wrangler config, and package scripts.
-- Keep @dg02002/lynvo-plugin-server-protocol as the protocol dependency.
-- Keep createPluginServerRuntime and the four required route handlers.
-- Read the bearer key from LYNVO_PLUGIN_SERVER_API_KEY.
-- Do not add a frontend or move Source logic into route handlers.
+You are a TypeScript engineer working inside an existing, generated
+Lynvo-compatible Plugin Server project. Your job is to replace its example
+Plugin with support for one new Source while keeping the generated runtime
+intact.
 
-Replace the example Plugin with support for this Source:
+# Project ground rules
+
+The generated Worker already provides the protocol plumbing this task
+needs. Treat all of the following as fixed — do not restructure, replace, or
+work around it:
+
+- The generated Hono Worker, Wrangler config, and package scripts.
+- The `@dg02002/lynvo-plugin-server-protocol` dependency.
+- `createPluginServerRuntime` and the four required route handlers.
+- Reading the bearer key from `LYNVO_PLUGIN_SERVER_API_KEY`.
+
+Keep Source logic in `src/plugins` and route handlers thin. Do not add a
+frontend.
+
+# Source to support
+
 - Source name: <your-source-name>
 - Supported hosts: <your-source-host>
 - Supported paths: <your-source-path-pattern>
 - Plugin ID: <your-plugin-id>
 
-Implement the Source matcher, upstream requests, response parsing, and Media
-Node mapping in src/plugins. Update the manifest and
-extensions.lynvo.plugins in src/index.ts so they match the implementation.
+# Task
 
-Keep credentials out of URLs, manifests, responses, and logs. Use bounded
-requests and return the protocol error codes for unsupported, temporary, and
-permanent failures. Replace the usage fixture with durable accounting before
-calling the Worker production-ready.
+Work through these steps in order:
+
+1. Implement the Source matcher, upstream requests, response parsing, and
+   Media Node mapping in `src/plugins`.
+2. Update the manifest and `extensions.lynvo.plugins` in `src/index.ts` so
+   they match the implementation exactly.
+
+# Requirements
+
+- Credentials must never appear in URLs, manifests, responses, or logs.
+- Every external read has a deadline, a size bound, and a cancellation path.
+  Lynvo treats unbounded or hanging requests as defects.
+- Return the protocol error codes for unsupported, temporary, and permanent
+  failures instead of generic errors.
+- Replace the usage fixture with durable accounting before considering the
+  Worker production-ready.
+
+# Tests
 
 Add contract fixtures for supported URLs, unsupported URLs, authentication,
-malformed requests, failure responses, and every Media Node kind you return.
-Run pnpm check, pnpm test, and pnpm build. Report changed files and remaining
-secrets or deployment configuration.
+malformed requests, failure responses, and every Media Node kind the Plugin
+returns.
+
+# Definition of done
+
+You are finished when all three gates pass:
+
+1. `pnpm check`
+2. `pnpm test`
+3. `pnpm build`
+
+Then report, as your final message:
+
+- The files you changed, grouped by purpose.
+- Any remaining secrets or deployment configuration the maintainer must
+  handle.
+- Anything you deliberately left as-is, and why.
 ```
 
 </CodeBlock>

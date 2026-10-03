@@ -3,15 +3,11 @@
 @import "shadcn/tailwind.css";
 @import "./typeset.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/jetbrains-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-inter: "Inter Variable", sans-serif;
-  --font-jetbrains-mono:
-    "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
   --font-heading: var(--font-sans);
   --font-sans: var(--font-inter);
   --font-mono:
@@ -1185,8 +1181,44 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
-/* The screenshot viewer zooms with the shared data-open/data-closed dialog
-   animation utilities; Base UI keeps it mounted through the exit animation. */
+/* Docs screenshot zoom, ported from the Linear docs image viewer. The clone
+   stays at the thumbnail's rect and the Web Animations API moves only its
+   transform to a centered fullscreen fit. The overlay uses Linear's separate
+   250ms ease-out fade. */
+.docs-screenshot-zoom__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--background);
+  opacity: 0;
+}
+
+.docs-screenshot-zoom__stage {
+  position: fixed;
+  inset: 0;
+  z-index: 51;
+  cursor: zoom-out;
+}
+
+.docs-screenshot-zoom__image {
+  position: absolute;
+  appearance: none;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  will-change: transform;
+}
+
+.docs-screenshot-zoom__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 
 /* The header section switcher expands from its trigger like a native
    select: fade and scale from the trigger corner on the project's strong

@@ -205,8 +205,11 @@ contexts. Use `--list` to print shot names, `--dry-run` to inspect selected
 routes and outputs, or `--only <name-or-prefix>` to retake a subset. Documentation
 shots follow each manifest entry's framing option and write finished assets under
 `apps/lynvo/app/features/site/docs/images/`; marketing captures stay in the
-ignored `apps/lynvo/.screenshots/intermediates/` directory.
-TV Bro shots use a 960 × 540 browser viewport at device scale factor 1.
+ignored `apps/lynvo/.screenshots/intermediates/` directory. Every context,
+TV Bro included, uses a 960 × 540 (TV) or context-default browser viewport at
+device scale factor 2 so the framed assets stay sharp. Shots that need another
+device in the Remote Play device list declare `companionReceiver`; the runner
+opens that second signed-in page and keeps it connected until the capture ends.
 
 ## Test TV Bro-specific UI
 

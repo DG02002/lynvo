@@ -1,5 +1,5 @@
 import { Result, Schema } from "effect"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 
 import { requestNoStoreSameOriginWithSessionIdentity } from "~/lib/api/client"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
@@ -68,7 +68,7 @@ export const useRemoteSessions = () => {
   const [loading, setLoading] = useState(false)
   const [hasError, setHasError] = useState(false)
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     setLoading(true)
     setHasError(false)
     try {
@@ -79,7 +79,7 @@ export const useRemoteSessions = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   return { sessions, loading, hasError, fetchSessions }
 }

@@ -77,6 +77,14 @@ const ShotSchema = Schema.Struct({
   blockedReason: Schema.optional(Schema.NonEmptyString),
   captureTarget: Schema.optional(LocatorDescriptorSchema),
   captureStyles: Schema.optional(Schema.NonEmptyString),
+  // A second signed-in page whose realtime socket registers as a Remote
+  // Play receiver, for shots that need another device in the device list.
+  companionReceiver: Schema.optional(
+    Schema.Struct({
+      expectVisible: LocatorDescriptorSchema,
+      route: Schema.NonEmptyString,
+    })
+  ),
   context: Schema.Literals(["desktop", "tv", "phone"]),
   framing: Schema.Union([
     Schema.Literal(false),
@@ -187,7 +195,7 @@ const expandShotSetup = (shot, setups) => {
 const validateViewport = (shot) => {
   const expectedViewport = CONTEXT_VIEWPORTS[shot.context]
   if (
-    shot.viewport.deviceScaleFactor !== (shot.context === "tv" ? 1 : 2) ||
+    shot.viewport.deviceScaleFactor !== 2 ||
     shot.viewport.width !== expectedViewport.width ||
     shot.viewport.height !== expectedViewport.height ||
     shot.steps.length === 0
@@ -234,7 +242,7 @@ const validateOutput = (shot, state) => {
     (!isDocsOutput && !isMarketingOutput && !isHomepageImageOutput) ||
     (isDocsOutput &&
       path.basename(outputPath) !== `${shot.name}${extension}`) ||
-    (isDocsOutput && shot.framing === false && shot.context !== "tv") ||
+    (isDocsOutput && shot.framing === false) ||
     (isHomepageImageOutput && shot.framing !== false)
   ) {
     throw new Error(
@@ -571,99 +579,122 @@ const resetScrollForCapture = async (page, shot) => {
   await expectVisible(page, finalStep.expectVisible, shot.name)
 }
 
+// waitForFunction in this Playwright version resolves an async predicate on
+// its Promise object instead of its value, so these gates must stay
+// synchronous; the decode pass runs in a plain evaluate afterwards.
+const installRequiredImagesReadyGate = (page) =>
+  page.evaluate(() => {
+    window.lynvoRequiredImagesReady = (expectedAlts) => {
+      const imagesByAlt = new Map(
+        [...document.images].map((image) => [image.alt, image])
+      )
+      const images = expectedAlts.map((alt) => imagesByAlt.get(alt))
+      if (images.some((image) => image === undefined)) {
+        return null
+      }
+      for (const image of images) {
+        image.loading = "eager"
+      }
+      if (images.some((image) => !image.complete || image.naturalWidth < 1)) {
+        return null
+      }
+      return images
+    }
+  })
+
 const waitForRequiredImages = async (page, shot) => {
   const requiredImageAlts = shot.requiredImages ?? []
   if (requiredImageAlts.length === 0) {
     return
   }
 
-  try {
-    await page.waitForFunction(
-      async (expectedAlts) => {
-        const imagesByAlt = new Map(
-          [...document.images].map((image) => [image.alt, image])
+  await waitForImageGate({
+    page,
+    installReadyGate: installRequiredImagesReadyGate,
+    gateArgument: requiredImageAlts,
+    isReady: (expectedAlts) =>
+      window.lynvoRequiredImagesReady(expectedAlts) !== null,
+    decodeImages: async (expectedAlts) => {
+      const images = window.lynvoRequiredImagesReady(expectedAlts) ?? []
+      await Promise.all(images.map((image) => image.decode()))
+    },
+    errorMessage: `${shot.name} did not load its required images ${JSON.stringify(requiredImageAlts)}.`,
+  })
+}
+
+// Installs the shared TMDB readiness check in the page, where both the wait
+// predicate and the decode pass can call it.
+const installTmdbImagesReadyGate = (page) =>
+  page.evaluate(() => {
+    window.lynvoTmdbImagesReady = (requiredImageCount) => {
+      const artworkImages = [...document.images].filter(
+        (image) =>
+          image.dataset.tmdbImagePreview !== "true" &&
+          /(^|\/)image\.tmdb\.org\/t\/p\//u.test(image.currentSrc || image.src)
+      )
+      const visibleImages = artworkImages.filter((image) => {
+        const bounds = image.getBoundingClientRect()
+        return (
+          bounds.width > 0 &&
+          bounds.height > 0 &&
+          bounds.bottom > 0 &&
+          bounds.right > 0 &&
+          bounds.top < window.innerHeight &&
+          bounds.left < window.innerWidth
         )
-        const images = expectedAlts.map((alt) => imagesByAlt.get(alt))
-        if (images.some((image) => image === undefined)) {
-          return false
-        }
-        const loadedImages = images.filter((image) => image !== undefined)
-        for (const image of loadedImages) {
-          image.loading = "eager"
-        }
-        if (
-          loadedImages.some(
-            (image) => !image.complete || image.naturalWidth < 1
-          )
-        ) {
-          return false
-        }
-        await Promise.all(loadedImages.map((image) => image.decode()))
-        return true
-      },
-      requiredImageAlts,
-      { timeout: IMAGE_TIMEOUT_MS }
-    )
+      })
+      const requiredImages = artworkImages.slice(0, requiredImageCount)
+      const imagesToLoad = [...new Set([...requiredImages, ...visibleImages])]
+      for (const image of imagesToLoad) {
+        image.loading = "eager"
+      }
+      if (
+        artworkImages.length < requiredImageCount ||
+        imagesToLoad.some((image) => !image.complete || image.naturalWidth < 1)
+      ) {
+        return null
+      }
+      return imagesToLoad
+    }
+  })
+
+const waitForImageGate = async ({
+  page,
+  installReadyGate,
+  gateArgument,
+  isReady,
+  decodeImages,
+  errorMessage,
+}) => {
+  try {
+    await installReadyGate(page)
+    // Playwright serializes these callbacks into the page; keep them self-contained.
+    await page.waitForFunction(isReady, gateArgument, {
+      timeout: IMAGE_TIMEOUT_MS,
+    })
+    await page.evaluate(decodeImages, gateArgument)
   } catch (error) {
-    throw new Error(
-      `${shot.name} did not load its required images ${JSON.stringify(requiredImageAlts)}.`,
-      { cause: error }
-    )
+    throw new Error(errorMessage, { cause: error })
   }
 }
 
 const waitForTmdbImages = async (page, shot) => {
-  try {
-    await page.waitForFunction(
-      async (requiredImageCount) => {
-        const artworkImages = [...document.images].filter(
-          (image) =>
-            image.dataset.tmdbImagePreview !== "true" &&
-            /(^|\/)image\.tmdb\.org\/t\/p\//u.test(
-              image.currentSrc || image.src
-            )
-        )
-        const visibleImages = artworkImages.filter((image) => {
-          const bounds = image.getBoundingClientRect()
-          return (
-            bounds.width > 0 &&
-            bounds.height > 0 &&
-            bounds.bottom > 0 &&
-            bounds.right > 0 &&
-            bounds.top < window.innerHeight &&
-            bounds.left < window.innerWidth
-          )
-        })
-        const requiredImages = artworkImages.slice(0, requiredImageCount)
-        const imagesToDecode = [
-          ...new Set([...requiredImages, ...visibleImages]),
-        ]
-        for (const image of imagesToDecode) {
-          image.loading = "eager"
-        }
-        if (
-          artworkImages.length < requiredImageCount ||
-          imagesToDecode.some(
-            (image) => !image.complete || image.naturalWidth < 1
-          )
-        ) {
-          return false
-        }
-        await Promise.all(imagesToDecode.map((image) => image.decode()))
-        return true
-      },
-      shot.requiredTmdbImageCount ?? 0,
-      { timeout: IMAGE_TIMEOUT_MS }
-    )
-  } catch (error) {
-    const requiredImageDescription =
-      shot.requiredTmdbImageCount === undefined
-        ? "visible TMDB artwork"
-        : `all ${shot.requiredTmdbImageCount} required TMDB artwork images`
-    throw new Error(`${shot.name} did not load ${requiredImageDescription}.`, {
-      cause: error,
-    })
-  }
+  const requiredImageCount = shot.requiredTmdbImageCount ?? 0
+  const requiredImageDescription =
+    shot.requiredTmdbImageCount === undefined
+      ? "visible TMDB artwork"
+      : `all ${shot.requiredTmdbImageCount} required TMDB artwork images`
+  await waitForImageGate({
+    page,
+    installReadyGate: installTmdbImagesReadyGate,
+    gateArgument: requiredImageCount,
+    isReady: (count) => window.lynvoTmdbImagesReady(count) !== null,
+    decodeImages: async (count) => {
+      const images = window.lynvoTmdbImagesReady(count) ?? []
+      await Promise.all(images.map((image) => image.decode()))
+    },
+    errorMessage: `${shot.name} did not load ${requiredImageDescription}.`,
+  })
 }
 
 const runShotSteps = async ({ page, shot, origin, variables }) => {
@@ -776,6 +807,63 @@ const createExtractionCaptureGate = () => {
   return { holdRoute, releaseAndWait, routePattern }
 }
 
+// A companion receiver is a second signed-in desktop page whose realtime
+// socket registers as a Remote Play receiver, so the captured page can list
+// it in the Connect Remote Play device list. It stays open until the shot
+// finishes.
+const openCompanionReceiver = async (browser, shot, origin) => {
+  const receiverViewport = CONTEXT_VIEWPORTS.desktop
+  const receiverContext = await browser.newContext({
+    viewport: {
+      width: receiverViewport.width,
+      height: receiverViewport.height,
+    },
+    deviceScaleFactor: 2,
+    userAgent: DESKTOP_USER_AGENT,
+    locale: "en-US",
+    timezoneId: "UTC",
+    colorScheme: "dark",
+    reducedMotion: "reduce",
+  })
+  const receiverPage = await receiverContext.newPage()
+  receiverPage.setDefaultTimeout(STEP_TIMEOUT_MS)
+  receiverPage.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
+  const receiverErrors = []
+  receiverPage.on("pageerror", (error) => receiverErrors.push(error))
+  await runShotSteps({
+    page: receiverPage,
+    shot: {
+      ...shot,
+      name: `${shot.name} (companion receiver)`,
+      steps: [
+        {
+          action: "navigate",
+          path: shot.companionReceiver.route,
+          expectVisible: shot.companionReceiver.expectVisible,
+        },
+      ],
+    },
+    origin,
+    variables: Object.create(null),
+  })
+  return { receiverContext, receiverErrors }
+}
+
+const openShotPage = async (context, shot) => {
+  const page = await context.newPage()
+  page.setDefaultTimeout(STEP_TIMEOUT_MS)
+  page.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
+  const pageErrors = []
+  page.on("pageerror", (error) => pageErrors.push(error))
+  let releaseHeldExtraction
+  if (shot.holdExtractionUntilCapture) {
+    const extractionGate = createExtractionCaptureGate()
+    await page.route(extractionGate.routePattern, extractionGate.holdRoute)
+    releaseHeldExtraction = () => extractionGate.releaseAndWait(page)
+  }
+  return { page, pageErrors, releaseHeldExtraction }
+}
+
 const captureShot = async ({ browser, shot, origin, palettes }) => {
   const context = await browser.newContext({
     viewport: { width: shot.viewport.width, height: shot.viewport.height },
@@ -788,29 +876,31 @@ const captureShot = async ({ browser, shot, origin, palettes }) => {
     isMobile: shot.context === "phone",
     hasTouch: shot.context === "phone",
   })
+  let companionReceiver
   let releaseHeldExtraction
   try {
-    const page = await context.newPage()
-    page.setDefaultTimeout(STEP_TIMEOUT_MS)
-    page.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
-    const pageErrors = []
-    page.on("pageerror", (error) => pageErrors.push(error))
-    if (shot.holdExtractionUntilCapture) {
-      const extractionGate = createExtractionCaptureGate()
-      await page.route(extractionGate.routePattern, extractionGate.holdRoute)
-      releaseHeldExtraction = () => extractionGate.releaseAndWait(page)
+    if (shot.companionReceiver) {
+      companionReceiver = await openCompanionReceiver(browser, shot, origin)
     }
+    const {
+      page,
+      pageErrors,
+      releaseHeldExtraction: release,
+    } = await openShotPage(context, shot)
+    releaseHeldExtraction = release
     await runShotSteps({ page, shot, origin, variables: Object.create(null) })
     await preparePageForCapture({ page, shot })
-    if (pageErrors.length > 0) {
+    const receiverErrors = companionReceiver?.receiverErrors ?? []
+    if (pageErrors.length > 0 || receiverErrors.length > 0) {
       throw new AggregateError(
-        pageErrors,
+        [...pageErrors, ...receiverErrors],
         `${shot.name} raised a browser error.`
       )
     }
     await saveCapturedShot({ page, shot, palettes })
   } finally {
     await releaseHeldExtraction?.()
+    await companionReceiver?.receiverContext.close()
     await context.close()
   }
 }

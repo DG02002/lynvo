@@ -1,6 +1,6 @@
 import { AirplayLineIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "~/components/ui/button"
 import {
@@ -85,6 +85,15 @@ export const RemotePlayButton = ({
 
   const { sessions, loading, hasError, fetchSessions } = useRemoteSessions()
 
+  // The dialog opens from the user menu through the controlled `open` prop,
+  // which never reaches Base UI's onOpenChange, so the device list is fetched
+  // for every transition to open regardless of the source.
+  useEffect(() => {
+    if (open) {
+      void fetchSessions()
+    }
+  }, [open, fetchSessions])
+
   const handleDeviceSelect = (session: RemoteSession) => {
     connectToSession(session.id, session.deviceName || "Unnamed device")
     setOpen(false)
@@ -92,9 +101,6 @@ export const RemotePlayButton = ({
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
-    if (nextOpen) {
-      void fetchSessions()
-    }
   }
 
   return (
