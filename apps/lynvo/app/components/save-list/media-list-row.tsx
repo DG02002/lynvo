@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
+import { PRESS_TINT_CLASS } from "~/lib/constants"
 import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
 
@@ -13,7 +14,6 @@ import {
   MEDIA_LIST_ROW_META_CLASS,
   MEDIA_LIST_ROW_OPENED_PRESS_TINT_CLASS,
   MEDIA_LIST_ROW_OPENED_TINT_CLASS,
-  MEDIA_LIST_ROW_PRESS_TINT_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
@@ -134,7 +134,7 @@ export const MediaListRow = ({
         !disabled &&
           (isOpened
             ? MEDIA_LIST_ROW_OPENED_PRESS_TINT_CLASS
-            : MEDIA_LIST_ROW_PRESS_TINT_CLASS),
+            : PRESS_TINT_CLASS),
         disabled && "cursor-not-allowed",
         buttonClassName
       )}

@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 
 import { Button } from "~/components/ui/button"
+import { PRESS_TINT_CLASS } from "~/lib/constants"
 
 import type { RemoteSession } from "./types"
 
@@ -81,7 +82,7 @@ export const RemoteSessionList = ({
         key={session.id}
         type="button"
         onClick={() => onSelect(session)}
-        className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-colors hover:bg-accent active:bg-foreground/10 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-colors hover:bg-accent ${PRESS_TINT_CLASS} hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
       >
         <HugeiconsIcon
           icon={ComputerIcon}

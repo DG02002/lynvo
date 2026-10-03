@@ -16,6 +16,7 @@ import {
   getMediaNodeInteractionState,
 } from "~/features/links/media-node-interaction"
 import type { ExtractedLink } from "~/features/links/types"
+import { PRESS_TINT_CLASS } from "~/lib/constants"
 import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
 
@@ -193,7 +194,7 @@ export const LinkSelectionTreeItem = ({
               ? "grid-cols-[1.5rem_minmax(0,1fr)_4rem]"
               : "grid-cols-[1.5rem_minmax(0,1fr)]"),
           (canExpand || canResolve || isSelectionControlAvailable) &&
-            "hover:bg-muted/50 active:bg-foreground/10 cursor-pointer",
+            `hover:bg-muted/50 ${PRESS_TINT_CLASS} cursor-pointer`,
           !canExpand &&
             !canResolve &&
             !isSelectionControlAvailable &&
