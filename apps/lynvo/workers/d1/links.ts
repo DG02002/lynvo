@@ -1369,6 +1369,8 @@ export const listSavedLinksWithDataVersion = async (
   // retention read joins the same batch as the links and version reads;
   // reading retention first would add a sequential D1 round trip to every
   // library load.
+  // Keep the SQL cutoff equivalent to getRetentionCutoff, including its
+  // default-retention behavior when the user row is absent.
   const batchResults = await database.batch([
     database
       .prepare(

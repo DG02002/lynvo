@@ -31,6 +31,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
+  SettingsLoadingBars,
   SettingsList,
   SettingsRow,
   SettingsRowInfo,
@@ -84,8 +85,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
           className="flex flex-col gap-2"
           role="status"
         >
-          <div className="loading-skeleton-pulse h-4 w-40 rounded-md bg-muted" />
-          <div className="loading-skeleton-pulse h-2 w-full rounded-full bg-muted" />
+          <SettingsLoadingBars titleWidthClassName="w-40" />
         </div>
       </SettingsPanel>
     )

@@ -47,7 +47,11 @@ import {
   GALLERY_IMAGE_SIZES,
 } from "./save-list-layout-constants"
 import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
-import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+import {
+  SaveListCardSkeleton,
+  SaveListEmptyState,
+  SaveListLoadingState,
+} from "./save-list-state"
 
 const GALLERY_MENU_TRIGGER_CLASS =
   "size-10 rounded-full bg-background/80 shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
@@ -90,11 +94,7 @@ const GallerySaveItemArtwork = ({
   if (isExtractionVisual) {
     if (!isExtractionFailed) {
       return (
-        <div
-          aria-label={`Loading links for ${displayTitle}…`}
-          className="loading-skeleton-pulse size-full bg-gradient-to-br from-muted to-muted-foreground/15"
-          role="status"
-        />
+        <SaveListCardSkeleton label={`Loading links for ${displayTitle}…`} />
       )
     }
 
@@ -135,11 +135,7 @@ const GallerySaveItemArtwork = ({
 
   if (isArtworkPending) {
     return (
-      <div
-        aria-label={`Loading artwork for ${displayTitle}…`}
-        className="loading-skeleton-pulse size-full bg-gradient-to-br from-muted to-muted-foreground/15"
-        role="status"
-      />
+      <SaveListCardSkeleton label={`Loading artwork for ${displayTitle}…`} />
     )
   }
 

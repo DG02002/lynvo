@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Link, type LinkProps } from "react-router"
 
+import { Skeleton } from "~/components/ui/skeleton"
 import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
 
@@ -49,6 +50,23 @@ export function SettingsRow({
   return (
     <div className={cn(settingsRowClass, className)} {...props}>
       {children}
+    </div>
+  )
+}
+
+export function SettingsLoadingBars({
+  className,
+  titleWidthClassName,
+}: {
+  className?: string
+  titleWidthClassName: string
+}) {
+  return (
+    <div aria-hidden="true" className={cn("flex flex-col gap-2", className)}>
+      <Skeleton
+        className={cn("loading-skeleton-pulse h-4", titleWidthClassName)}
+      />
+      <Skeleton className="loading-skeleton-pulse h-2 w-full rounded-full" />
     </div>
   )
 }

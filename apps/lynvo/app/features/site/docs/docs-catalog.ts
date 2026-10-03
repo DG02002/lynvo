@@ -86,7 +86,10 @@ for (const [path, loadContent] of Object.entries(contentModules)) {
     contentType: frontmatter.contentType,
     Content: lazy(loadContent),
     preloadContent: () => {
-      void loadContent()
+      void loadContent().catch(() => {
+        // Hover prefetch is speculative; navigation retries the import and
+        // surfaces any failure through the documentation route boundary.
+      })
     },
   }
 

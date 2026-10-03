@@ -6,6 +6,7 @@ import { LoadErrorRetry } from "~/components/load-error-retry"
 import { LynvoLink } from "~/components/lynvo-link"
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
+import { Skeleton } from "~/components/ui/skeleton"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { useViewTransition } from "~/lib/client-profile"
 import { authPaths } from "~/lib/paths"
@@ -83,9 +84,21 @@ const DeviceApprovalStatusMessage = ({
 
   if (isCheckingCode) {
     return (
-      <p className="text-balance text-lg text-muted-foreground" role="status">
-        Checking code…
-      </p>
+      <div
+        aria-label="Checking code"
+        className="flex flex-col items-center gap-3"
+        role="status"
+      >
+        <span className="sr-only">Checking code…</span>
+        <Skeleton
+          aria-hidden="true"
+          className="loading-skeleton-pulse h-4 w-40"
+        />
+        <Skeleton
+          aria-hidden="true"
+          className="loading-skeleton-pulse h-7 w-36"
+        />
+      </div>
     )
   }
 

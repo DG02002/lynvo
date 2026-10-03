@@ -3,6 +3,7 @@ import { useCallback, useState } from "react"
 
 import { requestNoStoreSameOriginWithSessionIdentity } from "~/lib/api/client"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
+import { readIdentityMeta } from "~/lib/session-identity"
 
 import type { RemoteSession } from "./types"
 
@@ -63,31 +64,78 @@ export const loadRemoteSessions = async (
   )
 }
 
-// The last successful receiver list is kept at module scope so reopening the
-// dialog shows known devices instantly while the presence list revalidates.
-let lastKnownSessions: readonly RemoteSession[] = []
+interface RemoteSessionState {
+  readonly userId: string | undefined
+  readonly sessions: RemoteSession[]
+  readonly loading: boolean
+  readonly hasError: boolean
+}
+
+// Keep this snapshot scoped to one account so reopening the dialog never
+// flashes receivers from a different signed-in user.
+let lastKnownSessions:
+  | { readonly userId: string; readonly sessions: readonly RemoteSession[] }
+  | undefined
+
+const createRemoteSessionState = (
+  userId: string | undefined
+): RemoteSessionState => ({
+  userId,
+  sessions:
+    userId && lastKnownSessions?.userId === userId
+      ? [...lastKnownSessions.sessions]
+      : [],
+  loading: false,
+  hasError: false,
+})
 
 export const useRemoteSessions = () => {
-  const [sessions, setSessions] = useState<RemoteSession[]>([
-    ...lastKnownSessions,
-  ])
-  const [loading, setLoading] = useState(false)
-  const [hasError, setHasError] = useState(false)
+  const userId = readIdentityMeta("lynvo-user-id")
+  const [state, setState] = useState(() => createRemoteSessionState(userId))
+  const currentState =
+    state.userId === userId ? state : createRemoteSessionState(userId)
 
   const fetchSessions = useCallback(async () => {
-    setLoading(true)
-    setHasError(false)
+    setState((previousState) => ({
+      ...(previousState.userId === userId
+        ? previousState
+        : createRemoteSessionState(userId)),
+      loading: true,
+      hasError: false,
+    }))
     try {
       const nextSessions = await loadRemoteSessions()
-      lastKnownSessions = nextSessions
-      setSessions(nextSessions)
+      if (readIdentityMeta("lynvo-user-id") !== userId) {
+        return
+      }
+      if (userId) {
+        lastKnownSessions = { userId, sessions: nextSessions }
+      }
+      setState({
+        userId,
+        sessions: nextSessions,
+        loading: false,
+        hasError: false,
+      })
     } catch (error) {
       console.error("Unable to fetch remote sessions", error)
-      setHasError(true)
+      if (readIdentityMeta("lynvo-user-id") === userId) {
+        setState((previousState) => ({
+          ...(previousState.userId === userId
+            ? previousState
+            : createRemoteSessionState(userId)),
+          loading: false,
+          hasError: true,
+        }))
+      }
     } finally {
-      setLoading(false)
+      setState((previousState) =>
+        previousState.userId === userId
+          ? { ...previousState, loading: false }
+          : previousState
+      )
     }
-  }, [])
+  }, [userId])
 
-  return { sessions, loading, hasError, fetchSessions }
+  return { ...currentState, fetchSessions }
 }

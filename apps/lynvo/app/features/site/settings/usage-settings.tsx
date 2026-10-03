@@ -11,6 +11,7 @@ import type { LynvoPlugin } from "./plugin-settings-data"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SectionHeading,
+  SettingsLoadingBars,
   SettingsList,
   SettingsPanel,
   SettingsRow,
@@ -109,8 +110,7 @@ const UsageItem = ({
 const UsageLoading = () => (
   <SettingsList role="status" aria-label="Loading usage">
     <SettingsRow className="flex-col items-stretch gap-3">
-      <div className="loading-skeleton-pulse h-4 w-48 rounded-md bg-muted" />
-      <div className="loading-skeleton-pulse h-2 w-full rounded-full bg-muted" />
+      <SettingsLoadingBars className="gap-3" titleWidthClassName="w-48" />
     </SettingsRow>
   </SettingsList>
 )

@@ -4,7 +4,7 @@ import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain
 import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
 import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
-import { SaveListLoadingState } from "~/components/save-list/save-list-state"
+import { SaveListImmersiveLoadingState } from "~/components/save-list/save-list-state"
 import { useGalleryGroupRoute } from "~/components/save-list/use-gallery-group-route"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
@@ -153,12 +153,12 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
     [links]
   )
   if (isImmersiveRoute && isPending) {
-    // The immersive shell renders immediately; only the grid area is pending,
-    // so navigation is never blocked behind a full-screen loading state.
+    // Keep the route's back action visible while the saved-link snapshot loads.
     return (
-      <div className="fixed inset-0 flex min-h-svh max-w-none flex-col gap-0 overflow-hidden bg-background px-6 pt-24 pb-10 md:px-8">
-        <SaveListLoadingState label="Loading folder…" variant="gallery" />
-      </div>
+      <SaveListImmersiveLoadingState
+        onNavigateBack={isGroupRoute ? exitGroup : closeSavedFolder}
+        kind={isGroupRoute ? "gallery-group" : "folder"}
+      />
     )
   }
 

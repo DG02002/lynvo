@@ -5,6 +5,7 @@ import { TmdbImage } from "~/features/links/tmdb-image"
 import { TMDB_LOGO_SHORT_SRC, TMDB_SITE_URL } from "~/lib/constants"
 
 import { GALLERY_GROUP_ARTWORK_SIZES } from "./save-list-layout-constants"
+import { SaveListCardSkeleton } from "./save-list-state"
 
 interface SeasonArtworkPanelProps {
   readonly displayTitle: string
@@ -40,11 +41,7 @@ const SeasonArtworkImage = ({
 
   if (isArtworkPending) {
     return (
-      <div
-        aria-label={`Loading artwork for ${displayTitle}…`}
-        className="loading-skeleton-pulse size-full bg-gradient-to-br from-muted to-muted-foreground/15"
-        role="status"
-      />
+      <SaveListCardSkeleton label={`Loading artwork for ${displayTitle}…`} />
     )
   }
 
