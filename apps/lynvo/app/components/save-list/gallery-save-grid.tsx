@@ -99,7 +99,7 @@ const GallerySaveItemArtwork = ({
     }
 
     return (
-      <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
+      <div className="flex size-full flex-col items-center justify-center gap-3 bg-muted p-4">
         <HugeiconsIcon
           icon={AlertCircleIcon}
           aria-label="Extraction failed"
@@ -141,7 +141,7 @@ const GallerySaveItemArtwork = ({
 
   if (isFolderContainer) {
     return (
-      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
+      <div className="flex size-full items-center justify-center bg-muted">
         <HugeiconsIcon
           icon={Folder01Icon}
           aria-hidden="true"
@@ -152,7 +152,7 @@ const GallerySaveItemArtwork = ({
   }
 
   return (
-    <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4 text-center text-sm text-muted-foreground">
+    <div className="flex size-full flex-col items-center justify-center gap-3 bg-muted p-4 text-center text-sm text-muted-foreground">
       <span>No poster found</span>
       {onChooseArtwork ? (
         <Button
@@ -324,7 +324,7 @@ const GallerySaveItem = ({
               : undefined
           }
         />
-        <div className="pointer-events-none absolute inset-0 bg-black/0 shadow-depth-gloss transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
+        <div className="pointer-events-none absolute inset-0 bg-black/0 shadow-depth-gloss transition-colors duration-150 group-hover:bg-black/20 group-active:bg-black/30 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
           <Button
             type="button"

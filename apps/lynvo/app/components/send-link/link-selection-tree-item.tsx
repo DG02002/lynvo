@@ -193,7 +193,7 @@ export const LinkSelectionTreeItem = ({
               ? "grid-cols-[1.5rem_minmax(0,1fr)_4rem]"
               : "grid-cols-[1.5rem_minmax(0,1fr)]"),
           (canExpand || canResolve || isSelectionControlAvailable) &&
-            "hover:bg-muted/50 cursor-pointer",
+            "hover:bg-muted/50 active:bg-foreground/10 cursor-pointer",
           !canExpand &&
             !canResolve &&
             !isSelectionControlAvailable &&

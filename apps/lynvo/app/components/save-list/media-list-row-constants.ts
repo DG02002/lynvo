@@ -16,8 +16,13 @@ export const MEDIA_LIST_ROW_MENU_CELL_CLASS = "w-16 shrink-0 text-foreground"
 
 export const MEDIA_LIST_ROW_HOVER_TINT_CLASS = "group-hover:bg-muted"
 
+// A press must read stronger than the hover tint, so it steps past bg-muted.
+export const MEDIA_LIST_ROW_PRESS_TINT_CLASS = "active:bg-foreground/10"
+
 export const MEDIA_LIST_ROW_OPENED_TINT_CLASS =
   "bg-sky-500/15 group-hover:bg-sky-500/20"
+
+export const MEDIA_LIST_ROW_OPENED_PRESS_TINT_CLASS = "active:bg-sky-500/30"
 
 // The immersive header's episode toggle is an optional auto-sized column, so
 // the menu cell must pin itself to the trailing column to stay right-aligned

@@ -11,7 +11,9 @@ import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_META_CLASS,
+  MEDIA_LIST_ROW_OPENED_PRESS_TINT_CLASS,
   MEDIA_LIST_ROW_OPENED_TINT_CLASS,
+  MEDIA_LIST_ROW_PRESS_TINT_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
@@ -126,9 +128,13 @@ export const MediaListRow = ({
       })}
       disabled={disabled}
       className={cn(
-        "absolute inset-0 z-1 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        "absolute inset-0 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         !disabled && MEDIA_LIST_ROW_HOVER_TINT_CLASS,
         isOpened && !disabled && MEDIA_LIST_ROW_OPENED_TINT_CLASS,
+        !disabled &&
+          (isOpened
+            ? MEDIA_LIST_ROW_OPENED_PRESS_TINT_CLASS
+            : MEDIA_LIST_ROW_PRESS_TINT_CLASS),
         disabled && "cursor-not-allowed",
         buttonClassName
       )}
@@ -136,7 +142,7 @@ export const MediaListRow = ({
     />
     <div
       className={cn(
-        "pointer-events-none relative z-2 flex min-h-24 flex-1",
+        "pointer-events-none relative flex min-h-24 flex-1",
         shouldStackIconOnMobile
           ? "flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:gap-3 md:p-0 md:px-4 md:py-6"
           : "min-w-0 items-center gap-3 px-4 py-6",
@@ -198,7 +204,7 @@ export const MediaListRow = ({
     {overlay && (
       <div
         className={cn(
-          "relative z-2 items-center justify-center",
+          "relative items-center justify-center",
           shouldStackIconOnMobile ? "hidden md:flex" : "flex",
           MEDIA_LIST_ROW_MENU_CELL_CLASS
         )}

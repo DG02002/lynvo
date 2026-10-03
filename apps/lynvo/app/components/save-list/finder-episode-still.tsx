@@ -149,7 +149,7 @@ export const FinderEpisodeStillDisplay = ({
         // row's shimmering title carries the "working" signal.
         <span
           aria-label={`Loading ${label}…`}
-          className="absolute inset-0 z-1 rounded-xl bg-background/60"
+          className="absolute inset-0 rounded-xl bg-background/60"
           role="status"
         />
       )}

@@ -39,7 +39,7 @@ const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
 const getNavigationLinkStateClassName = (isCurrentPage: boolean) =>
   isCurrentPage
     ? "bg-muted font-medium text-foreground"
-    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted"
 
 const DocsSidebarContents = ({
   section,

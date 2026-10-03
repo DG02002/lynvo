@@ -81,7 +81,7 @@ export const RemoteSessionList = ({
         key={session.id}
         type="button"
         onClick={() => onSelect(session)}
-        className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-colors hover:bg-accent active:bg-foreground/10 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <HugeiconsIcon
           icon={ComputerIcon}

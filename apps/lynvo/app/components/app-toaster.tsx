@@ -25,6 +25,8 @@ import { cn } from "~/lib/utils"
 
 const CenteredToast = ({ className, ...props }: ToastPrimitive.Root.Props) => {
   return (
+    // Exiting toasts stay mounted after newer ones arrive, so DOM order cannot
+    // stack them; the frontmost toast needs the highest z-index.
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
