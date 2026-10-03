@@ -602,6 +602,96 @@ describe("d1 data routes", () => {
     expect(list.links).toHaveLength(0)
   })
 
+  it("delivers the data-changed broadcast before the mutation response", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+
+    let openRoomFetch: () => void = () => undefined
+    const heldRoomResponse = new Promise<Response>((resolve) => {
+      openRoomFetch = () => resolve(Response.json({ delivered: true }))
+    })
+    let signalRoomFetch: () => void = () => undefined
+    const roomFetchStarted = new Promise<void>((resolve) => {
+      signalRoomFetch = resolve
+    })
+    const deliveries: Array<{
+      userId: string
+      url: string
+      body: unknown
+    }> = []
+
+    const responsePromise = app.fetch(
+      dataApiRequest("/api/data/links/clear", session, {
+        method: "POST",
+        body: JSON.stringify({ operationId: crypto.randomUUID() }),
+      }),
+      // SAFETY: The stub only captures the realtime notification; every
+      // other binding keeps its pooled value.
+      {
+        ...env,
+        USER_REALTIME_ROOM: {
+          getByName: (userId: string) => ({
+            fetch: async (input: RequestInfo) => {
+              const notification =
+                input instanceof Request ? input : new Request(input)
+              deliveries.push({
+                userId,
+                url: notification.url,
+                body: JSON.parse(await notification.clone().text()),
+              })
+              signalRoomFetch()
+              return heldRoomResponse
+            },
+          }),
+        },
+      } as Env
+    )
+
+    // Wait for the route to reach the realtime room, then drain microtasks.
+    // The held room response cannot settle, so the mutation response must
+    // still be pending here; a route that broadcast in the background
+    // instead of awaiting it would have settled during the drain.
+    const earlyOutcome = await Promise.race([
+      roomFetchStarted.then(() => "room" as const),
+      responsePromise.then(() => "response" as const),
+    ])
+    if (earlyOutcome !== "room") {
+      const earlyResponse = await responsePromise
+      throw new Error(
+        `mutation settled before reaching the realtime room: ${earlyResponse.status} ${await earlyResponse.text()}`
+      )
+    }
+    let responseSettled = false
+    void responsePromise.then(
+      () => {
+        responseSettled = true
+      },
+      () => {
+        responseSettled = true
+      }
+    )
+    for (let index = 0; index < 25; index += 1) {
+      await Promise.resolve()
+    }
+    expect(responseSettled).toBe(false)
+
+    openRoomFetch()
+    const response = await responsePromise
+    expect(response.status).toBe(200)
+    const cleared = await readJsonBody<{
+      success: boolean
+      dataVersion: number
+    }>(response)
+    expect(cleared.success).toBe(true)
+    expect(deliveries).toEqual([
+      {
+        userId: user.id,
+        url: "https://realtime.internal/notify-data-changed",
+        body: { version: cleared.dataVersion },
+      },
+    ])
+  })
+
   it("reads usage metrics and storage settings through the API", async () => {
     const user = await createUser()
     const session = await createSessionFor(user.id)
