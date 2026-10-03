@@ -285,6 +285,8 @@ const GallerySaveItem = ({
       )}
     >
       {isExtractionVisual ? null : (
+        // z-1 is load-bearing: without it the button paints under the
+        // positioned card box below and its inset focus ring disappears.
         <button
           type="button"
           onClick={handleActivate}

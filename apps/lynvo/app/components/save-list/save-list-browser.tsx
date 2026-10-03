@@ -1187,7 +1187,7 @@ export const SaveListBrowser = ({
                       </span>
                     </div>
                     {isRootItemNew && (
-                      <NewBadge className="relative z-10 hidden md:inline-flex" />
+                      <NewBadge className="hidden md:inline-flex" />
                     )}
                   </div>
                   <div
