@@ -62,3 +62,8 @@ export const MOBILE_PRICING_CONTROLS_HEIGHT_PX = 112
 export const MEDIA_FILENAME_MAX_EPISODE_DIGITS = 4
 export const MEDIA_YEAR_MIN = 1900
 export const MEDIA_YEAR_MAX = 2099
+
+// Presses must read stronger than the hover tint. Every surface using this
+// competes with a hover utility, and Tailwind orders :active after :hover,
+// so this one class wins without per-surface overrides.
+export const PRESS_TINT_CLASS = "active:bg-foreground/10"

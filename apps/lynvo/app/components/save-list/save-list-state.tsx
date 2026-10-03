@@ -112,7 +112,7 @@ export const SaveListLoadingState = ({
 export const SaveListCardSkeleton = ({ label }: { readonly label: string }) => (
   <Skeleton
     aria-label={label}
-    className="loading-skeleton-pulse size-full rounded-none bg-gradient-to-br from-muted to-muted-foreground/15"
+    className="loading-skeleton-pulse size-full rounded-none bg-muted"
     role="status"
   />
 )

@@ -59,6 +59,8 @@ const getLayout = (viewportWidth: number): CardLayout => {
 
 const SWAP_DELAY = 4400
 
+// Cards fly between slots while their DOM order stays fixed, so paint depth
+// during the swap can only come from z-index.
 const makeSlot = (index: number, layout: CardLayout): Slot => ({
   depth: index,
   x: index * layout.cardDistance,

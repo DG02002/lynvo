@@ -46,7 +46,7 @@ const SeasonArtworkImage = ({
   }
 
   return (
-    <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
+    <div className="flex size-full items-center justify-center bg-muted text-sm text-muted-foreground">
       No poster found
     </div>
   )

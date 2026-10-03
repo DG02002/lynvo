@@ -315,14 +315,14 @@ const FolderTree = ({
               aria-current={isCurrent ? "page" : undefined}
               data-folder-state={getFolderVisualState(link, isInPath)}
               className={cn(
-                "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
+                "absolute inset-0 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
                 isCurrent && "bg-accent"
               )}
               onClick={() => onSelectFolder(link, path)}
             />
             <div
               className={cn(
-                "pointer-events-none relative z-2 flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
+                "pointer-events-none relative flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
                 isCurrent && "text-accent-foreground"
               )}
             >
@@ -355,14 +355,14 @@ const FolderTree = ({
           aria-label={rootLabel}
           aria-current={folderPath.length === 0 ? "page" : undefined}
           className={cn(
-            "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
+            "absolute inset-0 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
             folderPath.length === 0 && "bg-accent"
           )}
           onClick={onSelectRoot}
         />
         <div
           className={cn(
-            "pointer-events-none relative z-2 flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
+            "pointer-events-none relative flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
             folderPath.length === 0 && "text-accent-foreground"
           )}
         >
@@ -1084,7 +1084,7 @@ export const SaveListBrowser = ({
                         isNew: isRootItemNew,
                       })}
                       className={cn(
-                        "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                         !isDirectLinkExpired &&
                           !isExtractionIncomplete &&
                           MEDIA_LIST_ROW_HOVER_TINT_CLASS,
@@ -1118,7 +1118,7 @@ export const SaveListBrowser = ({
                     />
                     <div
                       className={cn(
-                        "pointer-events-none relative z-2 min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
+                        "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
                         "flex",
                         isDirectLinkExpired &&
                           "text-muted-foreground opacity-60",
@@ -1187,12 +1187,12 @@ export const SaveListBrowser = ({
                       </span>
                     </div>
                     {isRootItemNew && (
-                      <NewBadge className="relative z-10 hidden md:inline-flex" />
+                      <NewBadge className="hidden md:inline-flex" />
                     )}
                   </div>
                   <div
                     className={cn(
-                      "relative z-2 flex items-center justify-center",
+                      "relative flex items-center justify-center",
                       MEDIA_LIST_ROW_MENU_CELL_CLASS
                     )}
                   >

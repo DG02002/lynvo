@@ -221,7 +221,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none !active:translate-y-0 transition-colors shrink-0 px-4 text-sm font-normal"
+              className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none transition-colors shrink-0 px-4 text-sm font-normal"
               disabled={isClearingLinks || usage.savedLinkCount === 0}
               onClick={() => setIsClearLinksDialogOpen(true)}
             >
