@@ -187,10 +187,7 @@ export default defineConfig({
             rehypeShikiFromHighlighter,
             docsHighlighter,
             {
-              themes: {
-                light: DOCS_SHIKI_THEMES.light,
-                dark: DOCS_SHIKI_THEMES.dark,
-              },
+              themes: DOCS_SHIKI_THEMES,
               transformers: [transformerMetaHighlight()],
             },
           ],

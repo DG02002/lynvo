@@ -608,23 +608,18 @@ const waitForRequiredImages = async (page, shot) => {
     return
   }
 
-  try {
-    await installRequiredImagesReadyGate(page)
-    await page.waitForFunction(
-      (expectedAlts) => window.lynvoRequiredImagesReady(expectedAlts) !== null,
-      requiredImageAlts,
-      { timeout: IMAGE_TIMEOUT_MS }
-    )
-    await page.evaluate(async (expectedAlts) => {
+  await waitForImageGate({
+    page,
+    installReadyGate: installRequiredImagesReadyGate,
+    images: requiredImageAlts,
+    isReady: (expectedAlts) =>
+      window.lynvoRequiredImagesReady(expectedAlts) !== null,
+    decodeImages: async (expectedAlts) => {
       const images = window.lynvoRequiredImagesReady(expectedAlts) ?? []
       await Promise.all(images.map((image) => image.decode()))
-    }, requiredImageAlts)
-  } catch (error) {
-    throw new Error(
-      `${shot.name} did not load its required images ${JSON.stringify(requiredImageAlts)}.`,
-      { cause: error }
-    )
-  }
+    },
+    errorMessage: `${shot.name} did not load its required images ${JSON.stringify(requiredImageAlts)}.`,
+  })
 }
 
 // Installs the shared TMDB readiness check in the page, where both the wait
@@ -663,28 +658,42 @@ const installTmdbImagesReadyGate = (page) =>
     }
   })
 
+const waitForImageGate = async ({
+  page,
+  installReadyGate,
+  images,
+  isReady,
+  decodeImages,
+  errorMessage,
+}) => {
+  try {
+    await installReadyGate(page)
+    await page.waitForFunction(isReady, images, {
+      timeout: IMAGE_TIMEOUT_MS,
+    })
+    await page.evaluate(decodeImages, images)
+  } catch (error) {
+    throw new Error(errorMessage, { cause: error })
+  }
+}
+
 const waitForTmdbImages = async (page, shot) => {
   const requiredImageCount = shot.requiredTmdbImageCount ?? 0
-  try {
-    await installTmdbImagesReadyGate(page)
-    await page.waitForFunction(
-      (count) => window.lynvoTmdbImagesReady(count) !== null,
-      requiredImageCount,
-      { timeout: IMAGE_TIMEOUT_MS }
-    )
-    await page.evaluate(async (count) => {
+  const requiredImageDescription =
+    shot.requiredTmdbImageCount === undefined
+      ? "visible TMDB artwork"
+      : `all ${shot.requiredTmdbImageCount} required TMDB artwork images`
+  await waitForImageGate({
+    page,
+    installReadyGate: installTmdbImagesReadyGate,
+    images: requiredImageCount,
+    isReady: (count) => window.lynvoTmdbImagesReady(count) !== null,
+    decodeImages: async (count) => {
       const images = window.lynvoTmdbImagesReady(count) ?? []
       await Promise.all(images.map((image) => image.decode()))
-    }, requiredImageCount)
-  } catch (error) {
-    const requiredImageDescription =
-      shot.requiredTmdbImageCount === undefined
-        ? "visible TMDB artwork"
-        : `all ${shot.requiredTmdbImageCount} required TMDB artwork images`
-    throw new Error(`${shot.name} did not load ${requiredImageDescription}.`, {
-      cause: error,
-    })
-  }
+    },
+    errorMessage: `${shot.name} did not load ${requiredImageDescription}.`,
+  })
 }
 
 const runShotSteps = async ({ page, shot, origin, variables }) => {

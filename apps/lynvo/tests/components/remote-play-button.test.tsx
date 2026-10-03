@@ -93,6 +93,8 @@ describe("RemotePlayButton", () => {
     )
 
     rerender(renderRemotePlayButton(false))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
     rerender(renderRemotePlayButton(true))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
