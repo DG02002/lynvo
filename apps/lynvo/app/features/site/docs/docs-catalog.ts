@@ -87,8 +87,9 @@ for (const [path, loadContent] of Object.entries(contentModules)) {
     Content: lazy(loadContent),
     preloadContent: () => {
       void loadContent().catch(() => {
-        // Hover prefetch is speculative; navigation retries the import and
-        // surfaces any failure through the documentation route boundary.
+        // Hover prefetch is speculative. React lazy keeps the first import
+        // result, so navigation surfaces this same failure through the
+        // documentation route boundary rather than retrying the import.
       })
     },
   }

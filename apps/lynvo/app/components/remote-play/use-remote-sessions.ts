@@ -89,17 +89,20 @@ const createRemoteSessionState = (
   hasError: false,
 })
 
+const reconcileUserId = (
+  state: RemoteSessionState,
+  userId: string | undefined
+): RemoteSessionState =>
+  state.userId === userId ? state : createRemoteSessionState(userId)
+
 export const useRemoteSessions = () => {
   const userId = readIdentityMeta("lynvo-user-id")
   const [state, setState] = useState(() => createRemoteSessionState(userId))
-  const currentState =
-    state.userId === userId ? state : createRemoteSessionState(userId)
+  const currentState = reconcileUserId(state, userId)
 
   const fetchSessions = useCallback(async () => {
     setState((previousState) => ({
-      ...(previousState.userId === userId
-        ? previousState
-        : createRemoteSessionState(userId)),
+      ...reconcileUserId(previousState, userId),
       loading: true,
       hasError: false,
     }))
@@ -121,9 +124,7 @@ export const useRemoteSessions = () => {
       console.error("Unable to fetch remote sessions", error)
       if (readIdentityMeta("lynvo-user-id") === userId) {
         setState((previousState) => ({
-          ...(previousState.userId === userId
-            ? previousState
-            : createRemoteSessionState(userId)),
+          ...reconcileUserId(previousState, userId),
           loading: false,
           hasError: true,
         }))

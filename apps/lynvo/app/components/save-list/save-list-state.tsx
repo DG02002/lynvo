@@ -117,89 +117,115 @@ export const SaveListCardSkeleton = ({ label }: { readonly label: string }) => (
   />
 )
 
+interface SaveListImmersiveLoadingStateProps {
+  readonly onNavigateBack: () => void
+  readonly kind: "folder" | "gallery-group"
+}
+
+const FolderAside = () => (
+  <aside className="min-w-0 overflow-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
+    <Skeleton
+      aria-hidden="true"
+      className="loading-skeleton-pulse h-9 w-full md:hidden"
+    />
+    <div className="hidden flex-col gap-2 md:flex" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, index) => (
+        <div key={index} className="flex h-9 items-center gap-2 px-2">
+          <Skeleton className="loading-skeleton-pulse size-4 rounded-md" />
+          <Skeleton className="loading-skeleton-pulse h-4 flex-1" />
+        </div>
+      ))}
+    </div>
+  </aside>
+)
+
+const GalleryGroupAside = () => (
+  <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
+    <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
+      <div className="save-list-group-artwork-frame relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m">
+        <SaveListCardSkeleton label="Loading artwork…" />
+      </div>
+    </div>
+  </aside>
+)
+
+interface ImmersiveLoadingPreset {
+  readonly contentGridClass: string
+  readonly contentScrollClass: string
+  readonly loadingLabel: string
+  readonly loadingVariant: "list" | "gallery"
+  readonly Aside: () => ReactNode
+}
+
+const immersiveLoadingPresets = {
+  folder: {
+    contentGridClass: FINDER_FOLDER_CONTENT_GRID_CLASS,
+    contentScrollClass:
+      "overflow-x-hidden overflow-y-auto overscroll-y-contain",
+    loadingLabel: "Loading folder…",
+    loadingVariant: "gallery",
+    Aside: FolderAside,
+  },
+  "gallery-group": {
+    contentGridClass: GALLERY_GROUP_CONTENT_CLASS,
+    contentScrollClass:
+      "md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain",
+    loadingLabel: "Loading gallery group…",
+    loadingVariant: "list",
+    Aside: GalleryGroupAside,
+  },
+} satisfies Record<"folder" | "gallery-group", ImmersiveLoadingPreset>
+
 export const SaveListImmersiveLoadingState = ({
   onNavigateBack,
   kind,
-}: {
-  readonly onNavigateBack: () => void
-  readonly kind: "folder" | "gallery-group"
-}) => (
-  <section
-    className={cn(
-      SAVE_LIST_BROWSER_LAYOUT_CLASS,
-      "flex h-svh flex-col overflow-hidden bg-background"
-    )}
-  >
-    <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-      <SaveListBackButton onNavigateBack={onNavigateBack} />
-      <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse hidden h-5 w-48 md:block"
-        />
-      </div>
-      <div className="flex items-center justify-center">
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse size-5 rounded-sm"
-        />
-      </div>
-      <div className="flex items-center justify-center border-l">
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse size-9 rounded-lg"
-        />
-      </div>
-    </header>
-    <div
-      className={
-        kind === "folder"
-          ? FINDER_FOLDER_CONTENT_GRID_CLASS
-          : GALLERY_GROUP_CONTENT_CLASS
-      }
+}: SaveListImmersiveLoadingStateProps) => {
+  const preset = immersiveLoadingPresets[kind]
+  return (
+    <section
+      className={cn(
+        SAVE_LIST_BROWSER_LAYOUT_CLASS,
+        "flex h-svh flex-col overflow-hidden bg-background"
+      )}
     >
-      {kind === "folder" ? (
-        <aside className="min-w-0 overflow-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
+      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
+        <SaveListBackButton onNavigateBack={onNavigateBack} />
+        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <Skeleton
             aria-hidden="true"
-            className="loading-skeleton-pulse h-9 w-full md:hidden"
+            className="loading-skeleton-pulse hidden h-5 w-48 md:block"
           />
-          <div className="hidden flex-col gap-2 md:flex" aria-hidden="true">
-            {Array.from({ length: 5 }, (_, index) => (
-              <div key={index} className="flex h-9 items-center gap-2 px-2">
-                <Skeleton className="loading-skeleton-pulse size-4 rounded-md" />
-                <Skeleton className="loading-skeleton-pulse h-4 flex-1" />
-              </div>
-            ))}
-          </div>
-        </aside>
-      ) : (
-        <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
-          <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
-            <div className="save-list-group-artwork-frame relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m">
-              <SaveListCardSkeleton label="Loading artwork…" />
-            </div>
-          </div>
-        </aside>
-      )}
-      <div
-        className={cn(
-          "min-h-0 px-4 py-3 md:px-6 md:py-5",
-          kind === "folder"
-            ? "overflow-x-hidden overflow-y-auto overscroll-y-contain"
-            : "md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain"
-        )}
-      >
-        <SaveListLoadingState
-          label={
-            kind === "folder" ? "Loading folder…" : "Loading gallery group…"
-          }
-          variant={kind === "folder" ? "gallery" : "list"}
-        />
+        </div>
+        <div className="flex items-center justify-center">
+          <Skeleton
+            aria-hidden="true"
+            className="loading-skeleton-pulse size-5 rounded-sm"
+          />
+        </div>
+        <div className="flex items-center justify-center border-l">
+          <Skeleton
+            aria-hidden="true"
+            className="loading-skeleton-pulse size-9 rounded-lg"
+          />
+        </div>
+      </header>
+      <div className={preset.contentGridClass}>
+        <preset.Aside />
+        <div
+          className={cn(
+            "min-h-0 px-4 py-3 md:px-6 md:py-5",
+            preset.contentScrollClass
+          )}
+        >
+          <SaveListLoadingState
+            label={preset.loadingLabel}
+            variant={preset.loadingVariant}
+          />
+        </div>
       </div>
-    </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export const SaveListEmptyState = () => (
   <SaveListState
