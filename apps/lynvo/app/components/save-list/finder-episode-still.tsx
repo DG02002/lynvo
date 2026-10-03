@@ -1,7 +1,5 @@
 import { useMemo, type ReactNode } from "react"
 
-import { Spinner } from "~/components/spinner"
-import { Skeleton } from "~/components/ui/skeleton"
 import {
   getMediaArtworkRequest,
   getMediaEpisodeDisplayTitle,
@@ -63,7 +61,9 @@ const FinderEpisodeStillImage = ({
   }
 
   if (isLookupPending) {
-    return <Skeleton className="absolute inset-0 size-full" />
+    return (
+      <span className="loading-skeleton-pulse absolute inset-0 size-full rounded-xl bg-muted" />
+    )
   }
 
   if (isResolving) {
@@ -145,9 +145,13 @@ export const FinderEpisodeStillDisplay = ({
         />
       </span>
       {isResolving && (
-        <span className="absolute inset-0 z-1 flex items-center justify-center rounded-xl bg-background/60">
-          <Spinner aria-label={`Loading ${label}…`} className="size-6" />
-        </span>
+        // The scrim freezes the stale still while the row re-resolves; the
+        // row's shimmering title carries the "working" signal.
+        <span
+          aria-label={`Loading ${label}…`}
+          className="absolute inset-0 z-1 rounded-xl bg-background/60"
+          role="status"
+        />
       )}
     </span>
   )

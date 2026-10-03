@@ -237,6 +237,35 @@ describe("d1 links", () => {
     expect(snapshot.results).toHaveLength(1)
   })
 
+  it("applies the user's retention cutoff inside the list snapshot read", async () => {
+    const user = await createUser()
+    await updateUserStorageRetentionDays(env.DB, user.id, {
+      days: 7,
+      now: NOW,
+    })
+    const seedPrefix = `retention-cutoff-${crypto.randomUUID()}`
+    const seedLink = (suffix: string, createdAt: number) =>
+      env.DB.prepare(
+        "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at) VALUES (?1, ?2, ?3, NULL, ?4, NULL, ?5, ?5, ?6)"
+      ).bind(
+        `${seedPrefix}-${suffix}`,
+        user.id,
+        `https://example.com/${seedPrefix}-${suffix}`,
+        EMPTY_LINK_METADATA_JSON,
+        createdAt,
+        createdAt + 30 * DAY_MS
+      )
+    await env.DB.batch([
+      seedLink("fresh", NOW),
+      seedLink("stale", NOW - 8 * DAY_MS),
+    ])
+
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
+    expect(snapshot.results.map((link) => link.url)).toEqual([
+      `https://example.com/${seedPrefix}-fresh`,
+    ])
+  })
+
   it("does not report an in-flight metadata mutation as completed", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {

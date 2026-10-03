@@ -1,7 +1,6 @@
 import { LoadErrorRetry } from "~/components/load-error-retry"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
-import { Skeleton } from "~/components/ui/skeleton"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
@@ -12,6 +11,7 @@ import type { LynvoPlugin } from "./plugin-settings-data"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SectionHeading,
+  SettingsLoadingBars,
   SettingsList,
   SettingsPanel,
   SettingsRow,
@@ -110,8 +110,7 @@ const UsageItem = ({
 const UsageLoading = () => (
   <SettingsList role="status" aria-label="Loading usage">
     <SettingsRow className="flex-col items-stretch gap-3">
-      <Skeleton className="h-4 w-48" />
-      <Progress value={0} />
+      <SettingsLoadingBars className="gap-3" titleWidthClassName="w-48" />
     </SettingsRow>
   </SettingsList>
 )

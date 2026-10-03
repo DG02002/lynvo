@@ -18,6 +18,7 @@ export const UsagePolicyContent = () => (
       Responsible use is shared. You are responsible for the links, content,
       credentials, and Plugin Servers you use. These rules supplement the{" "}
       <Link
+        prefetch="intent"
         to={policyPaths.termsOfUse}
         className="underline underline-offset-4"
       >
@@ -158,6 +159,7 @@ export const UsagePolicyContent = () => (
       <p>
         The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.privacyPolicy}
           className="underline underline-offset-4"
         >

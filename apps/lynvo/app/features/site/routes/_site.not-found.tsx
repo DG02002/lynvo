@@ -20,6 +20,7 @@ const NotFound = () => (
     </h1>
     <div className="mt-8 flex flex-wrap justify-center gap-3">
       <Link
+        prefetch="intent"
         to="/"
         className="underline underline-offset-4 transition-opacity hover:opacity-70"
       >

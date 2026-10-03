@@ -14,7 +14,6 @@ import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
-import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
@@ -494,7 +493,13 @@ const FinderBrowserLinkRow = ({
     />
   )
   const rowStatusIcon = isResolving ? (
-    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
+    <span
+      aria-label={`Loading ${link.label}…`}
+      className="loading-skeleton-pulse inline-flex"
+      role="status"
+    >
+      {rowFallbackIcon}
+    </span>
   ) : (
     rowFallbackIcon
   )
@@ -916,7 +921,14 @@ const SaveListRootRowFallbackIcon = ({
   }
 
   if (isExtractionVisual) {
-    return <Spinner aria-hidden="true" className="size-6" />
+    return (
+      <span
+        aria-hidden="true"
+        className="loading-skeleton-pulse inline-flex text-muted-foreground"
+      >
+        <HugeiconsIcon icon={Folder01Icon} className="size-6" />
+      </span>
+    )
   }
 
   if (directLinkLabel) {

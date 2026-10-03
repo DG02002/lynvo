@@ -83,6 +83,8 @@ const DocsSidebarContents = ({
                       <Link
                         to={page.url}
                         prefetch="intent"
+                        onFocus={page.preloadContent}
+                        onMouseEnter={page.preloadContent}
                         aria-current={isCurrentPage ? "page" : undefined}
                         className={cn(
                           "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm leading-5 tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
@@ -161,6 +163,8 @@ const PageNavigation = ({
   <Link
     to={page.url}
     prefetch="intent"
+    onFocus={page.preloadContent}
+    onMouseEnter={page.preloadContent}
     className={`group flex min-w-0 flex-col gap-1 text-sm tracking-tight transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
       direction === "next" ? "items-end text-right" : "items-start"
     }`}

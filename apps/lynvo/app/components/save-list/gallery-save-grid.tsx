@@ -10,7 +10,6 @@ import React from "react"
 import { ChangeArtworkDialog } from "~/components/links/change-artwork-dialog"
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
-import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -48,7 +47,11 @@ import {
   GALLERY_IMAGE_SIZES,
 } from "./save-list-layout-constants"
 import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
-import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+import {
+  SaveListCardSkeleton,
+  SaveListEmptyState,
+  SaveListLoadingState,
+} from "./save-list-state"
 
 const GALLERY_MENU_TRIGGER_CLASS =
   "size-10 rounded-full bg-background/80 shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
@@ -91,9 +94,7 @@ const GallerySaveItemArtwork = ({
   if (isExtractionVisual) {
     if (!isExtractionFailed) {
       return (
-        <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
-          <Spinner aria-hidden="true" className="size-8" />
-        </div>
+        <SaveListCardSkeleton label={`Loading links for ${displayTitle}…`} />
       )
     }
 
@@ -134,12 +135,7 @@ const GallerySaveItemArtwork = ({
 
   if (isArtworkPending) {
     return (
-      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-        <Spinner
-          aria-label={`Loading artwork for ${displayTitle}…`}
-          className="size-8"
-        />
-      </div>
+      <SaveListCardSkeleton label={`Loading artwork for ${displayTitle}…`} />
     )
   }
 
@@ -426,7 +422,9 @@ export const GallerySaveGrid = ({
 }: GallerySaveGridProps) => {
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   if (isHydrating) {
-    return <SaveListLoadingState label="Loading saved links…" />
+    return (
+      <SaveListLoadingState label="Loading saved links…" variant="gallery" />
+    )
   }
   if (groups.length === 0) {
     return <SaveListEmptyState />

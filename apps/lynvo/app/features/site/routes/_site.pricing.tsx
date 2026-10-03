@@ -150,6 +150,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => {
         <span className="px-3 py-1 text-foreground">More plans</span>
       </div>
       <Link
+        prefetch="intent"
         to={authPaths.signIn}
         viewTransition={viewTransition}
         className={cn(
@@ -245,6 +246,7 @@ export default function Pricing() {
               <span className="text-lg text-muted-foreground">/ month</span>
             </div>
             <Link
+              prefetch="intent"
               to={authPaths.signIn}
               viewTransition={viewTransition}
               className={cn(buttonVariants({ size: "lg" }), "w-full")}
@@ -305,6 +307,7 @@ export default function Pricing() {
             <div className="flex flex-col items-start gap-3">
               <span className="text-lg">Free</span>
               <Link
+                prefetch="intent"
                 to={authPaths.signIn}
                 viewTransition={viewTransition}
                 className={buttonVariants({ size: "sm" })}
@@ -379,6 +382,7 @@ export default function Pricing() {
             limits listed on this page. Automated or abusive use may be
             restricted under the{" "}
             <Link
+              prefetch="intent"
               to={policyPaths.usagePolicy}
               viewTransition={viewTransition}
               className="text-foreground underline underline-offset-4"
@@ -395,6 +399,7 @@ export default function Pricing() {
             Plan limits may change as Lynvo develops. Material changes appear in
             the{" "}
             <Link
+              prefetch="intent"
               to={sitePaths.changelog}
               viewTransition={viewTransition}
               className="text-foreground underline underline-offset-4"

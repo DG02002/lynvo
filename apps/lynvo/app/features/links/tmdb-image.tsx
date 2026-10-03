@@ -121,7 +121,7 @@ const TmdbImageContent = ({
   return (
     <>
       {shouldShowSkeleton && (
-        <Skeleton className="absolute inset-0 size-full" />
+        <Skeleton className="loading-skeleton-pulse absolute inset-0 size-full" />
       )}
       {previewUrl && !isFullLoaded && (
         <img

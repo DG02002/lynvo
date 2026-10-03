@@ -87,6 +87,7 @@ export const LicensesContent = () => (
         service, account data, privacy practices, service availability, Lynvo
         trademarks, and third-party services. See the{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.termsOfUse}
           className="underline underline-offset-4"
         >
@@ -94,6 +95,7 @@ export const LicensesContent = () => (
         </Link>{" "}
         and{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.privacyPolicy}
           className="underline underline-offset-4"
         >

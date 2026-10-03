@@ -74,7 +74,9 @@ describe("settings select accessibility", () => {
     document.body.innerHTML = renderToString(<StorageSettings />)
     const body = within(document.body)
 
-    expect(body.getByText("Loading storage usage…")).toBeVisible()
+    expect(
+      body.getByRole("status", { name: "Loading storage usage" })
+    ).toBeVisible()
     expect(body.queryByRole("combobox")).not.toBeInTheDocument()
   })
 })

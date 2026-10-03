@@ -79,6 +79,7 @@ export const CookiePolicyContent = () => (
       This Cookie Policy explains what cookies and similar technologies Lynvo
       uses, why Lynvo uses them, and how you can manage them. Read it with the{" "}
       <Link
+        prefetch="intent"
         to={policyPaths.privacyPolicy}
         className="underline underline-offset-4"
       >

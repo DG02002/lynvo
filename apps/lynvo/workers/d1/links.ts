@@ -1365,14 +1365,21 @@ export const listSavedLinksWithDataVersion = async (
   userId: string,
   now: number
 ): Promise<{ results: SavedLinkRecord[]; dataVersion: number }> => {
-  const retentionDays = await getUserRetentionDays(database, userId)
-  const cutoff = getRetentionCutoff(now, retentionDays)
+  // The retention cutoff is derived inside the links query itself so the
+  // retention read joins the same batch as the links and version reads;
+  // reading retention first would add a sequential D1 round trip to every
+  // library load.
+  // Keep the SQL cutoff equivalent to getRetentionCutoff, including its
+  // default-retention behavior when the user row is absent.
   const batchResults = await database.batch([
     database
       .prepare(
-        `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND created_at >= ?2 ORDER BY created_at DESC LIMIT ?3`
+        `SELECT ${SAVED_LINK_COLUMNS} FROM links
+         WHERE user_id = ?1
+           AND created_at >= ?2 - COALESCE((SELECT storage_retention_days FROM users WHERE id = ?1), ?3) * ?4
+         ORDER BY created_at DESC LIMIT ?5`
       )
-      .bind(userId, cutoff, LINKS_MAX_COUNT),
+      .bind(userId, now, DEFAULT_RETENTION_DAYS, DAY_MS, LINKS_MAX_COUNT),
     database
       .prepare("SELECT data_version FROM users WHERE id = ?1")
       .bind(userId),

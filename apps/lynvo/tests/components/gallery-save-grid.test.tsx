@@ -76,15 +76,15 @@ const renderQueuedGrid = (item: LinkListItem) =>
   )
 
 describe("GallerySaveGrid", () => {
-  it("renders a queued item with a centered spinner and shimmering title only", () => {
+  it("renders a queued item with a pulsing poster skeleton and shimmering title only", () => {
     renderQueuedGrid(createQueuedItem({ state: "queued" }))
 
     const queuedItem = screen.getByTestId("gallery-save-item")
     expect(queuedItem).toHaveAttribute("data-extraction-state", "queued")
 
-    const posterSpinner = queuedItem.querySelector('[data-slot="spinner"]')
-    expect(posterSpinner).toBeInTheDocument()
-    expect(posterSpinner?.closest(".aspect-2\\/3")).toBeInTheDocument()
+    const posterSkeleton = queuedItem.querySelector(".loading-skeleton-pulse")
+    expect(posterSkeleton).toBeInTheDocument()
+    expect(posterSkeleton?.closest(".aspect-2\\/3")).toBeInTheDocument()
 
     const queuedTitle = screen.getByText("Waiting to load…")
     expect(queuedTitle).toHaveClass("shimmer")
@@ -121,7 +121,7 @@ describe("GallerySaveGrid", () => {
 
     const settledItem = screen.getByTestId("gallery-save-item")
     expect(
-      settledItem.querySelector('[data-slot="spinner"]')
+      settledItem.querySelector(".loading-skeleton-pulse")
     ).not.toBeInTheDocument()
     expect(screen.queryByText("Waiting to load…")).not.toBeInTheDocument()
 
@@ -236,7 +236,7 @@ describe("GallerySaveGrid", () => {
     expect(screen.getByText("Copy Source link")).toBeInTheDocument()
   })
 
-  it("shows a poster loading spinner while artwork is being looked up", () => {
+  it("shows a poster skeleton while artwork is being looked up", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       // SAFETY: never-settling promise mimics an in-flight lookup; the assertion-free mock needs no Response body
       () => new Promise(() => {}) as Promise<Response>
@@ -268,7 +268,9 @@ describe("GallerySaveGrid", () => {
 
     const movieItem = screen.getByTestId("gallery-save-item")
     expect(screen.queryByText("No poster found")).not.toBeInTheDocument()
-    expect(movieItem.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+    expect(
+      movieItem.querySelector(".loading-skeleton-pulse")
+    ).toBeInTheDocument()
 
     vi.restoreAllMocks()
   })
@@ -376,7 +378,7 @@ describe("GallerySaveGrid", () => {
     const groupItem = screen.getByTestId("gallery-save-item")
     expect(groupItem).toHaveAttribute("data-extraction-state", "complete")
     expect(
-      groupItem.querySelector('[data-slot="spinner"]')
+      groupItem.querySelector(".loading-skeleton-pulse")
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Open Sample Series S01" })

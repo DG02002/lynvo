@@ -117,26 +117,41 @@ const getSessionContext = async (
   }
 }
 
-export const getUserSession = async (
+// React Router hands the same Request instance to every loader it calls for
+// one request, so keying on it lets root and the matching layout share a
+// single D1 session lookup instead of one query each.
+const sessionByRequest = new WeakMap<Request, Promise<SessionResult>>()
+
+const loadUserSession = (request: Request, env: Env): Promise<SessionResult> =>
+  getSessionContext(request, env).then((result) => {
+    if (!result.available) {
+      throw data(
+        { error: "Authentication is temporarily unavailable." },
+        { status: 503 }
+      )
+    }
+    return {
+      user: result.user
+        ? {
+            sub: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            sid: result.user.sid,
+          }
+        : null,
+      sessionExpiresAt: result.expiresAt,
+    }
+  })
+
+export const getUserSession = (
   request: Request,
   env: Env
 ): Promise<SessionResult> => {
-  const result = await getSessionContext(request, env)
-  if (!result.available) {
-    throw data(
-      { error: "Authentication is temporarily unavailable." },
-      { status: 503 }
-    )
+  const cachedSession = sessionByRequest.get(request)
+  if (cachedSession) {
+    return cachedSession
   }
-  return {
-    user: result.user
-      ? {
-          sub: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          sid: result.user.sid,
-        }
-      : null,
-    sessionExpiresAt: result.expiresAt,
-  }
+  const session = loadUserSession(request, env)
+  sessionByRequest.set(request, session)
+  return session
 }

@@ -116,7 +116,7 @@ export function LinkInputSection({
             onClick={pasteClipboardUrl}
             tabIndex={clipboardUrl ? 0 : -1}
           >
-            <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-6000 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
+            <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-900 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
               {clipboardUrl}
             </span>
           </button>

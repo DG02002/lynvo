@@ -31,6 +31,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
+  SettingsLoadingBars,
   SettingsList,
   SettingsRow,
   SettingsRowInfo,
@@ -79,11 +80,12 @@ export function StorageSettings({ userId }: { userId?: string }) {
   if (!usage) {
     return (
       <SettingsPanel>
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-normal text-muted-foreground">
-            Loading storage usage…
-          </span>
-          <Progress value={0} />
+        <div
+          aria-label="Loading storage usage"
+          className="flex flex-col gap-2"
+          role="status"
+        >
+          <SettingsLoadingBars titleWidthClassName="w-40" />
         </div>
       </SettingsPanel>
     )

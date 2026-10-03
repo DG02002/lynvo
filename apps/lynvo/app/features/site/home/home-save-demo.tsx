@@ -445,7 +445,7 @@ export const HomeSaveDemo = () => {
                     tabIndex={isClipboardOpen ? 0 : -1}
                   >
                     <span
-                      className={`${isClipboardOpen ? "shimmer shimmer-color-blue-500/60 shimmer-duration-6000 shimmer-spread-24" : ""} block max-w-full truncate text-base font-normal text-primary`}
+                      className={`${isClipboardOpen ? "shimmer shimmer-color-blue-500/60 shimmer-duration-900 shimmer-spread-24" : ""} block max-w-full truncate text-base font-normal text-primary`}
                     >
                       {HOME_DEMO_CLIPBOARD_URL}
                     </span>

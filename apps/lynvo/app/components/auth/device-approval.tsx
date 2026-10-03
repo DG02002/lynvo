@@ -6,6 +6,7 @@ import { LoadErrorRetry } from "~/components/load-error-retry"
 import { LynvoLink } from "~/components/lynvo-link"
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
+import { Skeleton } from "~/components/ui/skeleton"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { useViewTransition } from "~/lib/client-profile"
 import { authPaths } from "~/lib/paths"
@@ -84,11 +85,19 @@ const DeviceApprovalStatusMessage = ({
   if (isCheckingCode) {
     return (
       <div
-        className="flex items-center justify-center gap-2 text-muted-foreground"
+        aria-label="Checking code"
+        className="flex flex-col items-center gap-3"
         role="status"
       >
-        <Spinner aria-hidden="true" />
-        <span>Checking code…</span>
+        <span className="sr-only">Checking code…</span>
+        <Skeleton
+          aria-hidden="true"
+          className="loading-skeleton-pulse h-4 w-40"
+        />
+        <Skeleton
+          aria-hidden="true"
+          className="loading-skeleton-pulse h-7 w-36"
+        />
       </div>
     )
   }
@@ -180,7 +189,11 @@ const DeviceApproval = () => {
                 className="h-13.5 w-full"
                 nativeButton={false}
                 render={
-                  <Link to="/" viewTransition={viewTransition}>
+                  <Link
+                    prefetch="intent"
+                    to="/"
+                    viewTransition={viewTransition}
+                  >
                     Go home
                   </Link>
                 }
@@ -205,7 +218,11 @@ const DeviceApproval = () => {
                   className="h-13.5 w-full"
                   nativeButton={false}
                   render={
-                    <Link to={authPaths.signIn} viewTransition={viewTransition}>
+                    <Link
+                      prefetch="intent"
+                      to={authPaths.signIn}
+                      viewTransition={viewTransition}
+                    >
                       Back to sign in
                     </Link>
                   }
