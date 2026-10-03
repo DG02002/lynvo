@@ -11,18 +11,18 @@ const getLogJsonHighlighter = (): Promise<HighlighterCore> => {
     const [
       { createHighlighterCore },
       { createJavaScriptRegexEngine },
-      oneLightTheme,
-      oneDarkProTheme,
+      nightOwlLightTheme,
+      houstonTheme,
       jsonLang,
     ] = await Promise.all([
       import("shiki/core"),
       import("shiki/engine/javascript"),
-      import("@shikijs/themes/one-light"),
-      import("@shikijs/themes/one-dark-pro"),
+      import("@shikijs/themes/night-owl-light"),
+      import("@shikijs/themes/houston"),
       import("@shikijs/langs/json"),
     ])
     return createHighlighterCore({
-      themes: [oneLightTheme.default, oneDarkProTheme.default],
+      themes: [nightOwlLightTheme.default, houstonTheme.default],
       langs: [jsonLang.default],
       engine: createJavaScriptRegexEngine(),
     })

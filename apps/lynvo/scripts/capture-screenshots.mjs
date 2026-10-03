@@ -611,7 +611,7 @@ const waitForRequiredImages = async (page, shot) => {
   await waitForImageGate({
     page,
     installReadyGate: installRequiredImagesReadyGate,
-    images: requiredImageAlts,
+    gateArgument: requiredImageAlts,
     isReady: (expectedAlts) =>
       window.lynvoRequiredImagesReady(expectedAlts) !== null,
     decodeImages: async (expectedAlts) => {
@@ -661,17 +661,18 @@ const installTmdbImagesReadyGate = (page) =>
 const waitForImageGate = async ({
   page,
   installReadyGate,
-  images,
+  gateArgument,
   isReady,
   decodeImages,
   errorMessage,
 }) => {
   try {
     await installReadyGate(page)
-    await page.waitForFunction(isReady, images, {
+    // Playwright serializes these callbacks into the page; keep them self-contained.
+    await page.waitForFunction(isReady, gateArgument, {
       timeout: IMAGE_TIMEOUT_MS,
     })
-    await page.evaluate(decodeImages, images)
+    await page.evaluate(decodeImages, gateArgument)
   } catch (error) {
     throw new Error(errorMessage, { cause: error })
   }
@@ -686,7 +687,7 @@ const waitForTmdbImages = async (page, shot) => {
   await waitForImageGate({
     page,
     installReadyGate: installTmdbImagesReadyGate,
-    images: requiredImageCount,
+    gateArgument: requiredImageCount,
     isReady: (count) => window.lynvoTmdbImagesReady(count) !== null,
     decodeImages: async (count) => {
       const images = window.lynvoTmdbImagesReady(count) ?? []

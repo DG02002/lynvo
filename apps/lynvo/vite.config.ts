@@ -69,8 +69,8 @@ const loadRawDocumentation = async (
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
-    import("@shikijs/themes/one-light"),
-    import("@shikijs/themes/one-dark-pro"),
+    import("@shikijs/themes/night-owl-light"),
+    import("@shikijs/themes/houston"),
   ],
   langs: [
     import("@shikijs/langs/typescript"),
@@ -163,8 +163,8 @@ export default defineConfig({
       "@hugeicons/core-free-icons",
       "@hugeicons/react",
       "@shikijs/langs/json",
-      "@shikijs/themes/one-dark-pro",
-      "@shikijs/themes/one-light",
+      "@shikijs/themes/houston",
+      "@shikijs/themes/night-owl-light",
       "@tanstack/react-form",
       "class-variance-authority",
       "effect",
