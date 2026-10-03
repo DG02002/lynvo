@@ -113,6 +113,9 @@ const selectCustomPlugin = Effect.fn(
         requestId: options.requestId,
       })
       discoveredPluginId = discovery?.matched ? discovery.pluginId : undefined
+      // Cache a "no plugin" answer (undefined) too — whether the server
+      // answered matched:false or discovery is unsupported, retries of a
+      // URL this manifest cannot route must not repeat the discover hop.
       rememberPluginDiscovery(
         pluginServer,
         options.targetUrl,
