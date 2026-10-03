@@ -324,6 +324,8 @@ const GallerySaveItem = ({
               : undefined
           }
         />
+        {/* The press is a black step over artwork; the shared press tint is
+            tuned for plain surfaces and would wash out the poster. */}
         <div className="pointer-events-none absolute inset-0 bg-black/0 shadow-depth-gloss transition-colors duration-150 group-hover:bg-black/20 group-active:bg-black/30 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
           <Button

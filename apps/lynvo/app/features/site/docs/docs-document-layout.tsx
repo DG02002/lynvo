@@ -36,6 +36,8 @@ const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 })
 
+// The non-current press previews the selected bg-muted instead of the shared
+// press tint: pressing darker than the page you land on would read wrong.
 const getNavigationLinkStateClassName = (isCurrentPage: boolean) =>
   isCurrentPage
     ? "bg-muted font-medium text-foreground"
