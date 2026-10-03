@@ -197,4 +197,43 @@ describe("getUserSession", () => {
       getUserSession(new Request("https://lynvo.test"), environment)
     ).rejects.toMatchObject({ init: { status: 503 } })
   })
+
+  it("shares one session query across loaders on the same request", async () => {
+    let sessionQueries = 0
+    // SAFETY: getUserSession only reads the DB binding from this test environment.
+    const environment = {
+      DB: createFakeD1Database((sql) => {
+        if (sql.includes("INNER JOIN users u")) {
+          sessionQueries += 1
+          return {
+            row: {
+              session_id: "session-123",
+              user_id: "user-456",
+              email: "user@example.com",
+              display_name: "Demo User",
+              last_seen_at: Date.now(),
+              expires_at: Date.now() + 60_000,
+            },
+          }
+        }
+        return undefined
+      }),
+    } as Env
+    const loadForSettings = () =>
+      new Request("https://lynvo.test/settings/plugins", {
+        headers: { Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id` },
+      })
+
+    const request = loadForSettings()
+    const [rootSession, layoutSession] = await Promise.all([
+      getUserSession(request, environment),
+      getUserSession(request, environment),
+    ])
+    expect(layoutSession).toEqual(rootSession)
+    expect(rootSession.user?.sub).toBe("user-456")
+    expect(sessionQueries).toBe(1)
+
+    await getUserSession(loadForSettings(), environment)
+    expect(sessionQueries).toBe(2)
+  })
 })
