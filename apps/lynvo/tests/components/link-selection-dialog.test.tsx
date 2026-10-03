@@ -433,10 +433,10 @@ describe("LinkSelectionDialog", () => {
     expect(
       await screen.findByRole("status", { name: "Loading Unresolved item…" })
     ).toBeVisible()
-    const resolvingSpinner = folderTreeItem.querySelector(
-      '[data-slot="spinner"]'
+    const resolvingPulse = folderTreeItem.querySelector(
+      ".loading-skeleton-pulse"
     )
-    expect(resolvingSpinner).toHaveClass("size-5")
+    expect(resolvingPulse).toBeInTheDocument()
     finishFolderResolution?.([
       {
         id: "video-one",

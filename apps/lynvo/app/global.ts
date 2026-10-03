@@ -67,6 +67,9 @@ declare global {
     description: string
     contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
     Content: LazyExoticComponent<DocumentationMdxModule["default"]>
+    /** Warms the lazy content chunk so navigation renders it without a
+     * placeholder. Safe to call repeatedly; the import is memoized. */
+    preloadContent: () => void
   }
 
   interface DocumentationHeading {

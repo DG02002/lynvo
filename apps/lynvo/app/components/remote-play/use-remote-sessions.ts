@@ -63,8 +63,14 @@ export const loadRemoteSessions = async (
   )
 }
 
+// The last successful receiver list is kept at module scope so reopening the
+// dialog shows known devices instantly while the presence list revalidates.
+let lastKnownSessions: readonly RemoteSession[] = []
+
 export const useRemoteSessions = () => {
-  const [sessions, setSessions] = useState<RemoteSession[]>([])
+  const [sessions, setSessions] = useState<RemoteSession[]>([
+    ...lastKnownSessions,
+  ])
   const [loading, setLoading] = useState(false)
   const [hasError, setHasError] = useState(false)
 
@@ -72,7 +78,9 @@ export const useRemoteSessions = () => {
     setLoading(true)
     setHasError(false)
     try {
-      setSessions(await loadRemoteSessions())
+      const nextSessions = await loadRemoteSessions()
+      lastKnownSessions = nextSessions
+      setSessions(nextSessions)
     } catch (error) {
       console.error("Unable to fetch remote sessions", error)
       setHasError(true)

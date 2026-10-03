@@ -120,20 +120,38 @@ export const createExtractionOrchestration = (
       sourceMetadata,
       existingMeta,
     }) => {
-      const metadata =
-        sourceMetadata ?? (await getSourceMetadata(targetUrl, links))
       const existingItem = links.find((item) => item.url === targetUrl)
-      const pluginServerId =
-        getSavedPluginServerId(existingItem) ?? metadata.pluginServerId
-      const pluginId = getSavedSourceId(existingItem) ?? metadata.pluginId
+      const savedPluginServerId = getSavedPluginServerId(existingItem)
+      const savedPluginId = getSavedSourceId(existingItem)
+      const metadataPromise: Promise<MetaData> =
+        sourceMetadata !== undefined
+          ? Promise.resolve(sourceMetadata)
+          : getSourceMetadata(targetUrl, links)
+      // When the saved item already routes the extraction to its Plugin
+      // Server, metadata is only merged afterwards, so both requests run in
+      // parallel instead of waiting for metadata before extracting.
+      const canRouteFromSavedItem =
+        savedPluginServerId !== undefined && savedPluginId !== undefined
+      const extractionPromise = canRouteFromSavedItem
+        ? transport.extract({
+            url: targetUrl,
+            pluginServerId: savedPluginServerId,
+            pluginId: savedPluginId,
+          })
+        : metadataPromise.then((metadata) =>
+            transport.extract({
+              url: targetUrl,
+              pluginServerId: savedPluginServerId ?? metadata.pluginServerId,
+              pluginId: savedPluginId ?? metadata.pluginId,
+            })
+          )
+      const [metadata, extraction] = await Promise.all([
+        metadataPromise,
+        extractionPromise,
+      ])
       const metadataWithRoute = mergeDefinedMeta(metadata, {
-        pluginServerId,
-        pluginId,
-      })
-      const extraction = await transport.extract({
-        url: targetUrl,
-        pluginServerId,
-        pluginId,
+        pluginServerId: savedPluginServerId ?? metadata.pluginServerId,
+        pluginId: savedPluginId ?? metadata.pluginId,
       })
       const mergedMeta = mergeDefinedMeta(
         mergeDefinedMeta(metadataWithRoute, existingMeta),

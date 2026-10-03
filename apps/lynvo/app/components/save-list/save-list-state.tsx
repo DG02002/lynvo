@@ -2,7 +2,7 @@ import { Archive04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type { ReactNode } from "react"
 
-import { Spinner } from "~/components/spinner"
+import { GALLERY_GRID_CLASS } from "./save-list-layout-constants"
 
 interface SaveListStateProps {
   readonly title: string
@@ -15,7 +15,29 @@ interface SaveListStateProps {
 
 interface SaveListLoadingStateProps {
   readonly label: string
+  readonly variant?: "list" | "gallery"
 }
+
+const SKELETON_BLOCK_CLASS = "loading-skeleton-pulse rounded-xl bg-muted"
+
+const SaveListSkeletonRow = () => (
+  <div className="flex items-center gap-4 py-4">
+    <div className={`size-10 shrink-0 rounded-full ${SKELETON_BLOCK_CLASS}`} />
+    <div className="flex w-full max-w-md flex-col gap-2">
+      <div className={`h-4 w-3/5 ${SKELETON_BLOCK_CLASS}`} />
+      <div className={`h-3 w-2/5 ${SKELETON_BLOCK_CLASS}`} />
+    </div>
+  </div>
+)
+
+const SaveListSkeletonTile = () => (
+  <div className="w-full">
+    <div
+      className={`aspect-2/3 w-full rounded-2xl sm:rounded-3xl ${SKELETON_BLOCK_CLASS}`}
+    />
+    <div className={`mx-auto mt-3 h-4 w-2/3 ${SKELETON_BLOCK_CLASS}`} />
+  </div>
+)
 
 const SaveListState = ({
   title,
@@ -48,13 +70,32 @@ const SaveListState = ({
   </section>
 )
 
-export const SaveListLoadingState = ({ label }: SaveListLoadingStateProps) => (
+export const SaveListLoadingState = ({
+  label,
+  variant = "list",
+}: SaveListLoadingStateProps) => (
   <div
     aria-label={label}
-    className="flex min-h-56 items-center justify-center"
+    className="flex min-h-56 w-full flex-col justify-center"
     role="status"
   >
-    <Spinner aria-hidden="true" />
+    <span className="sr-only">{label}</span>
+    {variant === "gallery" ? (
+      <div className={GALLERY_GRID_CLASS} aria-hidden="true">
+        {Array.from({ length: 12 }, (_, index) => (
+          <SaveListSkeletonTile key={index} />
+        ))}
+      </div>
+    ) : (
+      <div
+        className="flex flex-col divide-y divide-border/70"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 4 }, (_, index) => (
+          <SaveListSkeletonRow key={index} />
+        ))}
+      </div>
+    )}
   </div>
 )
 

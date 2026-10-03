@@ -10,7 +10,6 @@ import React from "react"
 import { ChangeArtworkDialog } from "~/components/links/change-artwork-dialog"
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
-import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -91,9 +90,11 @@ const GallerySaveItemArtwork = ({
   if (isExtractionVisual) {
     if (!isExtractionFailed) {
       return (
-        <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
-          <Spinner aria-hidden="true" className="size-8" />
-        </div>
+        <div
+          aria-label={`Loading links for ${displayTitle}…`}
+          className="loading-skeleton-pulse size-full bg-gradient-to-br from-muted to-muted-foreground/15"
+          role="status"
+        />
       )
     }
 
@@ -134,12 +135,11 @@ const GallerySaveItemArtwork = ({
 
   if (isArtworkPending) {
     return (
-      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-        <Spinner
-          aria-label={`Loading artwork for ${displayTitle}…`}
-          className="size-8"
-        />
-      </div>
+      <div
+        aria-label={`Loading artwork for ${displayTitle}…`}
+        className="loading-skeleton-pulse size-full bg-gradient-to-br from-muted to-muted-foreground/15"
+        role="status"
+      />
     )
   }
 
@@ -426,7 +426,9 @@ export const GallerySaveGrid = ({
 }: GallerySaveGridProps) => {
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   if (isHydrating) {
-    return <SaveListLoadingState label="Loading saved links…" />
+    return (
+      <SaveListLoadingState label="Loading saved links…" variant="gallery" />
+    )
   }
   if (groups.length === 0) {
     return <SaveListEmptyState />

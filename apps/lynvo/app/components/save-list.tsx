@@ -4,12 +4,12 @@ import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain
 import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
 import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
+import { SaveListLoadingState } from "~/components/save-list/save-list-state"
 import { useGalleryGroupRoute } from "~/components/save-list/use-gallery-group-route"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
-import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { GalleryGroup } from "~/features/links/media-artwork"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
@@ -153,13 +153,11 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
     [links]
   )
   if (isImmersiveRoute && isPending) {
+    // The immersive shell renders immediately; only the grid area is pending,
+    // so navigation is never blocked behind a full-screen loading state.
     return (
-      <div
-        className="fixed inset-0 flex min-h-svh items-center justify-center bg-background"
-        role="status"
-        aria-label="Loading folder…"
-      >
-        <Spinner aria-hidden="true" />
+      <div className="fixed inset-0 flex min-h-svh max-w-none flex-col gap-0 overflow-hidden bg-background px-6 pt-24 pb-10 md:px-8">
+        <SaveListLoadingState label="Loading folder…" variant="gallery" />
       </div>
     )
   }

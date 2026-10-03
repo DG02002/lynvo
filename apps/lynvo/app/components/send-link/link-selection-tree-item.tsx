@@ -9,7 +9,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
-import { Spinner } from "~/components/spinner"
 import { Checkbox } from "~/components/ui/checkbox"
 import {
   getMediaNodeKey,
@@ -231,10 +230,16 @@ export const LinkSelectionTreeItem = ({
         )}
 
         {isResolving ? (
-          <Spinner
+          <span
             aria-label={`Loading ${link.label}…`}
-            className="size-5 shrink-0 justify-self-center"
-          />
+            className="loading-skeleton-pulse inline-flex size-5 shrink-0 justify-self-center"
+            role="status"
+          >
+            <HugeiconsIcon
+              icon={itemIcon}
+              className="size-5 text-muted-foreground"
+            />
+          </span>
         ) : (
           <HugeiconsIcon
             icon={itemIcon}

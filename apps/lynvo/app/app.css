@@ -352,7 +352,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   height: 2px;
   transform-origin: left;
   background: var(--primary);
-  animation: navigation-progress 1.2s ease-in-out infinite;
+  animation: navigation-progress 900ms ease-in-out infinite;
 }
 
 @keyframes navigation-progress {
@@ -388,6 +388,29 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   }
   to {
     mask-position: -150% 0;
+  }
+}
+
+/* Placeholder skeletons pulse on a sub-second cycle so pending content reads
+   as "arriving now" rather than a calm ambient glow. Reduced motion gets a
+   static placeholder. */
+.loading-skeleton-pulse {
+  animation: loading-skeleton-pulse 800ms ease-in-out infinite;
+}
+
+@keyframes loading-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-skeleton-pulse {
+    animation: none;
   }
 }
 

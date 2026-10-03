@@ -73,6 +73,7 @@ const SignIn = () => {
             nativeButton={false}
             render={
               <Link
+                prefetch="intent"
                 to={authPaths.signInWithAnotherDevice}
                 viewTransition={viewTransition}
               >

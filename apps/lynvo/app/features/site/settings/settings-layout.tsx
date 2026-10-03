@@ -62,10 +62,17 @@ export function SettingsActionRow(props: SettingsActionRowProps) {
   const clientViewTransition = useViewTransition()
 
   if (props.as === "link") {
-    const { as: _as, className, viewTransition = true, ...linkProps } = props
+    const {
+      as: _as,
+      className,
+      viewTransition = true,
+      prefetch = "intent",
+      ...linkProps
+    } = props
     return (
       <Link
         {...linkProps}
+        prefetch={prefetch}
         viewTransition={clientViewTransition && viewTransition}
         className={cn(
           settingsActionRowClass,

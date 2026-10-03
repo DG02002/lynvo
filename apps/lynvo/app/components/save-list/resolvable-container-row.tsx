@@ -24,7 +24,6 @@ import {
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "~/components/save-list/media-list-row-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
-import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
@@ -180,10 +179,13 @@ export const ResolvableContainerRow = ({
   const { stateKey: containerIconStateKey, icon: containerIconDefinition } =
     getResolvableContainerIconState(mirrors.length > 0, isExpanded)
   const containerIcon = shouldShowResolving ? (
-    <Spinner
+    <span
       aria-label={`Loading playable links for ${link.label}…`}
-      className="size-6"
-    />
+      className="loading-skeleton-pulse inline-flex"
+      role="status"
+    >
+      <HugeiconsIcon icon={PackageSearchIcon} className="size-6" />
+    </span>
   ) : (
     <AnimatedStateIcon stateKey={containerIconStateKey}>
       <HugeiconsIcon icon={containerIconDefinition} className="size-6" />

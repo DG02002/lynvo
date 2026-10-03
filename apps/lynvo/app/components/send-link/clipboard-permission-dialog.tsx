@@ -74,7 +74,7 @@ export function ClipboardPermissionDialog({
           >
             <div className="min-h-0 overflow-hidden">
               <div className="w-full rounded-md px-1 py-2 text-left">
-                <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-6000 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
+                <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-900 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
                   {HOME_DEMO_CLIPBOARD_URL}
                 </span>
               </div>

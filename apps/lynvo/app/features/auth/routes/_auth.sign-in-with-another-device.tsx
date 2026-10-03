@@ -54,7 +54,11 @@ export default function SignInWithAnotherDevice() {
               className="h-13.5 w-full"
               nativeButton={false}
               render={
-                <Link to={authPaths.signIn} viewTransition={viewTransition}>
+                <Link
+                  prefetch="intent"
+                  to={authPaths.signIn}
+                  viewTransition={viewTransition}
+                >
                   Back to sign in
                 </Link>
               }
@@ -66,6 +70,7 @@ export default function SignInWithAnotherDevice() {
             className="mt-3 hidden space-x-1 text-center text-xs text-muted-foreground md:block"
           >
             <Link
+              prefetch="intent"
               to={policyPaths.termsOfUse}
               viewTransition={viewTransition}
               className="underline underline-offset-4"
@@ -74,6 +79,7 @@ export default function SignInWithAnotherDevice() {
             </Link>
             <span> | </span>
             <Link
+              prefetch="intent"
               to={policyPaths.privacyPolicy}
               viewTransition={viewTransition}
               className="underline underline-offset-4"

@@ -44,6 +44,7 @@ export const AuthPolicyLinks = () => {
       className="mt-3 space-x-1 text-center text-xs text-muted-foreground"
     >
       <Link
+        prefetch="intent"
         to={policyPaths.termsOfUse}
         viewTransition={viewTransition}
         className="underline underline-offset-4"
@@ -52,6 +53,7 @@ export const AuthPolicyLinks = () => {
       </Link>
       <span> | </span>
       <Link
+        prefetch="intent"
         to={policyPaths.privacyPolicy}
         viewTransition={viewTransition}
         className="underline underline-offset-4"

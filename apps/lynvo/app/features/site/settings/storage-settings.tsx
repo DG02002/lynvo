@@ -79,11 +79,13 @@ export function StorageSettings({ userId }: { userId?: string }) {
   if (!usage) {
     return (
       <SettingsPanel>
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-normal text-muted-foreground">
-            Loading storage usage…
-          </span>
-          <Progress value={0} />
+        <div
+          aria-label="Loading storage usage"
+          className="flex flex-col gap-2"
+          role="status"
+        >
+          <div className="loading-skeleton-pulse h-4 w-40 rounded-md bg-muted" />
+          <div className="loading-skeleton-pulse h-2 w-full rounded-full bg-muted" />
         </div>
       </SettingsPanel>
     )

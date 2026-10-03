@@ -140,6 +140,7 @@ const TermsOfUseLinksContent = () => {
       <p>
         You must use Lynvo lawfully and follow the{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.usagePolicy}
           viewTransition={viewTransition}
           className="font-normal underline underline-offset-4"
@@ -197,6 +198,7 @@ const TermsOfUsePrivacyContent = () => {
       <p>
         The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.privacyPolicy}
           viewTransition={viewTransition}
           className="font-normal underline underline-offset-4"
@@ -209,6 +211,7 @@ const TermsOfUsePrivacyContent = () => {
       <p>
         The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.cookiePolicy}
           viewTransition={viewTransition}
           className="font-normal underline underline-offset-4"
@@ -217,6 +220,7 @@ const TermsOfUsePrivacyContent = () => {
         </Link>{" "}
         explains Lynvo&apos;s cookies and browser storage. The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.usagePolicy}
           viewTransition={viewTransition}
           className="font-normal underline underline-offset-4"
@@ -228,6 +232,7 @@ const TermsOfUsePrivacyContent = () => {
       <p>
         The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.licenses}
           viewTransition={viewTransition}
           className="font-normal underline underline-offset-4"

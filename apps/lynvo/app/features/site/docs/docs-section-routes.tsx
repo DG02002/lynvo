@@ -46,11 +46,11 @@ const DocsContentLoading = ({
       {headings.map((heading, index) => (
         <div key={heading.id} className="space-y-4">
           <div
-            className={`h-6 animate-pulse rounded bg-muted motion-reduce:animate-none ${heading.level === 3 ? "ml-4 w-2/5" : "w-1/2"}`}
+            className={`loading-skeleton-pulse h-6 rounded bg-muted ${heading.level === 3 ? "ml-4 w-2/5" : "w-1/2"}`}
           />
-          <div className="h-4 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+          <div className="loading-skeleton-pulse h-4 rounded bg-muted" />
           <div
-            className={`h-4 animate-pulse rounded bg-muted motion-reduce:animate-none ${index % 2 === 0 ? "w-4/5" : "w-3/5"}`}
+            className={`loading-skeleton-pulse h-4 rounded bg-muted ${index % 2 === 0 ? "w-4/5" : "w-3/5"}`}
           />
         </div>
       ))}

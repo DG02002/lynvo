@@ -98,6 +98,7 @@ const CustomPluginServerRow = ({
               variant={hasProxyKey ? "secondary" : "outline"}
               render={
                 <Link
+                  prefetch="intent"
                   to="/settings/proxy"
                   aria-label={`Manage proxy settings for ${manifest.name}`}
                 />

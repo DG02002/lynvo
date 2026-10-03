@@ -85,6 +85,9 @@ for (const [path, loadContent] of Object.entries(contentModules)) {
     description: frontmatter.description,
     contentType: frontmatter.contentType,
     Content: lazy(loadContent),
+    preloadContent: () => {
+      void loadContent()
+    },
   }
 
   state.pagesBySlug.set(slug, page)

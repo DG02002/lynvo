@@ -8,7 +8,6 @@ import { useMemo } from "react"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
-import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
@@ -92,7 +91,12 @@ const GalleryGroupItemRow = ({
       {extractionState === "failed" ? (
         <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
       ) : (
-        <Spinner aria-hidden="true" className="size-6" />
+        <span
+          aria-hidden="true"
+          className="loading-skeleton-pulse inline-flex text-muted-foreground"
+        >
+          <HugeiconsIcon icon={Folder01Icon} className="size-6" />
+        </span>
       )}
     </SaveListRowIcon>
   ) : (

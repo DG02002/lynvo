@@ -64,6 +64,7 @@ export const PrivacyPolicyContent = () => (
         services that you choose to use with Lynvo. Those services have their
         own policies. The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.cookiePolicy}
           className="underline underline-offset-4"
         >
@@ -395,6 +396,7 @@ export const PrivacyPolicyContent = () => (
       <p>
         The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.termsOfUse}
           className="underline underline-offset-4"
         >
@@ -402,6 +404,7 @@ export const PrivacyPolicyContent = () => (
         </Link>{" "}
         explain the agreement for using Lynvo. The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.usagePolicy}
           className="underline underline-offset-4"
         >
@@ -409,6 +412,7 @@ export const PrivacyPolicyContent = () => (
         </Link>{" "}
         explains prohibited and restricted uses. The{" "}
         <Link
+          prefetch="intent"
           to={policyPaths.licenses}
           className="underline underline-offset-4"
         >

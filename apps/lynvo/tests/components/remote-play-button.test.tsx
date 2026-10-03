@@ -99,4 +99,34 @@ describe("RemotePlayButton", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
   })
+
+  it("shows the last known devices immediately while reopening revalidates", async () => {
+    let resolveRevalidation: (value: Response) => void = () => undefined
+    const { rerender } = render(renderRemotePlayButton(false))
+
+    rerender(renderRemotePlayButton(true))
+    expect(
+      await screen.findByRole("button", { name: "Living room TV" })
+    ).toBeInTheDocument()
+
+    rerender(renderRemotePlayButton(false))
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveRevalidation = resolve
+        })
+    )
+    rerender(renderRemotePlayButton(true))
+
+    // The cached receiver list renders without waiting for the revalidation
+    // response, so reopening never falls back to a placeholder.
+    expect(
+      screen.getByRole("button", { name: "Living room TV" })
+    ).toBeInTheDocument()
+
+    resolveRevalidation(Response.json({ receivers: [] }))
+    await waitFor(() =>
+      expect(screen.getByText("No Remote Play devices found")).toBeVisible()
+    )
+  })
 })

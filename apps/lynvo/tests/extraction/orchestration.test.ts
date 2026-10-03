@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkViewItem,
+  MetaData,
+} from "~/features/links/types"
 import { createExtractionOrchestration } from "~/lib/extraction/orchestration"
 import { decideSavePresentation } from "~/lib/extraction/presentation"
 
@@ -136,6 +140,76 @@ describe("extraction orchestration", () => {
         pluginServerId: "pluginServer-1",
       })
     )
+  })
+
+  it("extracts in parallel with metadata when the saved item routes the extraction", async () => {
+    let finishMetadata: (value: MetaData) => void = () => undefined
+    transport.getMetadata.mockImplementation(
+      () =>
+        new Promise<MetaData>((resolve) => {
+          finishMetadata = resolve
+        })
+    )
+    transport.extract.mockResolvedValue({
+      links: [
+        {
+          url: "https://cdn.example/playable.mp4",
+          label: "Playable Item",
+          mediaNodeKind: "playable",
+        },
+      ],
+    })
+
+    const prepared = orchestration.prepareSource({
+      targetUrl: "https://example.com/source",
+      links: [savedWorkerItem()],
+    })
+    // The saved item carries its pluginServer identity, so extract must start
+    // without waiting for the metadata response to arrive.
+    await vi.waitFor(() => expect(transport.extract).toHaveBeenCalledTimes(1))
+    expect(transport.extract).toHaveBeenCalledWith({
+      url: "https://example.com/source",
+      pluginServerId: "pluginServer-1",
+      pluginId: "example-drive-index",
+    })
+
+    finishMetadata({ filename: "playable-item.mp4" })
+    const result = await prepared
+    expect(result.mergedMeta).toEqual(
+      expect.objectContaining({ filename: "playable-item.mp4" })
+    )
+  })
+
+  it("waits for metadata to route the extraction without a saved pluginServer identity", async () => {
+    const unroutedItem: LinkViewItem = {
+      ...savedWorkerItem(),
+      metadata: {
+        ...savedWorkerItem().metadata,
+        source: {},
+      },
+    }
+    let finishMetadata: (value: MetaData) => void = () => undefined
+    transport.getMetadata.mockImplementation(
+      () =>
+        new Promise<MetaData>((resolve) => {
+          finishMetadata = resolve
+        })
+    )
+    transport.extract.mockResolvedValue({ links: [] })
+
+    const prepared = orchestration.prepareSource({
+      targetUrl: "https://example.com/source",
+      links: [unroutedItem],
+    })
+    expect(transport.extract).not.toHaveBeenCalled()
+
+    finishMetadata({ pluginServerId: "pluginServer-from-metadata" })
+    await prepared
+    expect(transport.extract).toHaveBeenCalledWith({
+      url: "https://example.com/source",
+      pluginServerId: "pluginServer-from-metadata",
+      pluginId: undefined,
+    })
   })
 
   it("routes refresh, mirror, and folder operations through the saved pluginServer", async () => {

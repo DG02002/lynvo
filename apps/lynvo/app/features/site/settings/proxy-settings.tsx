@@ -118,7 +118,7 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
               variant="outline"
               size="sm"
               nativeButton={false}
-              render={<Link to="/settings/plugins" />}
+              render={<Link prefetch="intent" to="/settings/plugins" />}
             >
               Open Plugins
             </Button>
@@ -148,6 +148,7 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
       </div>
       <p className="text-xs leading-normal text-muted-foreground">
         <Link
+          prefetch="intent"
           to="/docs/proxy-keys"
           className="text-foreground underline underline-offset-4"
         >

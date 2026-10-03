@@ -1,6 +1,5 @@
 import type { MediaArtworkRequest } from "~shared/api-contracts"
 
-import { Spinner } from "~/components/spinner"
 import { useMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import { TMDB_LOGO_SHORT_SRC, TMDB_SITE_URL } from "~/lib/constants"
@@ -41,12 +40,11 @@ const SeasonArtworkImage = ({
 
   if (isArtworkPending) {
     return (
-      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-        <Spinner
-          aria-label={`Loading artwork for ${displayTitle}…`}
-          className="size-8"
-        />
-      </div>
+      <div
+        aria-label={`Loading artwork for ${displayTitle}…`}
+        className="loading-skeleton-pulse size-full bg-gradient-to-br from-muted to-muted-foreground/15"
+        role="status"
+      />
     )
   }
 

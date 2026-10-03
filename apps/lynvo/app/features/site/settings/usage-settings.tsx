@@ -1,7 +1,6 @@
 import { LoadErrorRetry } from "~/components/load-error-retry"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
-import { Skeleton } from "~/components/ui/skeleton"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
@@ -110,8 +109,8 @@ const UsageItem = ({
 const UsageLoading = () => (
   <SettingsList role="status" aria-label="Loading usage">
     <SettingsRow className="flex-col items-stretch gap-3">
-      <Skeleton className="h-4 w-48" />
-      <Progress value={0} />
+      <div className="loading-skeleton-pulse h-4 w-48 rounded-md bg-muted" />
+      <div className="loading-skeleton-pulse h-2 w-full rounded-full bg-muted" />
     </SettingsRow>
   </SettingsList>
 )

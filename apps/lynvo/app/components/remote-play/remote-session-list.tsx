@@ -2,10 +2,22 @@ import { ComputerIcon, Refresh03Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 
-import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 
 import type { RemoteSession } from "./types"
+
+const RemoteSessionSkeletonRow = () => (
+  <div
+    aria-hidden="true"
+    className="flex w-full items-center gap-3 rounded-md px-4 py-3"
+  >
+    <HugeiconsIcon
+      icon={ComputerIcon}
+      className="size-5 shrink-0 text-muted-foreground"
+    />
+    <div className="loading-skeleton-pulse h-4 w-32 rounded-md bg-muted" />
+  </div>
+)
 
 export const RemoteSessionList = ({
   sessions,
@@ -26,13 +38,14 @@ export const RemoteSessionList = ({
     (session) => session.id !== activeSessionId
   )
   let sessionContent: ReactNode
-  if (loading) {
+  if (loading && visibleSessions.length === 0 && !hasError) {
     sessionContent = (
-      <div className="flex items-center gap-3 px-4 py-3">
-        <Spinner aria-hidden="true" />
+      <div className="flex flex-col gap-2 px-4 py-3" role="status">
         <p className="text-sm text-muted-foreground">
           Searching for Remote Play devices…
         </p>
+        <RemoteSessionSkeletonRow />
+        <RemoteSessionSkeletonRow />
       </div>
     )
   } else if (hasError || visibleSessions.length === 0) {

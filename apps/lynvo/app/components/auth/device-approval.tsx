@@ -83,13 +83,9 @@ const DeviceApprovalStatusMessage = ({
 
   if (isCheckingCode) {
     return (
-      <div
-        className="flex items-center justify-center gap-2 text-muted-foreground"
-        role="status"
-      >
-        <Spinner aria-hidden="true" />
-        <span>Checking code…</span>
-      </div>
+      <p className="text-balance text-lg text-muted-foreground" role="status">
+        Checking code…
+      </p>
     )
   }
 
@@ -180,7 +176,11 @@ const DeviceApproval = () => {
                 className="h-13.5 w-full"
                 nativeButton={false}
                 render={
-                  <Link to="/" viewTransition={viewTransition}>
+                  <Link
+                    prefetch="intent"
+                    to="/"
+                    viewTransition={viewTransition}
+                  >
                     Go home
                   </Link>
                 }
@@ -205,7 +205,11 @@ const DeviceApproval = () => {
                   className="h-13.5 w-full"
                   nativeButton={false}
                   render={
-                    <Link to={authPaths.signIn} viewTransition={viewTransition}>
+                    <Link
+                      prefetch="intent"
+                      to={authPaths.signIn}
+                      viewTransition={viewTransition}
+                    >
                       Back to sign in
                     </Link>
                   }

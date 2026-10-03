@@ -270,7 +270,10 @@ export const useSaveActions = ({
         addLink,
         enqueueLink,
       })
-      await offerPluginDomainSuggestion(applySaveIntentResult(result))
+      // The suggestion availability check is a follow-up read, not part of
+      // the save; awaiting it would keep the save button busy for an extra
+      // request. Errors are caught inside offerPluginDomainSuggestion.
+      void offerPluginDomainSuggestion(applySaveIntentResult(result))
     } catch (error) {
       console.error(error)
       reporter.publish({ kind: "clear-preview" })
@@ -298,7 +301,7 @@ export const useSaveActions = ({
         addLink,
         pluginDomainSuggestion: selectionSuggestion,
       })
-      await offerPluginDomainSuggestion(applyConfirmSaveIntentResult(result))
+      void offerPluginDomainSuggestion(applyConfirmSaveIntentResult(result))
     } catch (error) {
       console.error(error)
       reportGenericSavedLinkError(

@@ -1105,12 +1105,11 @@ describe("SaveListBrowser", () => {
       })
     ).toBeVisible()
     const playableItemRow = playableItemButton.parentElement
-    const resolvingSpinner = playableItemRow?.querySelector(
-      '[data-slot="spinner"]'
+    const resolvingPulse = playableItemRow?.querySelector(
+      ".loading-skeleton-pulse"
     )
-    expect(resolvingSpinner).toBeInTheDocument()
-    expect(resolvingSpinner).toHaveClass("size-6")
-    expect(resolvingSpinner?.parentElement).toHaveClass("size-10", "md:size-14")
+    expect(resolvingPulse).toBeInTheDocument()
+    expect(resolvingPulse).toHaveAttribute("role", "status")
     expect(playableItemRow).toHaveAttribute(
       "data-resolution-state",
       "resolving"
@@ -1972,6 +1971,6 @@ describe("SaveListBrowser", () => {
     expect(
       screen.getByRole("button", { name: "Loading links… for Queued Source" })
     ).toBeDisabled()
-    expect(row?.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+    expect(row?.querySelector(".loading-skeleton-pulse")).toBeInTheDocument()
   })
 })

@@ -2,7 +2,6 @@ import { Refresh01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
-import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
@@ -309,11 +308,21 @@ export const DeviceLoginQr = () => {
     return (
       <div
         data-device-login-state="loading"
-        className="flex items-center justify-center gap-2 p-10"
+        className="flex flex-col items-center justify-center gap-6 p-10 text-center"
         role="status"
       >
-        <Spinner />
-        <span>Creating activation code…</span>
+        <span className="text-sm text-muted-foreground">
+          Creating activation code…
+        </span>
+        {/* Matches the loaded QR panel: square code image, then the code line. */}
+        <div
+          aria-hidden="true"
+          className="loading-skeleton-pulse size-44 rounded-xl bg-muted"
+        />
+        <div
+          aria-hidden="true"
+          className="loading-skeleton-pulse h-8 w-48 rounded-md bg-muted"
+        />
       </div>
     )
   }
