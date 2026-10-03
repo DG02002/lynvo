@@ -30,6 +30,54 @@ export interface CustomExtractionAdapterOptions {
   readonly inlineBasicAuth?: HttpBasicAuth
 }
 
+// Discovery asks the Plugin Server which plugin owns a URL. The answer is
+// stable for one manifest, so retries of the same extraction reuse it
+// instead of repeating the network hop; a refreshed manifest invalidates
+// the entry because the server may have changed its answer.
+const DISCOVERY_CACHE_MAX_ENTRIES = 512
+
+interface CachedPluginDiscovery {
+  readonly manifest: string
+  readonly pluginId: string | undefined
+}
+
+const pluginDiscoveryCache = new Map<string, CachedPluginDiscovery>()
+
+const pluginDiscoveryCacheKey = (
+  pluginServerId: string,
+  targetUrl: string
+): string => `${pluginServerId}\n${targetUrl}`
+
+const readCachedPluginDiscovery = (
+  pluginServer: RegisteredPluginServer,
+  targetUrl: string
+): CachedPluginDiscovery | undefined => {
+  const cached = pluginDiscoveryCache.get(
+    pluginDiscoveryCacheKey(pluginServer.id, targetUrl)
+  )
+  return cached?.manifest === pluginServer.manifest ? cached : undefined
+}
+
+const rememberPluginDiscovery = (
+  pluginServer: RegisteredPluginServer,
+  targetUrl: string,
+  pluginId: string | undefined
+): void => {
+  const key = pluginDiscoveryCacheKey(pluginServer.id, targetUrl)
+  if (!pluginDiscoveryCache.has(key)) {
+    if (pluginDiscoveryCache.size >= DISCOVERY_CACHE_MAX_ENTRIES) {
+      const oldestKey = pluginDiscoveryCache.keys().next().value
+      if (oldestKey !== undefined) {
+        pluginDiscoveryCache.delete(oldestKey)
+      }
+    }
+  }
+  pluginDiscoveryCache.set(key, {
+    manifest: pluginServer.manifest,
+    pluginId,
+  })
+}
+
 const selectCustomPlugin = Effect.fn(
   "CustomExtractionAdapter.selectCustomPlugin"
 )(function* (
@@ -50,17 +98,32 @@ const selectCustomPlugin = Effect.fn(
     options.pluginId
   )
   if (!plugin && !options.pluginId && options.kind === "source") {
-    const discovery = yield* discoverCustomPlugin({
+    let discoveredPluginId: string | undefined
+    const cachedDiscovery = readCachedPluginDiscovery(
       pluginServer,
-      targetUrl: options.targetUrl,
-      basicAuth: options.inlineBasicAuth,
-      requestId: options.requestId,
-    })
-    if (discovery?.matched) {
+      options.targetUrl
+    )
+    if (cachedDiscovery) {
+      discoveredPluginId = cachedDiscovery.pluginId
+    } else {
+      const discovery = yield* discoverCustomPlugin({
+        pluginServer,
+        targetUrl: options.targetUrl,
+        basicAuth: options.inlineBasicAuth,
+        requestId: options.requestId,
+      })
+      discoveredPluginId = discovery?.matched ? discovery.pluginId : undefined
+      rememberPluginDiscovery(
+        pluginServer,
+        options.targetUrl,
+        discoveredPluginId
+      )
+    }
+    if (discoveredPluginId) {
       plugin = yield* getCustomPlugin(
         pluginServer,
         options.targetUrl,
-        discovery.pluginId
+        discoveredPluginId
       )
     }
   }
