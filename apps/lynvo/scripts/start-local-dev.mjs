@@ -1,8 +1,10 @@
 import { spawn, spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
 
 import { readSeedAppOrigin } from "./local-origin.mjs"
 
 const SEED_PLUGIN_SERVER_ORIGIN = "http://localhost:8788"
+const SEED_PLUGIN_SERVER_PORT = new URL(SEED_PLUGIN_SERVER_ORIGIN).port
 // The docs scenario is the only scenario registered in scripts/seed.ts today.
 const SEED_SCENARIO_NAME = "docs"
 const DEFAULT_DEV_SERVER_PORT = "5173"
@@ -110,35 +112,48 @@ const appReadinessProbe = (appOrigin) => async () => {
   return html.includes('name="csrf-token"')
 }
 
-const seedFixtureWorkerProbe = async () => {
-  let response
-  try {
-    response = await fetch(new URL("/manifest", SEED_PLUGIN_SERVER_ORIGIN), {
-      signal: AbortSignal.timeout(READINESS_REQUEST_TIMEOUT_MS),
-    })
-  } catch {
-    // Nothing is listening on the seeding Plugin Server port yet.
-    return false
+export const createSeedFixtureWorkerProbe =
+  ({
+    fetchFunction = fetch,
+    manifestUrl = new URL("/manifest", SEED_PLUGIN_SERVER_ORIGIN),
+  } = {}) =>
+  async () => {
+    let response
+    try {
+      response = await fetchFunction(manifestUrl, {
+        signal: AbortSignal.timeout(READINESS_REQUEST_TIMEOUT_MS),
+      })
+    } catch {
+      // Nothing is listening on the seeding Plugin Server port yet.
+      return false
+    }
+    let manifest = ""
+    if (response.ok && response.body) {
+      manifest = await readBodyPrefix(response.body, MAXIMUM_PROBE_BODY_BYTES)
+    } else {
+      await response.body?.cancel()
+    }
+    if (manifest.includes(SEED_MANIFEST_MARKER)) {
+      return true
+    }
+    // The same failure covers a foreign service and a genuine Lynvo Plugin
+    // Server whose manifest failed protocol validation, so the message must not
+    // claim which one holds the port.
+    throw new ReadinessAbortError(
+      `Port ${SEED_PLUGIN_SERVER_PORT} did not serve the Lynvo Plugin Server manifest. Free the port or restart the Lynvo Plugin Server on it, then rerun \`pnpm dev --seed\`.`
+    )
   }
-  let manifest = ""
-  if (response.ok && response.body) {
-    manifest = await readBodyPrefix(response.body, MAXIMUM_PROBE_BODY_BYTES)
-  } else {
-    await response.body?.cancel()
-  }
-  if (manifest.includes(SEED_MANIFEST_MARKER)) {
-    return true
-  }
-  // The same failure covers a foreign service and a genuine Lynvo Plugin
-  // Server whose manifest failed protocol validation, so the message must not
-  // claim which one holds the port.
-  throw new ReadinessAbortError(
-    `Port 8788 did not serve the Lynvo Plugin Server manifest. Free the port or restart the Lynvo Plugin Server on it, then rerun \`pnpm dev --seed\`.`
-  )
-}
 
-const waitForLocalServer = async ({ label, origin, probe, timeoutHint }) => {
-  const deadline = Date.now() + READINESS_TIMEOUT_MS
+const seedFixtureWorkerProbe = createSeedFixtureWorkerProbe()
+
+export const waitForLocalServer = async ({
+  label,
+  origin,
+  probe,
+  timeoutHint,
+  timeoutMs = READINESS_TIMEOUT_MS,
+}) => {
+  const deadline = Date.now() + timeoutMs
   let lastFailure
   for (;;) {
     try {
@@ -156,7 +171,7 @@ const waitForLocalServer = async ({ label, origin, probe, timeoutHint }) => {
     }
     if (Date.now() >= deadline) {
       throw new Error(
-        `${label} was not ready at ${origin} within ${READINESS_TIMEOUT_MS / 1000} seconds.${timeoutHint ? ` ${timeoutHint}` : ""}`,
+        `${label} was not ready at ${origin} within ${timeoutMs / 1000} seconds.${timeoutHint ? ` ${timeoutHint}` : ""}`,
         { cause: lastFailure }
       )
     }
@@ -260,6 +275,30 @@ const waitForSeedReadiness = async (appOrigin, devProcess) => {
   })
 }
 
+const writeSpawnedWorkerExitNotice = async (fixtureProcess) => {
+  if (
+    !fixtureProcess ||
+    (fixtureProcess.exitCode === null && fixtureProcess.signalCode === null)
+  ) {
+    return
+  }
+  // A re-probe separates the port race from an unrelated Worker crash; the
+  // notice must not assert the race without confirming another server holds
+  // the port.
+  let servedByAnotherWorker = false
+  try {
+    servedByAnotherWorker = await seedFixtureWorkerProbe()
+  } catch {
+    // The notice must not fail a successful seed; an unknown port state
+    // reports the plain exit.
+  }
+  writeMessage(
+    servedByAnotherWorker
+      ? `The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port ${SEED_PLUGIN_SERVER_PORT}, which stays running.`
+      : "The spawned seeding Plugin Server exited during seeding."
+  )
+}
+
 const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
   const reuseRunningFixtureWorker = await seedFixtureWorkerProbe()
   if (reuseRunningFixtureWorker) {
@@ -288,16 +327,7 @@ const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
         `The seed CLI exited with code ${seedResult.exitCode ?? 1}.`
       )
     }
-    if (
-      fixtureProcess &&
-      (fixtureProcess.exitCode !== null || fixtureProcess.signalCode !== null)
-    ) {
-      // The spawned Worker lost port 8788 to a Lynvo Plugin Server that was
-      // still starting when the reuse probe ran; the seed used that one.
-      writeMessage(
-        "The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port 8788, which stays running."
-      )
-    }
+    await writeSpawnedWorkerExitNotice(fixtureProcess)
     writeMessage(
       `Seeded the local development environment. The app keeps running at ${appOrigin.origin}.`
     )
@@ -306,59 +336,67 @@ const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
   }
 }
 
-const seedStartup = readSeedStartup()
+const runLauncher = () => {
+  const seedStartup = readSeedStartup()
 
-if (seedStartup.error) {
-  writeFailure(`Error: ${seedStartup.error}`)
-  process.exitCode = 1
-} else {
-  const migrationProcess = spawnSync(
-    "pnpm",
-    [
-      "exec",
-      "wrangler",
-      "d1",
-      "migrations",
-      "apply",
-      "DB",
-      "--local",
-      "--env",
-      "local",
-    ],
-    {
-      stdio: "inherit",
-      env: { ...process.env, CI: "1" },
-    }
-  )
-
-  if (migrationProcess.status !== 0) {
-    process.exitCode = migrationProcess.status ?? 1
+  if (seedStartup.error) {
+    writeFailure(`Error: ${seedStartup.error}`)
+    process.exitCode = 1
   } else {
-    const devProcess = spawn(`${environmentPrefix} ${reactRouterCommand}`, {
-      stdio: "inherit",
-      shell: true,
-    })
+    const migrationProcess = spawnSync(
+      "pnpm",
+      [
+        "exec",
+        "wrangler",
+        "d1",
+        "migrations",
+        "apply",
+        "DB",
+        "--local",
+        "--env",
+        "local",
+      ],
+      {
+        stdio: "inherit",
+        env: { ...process.env, CI: "1" },
+      }
+    )
 
-    if (isSeedEnabled) {
-      seedLocalDevelopmentEnvironment(seedStartup.appOrigin, devProcess).catch(
-        (cause) => {
+    if (migrationProcess.status !== 0) {
+      process.exitCode = migrationProcess.status ?? 1
+    } else {
+      const devProcess = spawn(`${environmentPrefix} ${reactRouterCommand}`, {
+        stdio: "inherit",
+        shell: true,
+      })
+
+      if (isSeedEnabled) {
+        seedLocalDevelopmentEnvironment(
+          seedStartup.appOrigin,
+          devProcess
+        ).catch((cause) => {
           writeFailure(
             `Seeding failed: ${cause instanceof Error ? cause.message : String(cause)}`
           )
           writeFailure(
             "The app keeps running. Resolve the issue and restart with `pnpm dev --seed`."
           )
-        }
-      )
-    }
-
-    devProcess.on("exit", (exitCode, signal) => {
-      if (signal) {
-        process.kill(process.pid, signal)
-        return
+        })
       }
 
-      process.exitCode = exitCode ?? 1
-    })
+      devProcess.on("exit", (exitCode, signal) => {
+        if (signal) {
+          process.kill(process.pid, signal)
+          return
+        }
+
+        process.exitCode = exitCode ?? 1
+      })
+    }
   }
+}
+
+const [invokedFile] = process.argv.slice(1)
+if (invokedFile && fileURLToPath(import.meta.url) === invokedFile) {
+  runLauncher()
 }

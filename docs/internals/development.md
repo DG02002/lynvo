@@ -180,14 +180,16 @@ sessions in one command:
 pnpm dev --seed
 ```
 
-`--seed` implies `--no-auth`. The launcher seeds the origin from
-`LYNVO_SEED_ORIGIN`, which defaults to `http://localhost:5173`; combining
-`--seed` with `--port` requires setting `LYNVO_SEED_ORIGIN` to the same port,
-and the launcher exits before migrations when the two disagree. A Lynvo Plugin
-Server already serving on port 8788 is reused and left running; otherwise the
-launcher starts the seeding fixture Worker there and stops it after the seed
-finishes. When port 8788 serves something else, seeding fails with an error
-while the app keeps running.
+`--seed` implies `--no-auth`, and the dev server keeps its port instead of
+moving to a free one. The launcher seeds the origin from `LYNVO_SEED_ORIGIN`,
+which defaults to `http://localhost:5173`; combining `--seed` with `--port`
+requires setting `LYNVO_SEED_ORIGIN` to the same port, and the launcher exits
+before migrations when the two disagree. A Lynvo Plugin Server already serving
+on port 8788 is reused and left running, even when it finishes starting while
+the launcher is starting its own; otherwise the launcher starts the seeding
+fixture Worker there and stops it after the seed finishes. When port 8788
+serves something else, seeding fails with an error while the app keeps
+running.
 
 To run the steps by hand instead, start `pnpm dev --no-auth`, start
 `pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed` in a second terminal,
