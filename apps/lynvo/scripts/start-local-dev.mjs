@@ -69,13 +69,13 @@ const environmentPrefix = [
   ...(isNoAuthEnabled ? ["LYNVO_NO_AUTH=true"] : []),
 ].join(" ")
 
-const readBoundedText = async (body, maximumBytes) => {
+const readBodyPrefix = async (body, maximumBytes) => {
   const reader = body.getReader()
   const decoder = new TextDecoder()
   let text = ""
   let receivedBytes = 0
   for (;;) {
-    // SAFETY: The bound is enforced per chunk, so each read must settle before the next.
+    // SAFETY: The cap counts accumulated bytes, so each read must settle before the next.
     // oxlint-disable-next-line eslint/no-await-in-loop
     const { done, value } = await reader.read()
     if (done) {
@@ -84,8 +84,8 @@ const readBoundedText = async (body, maximumBytes) => {
     receivedBytes += value.byteLength
     text += decoder.decode(value, { stream: true })
     if (receivedBytes >= maximumBytes) {
-      // Both probed pages place their marker near the start, so stopping at the
-      // byte bound keeps the marker search meaningful.
+      // Both probed pages place their marker near the start, so the truncated
+      // prefix still carries the marker the probes search for.
       // SAFETY: Cancelling releases the connection without reading further.
       // oxlint-disable-next-line eslint/no-await-in-loop
       await reader.cancel()
@@ -106,7 +106,7 @@ const appReadinessProbe = (appOrigin) => async () => {
   }
   // The seed CLI reads its CSRF credential from this page, so the meta tag
   // proves the app can serve the seed's first request.
-  const html = await readBoundedText(response.body, MAXIMUM_PROBE_BODY_BYTES)
+  const html = await readBodyPrefix(response.body, MAXIMUM_PROBE_BODY_BYTES)
   return html.includes('name="csrf-token"')
 }
 
@@ -122,19 +122,22 @@ const seedFixtureWorkerProbe = async () => {
   }
   let manifest = ""
   if (response.ok && response.body) {
-    manifest = await readBoundedText(response.body, MAXIMUM_PROBE_BODY_BYTES)
+    manifest = await readBodyPrefix(response.body, MAXIMUM_PROBE_BODY_BYTES)
   } else {
     await response.body?.cancel()
   }
   if (manifest.includes(SEED_MANIFEST_MARKER)) {
     return true
   }
+  // The same failure covers a foreign service and a genuine Lynvo Plugin
+  // Server whose manifest failed protocol validation, so the message must not
+  // claim which one holds the port.
   throw new ReadinessAbortError(
-    `${SEED_PLUGIN_SERVER_ORIGIN} is already serving something other than the Lynvo Plugin Server. Free port 8788 and rerun \`pnpm dev --seed\`.`
+    `Port 8788 did not serve the Lynvo Plugin Server manifest. Free the port or restart the Lynvo Plugin Server on it, then rerun \`pnpm dev --seed\`.`
   )
 }
 
-const waitForLocalServer = async ({ label, origin, probe }) => {
+const waitForLocalServer = async ({ label, origin, probe, timeoutHint }) => {
   const deadline = Date.now() + READINESS_TIMEOUT_MS
   let lastFailure
   for (;;) {
@@ -153,7 +156,7 @@ const waitForLocalServer = async ({ label, origin, probe }) => {
     }
     if (Date.now() >= deadline) {
       throw new Error(
-        `${label} was not ready at ${origin} within ${READINESS_TIMEOUT_MS / 1000} seconds.`,
+        `${label} was not ready at ${origin} within ${READINESS_TIMEOUT_MS / 1000} seconds.${timeoutHint ? ` ${timeoutHint}` : ""}`,
         { cause: lastFailure }
       )
     }
@@ -245,6 +248,10 @@ const waitForSeedReadiness = async (appOrigin, devProcess) => {
     label: "The app dev server",
     origin: appOrigin.origin,
     probe: guardedProbe(appReadinessProbe(appOrigin)),
+    timeoutHint:
+      appOrigin.hostname === "localhost"
+        ? undefined
+        : `If the dev server listens on another loopback address, set LYNVO_SEED_ORIGIN to http://localhost:${appOrigin.port}.`,
   })
   await waitForLocalServer({
     label: "The seeding Plugin Server",
@@ -279,6 +286,16 @@ const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
     if (seedResult.exitCode !== 0) {
       throw new Error(
         `The seed CLI exited with code ${seedResult.exitCode ?? 1}.`
+      )
+    }
+    if (
+      fixtureProcess &&
+      (fixtureProcess.exitCode !== null || fixtureProcess.signalCode !== null)
+    ) {
+      // The spawned Worker lost port 8788 to a Lynvo Plugin Server that was
+      // still starting when the reuse probe ran; the seed used that one.
+      writeMessage(
+        "The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port 8788, which stays running."
       )
     }
     writeMessage(
