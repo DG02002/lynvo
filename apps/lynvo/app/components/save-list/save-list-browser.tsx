@@ -86,6 +86,7 @@ import {
   isMirrorResolvable,
   type FolderLevel,
 } from "./save-list-browser-model"
+import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import { groupSaveListItems } from "./save-list-groups"
 import {
   FolderTitleDisplayToggleButton,
@@ -1062,8 +1063,8 @@ export const SaveListBrowser = ({
                   className={cn(
                     "group relative flex items-stretch",
                     SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
-                    "data-[highlighted]:ring-1 data-[highlighted]:ring-inset data-[highlighted]:ring-primary",
-                    "data-[extraction-state=failed]:ring-1 data-[extraction-state=failed]:ring-inset data-[extraction-state=failed]:ring-destructive"
+                    SAVE_LIST_FEEDBACK_RING_CLASSES.row.highlighted,
+                    SAVE_LIST_FEEDBACK_RING_CLASSES.row.failed
                   )}
                   data-highlighted={
                     highlightedId === item.id ? true : undefined

@@ -68,9 +68,8 @@ export const createLinkMetadata = (input: {
     extraction: {
       extractedLinks: stripOpenedFlags(input.extractedLinks ?? []),
       extractedAt: Date.now(),
-      // Replacements that did not come from the selection dialog (refresh,
-      // folder expansion) keep the confirmed choice; only a brand-new
-      // extraction starts unfinalized.
+      // Selection state belongs to the Saved link, so refreshes and later
+      // server extraction results keep the confirmed choice.
       selectionFinalized:
         input.selectionFinalized ??
         input.previous?.extraction.selectionFinalized,

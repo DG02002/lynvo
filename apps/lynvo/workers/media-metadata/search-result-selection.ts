@@ -120,11 +120,18 @@ export const selectBestSearchResult = (
   if (bestScore < 0.75) {
     return undefined
   }
-  const distinctYears = new Set(topResults.map((result) => result.year))
+  // Missing years do not establish a conflict; prefer the result with a
+  // known year when it is the only dated candidate.
+  const topResultsWithYears = topResults.filter(
+    (result) => result.year !== undefined
+  )
+  const distinctYears = new Set(
+    topResultsWithYears.map((result) => result.year)
+  )
   if (distinctYears.size > 1) {
     return undefined
   }
-  return topResults[0]
+  return topResultsWithYears[0] ?? topResults[0]
 }
 
 const toTokenList = (value: string): readonly string[] =>

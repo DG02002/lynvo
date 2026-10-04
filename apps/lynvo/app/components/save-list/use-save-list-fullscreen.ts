@@ -1,21 +1,48 @@
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
+import { useLocation } from "react-router"
+
+interface SaveListLocationState {
+  readonly lynvoSaveListScrollPosition?: number
+}
+
+export const getSaveListScrollPosition = (
+  state: SaveListLocationState | null | undefined
+): number | undefined => {
+  const scrollPosition = state?.lynvoSaveListScrollPosition
+  return Number.isFinite(scrollPosition) ? scrollPosition : undefined
+}
+
+export const createSaveListScrollLocationState = (
+  scrollPosition: number
+): SaveListLocationState => ({
+  lynvoSaveListScrollPosition: scrollPosition,
+})
 
 export const useSaveListFullscreen = (isFullscreen: boolean) => {
-  const pageScrollPositionRef = useRef(0)
+  const location = useLocation()
+  const restoredScrollPosition = getSaveListScrollPosition(location.state)
+  const pageScrollPositionRef = useRef(restoredScrollPosition ?? 0)
 
-  // The gallery position must be captured while the page still holds it.
-  // By the time the fullscreen effect below runs, React Router has already
-  // reset the window scroll and the immersive layout has collapsed the
-  // document, so window.scrollY reads 0 there. Callers capture at the
-  // moment an immersive view opens instead.
-  const rememberScrollPosition = () => {
-    pageScrollPositionRef.current = window.scrollY
-  }
+  // Keep the last Library position for history navigation and restored routes
+  // that do not pass through the click handlers.
+  const rememberScrollPosition = useCallback(() => {
+    if (!isFullscreen) {
+      pageScrollPositionRef.current = window.scrollY
+    }
+    return pageScrollPositionRef.current
+  }, [isFullscreen])
 
   useEffect(() => {
+    if (restoredScrollPosition !== undefined) {
+      pageScrollPositionRef.current = restoredScrollPosition
+    }
     if (!isFullscreen) {
       delete document.body.dataset.saveListFullscreen
-      return undefined
+      rememberScrollPosition()
+      window.addEventListener("scroll", rememberScrollPosition, {
+        passive: true,
+      })
+      return () => window.removeEventListener("scroll", rememberScrollPosition)
     }
 
     const previousBodyOverflow = document.body.style.overflow
@@ -30,7 +57,7 @@ export const useSaveListFullscreen = (isFullscreen: boolean) => {
       // navigation, so this restore has the final say.
       window.scrollTo(0, pageScrollPositionRef.current)
     }
-  }, [isFullscreen])
+  }, [isFullscreen, rememberScrollPosition, restoredScrollPosition])
 
   return { rememberScrollPosition }
 }

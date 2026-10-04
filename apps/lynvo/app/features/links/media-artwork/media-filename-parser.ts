@@ -31,7 +31,15 @@ const MALFORMED_MARKER_PLACEHOLDER_PATTERN =
   /(?:^|\s)S[xy#?*]{1,5}E[xy#?*]{1,5}\b/i
 const MALFORMED_MARKER_UPPERCASE_PATTERN = /(?:^|\s)S[A-Z]{2,5}E[A-Z]{2,5}\b/
 const TECHNICAL_TOKEN_PATTERN =
-  /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|dd|atmos|truehd|ac3|eac3|dual\s+audio|multi\s+audio|multi|remux|final\s+cut|subs?|subtitles?|amzn|nf|atv|dsnp|hulu|pcok|strz|480i|576i|ntsc|ds4k|bd|itunes)\b/i
+  /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|atmos|remux|final\s+cut|subs?|subtitles?|480i|576i|bd|itunes)\b/i
+// Release aliases can also be ordinary title words. Match these only in
+// uppercase when deciding where a title ends.
+const UPPERCASE_TECHNICAL_TOKEN_PATTERN =
+  /\b(?:DD|TRUEHD|AC3|EAC3|DUAL\s+AUDIO|MULTI\s+AUDIO|MULTI|AMZN|NF|ATV|DSNP|HULU|PCOK|STRZ|NTSC|DS4K)\b/
+const TECHNICAL_TOKEN_PATTERNS = [
+  TECHNICAL_TOKEN_PATTERN,
+  UPPERCASE_TECHNICAL_TOKEN_PATTERN,
+]
 // Edition/version tokens can sit between the title and the year or marker,
 // where they would poison the title slice on no-year names. Uppercase-only
 // on purpose: scene naming writes these in caps, while mixed case is an
@@ -85,7 +93,7 @@ const stripAlternateTitle = (value: string): string => {
   const boundaryMatches = [
     ALTERNATE_TITLE_BOUNDARY_PATTERN.exec(tail),
     ALTERNATE_TITLE_MARKER_BOUNDARY_PATTERN.exec(tail),
-    TECHNICAL_TOKEN_PATTERN.exec(tail),
+    ...TECHNICAL_TOKEN_PATTERNS.map((pattern) => pattern.exec(tail)),
   ].filter((match): match is RegExpExecArray => match !== null)
   const boundaryIndex = boundaryMatches.length
     ? Math.min(...boundaryMatches.map((match) => match.index))
@@ -150,11 +158,14 @@ const getYearMatch = (value: string): YearMatch | undefined => {
 }
 
 const stripTechnicalAndEditionTokens = (value: string): string =>
-  value.replace(TECHNICAL_TOKEN_PATTERN, "").replace(EDITION_TOKEN_PATTERN, "")
+  TECHNICAL_TOKEN_PATTERNS.reduce(
+    (remainingValue, pattern) => remainingValue.replace(pattern, ""),
+    value
+  ).replace(EDITION_TOKEN_PATTERN, "")
 
 const findTechnicalTokenStart = (value: string): number | undefined => {
   const starts = [
-    TECHNICAL_TOKEN_PATTERN.exec(value)?.index,
+    ...TECHNICAL_TOKEN_PATTERNS.map((pattern) => pattern.exec(value)?.index),
     EDITION_TOKEN_PATTERN.exec(value)?.index,
   ].filter((start): start is number => start !== undefined)
   return starts.length ? Math.min(...starts) : undefined

@@ -8,20 +8,10 @@ export interface ExtractionStatusTitleSpec {
   readonly error?: string
 }
 
-export const getExtractionStatusInput = (
+export const getItemExtractionState = (
   item: LinkListItem | undefined,
   isRefreshing: boolean
-): ExtractionStatusInput => {
-  const extractionState = item?.extractionStatus?.state
-  if (
-    isRefreshing ||
-    extractionState === "queued" ||
-    extractionState === "running"
-  ) {
-    return "waiting"
-  }
-  return extractionState === "failed" ? "failed" : "idle"
-}
+) => (isRefreshing ? "running" : (item?.extractionStatus?.state ?? "complete"))
 
 export const getExtractionWaitStatusInput = (
   isWaiting: boolean,
@@ -32,6 +22,20 @@ export const getExtractionWaitStatusInput = (
   }
   return didFail ? "failed" : "idle"
 }
+
+export const getExtractionStatusInputForState = (
+  extractionState: ReturnType<typeof getItemExtractionState>
+): ExtractionStatusInput =>
+  getExtractionWaitStatusInput(
+    extractionState === "queued" || extractionState === "running",
+    extractionState === "failed"
+  )
+
+export const getExtractionStatusInput = (
+  item: LinkListItem | undefined,
+  isRefreshing: boolean
+): ExtractionStatusInput =>
+  getExtractionStatusInputForState(getItemExtractionState(item, isRefreshing))
 
 export const getExtractionStatusTitleSpec = (
   item: LinkListItem | undefined,

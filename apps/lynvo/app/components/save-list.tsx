@@ -148,15 +148,11 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
   } = useGalleryGroupRoute({ links, isFolderRoute, isPending })
 
   const { rememberScrollPosition } = useSaveListFullscreen(isImmersiveRoute)
-  // Capture the gallery scroll position before the navigation collapses
-  // the page, so exiting the immersive view returns to where the user was.
   const openSavedFolderFromLibrary = (itemUrl: string) => {
-    rememberScrollPosition()
-    openSavedFolder(itemUrl)
+    openSavedFolder(itemUrl, rememberScrollPosition())
   }
   const openGroupFromLibrary = (groupKey: string) => {
-    rememberScrollPosition()
-    openGroup(groupKey)
+    openGroup(groupKey, rememberScrollPosition())
   }
   const savedUrls = useMemo(
     () => new Set(links.map((link) => link.url)),

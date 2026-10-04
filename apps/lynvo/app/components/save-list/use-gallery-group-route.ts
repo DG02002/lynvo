@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react"
-import { useSearchParams } from "react-router"
+import { useLocation, useSearchParams } from "react-router"
 
 import {
   getGalleryGroups,
@@ -8,6 +8,11 @@ import {
 import type { SavedLinkListItem } from "~/features/links/types"
 import { useMediaView } from "~/features/site/settings/media-view-preference"
 import { SAVE_GROUP_SEARCH_PARAM } from "~/lib/paths"
+
+import {
+  createSaveListScrollLocationState,
+  getSaveListScrollPosition,
+} from "./use-save-list-fullscreen"
 
 interface UseGalleryGroupRouteOptions {
   links: SavedLinkListItem[]
@@ -22,7 +27,7 @@ interface GalleryGroupRouteState {
   isGroupRoute: boolean
   isImmersiveRoute: boolean
   exitGroup: () => void
-  openGroup: (groupKey: string) => void
+  openGroup: (groupKey: string, scrollPosition: number) => void
 }
 
 export const useGalleryGroupRoute = ({
@@ -31,6 +36,7 @@ export const useGalleryGroupRoute = ({
   isPending,
 }: UseGalleryGroupRouteOptions): GalleryGroupRouteState => {
   const mediaView = useMediaView()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const isGalleryMediaView = mediaView === "gallery"
   const requestedGroupKey = searchParams.get(SAVE_GROUP_SEARCH_PARAM)
@@ -66,9 +72,20 @@ export const useGalleryGroupRoute = ({
     setSearchParams,
   ])
 
-  const exitGroup = () => setSearchParams({}, { replace: true })
-  const openGroup = (groupKey: string) =>
-    setSearchParams({ [SAVE_GROUP_SEARCH_PARAM]: groupKey })
+  const savedScrollPosition = getSaveListScrollPosition(location.state) ?? 0
+  const exitGroup = () =>
+    setSearchParams(
+      {},
+      {
+        replace: true,
+        state: createSaveListScrollLocationState(savedScrollPosition),
+      }
+    )
+  const openGroup = (groupKey: string, scrollPosition: number) =>
+    setSearchParams(
+      { [SAVE_GROUP_SEARCH_PARAM]: groupKey },
+      { state: createSaveListScrollLocationState(scrollPosition) }
+    )
 
   return {
     isGalleryMediaView,

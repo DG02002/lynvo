@@ -13,6 +13,7 @@ import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-ac
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getEpisodeListingLabels,
+  getEpisodeOnlyListingLabel,
   getGalleryItemLabel,
   getMediaDisplayTitle,
   hasEpisodeMarker,
@@ -239,8 +240,9 @@ const getItemEpisodeStillSource = (
   if (childLinks.length === 0) {
     return undefined
   }
-  const firstEpisodeLabel = getEpisodeListingLabels(childLinks, itemLabel).find(
-    (childLabel) => hasEpisodeMarker(childLabel, itemLabel)
+  const firstEpisodeLabel = getEpisodeOnlyListingLabel(
+    getEpisodeListingLabels(childLinks, itemLabel),
+    itemLabel
   )
   return firstEpisodeLabel
     ? { label: firstEpisodeLabel, parentFolderName: itemLabel }

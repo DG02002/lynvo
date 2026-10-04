@@ -35,8 +35,9 @@ import { ExtractionStatusTitle } from "./extraction-status"
 import {
   getExtractionStatusLabel,
   getExtractionStatusInput,
+  getExtractionStatusInputForState,
   getExtractionStatusTitleSpec,
-  getExtractionWaitStatusInput,
+  getItemExtractionState,
   type ExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
@@ -45,6 +46,7 @@ import {
   SaveDateGroupSection,
 } from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
+import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import {
   GALLERY_GRID_CLASS,
   GALLERY_IMAGE_SIZES,
@@ -204,31 +206,23 @@ const getGallerySingleItemState = (
   // must not render the group idle, and a failed member must be visible
   // without opening the group. Pending wins over failed so in-progress
   // retries do not flash the failure state.
+  const getMemberExtractionState = (member: LinkListItem) =>
+    getItemExtractionState(member, extractingItems.has(member.url))
   const pendingMember = group.items.find((member) => {
-    const memberState = member.extractionStatus?.state
-    return (
-      memberState === "queued" ||
-      memberState === "running" ||
-      extractingItems.has(member.url)
-    )
+    const memberState = getMemberExtractionState(member)
+    return memberState === "queued" || memberState === "running"
   })
   const failedMember = group.items.find(
-    (member) => member.extractionStatus?.state === "failed"
+    (member) => getMemberExtractionState(member) === "failed"
   )
-  const pendingMemberState = pendingMember?.extractionStatus?.state
-  let extractionState: LinkExtractionStatus["state"] = "complete"
-  if (pendingMemberState === "queued" || pendingMemberState === "running") {
-    extractionState = pendingMemberState
-  } else if (failedMember) {
-    extractionState = "failed"
-  }
+  const extractionState: LinkExtractionStatus["state"] = getItemExtractionState(
+    pendingMember ?? failedMember,
+    pendingMember !== undefined
+  )
   const statusSpec: ExtractionStatusTitleSpec = isSingleItem
     ? getExtractionStatusTitleSpec(item, isExtracting)
     : {
-        status: getExtractionWaitStatusInput(
-          pendingMember !== undefined,
-          failedMember !== undefined
-        ),
+        status: getExtractionStatusInputForState(extractionState),
         fallbackLabel: pendingMember
           ? getExtractionStatusLabel(
               pendingMember,
@@ -349,10 +343,8 @@ const GallerySaveItem = ({
         className={cn(
           "relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m transition-colors duration-150 motion-reduce:transition-none sm:rounded-3xl",
           "group-hover:border-foreground/25 group-has-[:focus-visible]:border-foreground/25 has-aria-expanded:border-foreground/25",
-          // Rings for the states the article broadcasts: a fresh save or
-          // completion highlight, and a failed extraction on any member.
-          "group-data-[highlighted]:ring-2 group-data-[highlighted]:ring-primary",
-          "group-data-[extraction-state=failed]:ring-2 group-data-[extraction-state=failed]:ring-destructive",
+          SAVE_LIST_FEEDBACK_RING_CLASSES.gallery.highlighted,
+          SAVE_LIST_FEEDBACK_RING_CLASSES.gallery.failed,
           isDirectLinkExpired && isSingleItem && "opacity-60"
         )}
       >

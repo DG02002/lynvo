@@ -59,9 +59,9 @@ export interface LinkMetadata {
   extraction: {
     extractedLinks: ExtractedLink[]
     extractedAt?: number
-    /** Set once the user confirmed a manual link selection for this
-        extraction; the card stops offering "Choose links" until the links
-        are replaced by a new server extraction. */
+    /** Set when the user confirms a manual link selection. Refreshes and
+        later server extraction updates preserve it; the item menu can reopen
+        the choice. */
     selectionFinalized?: boolean
   }
   playback: {
