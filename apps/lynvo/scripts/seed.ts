@@ -20,9 +20,8 @@ import {
   LynvoUsageSnapshotSchema,
   PluginServerUsageSchema,
 } from "../shared/usage-contracts"
-import { assertLocalHttpOrigin } from "./local-origin.mjs"
+import { readSeedAppOrigin } from "./local-origin.mjs"
 
-const DEFAULT_APP_ORIGIN = "http://localhost:5173"
 const DEVELOPMENT_USER_ID = "lynvo-development-user"
 const DEVELOPMENT_SESSION_ID = "lynvo-development-session"
 const DEVELOPMENT_PLUGIN_SERVER_URL = "http://localhost:8788"
@@ -1397,8 +1396,8 @@ const run = async (): Promise<void> => {
     throw new Error(`Usage: pnpm --filter @lynvo/app seed <${scenarios}>`)
   }
 
-  const origin = assertLocalHttpOrigin(
-    process.env.LYNVO_SEED_ORIGIN ?? DEFAULT_APP_ORIGIN,
+  const origin = readSeedAppOrigin(
+    process.env,
     "The seed CLI only writes to a local HTTP dev server. Set LYNVO_SEED_ORIGIN to a localhost origin."
   )
   const api = new SeedApiClient(origin.href)
