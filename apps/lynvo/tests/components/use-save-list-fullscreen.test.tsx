@@ -6,7 +6,6 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 describe("useSaveListFullscreen", () => {
   afterEach(() => {
     vi.restoreAllMocks()
-    delete document.body.dataset.saveListFullscreen
     document.body.style.overflow = ""
   })
 
@@ -51,12 +50,10 @@ describe("useSaveListFullscreen", () => {
       { initialProps: { fullscreen: true } }
     )
 
-    expect(document.body.dataset.saveListFullscreen).toBe("true")
     expect(document.body.style.overflow).toBe("hidden")
 
     rerender({ fullscreen: false })
 
-    expect(document.body.dataset.saveListFullscreen).toBeUndefined()
     expect(document.body.style.overflow).toBe("")
   })
 })

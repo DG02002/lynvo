@@ -39,10 +39,8 @@ export const SiteLayoutContent = ({
     savePaths.folderPrefix
   )
   // The gallery group view is a search-param route (/save?group=…) that
-  // renders a fullscreen immersive layer. Chrome must drop with the route
-  // itself, not with the client-side body attribute the fullscreen hook
-  // sets after paint — otherwise server HTML and slow paints show the
-  // footer as a stray bar below the immersive view.
+  // renders a fullscreen layer. Derive shell chrome from the URL so it is
+  // absent in server HTML and on hard loads too.
   const isSaveGroupRoute = isSaveRoute && hasSaveGroupSearchParam(search)
   const isSaveImmersiveRoute = isSaveFolderRoute || isSaveGroupRoute
 

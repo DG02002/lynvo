@@ -38,7 +38,10 @@ import {
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { linkCopy } from "~/features/links/link-copy"
-import { fetchMediaArtwork } from "~/features/links/media-artwork"
+import {
+  fetchMediaArtwork,
+  getMediaDisplayTitle,
+} from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 
@@ -181,11 +184,16 @@ const getSearchQuery = (searchQuery: string): string | undefined => {
   return trimmedQuery || undefined
 }
 
-// The picker starts from what Lynvo already knows about the item: the
-// stored pick's title, else the saved title. An empty query made fixing a
-// bad lookup slower than the lookup itself.
-const getArtworkPrefillQuery = (item: LinkViewItem): string =>
-  (item.metadata.artwork?.title ?? item.title ?? "").trim()
+// Keep a chosen artwork title verbatim. Otherwise parse release noise from
+// the saved filename before starting the search.
+const getArtworkPrefillQuery = (item: LinkViewItem): string => {
+  const savedTitle = item.title ?? ""
+  return (
+    item.metadata.artwork?.title ??
+    getMediaDisplayTitle(savedTitle) ??
+    savedTitle
+  ).trim()
+}
 
 const startArtworkSearch = (
   searchAbortController: ArtworkSearchControllerRef

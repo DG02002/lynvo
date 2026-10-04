@@ -40,7 +40,6 @@ export const useSaveListFullscreen = (
       pageScrollPositionRef.current = restoredScrollPosition
     }
     if (!isFullscreen) {
-      delete document.body.dataset.saveListFullscreen
       rememberScrollPosition()
       window.addEventListener("scroll", rememberScrollPosition, {
         passive: true,
@@ -49,12 +48,10 @@ export const useSaveListFullscreen = (
     }
 
     const previousBodyOverflow = document.body.style.overflow
-    document.body.dataset.saveListFullscreen = "true"
     document.body.style.overflow = "hidden"
     window.scrollTo(0, 0)
 
     return () => {
-      delete document.body.dataset.saveListFullscreen
       document.body.style.overflow = previousBodyOverflow
       // Runs after React Router's own scroll handling for the exit
       // navigation, so this restore has the final say.
