@@ -11,9 +11,9 @@ import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu
 import { getExtractionWaitStatusInput } from "~/components/save-list/extraction-status-utils"
 import {
   EpisodeStillSlot,
-  FinderEpisodeStillDisplay,
+  FinderArtworkDisplay,
   useFinderEpisodeStill,
-} from "~/components/save-list/finder-episode-still"
+} from "~/components/save-list/finder-media-artwork"
 import {
   MediaListRow,
   MediaListRowMeta,
@@ -220,7 +220,7 @@ export const ResolvableContainerRow = ({
                 <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
               }
             >
-              <FinderEpisodeStillDisplay
+              <FinderArtworkDisplay
                 label={link.label}
                 fallbackIcon={containerIcon}
                 isResolving={shouldShowResolving}

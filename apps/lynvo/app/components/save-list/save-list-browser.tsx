@@ -55,9 +55,9 @@ import {
 } from "./extraction-status-utils"
 import {
   EpisodeStillSlot,
-  FinderEpisodeStillDisplay,
+  FinderArtworkDisplay,
   useFinderEpisodeStill,
-} from "./finder-episode-still"
+} from "./finder-media-artwork"
 import { buildItemAriaLabel } from "./item-aria-label"
 import {
   MediaListRowMeta,
@@ -506,7 +506,7 @@ const FinderBrowserLinkRow = ({
     rowFallbackIcon
   )
   const episodeStillElement = (
-    <FinderEpisodeStillDisplay
+    <FinderArtworkDisplay
       label={link.label}
       fallbackIcon={rowFallbackIcon}
       isResolving={isResolving}

@@ -172,6 +172,7 @@ beforeEach(() => {
 afterEach(() => {
   localStorageValues.clear()
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe("GalleryGroupBrowser", () => {
@@ -342,7 +343,7 @@ describe("GalleryGroupBrowser", () => {
       screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     const folderRow = screen.getByRole("button", {
-      name: "Sample Series Sample Arc S04, new",
+      name: "Sample Series Sample Arc Season 4, new",
     }).parentElement
     const episodeRow = screen.getByRole("button", {
       name: /^3\./,

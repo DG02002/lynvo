@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMemo } from "react"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
@@ -29,10 +30,10 @@ import {
   getExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import {
-  FinderEpisodeStillDisplay,
+  FinderArtworkDisplay,
+  useFinderArtwork,
   useFinderEpisodeStill,
-  useFinderSeasonPoster,
-} from "./finder-episode-still"
+} from "./finder-media-artwork"
 import { GalleryGroupMenu } from "./gallery-group-menu"
 import {
   MediaListRow,
@@ -114,31 +115,25 @@ const GalleryGroupItemRow = ({
     </SaveListRowIcon>
   )
   const isSeasonFolder = artworkSource?.kind === "season"
+  const isEpisodeRow = artworkSource?.kind === "episode"
   const episodeStill = useFinderEpisodeStill(
-    artworkSource?.kind === "episode" ? artworkSource.label : itemLabel,
+    isEpisodeRow ? artworkSource.label : itemLabel,
     undefined,
-    shouldShowRowArtwork && artworkSource?.kind === "episode"
+    shouldShowRowArtwork && isEpisodeRow
   )
-  const seasonPoster = useFinderSeasonPoster(
-    artworkSource?.kind === "season" ? artworkSource.request : undefined
+  const seasonPoster = useFinderArtwork(
+    isSeasonFolder ? artworkSource.request : undefined,
+    "poster"
   )
   const rowArtwork = isSeasonFolder ? seasonPoster : episodeStill
-  const seasonFolderFallbackIcon = (
-    <SaveListRowIcon>
-      <HugeiconsIcon icon={Folder01Icon} className="size-6" />
-    </SaveListRowIcon>
-  )
-  // Season folder labels stay intact when the episode-title toggle is on.
   const rowDisplayTitle =
-    titleDisplay === "episode" && artworkSource?.kind === "episode"
+    titleDisplay === "episode" && isEpisodeRow
       ? episodeStill.episodeDisplayTitle
       : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
   const shouldCenterMobileNewBadge =
-    shouldShowRowArtwork &&
-    artworkSource?.kind === "episode" &&
-    titleDisplay === "episode"
+    shouldShowRowArtwork && isEpisodeRow && titleDisplay === "episode"
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -165,11 +160,9 @@ const GalleryGroupItemRow = ({
       icon={
         shouldShowRowArtwork ? (
           <span className={GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS}>
-            <FinderEpisodeStillDisplay
+            <FinderArtworkDisplay
               label={itemLabel}
-              fallbackIcon={
-                isSeasonFolder ? seasonFolderFallbackIcon : rowFallbackIcon
-              }
+              fallbackIcon={rowFallbackIcon}
               isResolving={isExtractionVisual}
               isDimmed={isDirectLinkExpired}
               isWatched={directLink?.opened === true}
@@ -237,7 +230,7 @@ interface GalleryItemEpisodeStillSource {
 
 interface GalleryItemSeasonPosterSource {
   readonly kind: "season"
-  readonly request: NonNullable<ReturnType<typeof getMediaArtworkRequest>>
+  readonly request: MediaArtworkRequest
 }
 
 type GalleryItemArtworkSource =
@@ -347,10 +340,9 @@ export const GalleryGroupBrowser = ({
           <div className="stagger-children flex flex-col divide-y divide-border/70">
             {sortedItemEntries.map(({ item, itemLabel, artworkSource }) => {
               const displayTitle =
-                artworkSource?.kind === "season" ||
-                groupTitleDisplay !== "episode"
-                  ? itemLabel
-                  : (getMediaDisplayTitle(itemLabel) ?? itemLabel)
+                groupTitleDisplay === "episode"
+                  ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
+                  : itemLabel
 
               return (
                 <GalleryGroupItemRow
