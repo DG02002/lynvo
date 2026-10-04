@@ -275,7 +275,10 @@ const waitForSeedReadiness = async (appOrigin, devProcess) => {
   })
 }
 
-const writeSpawnedWorkerExitNotice = async (fixtureProcess) => {
+export const writeSpawnedWorkerExitNotice = async (
+  fixtureProcess,
+  { probe = seedFixtureWorkerProbe, write = writeMessage } = {}
+) => {
   if (
     !fixtureProcess ||
     (fixtureProcess.exitCode === null && fixtureProcess.signalCode === null)
@@ -287,15 +290,15 @@ const writeSpawnedWorkerExitNotice = async (fixtureProcess) => {
   // the port.
   let servedByAnotherWorker = false
   try {
-    servedByAnotherWorker = await seedFixtureWorkerProbe()
+    servedByAnotherWorker = await probe()
   } catch {
     // The notice must not fail a successful seed; an unknown port state
     // reports the plain exit.
   }
-  writeMessage(
+  write(
     servedByAnotherWorker
       ? `The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port ${SEED_PLUGIN_SERVER_PORT}, which stays running.`
-      : "The spawned seeding Plugin Server exited during seeding."
+      : "The spawned seeding Plugin Server is no longer running."
   )
 }
 

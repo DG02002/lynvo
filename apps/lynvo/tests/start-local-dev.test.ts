@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import {
   createSeedFixtureWorkerProbe,
   waitForLocalServer,
+  writeSpawnedWorkerExitNotice,
 } from "../scripts/start-local-dev.mjs"
 
 const runDevLauncher = (arguments_: readonly string[]) => {
@@ -91,5 +92,79 @@ describe("readiness wait", () => {
     ).rejects.toThrow(
       "The app dev server was not ready at http://127.0.0.1:5175 within 0.01 seconds. If the dev server listens on another loopback address, set LYNVO_SEED_ORIGIN to http://localhost:5175."
     )
+  })
+})
+
+describe("spawned Worker exit notice", () => {
+  it("reports the confirmed race when another Lynvo Plugin Server serves the port", async () => {
+    const messages: string[] = []
+
+    await writeSpawnedWorkerExitNotice(
+      { exitCode: 1, signalCode: null },
+      {
+        probe: async () => true,
+        write: (text: string) => {
+          messages.push(text)
+        },
+      }
+    )
+
+    expect(messages).toEqual([
+      "The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port 8788, which stays running.",
+    ])
+  })
+
+  it("reports the plain exit when the port no longer serves the manifest", async () => {
+    const messages: string[] = []
+
+    await writeSpawnedWorkerExitNotice(
+      { exitCode: null, signalCode: "SIGTERM" },
+      {
+        probe: async () => false,
+        write: (text: string) => {
+          messages.push(text)
+        },
+      }
+    )
+
+    expect(messages).toEqual([
+      "The spawned seeding Plugin Server is no longer running.",
+    ])
+  })
+
+  it("reports the plain exit when the re-probe itself fails", async () => {
+    const messages: string[] = []
+
+    await writeSpawnedWorkerExitNotice(
+      { exitCode: 1, signalCode: null },
+      {
+        probe: async () => {
+          throw new Error("connect ECONNREFUSED")
+        },
+        write: (text: string) => {
+          messages.push(text)
+        },
+      }
+    )
+
+    expect(messages).toEqual([
+      "The spawned seeding Plugin Server is no longer running.",
+    ])
+  })
+
+  it("writes nothing while the spawned Worker is still running", async () => {
+    const messages: string[] = []
+
+    await writeSpawnedWorkerExitNotice(
+      { exitCode: null, signalCode: null },
+      {
+        probe: async () => true,
+        write: (text: string) => {
+          messages.push(text)
+        },
+      }
+    )
+
+    expect(messages).toEqual([])
   })
 })
