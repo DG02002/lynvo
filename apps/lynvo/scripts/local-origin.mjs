@@ -1,4 +1,5 @@
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"])
+const DEFAULT_APP_ORIGIN = "http://localhost:5173"
 
 export const assertLocalHttpOrigin = (value, errorMessage) => {
   let origin
@@ -21,3 +22,9 @@ export const assertLocalHttpOrigin = (value, errorMessage) => {
   }
   return origin
 }
+
+export const readSeedAppOrigin = (environment, errorMessage) =>
+  assertLocalHttpOrigin(
+    environment.LYNVO_SEED_ORIGIN ?? DEFAULT_APP_ORIGIN,
+    errorMessage
+  )

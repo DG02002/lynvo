@@ -173,16 +173,27 @@ and it never attaches to a personal browser session.
 
 ## Seed the docs scenario
 
-Start the app with `pnpm dev --no-auth`. The docs seed also registers a Custom
-Plugin Server at `http://localhost:8788`. The Vite auxiliary Plugin Server is
-available through a service binding, so start its local HTTP listener in a
-second terminal while seeding:
+Start the app with the sample Saved links, Plugin Server settings, and device
+sessions in one command:
 
 ```sh
-pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed
+pnpm dev --seed
 ```
 
-Then run `pnpm seed docs` from the repository root. Stop the standalone Worker
+`--seed` implies `--no-auth`, and the dev server keeps its port instead of
+moving to a free one. The launcher seeds the origin from `LYNVO_SEED_ORIGIN`,
+which defaults to `http://localhost:5173`; combining `--seed` with `--port`
+requires setting `LYNVO_SEED_ORIGIN` to the same port, and the launcher exits
+before migrations when the two disagree. A Lynvo Plugin Server already serving
+on port 8788 is reused and left running, even when it finishes starting while
+the launcher is starting its own; otherwise the launcher starts the seeding
+fixture Worker there and stops it after the seed finishes. When port 8788
+serves something else, seeding fails with an error while the app keeps
+running.
+
+To run the steps by hand instead, start `pnpm dev --no-auth`, start
+`pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed` in a second terminal,
+run `pnpm seed docs` from the repository root, then stop the standalone Worker
 with Ctrl-C when the seed finishes.
 
 ## Capture the screenshot manifest

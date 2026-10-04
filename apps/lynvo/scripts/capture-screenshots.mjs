@@ -13,7 +13,7 @@ import {
   saveScreenshot,
   validatePalette,
 } from "./frame-screenshot.mjs"
-import { assertLocalHttpOrigin } from "./local-origin.mjs"
+import { readSeedAppOrigin } from "./local-origin.mjs"
 
 const APP_DIRECTORY = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -28,7 +28,6 @@ const MANIFEST_PATH = path.join(
 const DOCS_IMAGES_DIRECTORY =
   path.join(APP_DIRECTORY, "app", "features", "site", "docs", "images") +
   path.sep
-const DEFAULT_ORIGIN = "http://localhost:5173"
 const DESKTOP_USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 const TV_BRO_USER_AGENT =
@@ -973,8 +972,8 @@ const main = async () => {
     return
   }
 
-  const origin = assertLocalHttpOrigin(
-    process.env.LYNVO_SEED_ORIGIN || DEFAULT_ORIGIN,
+  const origin = readSeedAppOrigin(
+    process.env,
     "Screenshot capture only connects to a local HTTP dev server. Set LYNVO_SEED_ORIGIN to a localhost origin."
   )
   seedScenariosForShots(runnableShots, origin)
