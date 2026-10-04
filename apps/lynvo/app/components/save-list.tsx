@@ -152,15 +152,18 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
     openGroup,
   } = useGalleryGroupRoute({ links, isFolderRoute, isPending })
 
-  const { rememberScrollPosition } = useSaveListFullscreen(
-    isImmersiveRoute,
-    getSaveListScrollPosition(location.state)
-  )
+  const { getRememberedScrollPosition, rememberScrollPosition } =
+    useSaveListFullscreen(
+      isImmersiveRoute,
+      getSaveListScrollPosition(location.state)
+    )
   const openSavedFolderFromLibrary = (itemUrl: string) => {
-    openSavedFolder(itemUrl, rememberScrollPosition())
+    rememberScrollPosition()
+    openSavedFolder(itemUrl, getRememberedScrollPosition())
   }
   const openGroupFromLibrary = (groupKey: string) => {
-    openGroup(groupKey, rememberScrollPosition())
+    rememberScrollPosition()
+    openGroup(groupKey, getRememberedScrollPosition())
   }
   const savedUrls = useMemo(
     () => new Set(links.map((link) => link.url)),

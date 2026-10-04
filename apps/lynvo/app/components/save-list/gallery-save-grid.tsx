@@ -21,11 +21,7 @@ import {
 } from "~/features/links/media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import { TmdbImage } from "~/features/links/tmdb-image"
-import type {
-  ExtractedLink,
-  LinkExtractionStatus,
-  LinkListItem,
-} from "~/features/links/types"
+import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
 import { useLongPress } from "~/hooks/use-long-press"
 import { useCurrentTimeMs } from "~/lib/use-coarse-time-bucket"
@@ -38,6 +34,8 @@ import {
   getExtractionStatusInputForState,
   getExtractionStatusTitleSpec,
   getItemExtractionState,
+  isPendingExtractionState,
+  type LinkExtractionState,
   type ExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
@@ -182,7 +180,7 @@ interface GallerySingleItemState {
   readonly isSingleItem: boolean
   readonly directLink: ExtractedLink | undefined
   readonly isDirectLinkExpired: boolean
-  readonly extractionState: LinkExtractionStatus["state"]
+  readonly extractionState: LinkExtractionState
   readonly isExtracting: boolean
   readonly isExtractionVisual: boolean
   readonly isFolderContainer: boolean
@@ -208,25 +206,26 @@ const getGallerySingleItemState = (
   // retries do not flash the failure state.
   const getMemberExtractionState = (member: LinkListItem) =>
     getItemExtractionState(member, extractingItems.has(member.url))
-  const pendingMember = group.items.find((member) => {
-    const memberState = getMemberExtractionState(member)
-    return memberState === "queued" || memberState === "running"
-  })
+  const pendingMember = group.items.find((member) =>
+    isPendingExtractionState(getMemberExtractionState(member))
+  )
   const failedMember = group.items.find(
     (member) => getMemberExtractionState(member) === "failed"
   )
-  const extractionState: LinkExtractionStatus["state"] = getItemExtractionState(
-    pendingMember ?? failedMember,
-    pendingMember !== undefined
-  )
+  let extractionState: LinkExtractionState = "complete"
+  if (pendingMember) {
+    extractionState = getMemberExtractionState(pendingMember)
+  } else if (failedMember) {
+    extractionState = "failed"
+  }
   const statusSpec: ExtractionStatusTitleSpec = isSingleItem
     ? getExtractionStatusTitleSpec(item, isExtracting)
     : {
         status: getExtractionStatusInputForState(extractionState),
         fallbackLabel: pendingMember
           ? getExtractionStatusLabel(
-              pendingMember,
-              extractingItems.has(pendingMember.url)
+              extractionState,
+              pendingMember.extractionStatus?.error
             )
           : undefined,
         // The title component falls back to its own "Unable to load links"

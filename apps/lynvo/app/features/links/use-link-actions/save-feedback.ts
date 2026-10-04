@@ -19,8 +19,7 @@ export const vibrateSaveStart = () => vibrate(SAVE_START_VIBRATION_MS)
 
 export const vibrateSaveSuccess = () => vibrate(SAVE_SUCCESS_VIBRATION_MS)
 
-export const vibrateSaveFailure = () =>
-  vibrate([...SAVE_FAILED_VIBRATION_PATTERN])
+export const vibrateSaveFailure = () => vibrate(SAVE_FAILED_VIBRATION_PATTERN)
 
 export const clearHighlightAfterDelay = (
   setHighlightedId: (id: string | null) => void

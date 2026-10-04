@@ -429,6 +429,72 @@ describe("GallerySaveGrid", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows a refreshed failed member as loading instead of failed", () => {
+    const failedItem = createQueuedItem({
+      state: "failed",
+      error: "Source unavailable",
+    })
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "tv:sample series::S01",
+            displayTitle: "Sample Series S01",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [
+              failedItem,
+              {
+                ...createQueuedItem(undefined),
+                id: "ready-episode",
+                url: "https://media.example/ready-episode",
+                title: "Sample.Series.S01E02.1080p.mkv",
+              },
+            ],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set([failedItem.url])}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "running")
+    expect(screen.getByText("Loading links…")).toBeInTheDocument()
+    expect(screen.queryByText("Source unavailable")).not.toBeInTheDocument()
+  })
+
+  it("keeps a queued single item queued while showing active refresh feedback", () => {
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "item:queued-item",
+            displayTitle: "Queued item",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem({ state: "queued" })],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set(["https://media.example/queued-item"])}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "queued")
+    expect(screen.getByText("Waiting to load…")).toBeInTheDocument()
+  })
+
   it("offers the card Choose links action in manual mode until a selection is confirmed", () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
     localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, "false")

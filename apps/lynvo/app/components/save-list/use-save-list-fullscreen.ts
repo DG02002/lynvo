@@ -29,8 +29,11 @@ export const useSaveListFullscreen = (
     if (!isFullscreen) {
       pageScrollPositionRef.current = window.scrollY
     }
-    return pageScrollPositionRef.current
   }, [isFullscreen])
+  const getRememberedScrollPosition = useCallback(
+    () => pageScrollPositionRef.current,
+    []
+  )
 
   useEffect(() => {
     if (restoredScrollPosition !== undefined) {
@@ -59,5 +62,5 @@ export const useSaveListFullscreen = (
     }
   }, [isFullscreen, rememberScrollPosition, restoredScrollPosition])
 
-  return { rememberScrollPosition }
+  return { getRememberedScrollPosition, rememberScrollPosition }
 }

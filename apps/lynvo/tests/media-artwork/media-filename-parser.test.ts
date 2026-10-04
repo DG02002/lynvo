@@ -395,4 +395,26 @@ describe("parseMediaFilename", () => {
       year: 2019,
     })
   })
+
+  it("keeps mixed-case release aliases in titles and strips uppercase aliases without a year", () => {
+    expect(
+      parseMediaFilename("Multi.Storey.2020.1080p.WEB-DL.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Multi Storey",
+      year: 2020,
+    })
+    expect(
+      parseMediaFilename("Hulu.House.2024.1080p.WEB-DL.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Hulu House",
+      year: 2024,
+    })
+    expect(parseMediaFilename("The Show MULTI 1080p.mkv")).toMatchObject({
+      kind: "movie",
+      title: "The Show",
+      year: undefined,
+    })
+  })
 })

@@ -30,6 +30,7 @@ describe("useSaveListFullscreen", () => {
     act(() => {
       result.current.rememberScrollPosition()
     })
+    expect(result.current.getRememberedScrollPosition()).toBe(800)
     // Entering the immersive route resets the window and collapses the
     // document before the fullscreen effect runs.
     scrollY = 0

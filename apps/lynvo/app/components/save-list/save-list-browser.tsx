@@ -51,6 +51,7 @@ import {
   getExtractionStatusInput,
   getExtractionStatusLabel,
   getExtractionStatusTitleSpec,
+  getItemExtractionState,
 } from "./extraction-status-utils"
 import {
   EpisodeStillSlot,
@@ -1031,8 +1032,9 @@ export const SaveListBrowser = ({
               const { directLink, isDirectLinkExpired, isResolvableContainer } =
                 interactionState
               const isExtracting = extractingItems.has(item.url)
-              const extractionState = item.extractionStatus?.state ?? "complete"
-              const isExtractionIncomplete = extractionState !== "complete"
+              const extractionState = getItemExtractionState(item, isExtracting)
+              const isExtractionIncomplete =
+                (item.extractionStatus?.state ?? "complete") !== "complete"
               const isRootItemNew =
                 !isExtractionIncomplete && interactionState.isNew
 
@@ -1080,8 +1082,8 @@ export const SaveListBrowser = ({
                         directLink,
                         isExtractionIncomplete,
                         extractionStatusLabel: getExtractionStatusLabel(
-                          item,
-                          isExtracting
+                          extractionState,
+                          item.extractionStatus?.error
                         ),
                         isOpened: directLink?.opened === true,
                         isNew: isRootItemNew,

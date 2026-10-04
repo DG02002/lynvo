@@ -71,6 +71,14 @@ describe("search result selection", () => {
     expect(selected).toBeUndefined()
   })
 
+  it("prefers a dated exact-title match over an undated duplicate", () => {
+    const selected = selectBestSearchResult("The Avengers", [
+      result("The Avengers", 1),
+      result("The Avengers", 24428, 2012),
+    ])
+    expect(selected?.providerId).toBe(24428)
+  })
+
   it("picks through same-year title ties", () => {
     const selected = selectBestSearchResult("The Avengers", [
       result("The Avengers", 101, 2012),
