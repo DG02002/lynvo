@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from "react"
-import { useLocation } from "react-router"
 
 interface SaveListLocationState {
   readonly lynvoSaveListScrollPosition?: number
@@ -18,9 +17,10 @@ export const createSaveListScrollLocationState = (
   lynvoSaveListScrollPosition: scrollPosition,
 })
 
-export const useSaveListFullscreen = (isFullscreen: boolean) => {
-  const location = useLocation()
-  const restoredScrollPosition = getSaveListScrollPosition(location.state)
+export const useSaveListFullscreen = (
+  isFullscreen: boolean,
+  restoredScrollPosition?: number
+) => {
   const pageScrollPositionRef = useRef(restoredScrollPosition ?? 0)
 
   // Keep the last Library position for history navigation and restored routes

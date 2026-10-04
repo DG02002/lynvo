@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react"
+import { useLocation } from "react-router"
 
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
@@ -7,7 +8,10 @@ import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { SaveListImmersiveLoadingState } from "~/components/save-list/save-list-state"
 import { useGalleryGroupRoute } from "~/components/save-list/use-gallery-group-route"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
-import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
+import {
+  getSaveListScrollPosition,
+  useSaveListFullscreen,
+} from "~/components/save-list/use-save-list-fullscreen"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -103,6 +107,7 @@ const renderSaveListContent = ({
 }
 
 const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
+  const location = useLocation()
   const isSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const hasInitialItems = initialItems !== undefined
@@ -147,7 +152,10 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
     openGroup,
   } = useGalleryGroupRoute({ links, isFolderRoute, isPending })
 
-  const { rememberScrollPosition } = useSaveListFullscreen(isImmersiveRoute)
+  const { rememberScrollPosition } = useSaveListFullscreen(
+    isImmersiveRoute,
+    getSaveListScrollPosition(location.state)
+  )
   const openSavedFolderFromLibrary = (itemUrl: string) => {
     openSavedFolder(itemUrl, rememberScrollPosition())
   }

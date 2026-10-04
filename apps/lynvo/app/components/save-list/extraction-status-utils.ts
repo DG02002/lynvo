@@ -11,7 +11,12 @@ export interface ExtractionStatusTitleSpec {
 export const getItemExtractionState = (
   item: LinkListItem | undefined,
   isRefreshing: boolean
-) => (isRefreshing ? "running" : (item?.extractionStatus?.state ?? "complete"))
+) => {
+  const extractionState = item?.extractionStatus?.state ?? "complete"
+  return isRefreshing && extractionState !== "queued"
+    ? "running"
+    : extractionState
+}
 
 export const getExtractionWaitStatusInput = (
   isWaiting: boolean,
