@@ -138,8 +138,11 @@ const ExtractionStatusText = ({
       titleClassName ?? MEDIA_LIST_ROW_TITLE_CLASS
     )}
   >
+    {/* No key on the message: rotating messages must swap in place, or each
+        2.4s tick replays the entrance fade as a flicker. The wrapper mounts
+        once per waiting phase, so the fade-in still covers the first
+        appearance. */}
     <span
-      key={message}
       className={cn(
         TVBRO_FILTER_FREE_ENTER_CLASS,
         "min-w-0 animate-[enter_500ms_ease] fade-in motion-reduce:animate-none"

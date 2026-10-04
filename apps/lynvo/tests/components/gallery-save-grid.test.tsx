@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
+import { AUTO_SAVE_LINKS_STORAGE_KEY } from "~/features/site/settings/auto-save-links-preference"
 import { CARD_MENU_LONG_PRESS_DURATION_MS } from "~/lib/constants"
+
+import { createMemoryStorage } from "../memory-storage"
 
 const createActions = (): LinkItemActions => ({
   play: vi.fn().mockResolvedValue({ accepted: true }),
@@ -376,12 +379,225 @@ describe("GallerySaveGrid", () => {
     )
 
     const groupItem = screen.getByTestId("gallery-save-item")
-    expect(groupItem).toHaveAttribute("data-extraction-state", "complete")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "queued")
     expect(
       groupItem.querySelector(".loading-skeleton-pulse")
     ).not.toBeInTheDocument()
+    expect(screen.getByText("Waiting to load…")).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Open Sample Series S01" })
     ).toBeInTheDocument()
+  })
+
+  it("shows a failed member on the group card without blocking the group", () => {
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "tv:sample series::S01",
+            displayTitle: "Sample Series S01",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [
+              createQueuedItem({
+                state: "failed",
+                error: "Source unavailable",
+              }),
+              {
+                ...createQueuedItem(undefined),
+                id: "ready-episode",
+                url: "https://media.example/ready-episode",
+                title: "Sample.Series.S01E02.1080p.mkv",
+              },
+            ],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "failed")
+    expect(screen.getByText("Source unavailable")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Open Sample Series S01" })
+    ).toBeInTheDocument()
+  })
+
+  it("shows a refreshed failed member as loading instead of failed", () => {
+    const failedItem = createQueuedItem({
+      state: "failed",
+      error: "Source unavailable",
+    })
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "tv:sample series::S01",
+            displayTitle: "Sample Series S01",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [
+              failedItem,
+              {
+                ...createQueuedItem(undefined),
+                id: "ready-episode",
+                url: "https://media.example/ready-episode",
+                title: "Sample.Series.S01E02.1080p.mkv",
+              },
+            ],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set([failedItem.url])}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "running")
+    expect(screen.getByText("Loading links…")).toBeInTheDocument()
+    expect(screen.queryByText("Source unavailable")).not.toBeInTheDocument()
+  })
+
+  it("keeps a queued single item queued while showing active refresh feedback", () => {
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "item:queued-item",
+            displayTitle: "Queued item",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem({ state: "queued" })],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set(["https://media.example/queued-item"])}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "queued")
+    expect(screen.getByText("Waiting to load…")).toBeInTheDocument()
+  })
+
+  it("offers the card Choose links action in manual mode until a selection is confirmed", () => {
+    vi.stubGlobal("localStorage", createMemoryStorage())
+    localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, "false")
+    const chooseLinks = vi.fn()
+    const actions = { ...createActions(), chooseLinks }
+    const multiLinkItem: LinkListItem = {
+      ...createQueuedItem(undefined),
+      id: "multi-link-item",
+      metadata: {
+        ...createQueuedItem(undefined).metadata,
+        extraction: {
+          extractedLinks: [
+            {
+              id: "file-one",
+              url: "https://media.example/one.mkv",
+              label: "One.mkv",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
+            {
+              id: "file-two",
+              url: "https://media.example/two.mkv",
+              label: "Two.mkv",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
+          ],
+        },
+      },
+    }
+    const renderGrid = (selectionFinalized?: boolean) =>
+      render(
+        <GallerySaveGrid
+          groups={[
+            {
+              key: "item:multi-link-item",
+              displayTitle: "Multi link item",
+              artworkRequest: undefined,
+              lastAddedAt: Date.now(),
+              items: [
+                {
+                  ...multiLinkItem,
+                  metadata: {
+                    ...multiLinkItem.metadata,
+                    extraction: {
+                      ...multiLinkItem.metadata.extraction,
+                      selectionFinalized,
+                    },
+                  },
+                },
+              ],
+            },
+          ]}
+          actions={actions}
+          extractingItems={new Set()}
+          isHydrating={false}
+          highlightedId={null}
+          onOpenItem={vi.fn()}
+          onOpenGroup={vi.fn()}
+        />
+      )
+
+    const view = renderGrid(undefined)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose links for Multi link item" })
+    )
+    expect(chooseLinks).toHaveBeenCalledTimes(1)
+
+    view.rerender(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "item:multi-link-item",
+            displayTitle: "Multi link item",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [
+              {
+                ...multiLinkItem,
+                metadata: {
+                  ...multiLinkItem.metadata,
+                  extraction: {
+                    ...multiLinkItem.metadata.extraction,
+                    selectionFinalized: true,
+                  },
+                },
+              },
+            ],
+          },
+        ]}
+        actions={actions}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Choose links for Multi link item" })
+    ).not.toBeInTheDocument()
+    expect(chooseLinks).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals()
   })
 })

@@ -84,8 +84,9 @@ interface ConfirmSaveIntentUpdatedResult {
   itemUrl: string
   links: ExtractedLink[]
   pluginDomainSuggestion?: PluginDomainSuggestion
+  /** The update confirmed a manual selection on an existing Saved link. */
+  selectionFinalized: boolean
 }
-
 interface ConfirmSaveIntentSavedResult {
   kind: "saved"
   pluginDomainSuggestion?: PluginDomainSuggestion
@@ -156,6 +157,7 @@ export const confirmSaveIntent = async ({
       itemUrl: originalUrl,
       links: selectedLinks,
       pluginDomainSuggestion,
+      selectionFinalized: true,
     }
   }
 

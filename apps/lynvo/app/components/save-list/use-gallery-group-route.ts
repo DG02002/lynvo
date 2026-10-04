@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react"
-import { useSearchParams } from "react-router"
+import { useLocation, useSearchParams } from "react-router"
 
 import {
   getGalleryGroups,
@@ -7,6 +7,12 @@ import {
 } from "~/features/links/media-artwork"
 import type { SavedLinkListItem } from "~/features/links/types"
 import { useMediaView } from "~/features/site/settings/media-view-preference"
+import { SAVE_GROUP_SEARCH_PARAM } from "~/lib/paths"
+
+import {
+  createSaveListScrollLocationState,
+  getSaveListScrollPosition,
+} from "./use-save-list-fullscreen"
 
 interface UseGalleryGroupRouteOptions {
   links: SavedLinkListItem[]
@@ -21,7 +27,7 @@ interface GalleryGroupRouteState {
   isGroupRoute: boolean
   isImmersiveRoute: boolean
   exitGroup: () => void
-  openGroup: (groupKey: string) => void
+  openGroup: (groupKey: string, scrollPosition: number) => void
 }
 
 export const useGalleryGroupRoute = ({
@@ -30,9 +36,11 @@ export const useGalleryGroupRoute = ({
   isPending,
 }: UseGalleryGroupRouteOptions): GalleryGroupRouteState => {
   const mediaView = useMediaView()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const isGalleryMediaView = mediaView === "gallery"
-  const galleryGroupKey = isGalleryMediaView ? searchParams.get("group") : null
+  const requestedGroupKey = searchParams.get(SAVE_GROUP_SEARCH_PARAM)
+  const galleryGroupKey = isGalleryMediaView ? requestedGroupKey : null
   const galleryGroups = useMemo(
     () =>
       isGalleryMediaView && !isFolderRoute
@@ -46,14 +54,38 @@ export const useGalleryGroupRoute = ({
   const isGroupRoute = galleryGroupKey !== null
   const isImmersiveRoute = isFolderRoute || isGroupRoute
 
+  // A group param the page cannot render (list view selected, unknown
+  // group) is cleared instead of lingering: the site layout drops chrome
+  // for /save?group=… and must never do that for an ignored param.
   useEffect(() => {
-    if (galleryGroupKey && !isPending && !openGalleryGroup) {
+    if (
+      requestedGroupKey &&
+      (!isGalleryMediaView || (!isPending && !openGalleryGroup))
+    ) {
       setSearchParams({}, { replace: true })
     }
-  }, [galleryGroupKey, isPending, openGalleryGroup, setSearchParams])
+  }, [
+    isGalleryMediaView,
+    isPending,
+    openGalleryGroup,
+    requestedGroupKey,
+    setSearchParams,
+  ])
 
-  const exitGroup = () => setSearchParams({}, { replace: true })
-  const openGroup = (groupKey: string) => setSearchParams({ group: groupKey })
+  const savedScrollPosition = getSaveListScrollPosition(location.state) ?? 0
+  const exitGroup = () =>
+    setSearchParams(
+      {},
+      {
+        replace: true,
+        state: createSaveListScrollLocationState(savedScrollPosition),
+      }
+    )
+  const openGroup = (groupKey: string, scrollPosition: number) =>
+    setSearchParams(
+      { [SAVE_GROUP_SEARCH_PARAM]: groupKey },
+      { state: createSaveListScrollLocationState(scrollPosition) }
+    )
 
   return {
     isGalleryMediaView,

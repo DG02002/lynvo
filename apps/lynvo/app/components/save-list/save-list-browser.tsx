@@ -51,12 +51,13 @@ import {
   getExtractionStatusInput,
   getExtractionStatusLabel,
   getExtractionStatusTitleSpec,
+  getItemExtractionState,
 } from "./extraction-status-utils"
 import {
   EpisodeStillSlot,
-  FinderEpisodeStillDisplay,
+  FinderArtworkDisplay,
   useFinderEpisodeStill,
-} from "./finder-episode-still"
+} from "./finder-media-artwork"
 import { buildItemAriaLabel } from "./item-aria-label"
 import {
   MediaListRowMeta,
@@ -86,6 +87,7 @@ import {
   isMirrorResolvable,
   type FolderLevel,
 } from "./save-list-browser-model"
+import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import { groupSaveListItems } from "./save-list-groups"
 import {
   FolderTitleDisplayToggleButton,
@@ -504,7 +506,7 @@ const FinderBrowserLinkRow = ({
     rowFallbackIcon
   )
   const episodeStillElement = (
-    <FinderEpisodeStillDisplay
+    <FinderArtworkDisplay
       label={link.label}
       fallbackIcon={rowFallbackIcon}
       isResolving={isResolving}
@@ -1030,8 +1032,9 @@ export const SaveListBrowser = ({
               const { directLink, isDirectLinkExpired, isResolvableContainer } =
                 interactionState
               const isExtracting = extractingItems.has(item.url)
-              const extractionState = item.extractionStatus?.state ?? "complete"
-              const isExtractionIncomplete = extractionState !== "complete"
+              const extractionState = getItemExtractionState(item, isExtracting)
+              const isExtractionIncomplete =
+                (item.extractionStatus?.state ?? "complete") !== "complete"
               const isRootItemNew =
                 !isExtractionIncomplete && interactionState.isNew
 
@@ -1061,7 +1064,9 @@ export const SaveListBrowser = ({
                   key={itemKey}
                   className={cn(
                     "group relative flex items-stretch",
-                    SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
+                    SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+                    SAVE_LIST_FEEDBACK_RING_CLASSES.row.highlighted,
+                    SAVE_LIST_FEEDBACK_RING_CLASSES.row.failed
                   )}
                   data-highlighted={
                     highlightedId === item.id ? true : undefined
@@ -1077,8 +1082,8 @@ export const SaveListBrowser = ({
                         directLink,
                         isExtractionIncomplete,
                         extractionStatusLabel: getExtractionStatusLabel(
-                          item,
-                          isExtracting
+                          extractionState,
+                          item.extractionStatus?.error
                         ),
                         isOpened: directLink?.opened === true,
                         isNew: isRootItemNew,

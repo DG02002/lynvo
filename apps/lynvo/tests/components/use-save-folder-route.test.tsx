@@ -49,11 +49,12 @@ describe("saved folder routes", () => {
       () => ({
         folder: useSaveFolderRoute([savedFolder], false),
         pathname: useLocation().pathname,
+        locationState: useLocation().state,
       }),
       { wrapper: renderFolderRouteWrapper }
     )
 
-    void act(() => result.current.folder.openSavedFolder(savedFolder.url))
+    void act(() => result.current.folder.openSavedFolder(savedFolder.url, 625))
 
     await waitFor(() =>
       expect(result.current.pathname).toBe(
@@ -61,11 +62,17 @@ describe("saved folder routes", () => {
       )
     )
     expect(result.current.folder.selectedItemUrl).toBe(savedFolder.url)
+    expect(result.current.locationState).toEqual({
+      lynvoSaveListScrollPosition: 625,
+    })
 
     void act(() => result.current.folder.closeSavedFolder())
 
     await waitFor(() => expect(result.current.pathname).toBe("/save"))
     expect(result.current.folder.selectedItemUrl).toBeNull()
+    expect(result.current.locationState).toEqual({
+      lynvoSaveListScrollPosition: 625,
+    })
   })
 
   it("does not add a folder entry when the visible Back action closes it", async () => {
@@ -81,7 +88,7 @@ describe("saved folder routes", () => {
       { wrapper: renderFolderRouteWrapper }
     )
 
-    void act(() => result.current.folder.openSavedFolder(savedFolder.url))
+    void act(() => result.current.folder.openSavedFolder(savedFolder.url, 320))
     await waitFor(() =>
       expect(result.current.pathname).toBe(
         "/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"

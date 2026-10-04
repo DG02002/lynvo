@@ -22,6 +22,7 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
+import type { UpdateLinksOptions } from "~/features/links/use-links"
 import { client } from "~/lib/api/client"
 import {
   parsePluginDomainCandidate,
@@ -36,6 +37,7 @@ import { getSaveError } from "./save-error-message"
 import {
   clearHighlightAfterDelay,
   resetSaveView,
+  vibrateSaveFailure,
   vibrateSaveStart,
   vibrateSaveSuccess,
 } from "./save-feedback"
@@ -65,7 +67,11 @@ export const useSaveActions = ({
     savedUrl: string,
     sourceUrl?: string
   ) => Promise<string | undefined>
-  updateLinks: (url: string, links: ExtractedLink[]) => void
+  updateLinks: (
+    url: string,
+    links: ExtractedLink[],
+    options?: UpdateLinksOptions
+  ) => void
   openSelectionDialog: (options: OpenSelectionDialogOptions) => void
   setExtractionPreview: (preview: { meta: MetaData } | null) => void
   closeSelectionDialog: () => void
@@ -110,7 +116,10 @@ export const useSaveActions = ({
             resetSaveView({ setCurrentUrl })
             break
           case "links-updated":
-            updateLinks(outcome.itemUrl, outcome.links)
+            updateLinks(outcome.itemUrl, outcome.links, {
+              debugLogEntry: outcome.debugLogEntry,
+              selectionFinalized: outcome.selectionFinalized,
+            })
             break
           default:
             break
@@ -159,9 +168,25 @@ export const useSaveActions = ({
 
       pendingQueuedLinkIdsRef.current.delete(completedQueuedLinkId)
 
-      if (extractionState !== "complete") {
+      // The queue settles asynchronously over realtime, so this moment —
+      // not the enqueue — is the save's outcome. Confirm it with the
+      // vibration, a fresh card highlight, and on failure a toast, so a
+      // queued save can never finish silently.
+      reporter.publish({
+        kind: "link-focused",
+        linkId: completedQueuedLinkId,
+      })
+      if (extractionState === "failed") {
+        vibrateSaveFailure()
+        showErrorToast({
+          title: "Couldn’t load the saved link",
+          description:
+            completedQueuedItem.extractionStatus?.error ??
+            "Extraction failed. Open the link menu to refresh or remove it.",
+        })
         continue
       }
+      vibrateSaveSuccess()
 
       // Manual mode saves through the queue too; the card surfaces a
       // persistent Choose links action instead of interrupting with a
@@ -181,7 +206,7 @@ export const useSaveActions = ({
         )
       )
     }
-  }, [links, offerPluginDomainSuggestion, pluginDomainSuggestion])
+  }, [links, offerPluginDomainSuggestion, pluginDomainSuggestion, reporter])
 
   const applySaveIntentResult = (
     result: SaveIntentResult
@@ -213,7 +238,6 @@ export const useSaveActions = ({
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
         reporter.publish({ kind: "view-reset" })
         reporter.publish({ kind: "clear-preview" })
-        vibrateSaveSuccess()
         return undefined
       case "saved":
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
@@ -237,6 +261,7 @@ export const useSaveActions = ({
           kind: "links-updated",
           itemUrl: result.itemUrl,
           links: result.links,
+          selectionFinalized: result.selectionFinalized,
         })
         reporter.publish({ kind: "selection-closed" })
         reporter.publish({ kind: "view-reset" })

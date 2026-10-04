@@ -3,9 +3,9 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  FinderEpisodeStillDisplay,
+  FinderArtworkDisplay,
   useFinderEpisodeStill,
-} from "~/components/save-list/finder-episode-still"
+} from "~/components/save-list/finder-media-artwork"
 
 const EpisodeStillHarness = ({
   label,
@@ -23,7 +23,7 @@ const EpisodeStillHarness = ({
   const { imagePath, imageType, isLookupPending } = useFinderEpisodeStill(label)
 
   return (
-    <FinderEpisodeStillDisplay
+    <FinderArtworkDisplay
       label={label}
       fallbackIcon={fallbackIcon}
       isResolving={isResolving}

@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
 
 import {
   getMediaArtworkRequest,
@@ -15,7 +16,7 @@ import {
   MEDIA_LIST_EPISODE_STILL_SIZES,
 } from "./save-list-layout-constants"
 
-interface FinderEpisodeStillImageProps {
+interface FinderArtworkImageProps {
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
   readonly isLookupPending: boolean
@@ -30,7 +31,14 @@ interface FinderEpisodeStillLookupState {
   readonly isLookupPending: boolean
 }
 
-interface FinderEpisodeStillDisplayProps {
+interface FinderArtworkLookupState {
+  readonly imagePath: string | undefined
+  readonly imageType: "poster" | "still"
+  readonly isLookupPending: boolean
+  readonly episodeTitle: string | undefined
+}
+
+interface FinderArtworkDisplayProps {
   readonly label: string
   readonly fallbackIcon: ReactNode
   readonly isResolving: boolean
@@ -41,13 +49,13 @@ interface FinderEpisodeStillDisplayProps {
   readonly isLookupPending: boolean
 }
 
-const FinderEpisodeStillImage = ({
+const FinderArtworkImage = ({
   imagePath,
   imageType,
   isLookupPending,
   isResolving,
   fallbackIcon,
-}: FinderEpisodeStillImageProps) => {
+}: FinderArtworkImageProps) => {
   if (imagePath) {
     return (
       <TmdbImage
@@ -73,6 +81,31 @@ const FinderEpisodeStillImage = ({
   return fallbackIcon
 }
 
+export const useFinderArtwork = (
+  artworkRequest: MediaArtworkRequest | undefined,
+  preferredImageType: "poster" | "still"
+): FinderArtworkLookupState => {
+  const artwork = useMediaArtwork(artworkRequest)
+  const imagePath =
+    preferredImageType === "poster"
+      ? artwork?.posterPath
+      : (artwork?.stillPath ?? artwork?.posterPath)
+  // The type describes the path actually rendered, which can be the poster
+  // even when a still is preferred and unavailable.
+  const imageType =
+    artwork?.stillPath !== undefined && imagePath === artwork.stillPath
+      ? "still"
+      : "poster"
+  const isLookupPending = artworkRequest !== undefined && artwork === undefined
+
+  return {
+    imagePath,
+    imageType,
+    isLookupPending,
+    episodeTitle: artwork?.episodeTitle,
+  }
+}
+
 export const useFinderEpisodeStill = (
   label: string,
   parentFolderName?: string,
@@ -83,24 +116,21 @@ export const useFinderEpisodeStill = (
       isEnabled ? getMediaArtworkRequest(label, parentFolderName) : undefined,
     [isEnabled, label, parentFolderName]
   )
-  const artwork = useMediaArtwork(artworkRequest)
-  const imagePath = artwork?.stillPath ?? artwork?.posterPath
-  const imageType = artwork?.stillPath ? "still" : "poster"
-  const isLookupPending = artworkRequest !== undefined && artwork === undefined
+  const artwork = useFinderArtwork(artworkRequest, "still")
 
   return {
-    imagePath,
-    imageType,
-    isLookupPending,
+    imagePath: artwork.imagePath,
+    imageType: artwork.imageType,
+    isLookupPending: artwork.isLookupPending,
     episodeDisplayTitle: getMediaEpisodeDisplayTitle(
       label,
-      artwork?.episodeTitle,
+      artwork.episodeTitle,
       parentFolderName
     ),
   }
 }
 
-export const FinderEpisodeStillDisplay = ({
+export const FinderArtworkDisplay = ({
   label,
   fallbackIcon,
   isResolving,
@@ -109,7 +139,7 @@ export const FinderEpisodeStillDisplay = ({
   imagePath,
   imageType,
   isLookupPending,
-}: FinderEpisodeStillDisplayProps) => {
+}: FinderArtworkDisplayProps) => {
   return (
     <span
       className={cn(
@@ -132,7 +162,7 @@ export const FinderEpisodeStillDisplay = ({
           isWatched && "grayscale"
         )}
       >
-        <FinderEpisodeStillImage
+        <FinderArtworkImage
           imagePath={imagePath}
           imageType={imageType}
           isLookupPending={isLookupPending}

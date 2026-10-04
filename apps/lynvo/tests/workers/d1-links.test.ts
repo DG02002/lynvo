@@ -1504,6 +1504,41 @@ describe("d1 links", () => {
     expect(metadata.playback.resolvedMirrors).toEqual({})
   })
 
+  it("persists a finalized selection and keeps it across later replacements", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "selection:create",
+      url: "https://source.example",
+      meta: metadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    await applySavedLinkMetadataOperation(env.DB, user.id, {
+      operationId: "selection:finalize",
+      id: linkId,
+      operation: {
+        kind: "replaceExtraction",
+        expectedExtractionJson: JSON.stringify([playableLink]),
+        extractedLinksJson: JSON.stringify([playableLink]),
+        selectionFinalized: true,
+      },
+      now: NOW + 1_000,
+    })
+    await applySavedLinkMetadataOperation(env.DB, user.id, {
+      operationId: "selection:refresh",
+      id: linkId,
+      operation: {
+        kind: "replaceExtraction",
+        expectedExtractionJson: JSON.stringify([playableLink]),
+        extractedLinksJson: JSON.stringify([playableLink]),
+      },
+      now: NOW + 2_000,
+    })
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
+    const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
+    expect(metadata.extraction.selectionFinalized).toBe(true)
+  })
+
   it("refuses to delete another user's link", async () => {
     const owner = await createUser()
     const attacker = await createUser()

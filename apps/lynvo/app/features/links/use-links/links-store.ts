@@ -42,6 +42,7 @@ declare global {
     expectedExtraction?: ExtractedLink[]
     extractedLinks?: ExtractedLink[]
     debugLogEntry?: LinkDebugLogEntry
+    selectionFinalized?: boolean
     providerId?: number
     title?: string
     year?: number

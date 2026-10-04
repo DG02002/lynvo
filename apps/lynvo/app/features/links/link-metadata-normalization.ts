@@ -53,6 +53,7 @@ export const createLinkMetadata = (input: {
   extractedLinks?: ExtractedLink[]
   previous?: LinkMetadata
   debugLog?: LinkDebugLogEntry[]
+  selectionFinalized?: boolean
 }): LinkMetadata => {
   const metadata: LinkMetadata = {
     schemaVersion: 3,
@@ -67,6 +68,11 @@ export const createLinkMetadata = (input: {
     extraction: {
       extractedLinks: stripOpenedFlags(input.extractedLinks ?? []),
       extractedAt: Date.now(),
+      // Selection state belongs to the Saved link, so refreshes and later
+      // server extraction results keep the confirmed choice.
+      selectionFinalized:
+        input.selectionFinalized ??
+        input.previous?.extraction.selectionFinalized,
     },
     playback: input.previous?.playback ?? {
       openedUrls: [],

@@ -440,7 +440,7 @@ describe("useLinks", () => {
       result.current.actions.updateLinks(
         "https://example.com/link-native",
         [refreshedLink],
-        retryLogEntry
+        { debugLogEntry: retryLogEntry }
       )
     })
 

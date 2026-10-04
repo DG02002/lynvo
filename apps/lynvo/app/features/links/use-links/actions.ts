@@ -6,6 +6,12 @@ import type {
   MetaData,
 } from "~/features/links/types"
 
+export interface UpdateLinksOptions {
+  debugLogEntry?: LinkDebugLogEntry
+  /** True when the links came from a confirmed selection-dialog choice. */
+  selectionFinalized?: boolean
+}
+
 export interface LinksActions {
   add: (
     url: string,
@@ -17,7 +23,7 @@ export interface LinksActions {
   updateLinks: (
     url: string,
     links: ExtractedLink[],
-    debugLogEntry?: LinkDebugLogEntry
+    options?: UpdateLinksOptions
   ) => void
   appendDebugLog: (url: string, debugLogEntry: LinkDebugLogEntry) => void
   markOpened: (itemUrl: string, linkUrl: string) => void

@@ -38,7 +38,10 @@ import {
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { linkCopy } from "~/features/links/link-copy"
-import { fetchMediaArtwork } from "~/features/links/media-artwork"
+import {
+  fetchMediaArtwork,
+  getMediaDisplayTitle,
+} from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 
@@ -179,6 +182,17 @@ const getCandidatesByKind = (
 const getSearchQuery = (searchQuery: string): string | undefined => {
   const trimmedQuery = searchQuery.trim()
   return trimmedQuery || undefined
+}
+
+// Keep a chosen artwork title verbatim. Otherwise parse release noise from
+// the saved filename before starting the search.
+const getArtworkPrefillQuery = (item: LinkViewItem): string => {
+  const savedTitle = item.title ?? ""
+  return (
+    item.metadata.artwork?.title ??
+    getMediaDisplayTitle(savedTitle) ??
+    savedTitle
+  ).trim()
 }
 
 const startArtworkSearch = (
@@ -441,8 +455,15 @@ const ArtworkDialog = ({
       return undefined
     }
     dispatch({ type: "dialog-reset" })
+    const prefillQuery = getArtworkPrefillQuery(item)
+    if (prefillQuery) {
+      // Prefill and run the search so the picker opens with candidates
+      // for the title Lynvo already parsed.
+      dispatch({ type: "query-changed", query: prefillQuery })
+      void search(prefillQuery)
+    }
     return () => abortActiveSearch()
-  }, [open, item])
+  }, [open, item, search])
 
   const tvCandidates = getCandidatesByKind(state.candidates, "tv")
   const movieCandidates = getCandidatesByKind(state.candidates, "movie")

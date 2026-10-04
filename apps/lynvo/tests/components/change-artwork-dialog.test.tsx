@@ -66,4 +66,81 @@ describe("ChangeArtworkDialog", () => {
 
     expect(status).not.toContainElement(candidate)
   })
+
+  it("opens prefilled with the item's title and searches immediately", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              candidates: [
+                {
+                  providerId: 1,
+                  title: "Sample Movie",
+                  year: 2024,
+                  mediaKind: "movie",
+                  posterPath: "/poster.jpg",
+                },
+              ],
+            },
+          ],
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      )
+    )
+
+    render(
+      <ChangeArtworkDialog
+        item={item}
+        open
+        onOpenChange={vi.fn()}
+        setArtwork={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole("textbox", { name: "Search title" })).toHaveValue(
+      "Sample Movie"
+    )
+    const status = await screen.findByRole("status")
+    expect(status).toHaveTextContent("Found 1 artwork result.")
+    expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it("prefills a scene-style saved title with its parsed name", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              candidates: [
+                {
+                  providerId: 1,
+                  title: "The Avengers",
+                  year: 2012,
+                  mediaKind: "movie",
+                  posterPath: "/poster.jpg",
+                },
+              ],
+            },
+          ],
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      )
+    )
+
+    render(
+      <ChangeArtworkDialog
+        item={{ ...item, title: "The.Avengers.1080p.mkv" }}
+        open
+        onOpenChange={vi.fn()}
+        setArtwork={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole("textbox", { name: "Search title" })).toHaveValue(
+      "The Avengers"
+    )
+    const status = await screen.findByRole("status")
+    expect(status).toHaveTextContent("Found 1 artwork result.")
+  })
 })

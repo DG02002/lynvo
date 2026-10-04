@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { toast } from "~/components/ui/toast"
 import {
   dismissPluginDomainSuggestion,
   shouldOfferPluginDomainSuggestion,
@@ -159,5 +160,79 @@ describe("useSaveActions", () => {
 
     listDomains.mockRestore()
     createDomain.mockRestore()
+  })
+
+  it("does not celebrate at enqueue time and confirms a failed queued save with feedback", async () => {
+    const toastAdd = vi.spyOn(toast, "add")
+    const vibrate = vi.fn()
+    Object.defineProperty(navigator, "vibrate", {
+      value: vibrate,
+      configurable: true,
+    })
+    const setHighlightedId = vi.fn()
+    const createActions = (links: LinkViewItem[]) =>
+      useSaveActions({
+        url: "https://index.example.com/0:/Movies/",
+        links,
+        addLink: vi.fn(async () => "link-fail"),
+        enqueueLink: vi.fn(async () => "link-fail"),
+        updateLinks: vi.fn(),
+        openSelectionDialog: vi.fn(),
+        setExtractionPreview: vi.fn(),
+        closeSelectionDialog: vi.fn(),
+        selectionDialogState: {
+          open: false,
+          links: [],
+          meta: {},
+          originalUrl: "",
+        },
+        setError: vi.fn(),
+        setCurrentUrl: vi.fn(),
+        setHighlightedId,
+      })
+    const { result, rerender } = renderHook(
+      ({ links }: { links: LinkViewItem[] }) => createActions(links),
+      { initialProps: { links: [] } }
+    )
+
+    await act(async () => {
+      await result.current.handleSave()
+    })
+
+    // Enqueueing is not the outcome: no success buzz until the queue
+    // settles, only the tap acknowledgment.
+    expect(vibrate).toHaveBeenCalledTimes(1)
+    expect(vibrate).toHaveBeenCalledWith(4)
+
+    rerender({
+      links: [
+        {
+          id: "link-fail",
+          url: "https://index.example.com/0:/Movies/",
+          timestamp: 1,
+          metadata: {
+            schemaVersion: 3,
+            source: {},
+            extraction: { extractedLinks: [] },
+            playback: { openedUrls: [] },
+          },
+          extractionStatus: { state: "failed", error: "Source unavailable" },
+        },
+      ],
+    })
+    await waitFor(() =>
+      expect(toastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "error",
+          title: "Couldn’t load the saved link",
+          description: "Source unavailable",
+        })
+      )
+    )
+
+    expect(vibrate).toHaveBeenLastCalledWith([70, 60, 70])
+    // The highlight is refreshed at the completion moment, not only at
+    // enqueue time.
+    expect(setHighlightedId).toHaveBeenLastCalledWith("link-fail")
   })
 })

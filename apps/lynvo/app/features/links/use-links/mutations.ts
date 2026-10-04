@@ -14,6 +14,7 @@ import type {
 } from "~/features/links/types"
 import { showErrorToast } from "~/lib/toast-notifications"
 
+import type { UpdateLinksOptions } from "./actions"
 import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 import {
   buildLinkViewItem,
@@ -65,7 +66,7 @@ const toApiOperation = (
         : undefined
     }
     case "replaceExtraction": {
-      const { extractedLinks, debugLogEntry } = operation
+      const { extractedLinks, debugLogEntry, selectionFinalized } = operation
       return extractedLinks && expectedExtraction
         ? {
             kind: "replaceExtraction",
@@ -74,6 +75,7 @@ const toApiOperation = (
             debugLogEntryJson: debugLogEntry
               ? JSON.stringify(debugLogEntry)
               : undefined,
+            selectionFinalized: selectionFinalized === true,
           }
         : undefined
     }
@@ -239,12 +241,23 @@ export const createLinksMutations = ({
   const updateLinks = (
     targetUrl: string,
     links: ExtractedLink[],
-    debugLogEntry?: LinkDebugLogEntry
+    { debugLogEntry, selectionFinalized }: UpdateLinksOptions = {}
   ): void => {
     void runMetadataUpdate(
       targetUrl,
-      { kind: "replaceExtraction", extractedLinks: links, debugLogEntry },
-      (item) => createUpdatedItemWithLinks({ item, links, debugLogEntry })
+      {
+        kind: "replaceExtraction",
+        extractedLinks: links,
+        debugLogEntry,
+        selectionFinalized,
+      },
+      (item) =>
+        createUpdatedItemWithLinks({
+          item,
+          links,
+          debugLogEntry,
+          selectionFinalized,
+        })
     )
   }
 

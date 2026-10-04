@@ -203,6 +203,7 @@ export interface ApplyMetadataOperationInput {
         readonly expectedExtractionJson: string
         readonly extractedLinksJson: string
         readonly debugLogEntryJson?: string
+        readonly selectionFinalized?: boolean
       }
     | {
         readonly kind: "appendDebugLog"

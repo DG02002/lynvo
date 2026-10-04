@@ -236,4 +236,185 @@ describe("parseMediaFilename", () => {
       "ambiguous"
     )
   })
+
+  it("drops an AKA alternate-title segment before identifying the title", () => {
+    expect(
+      parseMediaFilename(
+        "The Desert Child AKA Lenfant du désert (2026) 2160p.WEB-DL.mkv"
+      )
+    ).toMatchObject({
+      kind: "movie",
+      title: "The Desert Child",
+      year: 2026,
+    })
+
+    expect(
+      parseMediaFilename("Metro.Love.Story.AKA.Histoire.de.Metro.2026.720p.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Metro Love Story",
+      year: 2026,
+    })
+
+    expect(
+      parseMediaFilename("Feature AKA Alternate Title With No Tail.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Feature",
+      year: undefined,
+    })
+  })
+
+  it("keeps a leading AKA as the title itself", () => {
+    expect(parseMediaFilename("AKA 2023 1080p.mkv")).toMatchObject({
+      kind: "movie",
+      title: "AKA",
+      year: 2023,
+    })
+  })
+
+  it("keeps lowercase aka inside a title untouched", () => {
+    expect(parseMediaFilename("Te aka o te mirai (2020).mkv")).toMatchObject({
+      kind: "movie",
+      title: "Te aka o te mirai",
+      year: 2020,
+    })
+  })
+
+  // Golden corpus: the real-world sample filenames from the artwork bug
+  // reports, pinned so regressions in one name surface immediately.
+  it("classifies the reported real-world filename corpus", () => {
+    const cases = [
+      {
+        filename: "MobLand.2025.S02E03.1080p.DSNP.WEB-DL.mkv",
+        kind: "episode",
+        title: "MobLand",
+        year: 2025,
+        seasonNumber: 2,
+        episodeNumber: 3,
+      },
+      {
+        filename: "MobLand (2026) S02E03 1080p.mkv",
+        kind: "episode",
+        title: "MobLand",
+        year: 2026,
+        seasonNumber: 2,
+        episodeNumber: 3,
+      },
+      {
+        filename:
+          "The.Piano.in.a.Factory.AKA.Gang.de.qin.2011.1080p.WEB-DL.mkv",
+        kind: "movie",
+        title: "The Piano in a Factory",
+        year: 2011,
+      },
+      {
+        filename: "Wet Dreams 2 AKA 몽정기 2 2005 1080p.mkv",
+        kind: "movie",
+        title: "Wet Dreams 2",
+        year: 2005,
+      },
+      {
+        filename: "1917 2019 PROPER 2160p.UHD.BluRay.mkv",
+        kind: "movie",
+        title: "1917",
+        year: 2019,
+      },
+      {
+        filename: "Drishyam-3 2026 1080p.WEB-DL.mkv",
+        kind: "movie",
+        title: "Drishyam 3",
+        year: 2026,
+      },
+      {
+        filename: "Inspector.Avinash.S02.COMBINED.1080p.AMZN.WEB-DL.mkv",
+        kind: "season",
+        title: "Inspector Avinash",
+        seasonNumber: 2,
+      },
+      {
+        filename: "Frozen.2010.1080p.BluRay.mkv",
+        kind: "movie",
+        title: "Frozen",
+        year: 2010,
+      },
+      {
+        filename: "The.Avengers.1080p.BluRay.mkv",
+        kind: "movie",
+        title: "The Avengers",
+        year: undefined,
+      },
+      {
+        filename: "KonoSuba Gods Blessing S00E04 OVA 1080p.CR.WEB-DL.mkv",
+        kind: "episode",
+        title: "KonoSuba Gods Blessing",
+        seasonNumber: 0,
+        episodeNumber: 4,
+      },
+      {
+        filename: "KonoSuba Gods Blessing S00E06 v2 Red-DDP 1080p.mkv",
+        kind: "episode",
+        title: "KonoSuba Gods Blessing",
+        seasonNumber: 0,
+        episodeNumber: 6,
+      },
+      {
+        filename:
+          "Tokyo Revengers AKA Tôkyô Ribenjâzu S03 1080p DSNP WEB-DL.mkv",
+        kind: "season",
+        title: "Tokyo Revengers",
+        seasonNumber: 3,
+      },
+    ]
+
+    for (const { filename, ...expected } of cases) {
+      expect(parseMediaFilename(filename)).toMatchObject(expected)
+    }
+  })
+
+  it("strips uppercase edition tokens from no-year titles but keeps mixed-case title words", () => {
+    expect(parseMediaFilename("Feature.PROPER.1080p.WEB-DL.mkv")).toMatchObject(
+      {
+        kind: "movie",
+        title: "Feature",
+        year: undefined,
+      }
+    )
+    expect(
+      parseMediaFilename("Show.Name.S01E02.REPACK.1080p.mkv")
+    ).toMatchObject({
+      kind: "episode",
+      seasonNumber: 1,
+      episodeNumber: 2,
+    })
+    expect(
+      parseMediaFilename("Uncut.Gems.2019.1080p.BluRay.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Uncut Gems",
+      year: 2019,
+    })
+  })
+
+  it("keeps mixed-case release aliases in titles and strips uppercase aliases without a year", () => {
+    expect(
+      parseMediaFilename("Multi.Storey.2020.1080p.WEB-DL.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Multi Storey",
+      year: 2020,
+    })
+    expect(
+      parseMediaFilename("Hulu.House.2024.1080p.WEB-DL.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Hulu House",
+      year: 2024,
+    })
+    expect(parseMediaFilename("The Show MULTI 1080p.mkv")).toMatchObject({
+      kind: "movie",
+      title: "The Show",
+      year: undefined,
+    })
+  })
 })

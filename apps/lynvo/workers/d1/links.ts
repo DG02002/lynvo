@@ -100,6 +100,7 @@ type SavedLinkMetadataOperation =
       expectedExtractionJson: string
       extractedLinksJson: string
       debugLogEntryJson?: string
+      selectionFinalized?: boolean
     }
   | { kind: "appendDebugLog"; debugLogEntryJson: string }
   | {
@@ -462,6 +463,11 @@ const applyReplaceExtraction = (
   metadata.extraction.extractedLinks = parseExtractedLinks(
     operation.extractedLinksJson
   )
+  if (operation.selectionFinalized === true) {
+    // Only the selection dialog sets this; other replacements keep whatever
+    // the stored metadata already carries.
+    metadata.extraction.selectionFinalized = true
+  }
   metadata.playback.resolvedMirrors = {}
   if (operation.debugLogEntryJson) {
     appendDebugLogEntry(metadata, operation.debugLogEntryJson)

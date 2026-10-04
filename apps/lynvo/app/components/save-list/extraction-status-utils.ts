@@ -1,4 +1,4 @@
-import type { LinkListItem } from "~/features/links/types"
+import type { LinkExtractionStatus, LinkListItem } from "~/features/links/types"
 
 export type ExtractionStatusInput = "idle" | "waiting" | "failed"
 
@@ -8,20 +8,21 @@ export interface ExtractionStatusTitleSpec {
   readonly error?: string
 }
 
-export const getExtractionStatusInput = (
+export type LinkExtractionState = LinkExtractionStatus["state"]
+
+export const getItemExtractionState = (
   item: LinkListItem | undefined,
   isRefreshing: boolean
-): ExtractionStatusInput => {
-  const extractionState = item?.extractionStatus?.state
-  if (
-    isRefreshing ||
-    extractionState === "queued" ||
-    extractionState === "running"
-  ) {
-    return "waiting"
-  }
-  return extractionState === "failed" ? "failed" : "idle"
+): LinkExtractionState => {
+  const extractionState = item?.extractionStatus?.state ?? "complete"
+  return isRefreshing && extractionState !== "queued"
+    ? "running"
+    : extractionState
 }
+
+export const isPendingExtractionState = (
+  extractionState: LinkExtractionState
+): boolean => extractionState === "queued" || extractionState === "running"
 
 export const getExtractionWaitStatusInput = (
   isWaiting: boolean,
@@ -33,29 +34,45 @@ export const getExtractionWaitStatusInput = (
   return didFail ? "failed" : "idle"
 }
 
+export const getExtractionStatusInputForState = (
+  extractionState: LinkExtractionState
+): ExtractionStatusInput =>
+  getExtractionWaitStatusInput(
+    isPendingExtractionState(extractionState),
+    extractionState === "failed"
+  )
+
+export const getExtractionStatusInput = (
+  item: LinkListItem | undefined,
+  isRefreshing: boolean
+): ExtractionStatusInput =>
+  getExtractionStatusInputForState(getItemExtractionState(item, isRefreshing))
+
 export const getExtractionStatusTitleSpec = (
   item: LinkListItem | undefined,
   isRefreshing: boolean
-): ExtractionStatusTitleSpec => ({
-  status: getExtractionStatusInput(item, isRefreshing),
-  fallbackLabel: item
-    ? getExtractionStatusLabel(item, isRefreshing)
-    : undefined,
-  error: item?.extractionStatus?.error,
-})
+): ExtractionStatusTitleSpec => {
+  const extractionState = getItemExtractionState(item, isRefreshing)
+  return {
+    status: getExtractionStatusInputForState(extractionState),
+    fallbackLabel: item
+      ? getExtractionStatusLabel(extractionState, item.extractionStatus?.error)
+      : undefined,
+    error: item?.extractionStatus?.error,
+  }
+}
 
 export const getExtractionStatusLabel = (
-  item: LinkListItem,
-  isRefreshing: boolean
+  extractionState: LinkExtractionState,
+  error?: string
 ): string => {
-  if (isRefreshing || item.extractionStatus?.state === "running") {
-    return "Loading links…"
-  }
-  switch (item.extractionStatus?.state) {
+  switch (extractionState) {
+    case "running":
+      return "Loading links…"
     case "queued":
       return "Waiting to load…"
     case "failed":
-      return item.extractionStatus.error || "Unable to load links"
+      return error || "Unable to load links"
     default:
       return ""
   }

@@ -31,8 +31,32 @@ const MALFORMED_MARKER_PLACEHOLDER_PATTERN =
   /(?:^|\s)S[xy#?*]{1,5}E[xy#?*]{1,5}\b/i
 const MALFORMED_MARKER_UPPERCASE_PATTERN = /(?:^|\s)S[A-Z]{2,5}E[A-Z]{2,5}\b/
 const TECHNICAL_TOKEN_PATTERN =
-  /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|atmos|dual\s+audio|multi\s+audio|remux|final\s+cut|subs?|subtitles?|bd|itunes)\b/i
+  /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|atmos|remux|final\s+cut|subs?|subtitles?|480i|576i|bd|itunes)\b/i
+// Release aliases can also be ordinary title words. Match these only in
+// uppercase when deciding where a title ends.
+const UPPERCASE_TECHNICAL_TOKEN_PATTERN =
+  /\b(?:DD|TRUEHD|AC3|EAC3|DUAL\s+AUDIO|MULTI\s+AUDIO|MULTI|AMZN|NF|ATV|DSNP|HULU|PCOK|STRZ|NTSC|DS4K)\b/
+const TECHNICAL_TOKEN_PATTERNS = [
+  TECHNICAL_TOKEN_PATTERN,
+  UPPERCASE_TECHNICAL_TOKEN_PATTERN,
+]
+// Edition/version tokens can sit between the title and the year or marker,
+// where they would poison the title slice on no-year names. Uppercase-only
+// on purpose: scene naming writes these in caps, while mixed case is an
+// ordinary title word ("Uncut Gems", "The Extended Stay").
+const EDITION_TOKEN_PATTERN =
+  /(?:^|\s)(?:PROPER|REPACK|RERIP|REMASTERED|EXTENDED|UNCUT|IMAX|COMBINED)\b|\bv\d+\b/
 const GENERIC_TITLE_PATTERN = /^(?:file|sample|video|movie|episode|untitled)$/i
+// Release names often append "AKA <alternate title>" between the primary
+// title and the year/technical tail. Uppercase-only on purpose: lowercase
+// "aka" can be an ordinary word in the title, and a wrong cut poisons the
+// lookup worse than no cut at all.
+const ALTERNATE_TITLE_TOKEN_PATTERN = /\bAKA\b/
+const ALTERNATE_TITLE_BOUNDARY_PATTERN = /[[(]|\b(?:19|20)\d{2}\b/
+// Season and episode markers must survive the cut: alternate titles can
+// carry the release's only marker ("… AKA Tôkyô Ribenjâzu S03 1080p…").
+const ALTERNATE_TITLE_MARKER_BOUNDARY_PATTERN =
+  /\b(?:S\d{1,3}|SEASON\s*\d{1,3})\b/i
 
 interface MarkerMatch {
   readonly kind: "episode" | "episode-range" | "season"
@@ -54,8 +78,33 @@ const stripMediaExtension = (filename: string): string =>
 const normalizeSeparators = (value: string): string =>
   value.replaceAll(/[._]+/g, " ").replaceAll(/\s+/g, " ").trim()
 
+const stripAlternateTitle = (value: string): string => {
+  const alternateTokenMatch = ALTERNATE_TITLE_TOKEN_PATTERN.exec(value)
+  if (!alternateTokenMatch) {
+    return value
+  }
+  const head = value.slice(0, alternateTokenMatch.index)
+  if (!head.trim()) {
+    // A name that begins with "AKA" carries it as the title itself, not as
+    // an alternate-name note.
+    return value
+  }
+  const tail = value.slice(alternateTokenMatch.index)
+  const boundaryMatches = [
+    ALTERNATE_TITLE_BOUNDARY_PATTERN.exec(tail),
+    ALTERNATE_TITLE_MARKER_BOUNDARY_PATTERN.exec(tail),
+    ...TECHNICAL_TOKEN_PATTERNS.map((pattern) => pattern.exec(tail)),
+  ].filter((match): match is RegExpExecArray => match !== null)
+  const boundaryIndex = boundaryMatches.length
+    ? Math.min(...boundaryMatches.map((match) => match.index))
+    : undefined
+  const keptTail =
+    boundaryIndex === undefined ? "" : tail.slice(boundaryIndex).trim()
+  return keptTail ? `${head.trim()} ${keptTail}` : head.trim()
+}
+
 const getMatchingText = (filename: string): string =>
-  normalizeSeparators(stripMediaExtension(filename))
+  stripAlternateTitle(normalizeSeparators(stripMediaExtension(filename)))
 
 const getAllYearMatches = (value: string): YearMatch[] => {
   const matches: YearMatch[] = []
@@ -108,10 +157,25 @@ const getYearMatch = (value: string): YearMatch | undefined => {
   )
 }
 
+const stripTechnicalAndEditionTokens = (value: string): string =>
+  TECHNICAL_TOKEN_PATTERNS.reduce(
+    (remainingValue, pattern) => remainingValue.replace(pattern, ""),
+    value
+  ).replace(EDITION_TOKEN_PATTERN, "")
+
+const findTechnicalTokenStart = (value: string): number | undefined => {
+  const starts = [
+    ...TECHNICAL_TOKEN_PATTERNS.map((pattern) => pattern.exec(value)?.index),
+    EDITION_TOKEN_PATTERN.exec(value)?.index,
+  ].filter((start): start is number => start !== undefined)
+  return starts.length ? Math.min(...starts) : undefined
+}
+
 const normalizeTitle = (value: string): string | undefined => {
   const withoutReleaseGroups = value.replace(/^\s*(?:\[[^\]]+\]\s*)+/, "")
-  const withoutTechnicalTail = withoutReleaseGroups
-    .replace(TECHNICAL_TOKEN_PATTERN, "")
+  const withoutTechnicalTail = stripTechnicalAndEditionTokens(
+    withoutReleaseGroups
+  )
     .replaceAll(/\s+/g, " ")
     .trim()
   const withoutDanglingPunctuation = withoutTechnicalTail
@@ -136,8 +200,10 @@ const getNormalizedTitleIdentity = (title: string): string =>
     .replaceAll(/\s+/g, " ")
 
 const getFilenameEpisodeTitle = (suffix: string): string | undefined => {
-  const technicalStart = TECHNICAL_TOKEN_PATTERN.exec(suffix)?.index
-  return normalizeTitle(suffix.slice(0, technicalStart))
+  const technicalStart = findTechnicalTokenStart(suffix)
+  return normalizeTitle(
+    technicalStart === undefined ? suffix : suffix.slice(0, technicalStart)
+  )
 }
 
 const toAmbiguousCandidate = (
@@ -214,8 +280,8 @@ const createCandidate = ({
   const markerTitleText = marker
     ? matchingText.slice(0, marker.index)
     : matchingText
-  const technicalMatch = TECHNICAL_TOKEN_PATTERN.exec(markerTitleText)
-  const titleEndIndex = technicalMatch?.index ?? markerTitleText.length
+  const technicalStartIndex = findTechnicalTokenStart(markerTitleText)
+  const titleEndIndex = technicalStartIndex ?? markerTitleText.length
   const titleBeforeYear = yearMatch
     ? matchingText.slice(0, Math.min(yearMatch.index, titleEndIndex))
     : markerTitleText.slice(0, titleEndIndex)

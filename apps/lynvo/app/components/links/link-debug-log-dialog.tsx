@@ -12,7 +12,6 @@ import {
 } from "~/components/ui/alert-dialog"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { LinkViewItem } from "~/features/links/types"
-import { showLinkCopiedToast } from "~/lib/toast-notifications"
 
 import { highlightLogJson } from "./log-json-highlight"
 
@@ -63,7 +62,6 @@ const LinkDebugLogDialog = ({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(serializedLog)
-      showLinkCopiedToast()
       onOpenChange(false)
     } catch {
       // Clipboard can be unavailable; the dialog itself stays selectable.

@@ -70,16 +70,21 @@ export const hasEpisodeMarker = (
   return candidate.kind === "episode" || candidate.kind === "episode-range"
 }
 
+const getEpisodeOnlyListingLabel = (
+  labels: readonly string[],
+  parentFolderName?: string
+): string | undefined => {
+  const mediaLabels = labels.filter((label) => !isNonMediaFilename(label))
+  return mediaLabels.length > 0 &&
+    mediaLabels.every((label) => hasEpisodeMarker(label, parentFolderName))
+    ? mediaLabels[0]
+    : undefined
+}
+
 export const isEpisodeOnlyListing = (
   labels: readonly string[],
   parentFolderName?: string
-): boolean => {
-  const mediaLabels = labels.filter((label) => !isNonMediaFilename(label))
-  return (
-    mediaLabels.length > 0 &&
-    mediaLabels.every((label) => hasEpisodeMarker(label, parentFolderName))
-  )
-}
+): boolean => getEpisodeOnlyListingLabel(labels, parentFolderName) !== undefined
 
 export const getEpisodeListingLabels = (
   links: readonly ExtractedLink[],

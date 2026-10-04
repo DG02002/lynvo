@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMemo } from "react"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
@@ -12,8 +13,9 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getGalleryItemLabel,
+  getMediaArtworkRequest,
   getMediaDisplayTitle,
-  isEpisodeOnlyListing,
+  hasEpisodeMarker,
   parseMediaFilename,
   type GalleryGroup,
 } from "~/features/links/media-artwork"
@@ -28,9 +30,10 @@ import {
   getExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import {
-  FinderEpisodeStillDisplay,
+  FinderArtworkDisplay,
+  useFinderArtwork,
   useFinderEpisodeStill,
-} from "./finder-episode-still"
+} from "./finder-media-artwork"
 import { GalleryGroupMenu } from "./gallery-group-menu"
 import {
   MediaListRow,
@@ -63,7 +66,8 @@ interface GalleryGroupItemRowProps {
   readonly itemLabel: string
   readonly displayTitle: string
   readonly titleDisplay: FolderTitleDisplay
-  readonly shouldShowEpisodeStill: boolean
+  readonly shouldShowRowArtwork: boolean
+  readonly artworkSource: GalleryItemArtworkSource | undefined
 }
 
 const GalleryGroupItemRow = ({
@@ -75,7 +79,8 @@ const GalleryGroupItemRow = ({
   itemLabel,
   displayTitle,
   titleDisplay,
-  shouldShowEpisodeStill,
+  shouldShowRowArtwork,
+  artworkSource,
 }: GalleryGroupItemRowProps) => {
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
@@ -109,17 +114,26 @@ const GalleryGroupItemRow = ({
       />
     </SaveListRowIcon>
   )
+  const isSeasonFolder = artworkSource?.kind === "season"
+  const isEpisodeRow = artworkSource?.kind === "episode"
   const episodeStill = useFinderEpisodeStill(
-    itemLabel,
+    isEpisodeRow ? artworkSource.label : itemLabel,
     undefined,
-    shouldShowEpisodeStill
+    shouldShowRowArtwork && isEpisodeRow
   )
+  const seasonPoster = useFinderArtwork(
+    isSeasonFolder ? artworkSource.request : undefined,
+    "poster"
+  )
+  const rowArtwork = isSeasonFolder ? seasonPoster : episodeStill
   const rowDisplayTitle =
-    titleDisplay === "episode" ? episodeStill.episodeDisplayTitle : displayTitle
+    titleDisplay === "episode" && isEpisodeRow
+      ? episodeStill.episodeDisplayTitle
+      : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
   const shouldCenterMobileNewBadge =
-    shouldShowEpisodeStill && titleDisplay === "episode"
+    shouldShowRowArtwork && isEpisodeRow && titleDisplay === "episode"
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -144,17 +158,17 @@ const GalleryGroupItemRow = ({
     <MediaListRow
       label={rowDisplayTitle}
       icon={
-        shouldShowEpisodeStill ? (
+        shouldShowRowArtwork ? (
           <span className={GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS}>
-            <FinderEpisodeStillDisplay
+            <FinderArtworkDisplay
               label={itemLabel}
               fallbackIcon={rowFallbackIcon}
               isResolving={isExtractionVisual}
               isDimmed={isDirectLinkExpired}
               isWatched={directLink?.opened === true}
-              imagePath={episodeStill.imagePath}
-              imageType={episodeStill.imageType}
-              isLookupPending={episodeStill.isLookupPending}
+              imagePath={rowArtwork.imagePath}
+              imageType={rowArtwork.imageType}
+              isLookupPending={rowArtwork.isLookupPending}
             />
           </span>
         ) : (
@@ -204,9 +218,37 @@ const GalleryGroupItemRow = ({
       onActivate={handleActivate}
       disabled={directLink !== undefined && isDirectLinkExpired}
       isOpened={directLink?.opened === true}
-      shouldStackIconOnMobile={shouldShowEpisodeStill}
+      shouldStackIconOnMobile={shouldShowRowArtwork}
     />
   )
+}
+
+interface GalleryItemEpisodeStillSource {
+  readonly kind: "episode"
+  readonly label: string
+}
+
+interface GalleryItemSeasonPosterSource {
+  readonly kind: "season"
+  readonly request: MediaArtworkRequest
+}
+
+type GalleryItemArtworkSource =
+  | GalleryItemEpisodeStillSource
+  | GalleryItemSeasonPosterSource
+
+// Episode rows use their own still. A season folder uses the season request
+// from its label, without borrowing artwork from any extracted child.
+const getItemArtworkSource = (
+  itemLabel: string
+): GalleryItemArtworkSource | undefined => {
+  if (hasEpisodeMarker(itemLabel)) {
+    return { kind: "episode", label: itemLabel }
+  }
+  const request = getMediaArtworkRequest(itemLabel)
+  return request?.mediaKind === "tv" && request.episodeNumber === undefined
+    ? { kind: "season", request }
+    : undefined
 }
 
 interface GalleryGroupBrowserProps {
@@ -232,18 +274,22 @@ export const GalleryGroupBrowser = ({
     () => group.items.map((item) => getGalleryItemLabel(item)),
     [group.items]
   )
-  const shouldShowEpisodeStills =
+  const itemArtworkSources = useMemo(
+    () => itemLabels.map((itemLabel) => getItemArtworkSource(itemLabel)),
+    [itemLabels]
+  )
+  const canShowEpisodeNames =
     group.artworkRequest?.mediaKind === "tv" &&
-    itemLabels.length > 0 &&
-    isEpisodeOnlyListing(itemLabels)
-  const groupTitleDisplay = shouldShowEpisodeStills ? titleDisplay : "filename"
+    itemArtworkSources.some((source) => source?.kind === "episode")
+  const groupTitleDisplay = canShowEpisodeNames ? titleDisplay : "filename"
   const sortedItemEntries = useMemo(() => {
     const itemEntries = group.items.map((item, itemIndex) => ({
       item,
-      itemLabel: itemLabels[itemIndex],
+      itemLabel: itemLabels[itemIndex] ?? "",
+      artworkSource: itemArtworkSources[itemIndex],
       originalIndex: itemIndex,
     }))
-    if (!shouldShowEpisodeStills) {
+    if (!canShowEpisodeNames) {
       return itemEntries
     }
     return itemEntries.toSorted(
@@ -253,7 +299,7 @@ export const GalleryGroupBrowser = ({
         (parseMediaFilename(secondEntry.itemLabel).episodeNumber ??
           secondEntry.originalIndex)
     )
-  }, [group.items, itemLabels, shouldShowEpisodeStills])
+  }, [group.items, itemLabels, itemArtworkSources, canShowEpisodeNames])
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
@@ -271,7 +317,7 @@ export const GalleryGroupBrowser = ({
             />
           </h1>
         </div>
-        {shouldShowEpisodeStills ? (
+        {canShowEpisodeNames ? (
           <div className="flex items-center justify-center px-1 md:px-0">
             <FolderTitleDisplayToggleButton
               titleDisplay={titleDisplay}
@@ -292,24 +338,31 @@ export const GalleryGroupBrowser = ({
         </div>
         <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
-            {sortedItemEntries.map(({ item, itemLabel }) => (
-              <GalleryGroupItemRow
-                key={item.id ?? item.url}
-                item={item}
-                actions={actions}
-                isExtracting={extractingItems.has(item.url)}
-                currentTimeMs={currentTimeMs}
-                onOpenItem={onOpenItem}
-                itemLabel={itemLabel}
-                displayTitle={
-                  groupTitleDisplay === "episode"
-                    ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
-                    : itemLabel
-                }
-                titleDisplay={groupTitleDisplay}
-                shouldShowEpisodeStill={shouldShowEpisodeStills}
-              />
-            ))}
+            {sortedItemEntries.map(({ item, itemLabel, artworkSource }) => {
+              const displayTitle =
+                groupTitleDisplay === "episode"
+                  ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
+                  : itemLabel
+
+              return (
+                <GalleryGroupItemRow
+                  key={item.id ?? item.url}
+                  item={item}
+                  actions={actions}
+                  isExtracting={extractingItems.has(item.url)}
+                  currentTimeMs={currentTimeMs}
+                  onOpenItem={onOpenItem}
+                  itemLabel={itemLabel}
+                  displayTitle={displayTitle}
+                  titleDisplay={groupTitleDisplay}
+                  shouldShowRowArtwork={
+                    group.artworkRequest?.mediaKind === "tv" &&
+                    artworkSource !== undefined
+                  }
+                  artworkSource={artworkSource}
+                />
+              )
+            })}
           </div>
         </div>
       </div>

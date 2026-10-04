@@ -5,11 +5,16 @@ import { Footer } from "~/components/footer"
 import { Header } from "~/components/header"
 import { ReceiverOverlay } from "~/components/receiver-overlay"
 import { RemoteCommandListener } from "~/components/remote-command-listener"
-import { isDocsRoutePathname, savePaths } from "~/lib/paths"
+import {
+  isDocsRoutePathname,
+  hasSaveGroupSearchParam,
+  savePaths,
+} from "~/lib/paths"
 
 declare global {
   interface SiteLayoutContentProps {
     readonly pathname: string
+    readonly search: string
     readonly children: ReactNode
     readonly HeaderComponent: ComponentType<{ showSaveAction: boolean }>
     readonly FooterComponent: ComponentType
@@ -20,6 +25,7 @@ declare global {
 
 export const SiteLayoutContent = ({
   pathname,
+  search,
   children,
   HeaderComponent,
   FooterComponent,
@@ -32,18 +38,27 @@ export const SiteLayoutContent = ({
   const isSaveFolderRoute = normalizedPathname.startsWith(
     savePaths.folderPrefix
   )
+  // The gallery group view is a search-param route (/save?group=…) that
+  // renders a fullscreen layer. Derive shell chrome from the URL so it is
+  // absent in server HTML and on hard loads too.
+  const isSaveGroupRoute = isSaveRoute && hasSaveGroupSearchParam(search)
+  const isSaveImmersiveRoute = isSaveFolderRoute || isSaveGroupRoute
 
   return (
     <>
       <RemoteCommandListenerComponent />
-      {!isSaveFolderRoute && <HeaderComponent showSaveAction={!isSaveRoute} />}
+      {!isSaveImmersiveRoute && (
+        <HeaderComponent showSaveAction={!isSaveRoute} />
+      )}
       <main
         data-site-content
-        className={isSaveFolderRoute ? "flex-1 pt-0" : "flex-1 pt-14 md:pt-16"}
+        className={
+          isSaveImmersiveRoute ? "flex-1 pt-0" : "flex-1 pt-14 md:pt-16"
+        }
       >
         {children}
       </main>
-      {!isDocsRoute && !isSaveFolderRoute && <FooterComponent />}
+      {!isDocsRoute && !isSaveImmersiveRoute && <FooterComponent />}
       <ReceiverOverlayComponent />
     </>
   )
@@ -55,6 +70,7 @@ const SiteLayout = () => {
   return (
     <SiteLayoutContent
       pathname={location.pathname}
+      search={location.search}
       HeaderComponent={Header}
       FooterComponent={Footer}
       RemoteCommandListenerComponent={RemoteCommandListener}

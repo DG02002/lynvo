@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { LinkListItem } from "~/features/links/types"
+import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 
 import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { readJsonInitBody } from "../support/request-inspection"
@@ -82,10 +82,29 @@ const createEpisodeItem = (
           url: "https://media.example/sample-episode-1.mkv",
           label: filename,
           type: "file",
+          mediaNodeKind: "playable",
           size: "597.62 MB",
         },
       ],
     },
+    playback: { openedUrls: [] },
+  },
+})
+
+const createFolderItem = (
+  itemId: string,
+  title: string,
+  extractedLinks: ExtractedLink[]
+): LinkListItem => ({
+  kind: "saved",
+  id: itemId,
+  url: `https://media.example/${itemId}`,
+  timestamp: Date.now(),
+  title,
+  metadata: {
+    schemaVersion: 3,
+    source: { sourceName: "StreamLive" },
+    extraction: { extractedLinks },
     playback: { openedUrls: [] },
   },
 })
@@ -153,6 +172,7 @@ beforeEach(() => {
 afterEach(() => {
   localStorageValues.clear()
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe("GalleryGroupBrowser", () => {
@@ -286,6 +306,135 @@ describe("GalleryGroupBrowser", () => {
         "9. Episode 9, new",
       ])
     })
+  })
+
+  it("uses season artwork for a season folder and keeps loose episode stills", async () => {
+    const folderItem = createFolderItem(
+      "season-folder",
+      "Sample Series Sample Arc S04",
+      [
+        {
+          id: "season-folder-link-1",
+          url: "https://media.example/season-folder/e1.mkv",
+          label: episodeFilename,
+          type: "file",
+          mediaNodeKind: "playable",
+          size: "597.62 MB",
+        },
+        {
+          id: "season-folder-link-2",
+          url: "https://media.example/season-folder/e2.mkv",
+          label: episodeFilename.replace("S04E01", "S04E02"),
+          type: "file",
+          mediaNodeKind: "playable",
+          size: "597.62 MB",
+        },
+      ]
+    )
+    renderBrowser([
+      createEpisodeItem(
+        "sample-episode-3",
+        episodeFilename.replace("S04E01", "S04E03")
+      ),
+      folderItem,
+    ])
+
+    expect(
+      screen.getByRole("switch", { name: "Show episode names" })
+    ).toBeInTheDocument()
+    const folderRow = screen.getByRole("button", {
+      name: "Sample Series Sample Arc Season 4, new",
+    }).parentElement
+    const episodeRow = screen.getByRole("button", {
+      name: /^3\./,
+    }).parentElement
+    await waitFor(() => {
+      expect(
+        folderRow?.querySelector('img:not([aria-hidden="true"])')
+      ).toHaveAttribute("src", expect.stringContaining("season-poster.jpg"))
+      expect(
+        episodeRow?.querySelector('img:not([aria-hidden="true"])')
+      ).toHaveAttribute("src", expect.stringContaining("episode-still-3.jpg"))
+    })
+    expect(
+      folderRow?.querySelector('img[src*="episode-still-1.jpg"]')
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps episode stills when a group item contains only folder children", async () => {
+    const folderItem = createFolderItem(
+      "series-folder",
+      "Sample Series Sample Arc",
+      [
+        {
+          id: "season-one-folder",
+          url: "https://media.example/series-folder/season-1",
+          label: "Season 01",
+          type: "folder",
+          mediaNodeKind: "group",
+        },
+        {
+          id: "season-two-folder",
+          url: "https://media.example/series-folder/season-2",
+          label: "Season 02",
+          type: "folder",
+          mediaNodeKind: "group",
+        },
+      ]
+    )
+    renderBrowser([
+      folderItem,
+      createEpisodeItem(
+        "sample-episode-3",
+        episodeFilename.replace("S04E01", "S04E03")
+      ),
+    ])
+
+    expect(
+      screen.getByRole("switch", { name: "Show episode names" })
+    ).toBeInTheDocument()
+    const folderRow = screen.getByRole("button", {
+      name: "Sample Series Sample Arc, new",
+    }).parentElement
+    const episodeRow = screen.getByRole("button", {
+      name: /^3\./,
+    }).parentElement
+    await waitFor(() => {
+      expect(
+        episodeRow?.querySelector('img:not([aria-hidden="true"])')
+      ).toHaveAttribute("src", expect.stringContaining("episode-still-3.jpg"))
+    })
+    expect(folderRow?.querySelector('[role="img"]')).not.toBeInTheDocument()
+  })
+
+  it("falls back to the folder icon when season artwork is unavailable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ results: [{}] }), {
+            headers: { "Content-Type": "application/json" },
+          })
+      )
+    )
+    renderBrowser([
+      createFolderItem(
+        "season-folder-without-artwork",
+        "Unique Empty Artwork Series S19",
+        []
+      ),
+    ])
+
+    const folderRow = screen.getByRole("button", {
+      name: "Unique Empty Artwork Series S19, new",
+    }).parentElement
+    const artworkFrame = folderRow?.querySelector('[role="img"]')
+    await waitFor(() => {
+      expect(artworkFrame?.querySelector("svg")).toBeInTheDocument()
+    })
+    expect(
+      artworkFrame?.querySelector('img[src*="season-poster.jpg"]')
+    ).not.toBeInTheDocument()
   })
 
   it("removes every group item after a delete-all confirmation", async () => {
