@@ -7,6 +7,7 @@ import {
 } from "~/features/links/media-artwork"
 import type { SavedLinkListItem } from "~/features/links/types"
 import { useMediaView } from "~/features/site/settings/media-view-preference"
+import { SAVE_GROUP_SEARCH_PARAM } from "~/lib/paths"
 
 interface UseGalleryGroupRouteOptions {
   links: SavedLinkListItem[]
@@ -32,7 +33,8 @@ export const useGalleryGroupRoute = ({
   const mediaView = useMediaView()
   const [searchParams, setSearchParams] = useSearchParams()
   const isGalleryMediaView = mediaView === "gallery"
-  const galleryGroupKey = isGalleryMediaView ? searchParams.get("group") : null
+  const requestedGroupKey = searchParams.get(SAVE_GROUP_SEARCH_PARAM)
+  const galleryGroupKey = isGalleryMediaView ? requestedGroupKey : null
   const galleryGroups = useMemo(
     () =>
       isGalleryMediaView && !isFolderRoute
@@ -46,14 +48,27 @@ export const useGalleryGroupRoute = ({
   const isGroupRoute = galleryGroupKey !== null
   const isImmersiveRoute = isFolderRoute || isGroupRoute
 
+  // A group param the page cannot render (list view selected, unknown
+  // group) is cleared instead of lingering: the site layout drops chrome
+  // for /save?group=… and must never do that for an ignored param.
   useEffect(() => {
-    if (galleryGroupKey && !isPending && !openGalleryGroup) {
+    if (
+      requestedGroupKey &&
+      (!isGalleryMediaView || (!isPending && !openGalleryGroup))
+    ) {
       setSearchParams({}, { replace: true })
     }
-  }, [galleryGroupKey, isPending, openGalleryGroup, setSearchParams])
+  }, [
+    isGalleryMediaView,
+    isPending,
+    openGalleryGroup,
+    requestedGroupKey,
+    setSearchParams,
+  ])
 
   const exitGroup = () => setSearchParams({}, { replace: true })
-  const openGroup = (groupKey: string) => setSearchParams({ group: groupKey })
+  const openGroup = (groupKey: string) =>
+    setSearchParams({ [SAVE_GROUP_SEARCH_PARAM]: groupKey })
 
   return {
     isGalleryMediaView,

@@ -33,6 +33,12 @@ const MALFORMED_MARKER_UPPERCASE_PATTERN = /(?:^|\s)S[A-Z]{2,5}E[A-Z]{2,5}\b/
 const TECHNICAL_TOKEN_PATTERN =
   /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|atmos|dual\s+audio|multi\s+audio|remux|final\s+cut|subs?|subtitles?|bd|itunes)\b/i
 const GENERIC_TITLE_PATTERN = /^(?:file|sample|video|movie|episode|untitled)$/i
+// Release names often append "AKA <alternate title>" between the primary
+// title and the year/technical tail. Uppercase-only on purpose: lowercase
+// "aka" can be an ordinary word in the title, and a wrong cut poisons the
+// lookup worse than no cut at all.
+const ALTERNATE_TITLE_TOKEN_PATTERN = /\bAKA\b/
+const ALTERNATE_TITLE_BOUNDARY_PATTERN = /[[(]|\b(?:19|20)\d{2}\b/
 
 interface MarkerMatch {
   readonly kind: "episode" | "episode-range" | "season"
@@ -54,8 +60,32 @@ const stripMediaExtension = (filename: string): string =>
 const normalizeSeparators = (value: string): string =>
   value.replaceAll(/[._]+/g, " ").replaceAll(/\s+/g, " ").trim()
 
+const stripAlternateTitle = (value: string): string => {
+  const alternateTokenMatch = ALTERNATE_TITLE_TOKEN_PATTERN.exec(value)
+  if (!alternateTokenMatch) {
+    return value
+  }
+  const head = value.slice(0, alternateTokenMatch.index)
+  if (!head.trim()) {
+    // A name that begins with "AKA" carries it as the title itself, not as
+    // an alternate-name note.
+    return value
+  }
+  const tail = value.slice(alternateTokenMatch.index)
+  const boundaryMatches = [
+    ALTERNATE_TITLE_BOUNDARY_PATTERN.exec(tail),
+    TECHNICAL_TOKEN_PATTERN.exec(tail),
+  ].filter((match): match is RegExpExecArray => match !== null)
+  const boundaryIndex = boundaryMatches.length
+    ? Math.min(...boundaryMatches.map((match) => match.index))
+    : undefined
+  const keptTail =
+    boundaryIndex === undefined ? "" : tail.slice(boundaryIndex).trim()
+  return keptTail ? `${head.trim()} ${keptTail}` : head.trim()
+}
+
 const getMatchingText = (filename: string): string =>
-  normalizeSeparators(stripMediaExtension(filename))
+  stripAlternateTitle(normalizeSeparators(stripMediaExtension(filename)))
 
 const getAllYearMatches = (value: string): YearMatch[] => {
   const matches: YearMatch[] = []

@@ -12,10 +12,11 @@ const Header = ({ showSaveAction }: { showSaveAction: boolean }) => (
 const Footer = () => <footer data-testid="site-footer" />
 const EmptyComponent = () => null
 
-const renderLayout = (pathname: string, content: ReactNode) =>
+const renderLayout = (pathname: string, content: ReactNode, search = "") =>
   render(
     <SiteLayoutContent
       pathname={pathname}
+      search={search}
       HeaderComponent={Header}
       FooterComponent={Footer}
       RemoteCommandListenerComponent={EmptyComponent}
@@ -54,6 +55,26 @@ describe("SiteLayout", () => {
     expect(screen.queryByTestId("site-header")).not.toBeInTheDocument()
     expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
     expect(screen.getByRole("main")).toHaveClass("pt-0")
+  })
+
+  it("renders only route content while a gallery group hydrates", () => {
+    renderLayout(
+      "/save",
+      <div role="status">Loading saved links…</div>,
+      "?group=tv%3Asample-series%3A%3AS01"
+    )
+
+    expect(screen.getByText("Loading saved links…")).toBeVisible()
+    expect(screen.queryByTestId("site-header")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
+    expect(screen.getByRole("main")).toHaveClass("pt-0")
+  })
+
+  it("keeps the site chrome on the library without a group param", () => {
+    renderLayout("/save", <div>Library</div>, "?media=list")
+
+    expect(screen.getByTestId("site-header")).toBeInTheDocument()
+    expect(screen.getByTestId("site-footer")).toBeInTheDocument()
   })
 
   it("keeps the site chrome on non-folder routes", () => {

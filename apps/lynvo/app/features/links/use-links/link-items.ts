@@ -24,6 +24,7 @@ export interface CreateLinkUpdateOptions {
   item: LinkViewItem
   links: ExtractedLink[]
   debugLogEntry?: LinkDebugLogEntry
+  selectionFinalized?: boolean
 }
 
 export const createLinkViewItem = ({
@@ -54,6 +55,7 @@ export const createUpdatedItemWithLinks = ({
   item,
   links,
   debugLogEntry,
+  selectionFinalized,
 }: CreateLinkUpdateOptions): LinkViewItem => {
   const previous = getLinkViewItemMetadata(item)
   const metadata = createLinkMetadata({
@@ -63,6 +65,7 @@ export const createUpdatedItemWithLinks = ({
     debugLog: debugLogEntry
       ? appendLinkDebugLog(previous.debugLog, debugLogEntry)
       : undefined,
+    selectionFinalized,
   })
 
   return {

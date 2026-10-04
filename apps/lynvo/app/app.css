@@ -676,15 +676,6 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
     scroll-behavior: auto !important;
   }
 }
-body[data-save-list-fullscreen="true"] [data-site-header],
-body[data-save-list-fullscreen="true"] [data-site-footer] {
-  display: none;
-}
-
-body[data-save-list-fullscreen="true"] [data-site-content] {
-  padding-top: 0;
-}
-
 .save-list-group-artwork-frame {
   width: min(100%, 20rem);
   aspect-ratio: 2 / 3;

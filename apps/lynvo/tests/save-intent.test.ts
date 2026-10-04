@@ -136,6 +136,7 @@ describe("save intent", () => {
       kind: "updated",
       itemUrl: "https://example.com/shows",
       links: selectedLinks,
+      selectionFinalized: true,
     })
     expect(addLink).not.toHaveBeenCalled()
   })

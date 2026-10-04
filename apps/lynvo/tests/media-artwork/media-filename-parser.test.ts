@@ -236,4 +236,48 @@ describe("parseMediaFilename", () => {
       "ambiguous"
     )
   })
+
+  it("drops an AKA alternate-title segment before identifying the title", () => {
+    expect(
+      parseMediaFilename(
+        "The Desert Child AKA Lenfant du désert (2026) 2160p.WEB-DL.mkv"
+      )
+    ).toMatchObject({
+      kind: "movie",
+      title: "The Desert Child",
+      year: 2026,
+    })
+
+    expect(
+      parseMediaFilename("Metro.Love.Story.AKA.Histoire.de.Metro.2026.720p.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Metro Love Story",
+      year: 2026,
+    })
+
+    expect(
+      parseMediaFilename("Feature AKA Alternate Title With No Tail.mkv")
+    ).toMatchObject({
+      kind: "movie",
+      title: "Feature",
+      year: undefined,
+    })
+  })
+
+  it("keeps a leading AKA as the title itself", () => {
+    expect(parseMediaFilename("AKA 2023 1080p.mkv")).toMatchObject({
+      kind: "movie",
+      title: "AKA",
+      year: 2023,
+    })
+  })
+
+  it("keeps lowercase aka inside a title untouched", () => {
+    expect(parseMediaFilename("Te aka o te mirai (2020).mkv")).toMatchObject({
+      kind: "movie",
+      title: "Te aka o te mirai",
+      year: 2020,
+    })
+  })
 })

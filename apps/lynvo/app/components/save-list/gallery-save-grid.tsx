@@ -33,8 +33,11 @@ import { cn } from "~/lib/utils"
 
 import { ExtractionStatusTitle } from "./extraction-status"
 import {
+  getExtractionStatusLabel,
   getExtractionStatusInput,
   getExtractionStatusTitleSpec,
+  getExtractionWaitStatusInput,
+  type ExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
@@ -181,6 +184,7 @@ interface GallerySingleItemState {
   readonly isExtracting: boolean
   readonly isExtractionVisual: boolean
   readonly isFolderContainer: boolean
+  readonly statusSpec: ExtractionStatusTitleSpec
 }
 
 const getGallerySingleItemState = (
@@ -196,14 +200,51 @@ const getGallerySingleItemState = (
   const directLink = interactionState?.directLink
   const isExtracting =
     isSingleItem && item ? extractingItems.has(item.url) : false
+  // Group cards answer for every member: a queued or refreshing member
+  // must not render the group idle, and a failed member must be visible
+  // without opening the group. Pending wins over failed so in-progress
+  // retries do not flash the failure state.
+  const pendingMember = group.items.find((member) => {
+    const memberState = member.extractionStatus?.state
+    return (
+      memberState === "queued" ||
+      memberState === "running" ||
+      extractingItems.has(member.url)
+    )
+  })
+  const failedMember = group.items.find(
+    (member) => member.extractionStatus?.state === "failed"
+  )
+  const pendingMemberState = pendingMember?.extractionStatus?.state
+  let extractionState: LinkExtractionStatus["state"] = "complete"
+  if (pendingMemberState === "queued" || pendingMemberState === "running") {
+    extractionState = pendingMemberState
+  } else if (failedMember) {
+    extractionState = "failed"
+  }
+  const statusSpec: ExtractionStatusTitleSpec = isSingleItem
+    ? getExtractionStatusTitleSpec(item, isExtracting)
+    : {
+        status: getExtractionWaitStatusInput(
+          pendingMember !== undefined,
+          failedMember !== undefined
+        ),
+        fallbackLabel: pendingMember
+          ? getExtractionStatusLabel(
+              pendingMember,
+              extractingItems.has(pendingMember.url)
+            )
+          : undefined,
+        // The title component falls back to its own "Unable to load links"
+        // default when the member recorded no error text.
+        error: failedMember?.extractionStatus?.error,
+      }
   return {
     item,
     isSingleItem,
     directLink,
     isDirectLinkExpired: interactionState?.isDirectLinkExpired ?? false,
-    extractionState: isSingleItem
-      ? (item?.extractionStatus?.state ?? "complete")
-      : "complete",
+    extractionState,
     isExtracting,
     isExtractionVisual:
       getExtractionStatusInput(
@@ -215,6 +256,7 @@ const getGallerySingleItemState = (
       item !== undefined &&
       directLink === undefined &&
       getLinkViewItemExtractedLinks(item).length > 0,
+    statusSpec,
   }
 }
 
@@ -236,6 +278,7 @@ const GallerySaveItem = ({
     isExtracting,
     isExtractionVisual,
     isFolderContainer,
+    statusSpec,
   } = getGallerySingleItemState(group, extractingItems, currentTimeMs)
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
@@ -247,11 +290,14 @@ const GallerySaveItem = ({
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
+  // Once a manual selection is confirmed, the card stops offering the
+  // choice; the item menu's "Refresh link choices" reopens it.
   const shouldOfferLinkChoice =
     !shouldAutoSaveAllLinks &&
     isSingleItem &&
     item !== undefined &&
     !isExtractionVisual &&
+    !item.metadata.extraction.selectionFinalized &&
     (item.metadata?.extraction?.extractedLinks?.length ?? 0) > 1
   const { longPressHandlers, consumeLongPress } = useLongPress({
     enabled: Boolean(isSingleItem && item && !isExtractionVisual),
@@ -303,6 +349,10 @@ const GallerySaveItem = ({
         className={cn(
           "relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m transition-colors duration-150 motion-reduce:transition-none sm:rounded-3xl",
           "group-hover:border-foreground/25 group-has-[:focus-visible]:border-foreground/25 has-aria-expanded:border-foreground/25",
+          // Rings for the states the article broadcasts: a fresh save or
+          // completion highlight, and a failed extraction on any member.
+          "group-data-[highlighted]:ring-2 group-data-[highlighted]:ring-primary",
+          "group-data-[extraction-state=failed]:ring-2 group-data-[extraction-state=failed]:ring-destructive",
           isDirectLinkExpired && isSingleItem && "opacity-60"
         )}
       >
@@ -360,33 +410,27 @@ const GallerySaveItem = ({
         )}
       </div>
       <div className="px-1 pt-3 text-center">
-        {isSingleItem && item ? (
-          <ExtractionStatusTitle
-            {...getExtractionStatusTitleSpec(item, isExtracting)}
-            titleClassName="font-heading text-base font-normal"
-          >
-            <h3
-              className={cn(
-                "font-heading text-base font-normal break-words",
-                isDirectLinkExpired && "line-through"
-              )}
-            >
-              {group.displayTitle}
-            </h3>
-            {directLink?.expiry !== undefined && (
-              <span className="mt-1 flex justify-center text-xs text-muted-foreground">
-                <PlayableExpiryBadge
-                  expiresAt={directLink.expiry}
-                  expirySource={directLink.expirySource}
-                />
-              </span>
+        <ExtractionStatusTitle
+          {...statusSpec}
+          titleClassName="font-heading text-base font-normal"
+        >
+          <h3
+            className={cn(
+              "font-heading text-base font-normal break-words",
+              isDirectLinkExpired && "line-through"
             )}
-          </ExtractionStatusTitle>
-        ) : (
-          <h3 className="font-heading text-base font-normal break-words">
+          >
             {group.displayTitle}
           </h3>
-        )}
+          {isSingleItem && directLink?.expiry !== undefined && (
+            <span className="mt-1 flex justify-center text-xs text-muted-foreground">
+              <PlayableExpiryBadge
+                expiresAt={directLink.expiry}
+                expirySource={directLink.expirySource}
+              />
+            </span>
+          )}
+        </ExtractionStatusTitle>
       </div>
       <LinkDebugLogDialog
         item={item}

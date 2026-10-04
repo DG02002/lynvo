@@ -71,6 +71,8 @@ interface SavedLinksUpdatedOutcome {
   itemUrl: string
   links: ExtractedLink[]
   debugLogEntry?: LinkDebugLogEntry
+  /** True when the links came from a confirmed selection-dialog choice. */
+  selectionFinalized?: boolean
 }
 
 interface SavedLinkRefreshAttemptOutcome {

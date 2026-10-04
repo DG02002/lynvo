@@ -126,6 +126,7 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   extraction: Schema.Struct({
     extractedLinks: Schema.mutable(Schema.Array(extractedLinkSchema)),
     extractedAt: Schema.optional(Schema.Number),
+    selectionFinalized: Schema.optional(Schema.Boolean),
   }),
   playback: Schema.Struct({
     openedUrls: Schema.mutable(Schema.Array(Schema.String)),

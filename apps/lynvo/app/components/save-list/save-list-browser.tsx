@@ -1061,7 +1061,9 @@ export const SaveListBrowser = ({
                   key={itemKey}
                   className={cn(
                     "group relative flex items-stretch",
-                    SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
+                    SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+                    "data-[highlighted]:ring-1 data-[highlighted]:ring-inset data-[highlighted]:ring-primary",
+                    "data-[extraction-state=failed]:ring-1 data-[extraction-state=failed]:ring-inset data-[extraction-state=failed]:ring-destructive"
                   )}
                   data-highlighted={
                     highlightedId === item.id ? true : undefined

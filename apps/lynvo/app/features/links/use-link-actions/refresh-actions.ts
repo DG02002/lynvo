@@ -11,6 +11,7 @@ import type {
   LinkDebugLogEntry,
   LinkListItem,
 } from "~/features/links/types"
+import type { UpdateLinksOptions } from "~/features/links/use-links"
 import { showErrorToast } from "~/lib/toast-notifications"
 
 import type {
@@ -39,7 +40,7 @@ export const useRefreshActions = ({
   updateLinks: (
     url: string,
     links: ExtractedLink[],
-    debugLogEntry?: LinkDebugLogEntry
+    options?: UpdateLinksOptions
   ) => void
   appendDebugLog: (url: string, debugLogEntry: LinkDebugLogEntry) => void
   cacheResolvedMirrors: (
@@ -61,7 +62,9 @@ export const useRefreshActions = ({
         if (outcome.kind === "selection-required") {
           openSelectionDialog(outcome.selection)
         } else if (outcome.kind === "links-updated") {
-          updateLinks(outcome.itemUrl, outcome.links, outcome.debugLogEntry)
+          updateLinks(outcome.itemUrl, outcome.links, {
+            debugLogEntry: outcome.debugLogEntry,
+          })
         } else if (outcome.kind === "refresh-attempt") {
           appendDebugLog(outcome.itemUrl, outcome.debugLogEntry)
         } else if (outcome.kind === "error") {

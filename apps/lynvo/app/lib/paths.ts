@@ -37,6 +37,13 @@ const saveFolderRouteSegment = "save/folder"
 
 export const SAVE_FOLDER_PATH_SEARCH_PARAM = "path"
 
+/** The gallery group view is a search-param route on /save, not a pathname
+    route, so chrome decisions must read the query string. */
+export const SAVE_GROUP_SEARCH_PARAM = "group"
+
+export const hasSaveGroupSearchParam = (search: string): boolean =>
+  new URLSearchParams(search).has(SAVE_GROUP_SEARCH_PARAM)
+
 export const savePaths = {
   root: "/save",
   folderPrefix: `/${saveFolderRouteSegment}/`,

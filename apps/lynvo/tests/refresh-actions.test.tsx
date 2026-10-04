@@ -57,11 +57,12 @@ describe("link refresh actions", () => {
       await result.current.handleSoftRefresh(item.url)
     })
 
-    expect(updateLinks).toHaveBeenCalledWith(
-      item.url,
-      updatedLinks,
-      expect.objectContaining({ outcome: "complete", attempt: 2 })
-    )
+    expect(updateLinks).toHaveBeenCalledWith(item.url, updatedLinks, {
+      debugLogEntry: expect.objectContaining({
+        outcome: "complete",
+        attempt: 2,
+      }),
+    })
   })
 
   it("records a pending attempt when refresh needs link selection", async () => {

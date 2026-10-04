@@ -395,6 +395,7 @@ const metadataOperationSchema = Schema.Union([
     expectedExtractionJson: Schema.String,
     extractedLinksJson: Schema.String,
     debugLogEntryJson: Schema.optional(Schema.String),
+    selectionFinalized: Schema.optional(Schema.Boolean),
   }),
   Schema.Struct({
     kind: Schema.Literal("appendDebugLog"),

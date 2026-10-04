@@ -53,6 +53,7 @@ export const createLinkMetadata = (input: {
   extractedLinks?: ExtractedLink[]
   previous?: LinkMetadata
   debugLog?: LinkDebugLogEntry[]
+  selectionFinalized?: boolean
 }): LinkMetadata => {
   const metadata: LinkMetadata = {
     schemaVersion: 3,
@@ -67,6 +68,12 @@ export const createLinkMetadata = (input: {
     extraction: {
       extractedLinks: stripOpenedFlags(input.extractedLinks ?? []),
       extractedAt: Date.now(),
+      // Replacements that did not come from the selection dialog (refresh,
+      // folder expansion) keep the confirmed choice; only a brand-new
+      // extraction starts unfinalized.
+      selectionFinalized:
+        input.selectionFinalized ??
+        input.previous?.extraction.selectionFinalized,
     },
     playback: input.previous?.playback ?? {
       openedUrls: [],
