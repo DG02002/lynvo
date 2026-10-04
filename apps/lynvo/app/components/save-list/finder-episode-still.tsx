@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
 
 import {
   getMediaArtworkRequest,
@@ -28,6 +29,13 @@ interface FinderEpisodeStillLookupState {
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
   readonly isLookupPending: boolean
+}
+
+interface FinderArtworkLookupState {
+  readonly imagePath: string | undefined
+  readonly imageType: "poster" | "still"
+  readonly isLookupPending: boolean
+  readonly episodeTitle: string | undefined
 }
 
 interface FinderEpisodeStillDisplayProps {
@@ -83,20 +91,49 @@ export const useFinderEpisodeStill = (
       isEnabled ? getMediaArtworkRequest(label, parentFolderName) : undefined,
     [isEnabled, label, parentFolderName]
   )
+  const artwork = useFinderArtwork(artworkRequest, "still")
+
+  return {
+    imagePath: artwork.imagePath,
+    imageType: artwork.imageType,
+    isLookupPending: artwork.isLookupPending,
+    episodeDisplayTitle: getMediaEpisodeDisplayTitle(
+      label,
+      artwork.episodeTitle,
+      parentFolderName
+    ),
+  }
+}
+
+export const useFinderSeasonPoster = (
+  artworkRequest: MediaArtworkRequest | undefined
+): Omit<FinderArtworkLookupState, "episodeTitle"> => {
+  const artwork = useFinderArtwork(artworkRequest, "poster")
+  return {
+    imagePath: artwork.imagePath,
+    imageType: artwork.imageType,
+    isLookupPending: artwork.isLookupPending,
+  }
+}
+
+const useFinderArtwork = (
+  artworkRequest: MediaArtworkRequest | undefined,
+  preferredImageType: "poster" | "still"
+): FinderArtworkLookupState => {
   const artwork = useMediaArtwork(artworkRequest)
-  const imagePath = artwork?.stillPath ?? artwork?.posterPath
-  const imageType = artwork?.stillPath ? "still" : "poster"
+  const imagePath =
+    preferredImageType === "poster"
+      ? artwork?.posterPath
+      : (artwork?.stillPath ?? artwork?.posterPath)
+  const imageType =
+    preferredImageType === "poster" || !artwork?.stillPath ? "poster" : "still"
   const isLookupPending = artworkRequest !== undefined && artwork === undefined
 
   return {
     imagePath,
     imageType,
     isLookupPending,
-    episodeDisplayTitle: getMediaEpisodeDisplayTitle(
-      label,
-      artwork?.episodeTitle,
-      parentFolderName
-    ),
+    episodeTitle: artwork?.episodeTitle,
   }
 }
 

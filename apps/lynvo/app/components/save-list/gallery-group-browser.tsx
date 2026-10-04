@@ -9,12 +9,10 @@ import { useMemo } from "react"
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
-  getEpisodeListingLabels,
-  getEpisodeOnlyListingLabel,
   getGalleryItemLabel,
+  getMediaArtworkRequest,
   getMediaDisplayTitle,
   hasEpisodeMarker,
   parseMediaFilename,
@@ -33,6 +31,7 @@ import {
 import {
   FinderEpisodeStillDisplay,
   useFinderEpisodeStill,
+  useFinderSeasonPoster,
 } from "./finder-episode-still"
 import { GalleryGroupMenu } from "./gallery-group-menu"
 import {
@@ -66,8 +65,8 @@ interface GalleryGroupItemRowProps {
   readonly itemLabel: string
   readonly displayTitle: string
   readonly titleDisplay: FolderTitleDisplay
-  readonly shouldShowEpisodeStill: boolean
-  readonly episodeStillSource: GalleryItemEpisodeStillSource | undefined
+  readonly shouldShowRowArtwork: boolean
+  readonly artworkSource: GalleryItemArtworkSource | undefined
 }
 
 const GalleryGroupItemRow = ({
@@ -79,8 +78,8 @@ const GalleryGroupItemRow = ({
   itemLabel,
   displayTitle,
   titleDisplay,
-  shouldShowEpisodeStill,
-  episodeStillSource,
+  shouldShowRowArtwork,
+  artworkSource,
 }: GalleryGroupItemRowProps) => {
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
@@ -114,22 +113,32 @@ const GalleryGroupItemRow = ({
       />
     </SaveListRowIcon>
   )
+  const isSeasonFolder = artworkSource?.kind === "season"
   const episodeStill = useFinderEpisodeStill(
-    episodeStillSource?.label ?? itemLabel,
-    episodeStillSource?.parentFolderName,
-    shouldShowEpisodeStill
+    artworkSource?.kind === "episode" ? artworkSource.label : itemLabel,
+    undefined,
+    shouldShowRowArtwork && artworkSource?.kind === "episode"
   )
-  // Folder rows resolve a still from a child episode, but their title
-  // stays the folder's own name — a child's episode title would misname
-  // the folder.
+  const seasonPoster = useFinderSeasonPoster(
+    artworkSource?.kind === "season" ? artworkSource.request : undefined
+  )
+  const rowArtwork = isSeasonFolder ? seasonPoster : episodeStill
+  const seasonFolderFallbackIcon = (
+    <SaveListRowIcon>
+      <HugeiconsIcon icon={Folder01Icon} className="size-6" />
+    </SaveListRowIcon>
+  )
+  // Season folder labels stay intact when the episode-title toggle is on.
   const rowDisplayTitle =
-    titleDisplay === "episode" && !episodeStillSource?.parentFolderName
+    titleDisplay === "episode" && artworkSource?.kind === "episode"
       ? episodeStill.episodeDisplayTitle
       : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
   const shouldCenterMobileNewBadge =
-    shouldShowEpisodeStill && titleDisplay === "episode"
+    shouldShowRowArtwork &&
+    artworkSource?.kind === "episode" &&
+    titleDisplay === "episode"
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -154,17 +163,19 @@ const GalleryGroupItemRow = ({
     <MediaListRow
       label={rowDisplayTitle}
       icon={
-        shouldShowEpisodeStill ? (
+        shouldShowRowArtwork ? (
           <span className={GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS}>
             <FinderEpisodeStillDisplay
               label={itemLabel}
-              fallbackIcon={rowFallbackIcon}
+              fallbackIcon={
+                isSeasonFolder ? seasonFolderFallbackIcon : rowFallbackIcon
+              }
               isResolving={isExtractionVisual}
               isDimmed={isDirectLinkExpired}
               isWatched={directLink?.opened === true}
-              imagePath={episodeStill.imagePath}
-              imageType={episodeStill.imageType}
-              isLookupPending={episodeStill.isLookupPending}
+              imagePath={rowArtwork.imagePath}
+              imageType={rowArtwork.imageType}
+              isLookupPending={rowArtwork.isLookupPending}
             />
           </span>
         ) : (
@@ -214,38 +225,36 @@ const GalleryGroupItemRow = ({
       onActivate={handleActivate}
       disabled={directLink !== undefined && isDirectLinkExpired}
       isOpened={directLink?.opened === true}
-      shouldStackIconOnMobile={shouldShowEpisodeStill}
+      shouldStackIconOnMobile={shouldShowRowArtwork}
     />
   )
 }
 
 interface GalleryItemEpisodeStillSource {
+  readonly kind: "episode"
   readonly label: string
-  readonly parentFolderName?: string
 }
 
-// Episode items carry their own S/E marker, but a folder item's label is
-// the folder name — no marker. Folder items resolve a still from their
-// extracted children instead, exactly like the folder view does, so one
-// folder item in a group no longer switches stills off for every episode
-// row around it.
-const getItemEpisodeStillSource = (
-  item: LinkListItem,
+interface GalleryItemSeasonPosterSource {
+  readonly kind: "season"
+  readonly request: NonNullable<ReturnType<typeof getMediaArtworkRequest>>
+}
+
+type GalleryItemArtworkSource =
+  | GalleryItemEpisodeStillSource
+  | GalleryItemSeasonPosterSource
+
+// Episode rows use their own still. A season folder uses the season request
+// from its label, without borrowing artwork from any extracted child.
+const getItemArtworkSource = (
   itemLabel: string
-): GalleryItemEpisodeStillSource | undefined => {
+): GalleryItemArtworkSource | undefined => {
   if (hasEpisodeMarker(itemLabel)) {
-    return { label: itemLabel }
+    return { kind: "episode", label: itemLabel }
   }
-  const childLinks = getLinkViewItemExtractedLinks(item)
-  if (childLinks.length === 0) {
-    return undefined
-  }
-  const firstEpisodeLabel = getEpisodeOnlyListingLabel(
-    getEpisodeListingLabels(childLinks, itemLabel),
-    itemLabel
-  )
-  return firstEpisodeLabel
-    ? { label: firstEpisodeLabel, parentFolderName: itemLabel }
+  const request = getMediaArtworkRequest(itemLabel)
+  return request?.mediaKind === "tv" && request.episodeNumber === undefined
+    ? { kind: "season", request }
     : undefined
 }
 
@@ -272,26 +281,22 @@ export const GalleryGroupBrowser = ({
     () => group.items.map((item) => getGalleryItemLabel(item)),
     [group.items]
   )
-  const itemStillSources = useMemo(
-    () =>
-      group.items.map((item, itemIndex) =>
-        getItemEpisodeStillSource(item, itemLabels[itemIndex] ?? "")
-      ),
-    [group.items, itemLabels]
+  const itemArtworkSources = useMemo(
+    () => itemLabels.map((itemLabel) => getItemArtworkSource(itemLabel)),
+    [itemLabels]
   )
-  const shouldShowEpisodeStills =
+  const canShowEpisodeNames =
     group.artworkRequest?.mediaKind === "tv" &&
-    itemStillSources.length > 0 &&
-    itemStillSources.every((stillSource) => stillSource !== undefined)
-  const groupTitleDisplay = shouldShowEpisodeStills ? titleDisplay : "filename"
+    itemArtworkSources.some((source) => source?.kind === "episode")
+  const groupTitleDisplay = canShowEpisodeNames ? titleDisplay : "filename"
   const sortedItemEntries = useMemo(() => {
     const itemEntries = group.items.map((item, itemIndex) => ({
       item,
       itemLabel: itemLabels[itemIndex] ?? "",
-      episodeStillSource: itemStillSources[itemIndex],
+      artworkSource: itemArtworkSources[itemIndex],
       originalIndex: itemIndex,
     }))
-    if (!shouldShowEpisodeStills) {
+    if (!canShowEpisodeNames) {
       return itemEntries
     }
     return itemEntries.toSorted(
@@ -301,7 +306,7 @@ export const GalleryGroupBrowser = ({
         (parseMediaFilename(secondEntry.itemLabel).episodeNumber ??
           secondEntry.originalIndex)
     )
-  }, [group.items, itemLabels, itemStillSources, shouldShowEpisodeStills])
+  }, [group.items, itemLabels, itemArtworkSources, canShowEpisodeNames])
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
@@ -319,7 +324,7 @@ export const GalleryGroupBrowser = ({
             />
           </h1>
         </div>
-        {shouldShowEpisodeStills ? (
+        {canShowEpisodeNames ? (
           <div className="flex items-center justify-center px-1 md:px-0">
             <FolderTitleDisplayToggleButton
               titleDisplay={titleDisplay}
@@ -340,8 +345,14 @@ export const GalleryGroupBrowser = ({
         </div>
         <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
-            {sortedItemEntries.map(
-              ({ item, itemLabel, episodeStillSource }) => (
+            {sortedItemEntries.map(({ item, itemLabel, artworkSource }) => {
+              const displayTitle =
+                artworkSource?.kind === "season" ||
+                groupTitleDisplay !== "episode"
+                  ? itemLabel
+                  : (getMediaDisplayTitle(itemLabel) ?? itemLabel)
+
+              return (
                 <GalleryGroupItemRow
                   key={item.id ?? item.url}
                   item={item}
@@ -350,19 +361,16 @@ export const GalleryGroupBrowser = ({
                   currentTimeMs={currentTimeMs}
                   onOpenItem={onOpenItem}
                   itemLabel={itemLabel}
-                  displayTitle={
-                    groupTitleDisplay === "episode"
-                      ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
-                      : itemLabel
-                  }
+                  displayTitle={displayTitle}
                   titleDisplay={groupTitleDisplay}
-                  shouldShowEpisodeStill={
-                    shouldShowEpisodeStills && episodeStillSource !== undefined
+                  shouldShowRowArtwork={
+                    group.artworkRequest?.mediaKind === "tv" &&
+                    artworkSource !== undefined
                   }
-                  episodeStillSource={episodeStillSource}
+                  artworkSource={artworkSource}
                 />
               )
-            )}
+            })}
           </div>
         </div>
       </div>
