@@ -288,6 +288,62 @@ describe("GalleryGroupBrowser", () => {
     })
   })
 
+  it("shows stills when a group mixes an episode item with a season folder item", async () => {
+    const folderItem: LinkListItem = {
+      kind: "saved",
+      id: "season-folder",
+      url: "https://media.example/season-folder",
+      timestamp: Date.now(),
+      title: "Sample Series Sample Arc S04",
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "StreamLive" },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "season-folder-link-1",
+              url: "https://media.example/season-folder/e1.mkv",
+              label: episodeFilename,
+              type: "file",
+              size: "597.62 MB",
+            },
+            {
+              id: "season-folder-link-2",
+              url: "https://media.example/season-folder/e2.mkv",
+              label: episodeFilename.replace("S04E01", "S04E02"),
+              type: "file",
+              size: "597.62 MB",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+    const view = renderBrowser([
+      createEpisodeItem(
+        "sample-episode-3",
+        episodeFilename.replace("S04E01", "S04E03")
+      ),
+      folderItem,
+    ])
+
+    // The folder item must not switch stills off for the whole group.
+    expect(
+      screen.getByRole("switch", { name: "Show episode names" })
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        view.container.querySelector('img[src*="episode-still-3.jpg"]')
+      ).toBeInTheDocument()
+      // The folder row resolves a still from its first episode child.
+      expect(
+        view.container.querySelector('img[src*="episode-still-1.jpg"]')
+      ).toBeInTheDocument()
+    })
+    // The folder row keeps its own name rather than a child's episode name.
+    expect(screen.getByText("Sample Series Sample Arc S04")).toBeInTheDocument()
+  })
+
   it("removes every group item after a delete-all confirmation", async () => {
     const { actions, onExit } = renderBrowser(
       [

@@ -181,6 +181,12 @@ const getSearchQuery = (searchQuery: string): string | undefined => {
   return trimmedQuery || undefined
 }
 
+// The picker starts from what Lynvo already knows about the item: the
+// stored pick's title, else the saved title. An empty query made fixing a
+// bad lookup slower than the lookup itself.
+const getArtworkPrefillQuery = (item: LinkViewItem): string =>
+  (item.metadata.artwork?.title ?? item.title ?? "").trim()
+
 const startArtworkSearch = (
   searchAbortController: ArtworkSearchControllerRef
 ): AbortController => {
@@ -441,8 +447,15 @@ const ArtworkDialog = ({
       return undefined
     }
     dispatch({ type: "dialog-reset" })
+    const prefillQuery = getArtworkPrefillQuery(item)
+    if (prefillQuery) {
+      // Prefill and run the search so the picker opens with candidates
+      // for the title Lynvo already parsed.
+      dispatch({ type: "query-changed", query: prefillQuery })
+      void search(prefillQuery)
+    }
     return () => abortActiveSearch()
-  }, [open, item])
+  }, [open, item, search])
 
   const tvCandidates = getCandidatesByKind(state.candidates, "tv")
   const movieCandidates = getCandidatesByKind(state.candidates, "movie")

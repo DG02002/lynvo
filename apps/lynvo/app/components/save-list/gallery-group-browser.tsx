@@ -9,11 +9,13 @@ import { useMemo } from "react"
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
+  getEpisodeListingLabels,
   getGalleryItemLabel,
   getMediaDisplayTitle,
-  isEpisodeOnlyListing,
+  hasEpisodeMarker,
   parseMediaFilename,
   type GalleryGroup,
 } from "~/features/links/media-artwork"
@@ -64,6 +66,7 @@ interface GalleryGroupItemRowProps {
   readonly displayTitle: string
   readonly titleDisplay: FolderTitleDisplay
   readonly shouldShowEpisodeStill: boolean
+  readonly episodeStillSource: GalleryItemEpisodeStillSource | undefined
 }
 
 const GalleryGroupItemRow = ({
@@ -76,6 +79,7 @@ const GalleryGroupItemRow = ({
   displayTitle,
   titleDisplay,
   shouldShowEpisodeStill,
+  episodeStillSource,
 }: GalleryGroupItemRowProps) => {
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
@@ -110,12 +114,17 @@ const GalleryGroupItemRow = ({
     </SaveListRowIcon>
   )
   const episodeStill = useFinderEpisodeStill(
-    itemLabel,
-    undefined,
+    episodeStillSource?.label ?? itemLabel,
+    episodeStillSource?.parentFolderName,
     shouldShowEpisodeStill
   )
+  // Folder rows resolve a still from a child episode, but their title
+  // stays the folder's own name — a child's episode title would misname
+  // the folder.
   const rowDisplayTitle =
-    titleDisplay === "episode" ? episodeStill.episodeDisplayTitle : displayTitle
+    titleDisplay === "episode" && !episodeStillSource?.parentFolderName
+      ? episodeStill.episodeDisplayTitle
+      : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
   const shouldCenterMobileNewBadge =
@@ -209,6 +218,35 @@ const GalleryGroupItemRow = ({
   )
 }
 
+interface GalleryItemEpisodeStillSource {
+  readonly label: string
+  readonly parentFolderName?: string
+}
+
+// Episode items carry their own S/E marker, but a folder item's label is
+// the folder name — no marker. Folder items resolve a still from their
+// extracted children instead, exactly like the folder view does, so one
+// folder item in a group no longer switches stills off for every episode
+// row around it.
+const getItemEpisodeStillSource = (
+  item: LinkListItem,
+  itemLabel: string
+): GalleryItemEpisodeStillSource | undefined => {
+  if (hasEpisodeMarker(itemLabel)) {
+    return { label: itemLabel }
+  }
+  const childLinks = getLinkViewItemExtractedLinks(item)
+  if (childLinks.length === 0) {
+    return undefined
+  }
+  const firstEpisodeLabel = getEpisodeListingLabels(childLinks, itemLabel).find(
+    (childLabel) => hasEpisodeMarker(childLabel, itemLabel)
+  )
+  return firstEpisodeLabel
+    ? { label: firstEpisodeLabel, parentFolderName: itemLabel }
+    : undefined
+}
+
 interface GalleryGroupBrowserProps {
   readonly group: GalleryGroup
   readonly actions: LinkItemActions
@@ -232,15 +270,23 @@ export const GalleryGroupBrowser = ({
     () => group.items.map((item) => getGalleryItemLabel(item)),
     [group.items]
   )
+  const itemStillSources = useMemo(
+    () =>
+      group.items.map((item, itemIndex) =>
+        getItemEpisodeStillSource(item, itemLabels[itemIndex] ?? "")
+      ),
+    [group.items, itemLabels]
+  )
   const shouldShowEpisodeStills =
     group.artworkRequest?.mediaKind === "tv" &&
-    itemLabels.length > 0 &&
-    isEpisodeOnlyListing(itemLabels)
+    itemStillSources.length > 0 &&
+    itemStillSources.every((stillSource) => stillSource !== undefined)
   const groupTitleDisplay = shouldShowEpisodeStills ? titleDisplay : "filename"
   const sortedItemEntries = useMemo(() => {
     const itemEntries = group.items.map((item, itemIndex) => ({
       item,
-      itemLabel: itemLabels[itemIndex],
+      itemLabel: itemLabels[itemIndex] ?? "",
+      episodeStillSource: itemStillSources[itemIndex],
       originalIndex: itemIndex,
     }))
     if (!shouldShowEpisodeStills) {
@@ -253,7 +299,7 @@ export const GalleryGroupBrowser = ({
         (parseMediaFilename(secondEntry.itemLabel).episodeNumber ??
           secondEntry.originalIndex)
     )
-  }, [group.items, itemLabels, shouldShowEpisodeStills])
+  }, [group.items, itemLabels, itemStillSources, shouldShowEpisodeStills])
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
@@ -292,24 +338,29 @@ export const GalleryGroupBrowser = ({
         </div>
         <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
-            {sortedItemEntries.map(({ item, itemLabel }) => (
-              <GalleryGroupItemRow
-                key={item.id ?? item.url}
-                item={item}
-                actions={actions}
-                isExtracting={extractingItems.has(item.url)}
-                currentTimeMs={currentTimeMs}
-                onOpenItem={onOpenItem}
-                itemLabel={itemLabel}
-                displayTitle={
-                  groupTitleDisplay === "episode"
-                    ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
-                    : itemLabel
-                }
-                titleDisplay={groupTitleDisplay}
-                shouldShowEpisodeStill={shouldShowEpisodeStills}
-              />
-            ))}
+            {sortedItemEntries.map(
+              ({ item, itemLabel, episodeStillSource }) => (
+                <GalleryGroupItemRow
+                  key={item.id ?? item.url}
+                  item={item}
+                  actions={actions}
+                  isExtracting={extractingItems.has(item.url)}
+                  currentTimeMs={currentTimeMs}
+                  onOpenItem={onOpenItem}
+                  itemLabel={itemLabel}
+                  displayTitle={
+                    groupTitleDisplay === "episode"
+                      ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
+                      : itemLabel
+                  }
+                  titleDisplay={groupTitleDisplay}
+                  shouldShowEpisodeStill={
+                    shouldShowEpisodeStills && episodeStillSource !== undefined
+                  }
+                  episodeStillSource={episodeStillSource}
+                />
+              )
+            )}
           </div>
         </div>
       </div>

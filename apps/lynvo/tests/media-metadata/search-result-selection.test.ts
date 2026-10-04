@@ -39,4 +39,43 @@ describe("search result selection", () => {
     ])
     expect(selected?.providerId).toBe(12345)
   })
+
+  it("matches apostrophe titles against filename-style queries", () => {
+    const tmdbTitle = "KonoSuba: God's Blessing on This Wonderful World!"
+    expect(
+      selectBestSearchResult("KonoSuba Gods Blessing", [
+        result(tmdbTitle, 12345, 2024),
+      ])
+    ).toMatchObject({ providerId: 12345 })
+    expect(
+      selectBestSearchResult("KonoSuba: God's Blessing", [
+        result(tmdbTitle, 12345, 2024),
+      ])
+    ).toMatchObject({ providerId: 12345 })
+  })
+
+  it("matches non-latin titles and folds latin accents", () => {
+    expect(
+      selectBestSearchResult("몽정기 2", [result("몽정기 2", 99, 2005)])
+    ).toMatchObject({ providerId: 99 })
+    expect(
+      selectBestSearchResult("Tokyo Story", [result("Tôkyô Story", 100, 1953)])
+    ).toMatchObject({ providerId: 100 })
+  })
+
+  it("refuses an exact-title tie across different years", () => {
+    const selected = selectBestSearchResult("The Avengers", [
+      result("The Avengers", 101, 1998),
+      result("The Avengers", 24428, 2012),
+    ])
+    expect(selected).toBeUndefined()
+  })
+
+  it("picks through same-year title ties", () => {
+    const selected = selectBestSearchResult("The Avengers", [
+      result("The Avengers", 101, 2012),
+      result("The Avengers", 24428, 2012),
+    ])
+    expect(selected?.providerId).toBe(101)
+  })
 })

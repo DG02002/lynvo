@@ -1,11 +1,18 @@
 import type { TmdbSearchResult } from "./tmdb-adapter"
 
+// Titles must normalize the same way on both sides of the comparison.
+// Apostrophes join the word they sit in ("God's" is the one token "gods"),
+// because release filenames drop them ("Gods") while TMDB keeps them;
+// splitting there makes every apostrophe title unmatchable. Unicode
+// letters survive so non-latin scripts compare at all, and latin accents
+// fold so "Tokyo" still finds "Tôkyô".
 const normalizeTitle = (value: string): string =>
   value
     .normalize("NFD")
     .replaceAll(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, " ")
+    .replaceAll(/['’]/g, "")
+    .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
 
 const levenshteinWithin = (
@@ -85,7 +92,10 @@ const scoreSearchResult = (
  * TMDB ranks loosely and returns fuzzy hits first when the query is
  * mistyped, so the first result is regularly a different work entirely.
  * Only a result whose title genuinely matches the query is used; when
- * nothing matches, no artwork beats wrong artwork.
+ * nothing matches, no artwork beats wrong artwork. An exact-title tie
+ * across different years ("The Avengers" 1998 vs 2012) is the same
+ * ambiguity: the picker decides through the empty outcome's candidates
+ * instead of a silent coin flip.
  */
 export const selectBestSearchResult = (
   query: string,
@@ -96,16 +106,25 @@ export const selectBestSearchResult = (
   if (queryTokens.length === 0) {
     return undefined
   }
-  let bestResult: TmdbSearchResult | undefined
   let bestScore = 0
+  let topResults: readonly TmdbSearchResult[] = []
   for (const result of results) {
     const score = scoreSearchResult(normalizedQuery, queryTokens, result)
     if (score > bestScore) {
-      bestResult = result
       bestScore = score
+      topResults = [result]
+    } else if (score > 0 && score === bestScore) {
+      topResults = [...topResults, result]
     }
   }
-  return bestScore >= 0.75 ? bestResult : undefined
+  if (bestScore < 0.75) {
+    return undefined
+  }
+  const distinctYears = new Set(topResults.map((result) => result.year))
+  if (distinctYears.size > 1) {
+    return undefined
+  }
+  return topResults[0]
 }
 
 const toTokenList = (value: string): readonly string[] =>

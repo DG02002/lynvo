@@ -31,7 +31,13 @@ const MALFORMED_MARKER_PLACEHOLDER_PATTERN =
   /(?:^|\s)S[xy#?*]{1,5}E[xy#?*]{1,5}\b/i
 const MALFORMED_MARKER_UPPERCASE_PATTERN = /(?:^|\s)S[A-Z]{2,5}E[A-Z]{2,5}\b/
 const TECHNICAL_TOKEN_PATTERN =
-  /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|atmos|dual\s+audio|multi\s+audio|remux|final\s+cut|subs?|subtitles?|bd|itunes)\b/i
+  /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|dd|atmos|truehd|ac3|eac3|dual\s+audio|multi\s+audio|multi|remux|final\s+cut|subs?|subtitles?|amzn|nf|atv|dsnp|hulu|pcok|strz|480i|576i|ntsc|ds4k|bd|itunes)\b/i
+// Edition/version tokens can sit between the title and the year or marker,
+// where they would poison the title slice on no-year names. Uppercase-only
+// on purpose: scene naming writes these in caps, while mixed case is an
+// ordinary title word ("Uncut Gems", "The Extended Stay").
+const EDITION_TOKEN_PATTERN =
+  /(?:^|\s)(?:PROPER|REPACK|RERIP|REMASTERED|EXTENDED|UNCUT|IMAX|COMBINED)\b|\bv\d+\b/
 const GENERIC_TITLE_PATTERN = /^(?:file|sample|video|movie|episode|untitled)$/i
 // Release names often append "AKA <alternate title>" between the primary
 // title and the year/technical tail. Uppercase-only on purpose: lowercase
@@ -39,6 +45,10 @@ const GENERIC_TITLE_PATTERN = /^(?:file|sample|video|movie|episode|untitled)$/i
 // lookup worse than no cut at all.
 const ALTERNATE_TITLE_TOKEN_PATTERN = /\bAKA\b/
 const ALTERNATE_TITLE_BOUNDARY_PATTERN = /[[(]|\b(?:19|20)\d{2}\b/
+// Season and episode markers must survive the cut: alternate titles can
+// carry the release's only marker ("… AKA Tôkyô Ribenjâzu S03 1080p…").
+const ALTERNATE_TITLE_MARKER_BOUNDARY_PATTERN =
+  /\b(?:S\d{1,3}|SEASON\s*\d{1,3})\b/i
 
 interface MarkerMatch {
   readonly kind: "episode" | "episode-range" | "season"
@@ -74,6 +84,7 @@ const stripAlternateTitle = (value: string): string => {
   const tail = value.slice(alternateTokenMatch.index)
   const boundaryMatches = [
     ALTERNATE_TITLE_BOUNDARY_PATTERN.exec(tail),
+    ALTERNATE_TITLE_MARKER_BOUNDARY_PATTERN.exec(tail),
     TECHNICAL_TOKEN_PATTERN.exec(tail),
   ].filter((match): match is RegExpExecArray => match !== null)
   const boundaryIndex = boundaryMatches.length
@@ -138,10 +149,22 @@ const getYearMatch = (value: string): YearMatch | undefined => {
   )
 }
 
+const stripTechnicalAndEditionTokens = (value: string): string =>
+  value.replace(TECHNICAL_TOKEN_PATTERN, "").replace(EDITION_TOKEN_PATTERN, "")
+
+const findTechnicalTokenStart = (value: string): number | undefined => {
+  const starts = [
+    TECHNICAL_TOKEN_PATTERN.exec(value)?.index,
+    EDITION_TOKEN_PATTERN.exec(value)?.index,
+  ].filter((start): start is number => start !== undefined)
+  return starts.length ? Math.min(...starts) : undefined
+}
+
 const normalizeTitle = (value: string): string | undefined => {
   const withoutReleaseGroups = value.replace(/^\s*(?:\[[^\]]+\]\s*)+/, "")
-  const withoutTechnicalTail = withoutReleaseGroups
-    .replace(TECHNICAL_TOKEN_PATTERN, "")
+  const withoutTechnicalTail = stripTechnicalAndEditionTokens(
+    withoutReleaseGroups
+  )
     .replaceAll(/\s+/g, " ")
     .trim()
   const withoutDanglingPunctuation = withoutTechnicalTail
@@ -166,8 +189,10 @@ const getNormalizedTitleIdentity = (title: string): string =>
     .replaceAll(/\s+/g, " ")
 
 const getFilenameEpisodeTitle = (suffix: string): string | undefined => {
-  const technicalStart = TECHNICAL_TOKEN_PATTERN.exec(suffix)?.index
-  return normalizeTitle(suffix.slice(0, technicalStart))
+  const technicalStart = findTechnicalTokenStart(suffix)
+  return normalizeTitle(
+    technicalStart === undefined ? suffix : suffix.slice(0, technicalStart)
+  )
 }
 
 const toAmbiguousCandidate = (
@@ -244,8 +269,8 @@ const createCandidate = ({
   const markerTitleText = marker
     ? matchingText.slice(0, marker.index)
     : matchingText
-  const technicalMatch = TECHNICAL_TOKEN_PATTERN.exec(markerTitleText)
-  const titleEndIndex = technicalMatch?.index ?? markerTitleText.length
+  const technicalStartIndex = findTechnicalTokenStart(markerTitleText)
+  const titleEndIndex = technicalStartIndex ?? markerTitleText.length
   const titleBeforeYear = yearMatch
     ? matchingText.slice(0, Math.min(yearMatch.index, titleEndIndex))
     : markerTitleText.slice(0, titleEndIndex)
