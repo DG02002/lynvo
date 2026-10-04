@@ -70,7 +70,7 @@ export const hasEpisodeMarker = (
   return candidate.kind === "episode" || candidate.kind === "episode-range"
 }
 
-export const getEpisodeOnlyListingLabel = (
+const getEpisodeOnlyListingLabel = (
   labels: readonly string[],
   parentFolderName?: string
 ): string | undefined => {

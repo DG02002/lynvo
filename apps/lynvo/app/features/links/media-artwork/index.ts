@@ -11,7 +11,6 @@ export {
 } from "./gallery-grouping"
 export {
   getEpisodeListingLabels,
-  getEpisodeOnlyListingLabel,
   getMediaArtworkRequest,
   getMediaDisplayTitle,
   getMediaEpisodeDisplayTitle,
