@@ -1,4 +1,4 @@
-import { HttpApi } from "effect/unstable/httpapi"
+import { HttpApi } from "effect/http-api"
 
 import { ExtractionGroup } from "./groups/extraction-group"
 import { PluginDomainsGroup } from "./groups/plugin-domains-group"
