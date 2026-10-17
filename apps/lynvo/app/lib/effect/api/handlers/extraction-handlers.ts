@@ -1,6 +1,6 @@
 import { Effect } from "effect"
-import { HttpServerRequest } from "effect/unstable/http"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpServerRequest } from "effect/http"
+import { HttpApiBuilder } from "effect/http-api"
 
 import { isDevelopmentFreezeUsageEnabled } from "../../../development-settings"
 import { CloudflareEnv } from "../../services/cloudflare-env"
