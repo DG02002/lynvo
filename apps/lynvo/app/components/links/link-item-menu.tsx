@@ -1,11 +1,11 @@
 import {
   ArrowUpRight01Icon,
+  Bug01Icon,
   CopyIcon,
   Delete02Icon,
   EllipsisIcon,
   RefreshDotIcon,
   Image01Icon,
-  SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
@@ -39,8 +39,8 @@ import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
 import { cn } from "~/lib/utils"
 
 import { ChangeArtworkDialog } from "./change-artwork-dialog"
-import { LinkDebugLogDialog } from "./link-debug-log-dialog"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
+import { ReportIssueDialog } from "./report-issue-dialog"
 
 const MENU_LABEL_MAX_LENGTH = 80
 
@@ -80,7 +80,7 @@ export const LinkItemMenu = ({
   onMenuOpenChange,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
-  const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const [isReportDialogOpen, setIsReportDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const itemLabel = getMenuItemLabel(item)
@@ -154,9 +154,9 @@ export const LinkItemMenu = ({
                 <HugeiconsIcon icon={CopyIcon} />
                 Copy Source link
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsLogDialogOpen(true)}>
-                <HugeiconsIcon icon={SourceCodeSquareIcon} />
-                {linkCopy.actions.viewLog}
+              <DropdownMenuItem onClick={() => setIsReportDialogOpen(true)}>
+                <HugeiconsIcon icon={Bug01Icon} />
+                {linkCopy.actions.reportIssue}
               </DropdownMenuItem>
               {actions.setArtwork && (
                 <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
@@ -232,10 +232,10 @@ export const LinkItemMenu = ({
         onOpenChange={setIsRemoveDialogOpen}
         onRemove={removeItem}
       />
-      <LinkDebugLogDialog
+      <ReportIssueDialog
         item={item}
-        open={isLogDialogOpen}
-        onOpenChange={setIsLogDialogOpen}
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
       />
       <ChangeArtworkDialog
         item={item}

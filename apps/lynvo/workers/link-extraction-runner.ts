@@ -109,6 +109,7 @@ const settlePendingExtraction = async ({
   claim,
   pending,
   extraction,
+  requestId,
   startedAt,
 }: PendingExtractionInput): Promise<void> => {
   const requeued = await requeuePendingSavedLinkExtraction(
@@ -125,6 +126,7 @@ const settlePendingExtraction = async ({
         pluginServerId: extraction.meta?.pluginServerId,
         pluginId: extraction.meta?.pluginId,
         outcome: "pending",
+        requestId,
         attempt: claim.extractionAttempts,
         durationMs: Date.now() - startedAt,
         detail: `Server deferred extraction; retrying in ${pending.retryAfterSeconds}s`,
@@ -139,6 +141,7 @@ const settleEmptyExtraction = async ({
   database,
   claim,
   extraction,
+  requestId,
   startedAt,
 }: CompletedExtractionInput): Promise<void> => {
   const settled = await settleSavedLinkExtraction(database, claim.userId, {
@@ -152,6 +155,7 @@ const settleEmptyExtraction = async ({
       pluginServerId: extraction.meta?.pluginServerId,
       pluginId: extraction.meta?.pluginId,
       outcome: "failed",
+      requestId,
       errorCode: "EMPTY_RESULT",
       nodeCount: extraction.links.length,
       attempt: claim.extractionAttempts,
@@ -196,6 +200,7 @@ const settleFailedExtraction = async ({
   database,
   claim,
   identity,
+  requestId,
   startedAt,
   extractionError,
 }: FailedExtractionInput): Promise<void> => {
@@ -215,6 +220,7 @@ const settleFailedExtraction = async ({
       pluginServerId: identity.pluginServerId,
       pluginId: identity.pluginId,
       outcome: "failed",
+      requestId,
       errorCode: extractionError.message.split(".")[0],
       attempt: claim.extractionAttempts,
       durationMs: Date.now() - startedAt,

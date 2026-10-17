@@ -1,8 +1,8 @@
-import { Delete02Icon, SourceCodeSquareIcon } from "@hugeicons/core-free-icons"
+import { Bug01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
-import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
+import { ReportIssueDialog } from "~/components/links/report-issue-dialog"
 import { Button } from "~/components/ui/button"
 import { linkCopy } from "~/features/links/link-copy"
 import type { LinkViewItem } from "~/features/links/types"
@@ -19,7 +19,7 @@ export const ExtractionFailedActions = ({
   onDelete,
   className,
 }: ExtractionFailedActionsProps) => {
-  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false)
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
 
   return (
     <span
@@ -34,16 +34,16 @@ export const ExtractionFailedActions = ({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setIsLogDialogOpen(true)}
+          onClick={() => setIsReportDialogOpen(true)}
         >
-          <HugeiconsIcon icon={SourceCodeSquareIcon} />
-          {linkCopy.actions.viewLog}
+          <HugeiconsIcon icon={Bug01Icon} />
+          {linkCopy.actions.reportIssue}
         </Button>
       </span>
-      <LinkDebugLogDialog
+      <ReportIssueDialog
         item={item}
-        open={isLogDialogOpen}
-        onOpenChange={setIsLogDialogOpen}
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
       />
     </span>
   )

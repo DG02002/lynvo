@@ -78,6 +78,41 @@ const renderQueuedGrid = (item: LinkListItem) =>
     />
   )
 
+const createGroupItems = (): [LinkListItem, LinkListItem] => [
+  createQueuedItem(undefined),
+  {
+    ...createQueuedItem(undefined),
+    id: "group-item-2",
+    url: "https://media.example/group-item-2",
+  },
+]
+
+const renderGroupGrid = (
+  actions: LinkItemActions
+): [LinkListItem, LinkListItem] => {
+  const items = createGroupItems()
+  render(
+    <GallerySaveGrid
+      groups={[
+        {
+          key: "movie:group-card",
+          displayTitle: "Group card",
+          artworkRequest: undefined,
+          lastAddedAt: Date.now(),
+          items,
+        },
+      ]}
+      actions={actions}
+      extractingItems={new Set()}
+      isHydrating={false}
+      highlightedId={null}
+      onOpenItem={vi.fn()}
+      onOpenGroup={vi.fn()}
+    />
+  )
+  return items
+}
+
 describe("GallerySaveGrid", () => {
   it("renders a queued item with a pulsing poster skeleton and shimmering title only", () => {
     renderQueuedGrid(createQueuedItem({ state: "queued" }))
@@ -237,6 +272,51 @@ describe("GallerySaveGrid", () => {
     void act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
 
     expect(screen.getByText("Copy Source link")).toBeInTheDocument()
+  })
+
+  it("opens the group menu after a touch long press on a group card", () => {
+    vi.useFakeTimers()
+    renderGroupGrid(createActions())
+
+    const groupButton = screen.getByRole("button", {
+      name: "Open Group card",
+    })
+    Object.defineProperties(groupButton, {
+      setPointerCapture: { value: vi.fn() },
+      hasPointerCapture: { value: vi.fn(() => false) },
+    })
+
+    fireEvent.pointerDown(groupButton, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 20,
+    })
+    void act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
+
+    expect(
+      screen.getByRole("menuitem", { name: "Delete all" })
+    ).toBeInTheDocument()
+  })
+
+  it("deletes every link in a group from the group card menu", () => {
+    const actions = createActions()
+    const [firstItem, secondItem] = renderGroupGrid(actions)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open menu for Group card" })
+    )
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete all" }))
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Remove 2 items from your library?",
+      })
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }))
+
+    expect(actions.remove).toHaveBeenCalledWith(firstItem.url, firstItem.id)
+    expect(actions.remove).toHaveBeenCalledWith(secondItem.url, secondItem.id)
   })
 
   it("shows a poster skeleton while artwork is being looked up", () => {

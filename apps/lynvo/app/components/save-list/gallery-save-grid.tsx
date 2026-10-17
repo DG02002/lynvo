@@ -1,15 +1,15 @@
 import {
   AlertCircleIcon,
+  Bug01Icon,
   Delete02Icon,
   Folder01Icon,
-  SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import React from "react"
 
 import { ChangeArtworkDialog } from "~/components/links/change-artwork-dialog"
-import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
+import { ReportIssueDialog } from "~/components/links/report-issue-dialog"
 import { Button } from "~/components/ui/button"
 import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -38,6 +38,7 @@ import {
   type LinkExtractionState,
   type ExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
+import { GalleryGroupMenu } from "./gallery-group-menu"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
@@ -78,7 +79,7 @@ interface GallerySaveItemArtworkProps {
   readonly isExtractionFailed: boolean
   readonly isFolderContainer: boolean
   readonly onDelete: () => void
-  readonly onOpenLog: () => void
+  readonly onReportIssue: () => void
   readonly onChooseArtwork?: () => void
 }
 
@@ -91,7 +92,7 @@ const GallerySaveItemArtwork = ({
   isExtractionFailed,
   isFolderContainer,
   onDelete,
-  onOpenLog,
+  onReportIssue,
   onChooseArtwork,
 }: GallerySaveItemArtworkProps) => {
   if (isExtractionVisual) {
@@ -113,9 +114,14 @@ const GallerySaveItemArtwork = ({
             <HugeiconsIcon icon={Delete02Icon} />
             Delete
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={onOpenLog}>
-            <HugeiconsIcon icon={SourceCodeSquareIcon} />
-            {linkCopy.actions.viewLog}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onReportIssue}
+          >
+            <HugeiconsIcon icon={Bug01Icon} />
+            {linkCopy.actions.reportIssue}
           </Button>
         </div>
       </div>
@@ -279,7 +285,7 @@ const GallerySaveItem = ({
   const isArtworkPending =
     group.artworkRequest !== undefined && artwork === undefined
   const isExtractionFailed = extractionState === "failed"
-  const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const [isReportDialogOpen, setIsReportDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
@@ -293,7 +299,7 @@ const GallerySaveItem = ({
     !item.metadata.extraction.selectionFinalized &&
     (item.metadata?.extraction?.extractedLinks?.length ?? 0) > 1
   const { longPressHandlers, consumeLongPress } = useLongPress({
-    enabled: Boolean(isSingleItem && item && !isExtractionVisual),
+    enabled: !isExtractionVisual,
     onLongPress: () => setIsMenuOpen(true),
   })
 
@@ -360,7 +366,7 @@ const GallerySaveItem = ({
               actions.remove(item.url, item.id)
             }
           }}
-          onOpenLog={() => setIsLogDialogOpen(true)}
+          onReportIssue={() => setIsReportDialogOpen(true)}
           onChooseArtwork={
             item && actions.setArtwork
               ? () => setIsArtworkDialogOpen(true)
@@ -384,19 +390,29 @@ const GallerySaveItem = ({
             Choose links
           </Button>
         )}
-        {isSingleItem && item && (
+        {!isExtractionVisual && (
           <div className="absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 has-[:focus-visible]:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
-            <LinkItemMenu
-              item={item}
-              actions={actions}
-              playableLink={directLink}
-              isPlayableLinkExpired={isDirectLinkExpired}
-              showRemove
-              isRefreshing={isExtracting}
-              triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
-              menuOpen={isMenuOpen}
-              onMenuOpenChange={setIsMenuOpen}
-            />
+            {isSingleItem && item ? (
+              <LinkItemMenu
+                item={item}
+                actions={actions}
+                playableLink={directLink}
+                isPlayableLinkExpired={isDirectLinkExpired}
+                showRemove
+                isRefreshing={isExtracting}
+                triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
+                menuOpen={isMenuOpen}
+                onMenuOpenChange={setIsMenuOpen}
+              />
+            ) : (
+              <GalleryGroupMenu
+                group={group}
+                actions={actions}
+                triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
+                menuOpen={isMenuOpen}
+                onMenuOpenChange={setIsMenuOpen}
+              />
+            )}
           </div>
         )}
       </div>
@@ -423,10 +439,10 @@ const GallerySaveItem = ({
           )}
         </ExtractionStatusTitle>
       </div>
-      <LinkDebugLogDialog
+      <ReportIssueDialog
         item={item}
-        open={isLogDialogOpen}
-        onOpenChange={setIsLogDialogOpen}
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
       />
       <ChangeArtworkDialog
         item={item}

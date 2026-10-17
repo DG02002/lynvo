@@ -20,13 +20,19 @@ import { MEDIA_LIST_ROW_MENU_TRIGGER_CLASS } from "./media-list-row-constants"
 interface GalleryGroupMenuProps {
   readonly group: GalleryGroup
   readonly actions: LinkItemActions
-  readonly onExit: () => void
+  readonly onExit?: () => void
+  readonly triggerClassName?: string
+  readonly menuOpen?: boolean
+  readonly onMenuOpenChange?: (open: boolean) => void
 }
 
 export const GalleryGroupMenu = ({
   group,
   actions,
   onExit,
+  triggerClassName,
+  menuOpen,
+  onMenuOpenChange,
 }: GalleryGroupMenuProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const itemCountLabel = formatItemCount(group.items.length)
@@ -35,19 +41,21 @@ export const GalleryGroupMenu = ({
     for (const item of group.items) {
       actions.remove(item.url, item.id)
     }
-    onExit()
+    onExit?.()
   }
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={onMenuOpenChange}>
         <DropdownMenuTrigger
           render={
             <Button
               variant="ghost"
               size="icon"
               aria-label={`Open menu for ${group.displayTitle}`}
-              className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+              // The media-row default carries !-marked classes that would
+              // survive a cn merge, so a caller's trigger class replaces it.
+              className={triggerClassName ?? MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             >
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">

@@ -44,6 +44,8 @@ export interface LinkDebugLogEntry {
   pluginServerId?: string
   pluginId?: string
   outcome: "complete" | "failed" | "pending" | "requeued"
+  /** Correlates this attempt with Worker logs and Cloudflare observability. */
+  requestId?: string
   errorCode?: string
   /** The Plugin Server's unmodified error text; never credentials. */
   detail?: string
