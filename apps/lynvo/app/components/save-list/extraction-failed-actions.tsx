@@ -1,4 +1,8 @@
-import { Bug01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import {
+  Bug01Icon,
+  Delete02Icon,
+  RefreshDotIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
@@ -11,12 +15,16 @@ import { cn } from "~/lib/utils"
 interface ExtractionFailedActionsProps {
   readonly item: LinkViewItem
   readonly onDelete: () => void
+  readonly onRetry?: () => void
+  readonly isRetrying?: boolean
   readonly className?: string
 }
 
 export const ExtractionFailedActions = ({
   item,
   onDelete,
+  onRetry,
+  isRetrying = false,
   className,
 }: ExtractionFailedActionsProps) => {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
@@ -26,6 +34,26 @@ export const ExtractionFailedActions = ({
       className={cn("relative z-10 [&_button]:pointer-events-auto", className)}
     >
       <span className="flex flex-wrap items-center gap-2">
+        {onRetry && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isRetrying}
+            aria-busy={isRetrying}
+            onClick={onRetry}
+          >
+            <HugeiconsIcon
+              icon={RefreshDotIcon}
+              className={
+                isRetrying
+                  ? "animate-spin motion-reduce:animate-none"
+                  : undefined
+              }
+            />
+            Retry
+          </Button>
+        )}
         <Button type="button" variant="outline" size="sm" onClick={onDelete}>
           <HugeiconsIcon icon={Delete02Icon} />
           Delete

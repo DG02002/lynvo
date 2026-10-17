@@ -2,6 +2,7 @@ import {
   ProtocolError,
   type MediaNode,
   type ExtractSuccessResponse,
+  type RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { load } from "cheerio"
 import { Result, Schema } from "effect"
@@ -92,6 +93,7 @@ export const extractGoogleDriveFolderId = (value: string | URL): string => {
 export interface GoogleDrivePublicFileMetadata {
   filename: string
   size?: string
+  rangeRequest: RangeRequestCapability
 }
 
 const isHtmlResponse = (response: Response): boolean =>
@@ -136,7 +138,13 @@ export const fetchGoogleDrivePublicFileMetadata = async (
       ? response.headers.get("content-length")
       : undefined) ??
     undefined
-  return { filename, size: formatFileSize(totalBytes) }
+  // The probe above already asked for one byte, so its response decides the
+  // range capability instead of a second request at handoff time.
+  const rangeRequest: RangeRequestCapability =
+    response.status === 206 && response.headers.has("content-range")
+      ? "supported"
+      : "unsupported"
+  return { filename, size: formatFileSize(totalBytes), rangeRequest }
 }
 
 export interface GoogleDrivePublicFolderItem {
@@ -305,6 +313,7 @@ export const extractGoogleDrivePublicFile = async ({
     label: metadata.filename,
     url: downloadUrl,
     size: metadata.size,
+    rangeRequest: metadata.rangeRequest,
   })
   return {
     plugin: createPluginResponseMetadata(

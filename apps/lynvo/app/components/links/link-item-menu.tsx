@@ -60,7 +60,6 @@ interface LinkItemMenuProps {
   showRemove?: boolean
   onRemoved?: () => void
   playableLink?: ExtractedLink
-  isPlayableLinkExpired?: boolean
   isRefreshing?: boolean
   triggerClassName?: string
   menuOpen?: boolean
@@ -73,7 +72,6 @@ export const LinkItemMenu = ({
   showRemove = false,
   onRemoved,
   playableLink,
-  isPlayableLinkExpired = false,
   isRefreshing = false,
   triggerClassName,
   menuOpen,
@@ -164,13 +162,11 @@ export const LinkItemMenu = ({
                   {linkCopy.actions.changeArtwork}
                 </DropdownMenuItem>
               )}
-              {!playableLink && (
-                <DropdownMenuItem onClick={() => refreshLink(item.url)}>
-                  <HugeiconsIcon icon={RefreshDotIcon} />
-                  {refreshActionLabel}
-                </DropdownMenuItem>
-              )}
-              {playableLink && !isPlayableLinkExpired && (
+              <DropdownMenuItem onClick={() => refreshLink(item.url)}>
+                <HugeiconsIcon icon={RefreshDotIcon} />
+                {refreshActionLabel}
+              </DropdownMenuItem>
+              {playableLink && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <HugeiconsIcon icon={ArrowUpRight01Icon} />

@@ -77,17 +77,26 @@ describe("ProxySettings", () => {
     )
 
     expect(await screen.findByText("Proxy Capable")).toBeVisible()
-    expect(screen.getByText("973 of 1,000 credits remaining")).toBeVisible()
+    expect(screen.getByText("Scrape.do")).toBeVisible()
+    expect(screen.getByText("27 of 1,000 credits used")).toBeVisible()
+    expect(screen.getByText("973 credits remaining")).toBeVisible()
     expect(
       screen.getByRole("switch", { name: "Disable proxy for Proxy Capable" })
     ).toBeChecked()
     expect(
-      screen.getByRole("button", { name: "Refresh balance" })
+      screen.getByRole("button", { name: "Refresh credits" })
     ).toBeVisible()
-    expect(screen.getByText("Source Alpha:")).toBeVisible()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Change proxy key for Proxy Capable",
+      })
+    )
+    expect(await screen.findByText("Source Alpha:")).toBeVisible()
     expect(
       screen.getByText("Uses 5 proxy credits for rendering.")
     ).toBeVisible()
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
     expect(
       screen.getByRole("link", { name: "Learn about proxy keys" })
     ).toHaveAttribute("href", "/docs/proxy-keys")
@@ -207,14 +216,10 @@ describe("ProxySettings", () => {
       </MemoryRouter>
     )
 
-    expect(
-      await screen.findByText("973 of 1,000 credits remaining")
-    ).toBeVisible()
-    fireEvent.click(screen.getByRole("button", { name: "Refresh balance" }))
+    expect(await screen.findByText("27 of 1,000 credits used")).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Refresh credits" }))
 
-    expect(
-      await screen.findByText("901 of 1,000 credits remaining")
-    ).toBeVisible()
+    expect(await screen.findByText("99 of 1,000 credits used")).toBeVisible()
     expect(
       document.querySelector(
         `time[datetime="${new Date(refreshedCheckedAt).toISOString()}"]`

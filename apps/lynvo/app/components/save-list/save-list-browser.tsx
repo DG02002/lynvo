@@ -52,6 +52,7 @@ import {
   getExtractionStatusLabel,
   getExtractionStatusTitleSpec,
   getItemExtractionState,
+  isPendingExtractionState,
 } from "./extraction-status-utils"
 import {
   EpisodeStillSlot,
@@ -581,7 +582,7 @@ const FinderBrowserLinkRow = ({
       key={linkKey}
       label={rowDisplayTitle}
       icon={rowIcon}
-      title={{ value: rowDisplayTitle, isStruckThrough: isExpired }}
+      title={{ value: rowDisplayTitle }}
       titleExtractionStatus={isResolving ? { status: "waiting" } : undefined}
       meta={
         <>
@@ -590,10 +591,7 @@ const FinderBrowserLinkRow = ({
             size={link.size}
           />
           {!isFolder && link.expiry !== undefined && (
-            <PlayableExpiryBadge
-              expiresAt={link.expiry}
-              expirySource={link.expirySource}
-            />
+            <PlayableExpiryBadge expiresAt={link.expiry} />
           )}
         </>
       }
@@ -612,7 +610,7 @@ const FinderBrowserLinkRow = ({
             itemLabel={link.label}
             onCopyLink={copyLink}
             onOpenInPlayer={openLinkInPlayer}
-            isPlayable={!isFolder && !isExpired}
+            isPlayable={!isFolder}
             className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             removeRequest={
               isFolder
@@ -628,7 +626,6 @@ const FinderBrowserLinkRow = ({
         ) : undefined
       }
       onActivate={onActivate}
-      disabled={isExpired}
       isOpened={link.opened === true}
       shouldStackIconOnMobile={shouldStackIconOnMobile}
       buttonClassName={isExpired ? "text-muted-foreground" : undefined}
@@ -1033,8 +1030,11 @@ export const SaveListBrowser = ({
                 interactionState
               const isExtracting = extractingItems.has(item.url)
               const extractionState = getItemExtractionState(item, isExtracting)
+              // A failed extraction keeps the previously extracted playable
+              // links, so only the loading states block activation; the row
+              // stays usable with its failed-status actions.
               const isExtractionIncomplete =
-                (item.extractionStatus?.state ?? "complete") !== "complete"
+                isPendingExtractionState(extractionState)
               const isRootItemNew =
                 !isExtractionIncomplete && interactionState.isNew
 
@@ -1076,7 +1076,7 @@ export const SaveListBrowser = ({
                   <div className="flex min-h-20 min-w-0 flex-1 items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5">
                     <button
                       type="button"
-                      disabled={isDirectLinkExpired || isExtractionIncomplete}
+                      disabled={isExtractionIncomplete}
                       aria-label={getSaveListItemAriaLabel({
                         itemTitle: getItemTitle(item),
                         directLink,
@@ -1090,14 +1090,12 @@ export const SaveListBrowser = ({
                       })}
                       className={cn(
                         "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                        !isDirectLinkExpired &&
-                          !isExtractionIncomplete &&
+                        !isExtractionIncomplete &&
                           MEDIA_LIST_ROW_HOVER_TINT_CLASS,
                         directLink?.opened &&
-                          !isDirectLinkExpired &&
+                          !isExtractionIncomplete &&
                           MEDIA_LIST_ROW_OPENED_TINT_CLASS,
-                        (isDirectLinkExpired || isExtractionIncomplete) &&
-                          "cursor-not-allowed"
+                        isExtractionIncomplete && "cursor-not-allowed"
                       )}
                       onClick={() => {
                         if (isExtractionIncomplete) {
@@ -1125,8 +1123,7 @@ export const SaveListBrowser = ({
                       className={cn(
                         "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
                         "flex",
-                        isDirectLinkExpired &&
-                          "text-muted-foreground opacity-60",
+                        isDirectLinkExpired && "text-muted-foreground",
                         isExtractionIncomplete && "text-muted-foreground"
                       )}
                     >
@@ -1146,9 +1143,6 @@ export const SaveListBrowser = ({
                           <ExpandableFilename
                             value={directLink?.label || getItemTitle(item)}
                             className={MEDIA_LIST_ROW_TITLE_CLASS}
-                            textClassName={
-                              isDirectLinkExpired ? "line-through" : undefined
-                            }
                             isInsideActivationOverlay
                           />
                           <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground md:flex-nowrap">
@@ -1173,7 +1167,6 @@ export const SaveListBrowser = ({
                                 </span>
                                 <PlayableExpiryBadge
                                   expiresAt={directLink.expiry}
-                                  expirySource={directLink.expirySource}
                                 />
                               </>
                             )}
@@ -1186,6 +1179,8 @@ export const SaveListBrowser = ({
                           <ExtractionFailedActions
                             item={item}
                             onDelete={() => actions.remove(item.url, item.id)}
+                            onRetry={() => actions.hardRefresh(item.url)}
+                            isRetrying={isExtracting}
                             className="mt-1.5"
                           />
                         )}
@@ -1205,7 +1200,6 @@ export const SaveListBrowser = ({
                       item={item}
                       actions={actions}
                       playableLink={directLink}
-                      isPlayableLinkExpired={isDirectLinkExpired}
                       showRemove
                       isRefreshing={isExtracting}
                       triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}

@@ -309,7 +309,7 @@ describe("docs seed CLI Saved link fixtures", () => {
         expiredMetadata?.extraction.extractedLinks[0]?.expiry ?? 0,
         SEED_TIME
       )
-    ).toBe("Link expired")
+    ).toBe("Link may have expired")
 
     const artworkApi = createApi({
       TMDB_API_READ_ACCESS_TOKEN: "docs-seed-test-token",

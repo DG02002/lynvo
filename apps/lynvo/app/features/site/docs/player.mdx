@@ -32,7 +32,7 @@ Open [**Settings > Player**](/settings/player). Set **Links with HTTP byte-range
 
 ### Choose players for each link type
 
-HTTP byte-range support lets a player request part of a media file, which helps it seek forward or backward. Lynvo checks whether a partial request works; it does not rely only on the `Accept-Ranges` header.
+HTTP byte-range support lets a player request part of a media file, which helps it seek forward or backward. Lynvo learns it while extracting a link by requesting one byte of the file; it does not rely only on the `Accept-Ranges` header. When a Source does not report the result, the link opens with the byte-range player.
 
 | Setting                                   | Default             | Supported players and Android package names                                                                                       |
 | ----------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |

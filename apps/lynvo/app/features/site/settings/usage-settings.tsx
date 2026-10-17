@@ -40,10 +40,12 @@ const formatResetDate = (resetsAt?: string): string | undefined =>
 
 const UsageSummary = ({
   label,
+  limitLabel = "Monthly usage limit",
   remainingPercent,
   resetsAt,
 }: {
   label: string
+  limitLabel?: string
   remainingPercent: number
   resetsAt?: string
 }) => {
@@ -52,9 +54,7 @@ const UsageSummary = ({
   return (
     <div className="flex flex-col gap-3 py-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-normal text-foreground">
-          Monthly usage limit
-        </h2>
+        <h2 className="text-base font-normal text-foreground">{limitLabel}</h2>
         <span className="shrink-0 text-base font-normal tabular-nums text-foreground">
           {remainingPercent}% remaining
         </span>
@@ -208,7 +208,7 @@ export const UsageSettings = ({
         <SettingsPanel className="gap-4">
           <SectionHeading
             title="Custom Plugin Server usage"
-            description="Each Custom Plugin Server keeps its own monthly usage."
+            description="Each Custom Plugin Server reports the usage it tracks for your account."
           />
           {snapshot.custom.groups.map((group) => (
             <div key={group.key} className="flex flex-col gap-3">
@@ -224,6 +224,7 @@ export const UsageSettings = ({
               </div>
               <UsageSummary
                 label={group.serverName}
+                limitLabel="Usage limit"
                 remainingPercent={group.remainingPercent}
                 resetsAt={group.resetsAt}
               />

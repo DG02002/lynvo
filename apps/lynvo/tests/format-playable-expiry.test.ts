@@ -29,8 +29,10 @@ describe("formatPlayableExpiry", () => {
     )
   })
 
-  it("reports expired links explicitly", () => {
-    expect(formatPlayableExpiry(NOW, NOW)).toBe("Playable link expired")
+  it("reports past-expiry links as possibly expired", () => {
+    expect(formatPlayableExpiry(NOW, NOW)).toBe(
+      "Playable link may have expired"
+    )
   })
 })
 

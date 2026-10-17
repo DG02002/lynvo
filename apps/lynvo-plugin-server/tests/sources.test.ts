@@ -252,6 +252,32 @@ describe("Direct Media source adapter", () => {
     })
   })
 
+  it("drops an Expires value in the past because the probe just succeeded", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Range": "bytes 0-0/1105713",
+        },
+      })
+    )
+
+    const result = await extractDirectMedia({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://media.example/video.mp4?Expires=3600",
+        },
+      },
+      targetUrl: "https://media.example/video.mp4?Expires=3600",
+      plugin,
+    })
+
+    expect(result.nodes[0]).not.toHaveProperty("expiry")
+    expect(result.nodes[0]).not.toHaveProperty("expirySource")
+  })
+
   it("rejects non-media files served as generic binary content", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(new Uint8Array([0]), {
@@ -1052,6 +1078,7 @@ describe("Google Drive public files source adapter", () => {
         url: "https://drive.usercontent.google.com/download?id=1AbCdEfGh123&export=download&confirm=t",
         size: "1.05 MB",
         status: "unknown",
+        rangeRequest: "supported",
       },
     ])
   })
@@ -1106,6 +1133,7 @@ describe("Google Drive public files source adapter", () => {
     expect(result.nodes[0]).toMatchObject({
       url: expectedUrl,
       size: "193.65 MB",
+      rangeRequest: "supported",
     })
   })
 
@@ -1145,6 +1173,9 @@ describe("Google Drive public files source adapter", () => {
       fetchGoogleDrivePublicFileMetadata(
         "https://drive.usercontent.google.com/download?id=file-id"
       )
-    ).resolves.toEqual({ filename: "example-video.mkv" })
+    ).resolves.toEqual({
+      filename: "example-video.mkv",
+      rangeRequest: "supported",
+    })
   })
 })

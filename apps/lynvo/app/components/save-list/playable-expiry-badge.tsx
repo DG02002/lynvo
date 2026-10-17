@@ -1,4 +1,3 @@
-import type { ExpirySource } from "@dg02002/lynvo-plugin-server-protocol"
 import { Clock04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
@@ -11,34 +10,25 @@ import { cn } from "~/lib/utils"
 
 interface PlayableExpiryBadgeProps {
   expiresAt: number
-  expirySource?: ExpirySource
 }
 
 export const PlayableExpiryBadge = ({
   expiresAt,
-  expirySource,
 }: PlayableExpiryBadgeProps) => {
   const currentTimeMs = useMinuteTimeBucket()
 
   const label = formatPlayableExpiry(expiresAt)
   const isExpired = expiresAt <= currentTimeMs
-  const isEstimated =
-    expirySource === "cache-control" || expirySource === "expires-header"
-  const displayLabel = formatPlayableValidity(
-    expiresAt,
-    currentTimeMs,
-    isEstimated
-  )
-  const accessibleLabel = isEstimated ? `Estimated: ${label}` : label
+  // Every expiry Lynvo records is an estimate from the source, not a verified
+  // deadline: hosts routinely keep serving past a signed URL's nominal
+  // expiry, so the badge never claims the link is dead.
+  const displayLabel = formatPlayableValidity(expiresAt, currentTimeMs, true)
+  const accessibleLabel = `Estimated: ${label}`
 
   return (
     <span
       aria-label={accessibleLabel}
-      title={
-        isEstimated
-          ? "Estimated expiry for this playable link from response caching headers; the saved item itself does not expire."
-          : "Expiry for this playable link; the saved item itself does not expire."
-      }
+      title="Estimated expiry for this playable link from the source. The link may still work after it — refresh the saved link if playback fails. The saved item itself does not expire."
       className={cn(
         "inline-flex shrink-0 items-center gap-1 tabular-nums",
         isExpired && "text-destructive"

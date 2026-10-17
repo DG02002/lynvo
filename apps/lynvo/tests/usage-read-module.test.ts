@@ -135,7 +135,7 @@ describe("Usage Read module", () => {
             ],
           },
         ],
-        failures: ["Usage for Custom Two couldn’t be loaded."],
+        failures: ["Usage for Custom Two couldn’t be loaded: unavailable."],
       },
     })
   })

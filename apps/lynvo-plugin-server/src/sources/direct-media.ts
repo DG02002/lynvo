@@ -57,17 +57,25 @@ const getFileSize = (status: number, headers: Headers): string | undefined => {
   )
 }
 
-const getSignedUrlExpiry = (targetUrl: string) => {
+const getSignedUrlExpiry = (targetUrl: string, now: number) => {
   const value = new URL(targetUrl).searchParams.get("Expires")
   const timestamp = Number(value)
   if (!value || !Number.isFinite(timestamp) || timestamp <= 0) {
     return {}
   }
+  const expiry =
+    timestamp < MILLISECONDS_EPOCH_THRESHOLD
+      ? timestamp * MILLISECONDS_PER_SECOND
+      : timestamp
+  // The probe above just fetched this URL successfully, so a timestamp
+  // already in the past is not an absolute expiry — some hosts encode a
+  // duration or relative value in Expires. Drop it instead of marking a
+  // working link as born-expired.
+  if (expiry <= now) {
+    return {}
+  }
   return {
-    expiry:
-      timestamp < MILLISECONDS_EPOCH_THRESHOLD
-        ? timestamp * MILLISECONDS_PER_SECOND
-        : timestamp,
+    expiry,
     expirySource: "signed-url" as const,
   }
 }
@@ -110,7 +118,7 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
           ? ("supported" as const)
           : ("unsupported" as const),
       size: getFileSize(response.status, response.headers),
-      ...getSignedUrlExpiry(options.targetUrl),
+      ...getSignedUrlExpiry(options.targetUrl, Date.now()),
     }
     return {
       plugin: createPluginResponseMetadata(
