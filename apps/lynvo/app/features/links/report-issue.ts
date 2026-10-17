@@ -9,8 +9,7 @@ export interface IssueReport {
   readonly message: string
 }
 
-/** The entry a maintainer needs most: the newest failure, else the newest
- *  attempt so a report is still useful when nothing has failed yet. */
+/** Report the newest failure, so a later successful attempt does not hide its diagnosis. */
 const findFeaturedDebugLogEntry = (
   item: LinkViewItem
 ): LinkDebugLogEntry | undefined => {

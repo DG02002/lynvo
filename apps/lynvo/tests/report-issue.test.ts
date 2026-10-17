@@ -72,7 +72,7 @@ describe("buildIssueReport", () => {
     expect(report.message).not.toContain("request-failed-1")
   })
 
-  it("falls back to the newest entry when nothing has failed", () => {
+  it("reports not-recorded fields when nothing has failed", () => {
     const item = createItem([
       { at: 1_700_000_000_000, outcome: "complete", requestId: "request-1" },
     ])
@@ -81,7 +81,6 @@ describe("buildIssueReport", () => {
 
     expect(report.title).toBe("Extraction failed")
     expect(report.message).toContain("Request ID: (not recorded)")
-    expect(report.message).toContain("(not recorded)")
     expect(report.message).not.toContain("Occurred:")
   })
 
