@@ -183,6 +183,7 @@ const GallerySaveItemArtwork = ({
 
 interface GallerySingleItemState {
   readonly item: LinkListItem | undefined
+  readonly failedItem: LinkListItem | undefined
   readonly isSingleItem: boolean
   readonly directLink: ExtractedLink | undefined
   readonly isDirectLinkExpired: boolean
@@ -240,6 +241,7 @@ const getGallerySingleItemState = (
       }
   return {
     item,
+    failedItem: failedMember,
     isSingleItem,
     directLink,
     isDirectLinkExpired: interactionState?.isDirectLinkExpired ?? false,
@@ -270,6 +272,7 @@ const GallerySaveItem = ({
 }: GallerySaveItemProps) => {
   const {
     item,
+    failedItem,
     isSingleItem,
     directLink,
     isDirectLinkExpired,
@@ -285,6 +288,8 @@ const GallerySaveItem = ({
   const isArtworkPending =
     group.artworkRequest !== undefined && artwork === undefined
   const isExtractionFailed = extractionState === "failed"
+  const canOpenMenu = !isExtractionVisual || isExtractionFailed
+  const issueItem = failedItem ?? item
   const [isReportDialogOpen, setIsReportDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
@@ -299,12 +304,16 @@ const GallerySaveItem = ({
     !item.metadata.extraction.selectionFinalized &&
     (item.metadata?.extraction?.extractedLinks?.length ?? 0) > 1
   const { longPressHandlers, consumeLongPress } = useLongPress({
-    enabled: !isExtractionVisual,
+    enabled: canOpenMenu,
     onLongPress: () => setIsMenuOpen(true),
   })
 
   const handleActivate = () => {
     if (consumeLongPress()) {
+      return
+    }
+    if (isExtractionVisual && isExtractionFailed) {
+      setIsMenuOpen(true)
       return
     }
     if (!isSingleItem || directLink) {
@@ -316,6 +325,12 @@ const GallerySaveItem = ({
     }
     actions.markOpened(item.url, item.url)
     onOpenItem(item.url)
+  }
+  let activationLabel = `Open ${group.displayTitle}`
+  if (isExtractionVisual && isExtractionFailed) {
+    activationLabel = `Open actions for ${group.displayTitle}`
+  } else if (isSingleItem && item && !directLink) {
+    activationLabel = `View ${getItemTitle(item)}`
   }
 
   return (
@@ -329,7 +344,7 @@ const GallerySaveItem = ({
         "animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none"
       )}
     >
-      {isExtractionVisual ? null : (
+      {isExtractionVisual && !isExtractionFailed ? null : (
         // z-1 is load-bearing: without it the button paints under the
         // positioned card box below and its inset focus ring disappears.
         <button
@@ -337,11 +352,7 @@ const GallerySaveItem = ({
           onClick={handleActivate}
           {...longPressHandlers}
           className="absolute inset-0 z-1 cursor-pointer rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:rounded-3xl"
-          aria-label={
-            isSingleItem && item && !directLink
-              ? `View ${getItemTitle(item)}`
-              : `Open ${group.displayTitle}`
-          }
+          aria-label={activationLabel}
         />
       )}
       <div
@@ -362,8 +373,8 @@ const GallerySaveItem = ({
           isExtractionFailed={isExtractionFailed}
           isFolderContainer={isFolderContainer}
           onDelete={() => {
-            if (item) {
-              actions.remove(item.url, item.id)
+            if (issueItem) {
+              actions.remove(issueItem.url, issueItem.id)
             }
           }}
           onReportIssue={() => setIsReportDialogOpen(true)}
@@ -390,7 +401,7 @@ const GallerySaveItem = ({
             Choose links
           </Button>
         )}
-        {!isExtractionVisual && (
+        {canOpenMenu && (
           <div className="absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 has-[:focus-visible]:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
             {isSingleItem && item ? (
               <LinkItemMenu
@@ -440,7 +451,7 @@ const GallerySaveItem = ({
         </ExtractionStatusTitle>
       </div>
       <ReportIssueDialog
-        item={item}
+        item={issueItem}
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
       />

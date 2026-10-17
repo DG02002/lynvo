@@ -56,7 +56,7 @@ describe("buildIssueReport", () => {
       },
     ])
 
-    const report = buildIssueReport(item, "https://lynvo.example")
+    const report = buildIssueReport(item)
 
     expect(report.title).toBe("Extraction failed: PLUGIN_SERVER_TIMEOUT")
     expect(report.message).toContain("Request ID: request-failed-2")
@@ -68,7 +68,7 @@ describe("buildIssueReport", () => {
     expect(report.message).toContain(
       "Source: https://media.example/report-item"
     )
-    expect(report.message).toContain("Reported from: https://lynvo.example")
+    expect(report.message).not.toContain("Reported from:")
     expect(report.message).not.toContain("request-failed-1")
   })
 
@@ -77,11 +77,12 @@ describe("buildIssueReport", () => {
       { at: 1_700_000_000_000, outcome: "complete", requestId: "request-1" },
     ])
 
-    const report = buildIssueReport(item, "https://lynvo.example")
+    const report = buildIssueReport(item)
 
     expect(report.title).toBe("Extraction failed")
-    expect(report.message).toContain("Request ID: request-1")
+    expect(report.message).toContain("Request ID: (not recorded)")
     expect(report.message).toContain("(not recorded)")
+    expect(report.message).not.toContain("Occurred:")
   })
 
   it("states when no request id was recorded", () => {
@@ -89,7 +90,7 @@ describe("buildIssueReport", () => {
       { at: 1_700_000_000_000, outcome: "failed", errorCode: "EMPTY_RESULT" },
     ])
 
-    const report = buildIssueReport(item, "https://lynvo.example")
+    const report = buildIssueReport(item)
 
     expect(report.message).toContain("Request ID: (not recorded)")
     expect(report.message).toContain("Error code: EMPTY_RESULT")
@@ -100,7 +101,7 @@ describe("buildIssueReport", () => {
       { at: 1_700_000_000_000, outcome: "failed", errorCode: "SOURCE_DOWN" },
     ])
 
-    const report = buildIssueReport(item, "https://lynvo.example")
+    const report = buildIssueReport(item)
 
     expect(report.message).toContain("Plugin Server: ui-test-plugin-server")
   })
@@ -108,7 +109,7 @@ describe("buildIssueReport", () => {
   it("features nothing when the debug log is empty", () => {
     const item = createItem(undefined)
 
-    const report = buildIssueReport(item, "https://lynvo.example")
+    const report = buildIssueReport(item)
     expect(report.title).toBe("Extraction failed")
     expect(report.message).toContain("Request ID: (not recorded)")
     expect(report.message).not.toContain("Occurred:")
@@ -124,8 +125,7 @@ describe("report target URLs", () => {
         requestId: "request id &?",
         errorCode: "SOURCE_TIMEOUT",
       },
-    ]),
-    "https://lynvo.example"
+    ])
   )
 
   it("builds a prefilled GitHub issue URL", () => {
@@ -142,10 +142,10 @@ describe("report target URLs", () => {
   })
 
   it("builds a prefilled Telegram share URL", () => {
-    const url = new URL(buildTelegramReportUrl(report, "https://lynvo.example"))
+    const url = new URL(buildTelegramReportUrl(report))
 
     expect(url.origin + url.pathname).toBe("https://t.me/share/url")
-    expect(url.searchParams.get("url")).toBe("https://lynvo.example")
+    expect(url.searchParams.has("url")).toBe(false)
     expect(url.searchParams.get("text")).toContain("Request ID: request id &?")
   })
 })

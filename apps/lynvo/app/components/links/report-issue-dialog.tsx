@@ -23,8 +23,6 @@ interface ReportIssueDialogProps {
   readonly onOpenChange: (open: boolean) => void
 }
 
-const getReportOrigin = (): string => window.location.origin
-
 const openReportUrl = (url: string): void => {
   window.open(url, "_blank", "noopener,noreferrer")
 }
@@ -34,12 +32,9 @@ const ReportIssueDialog = ({
   open,
   onOpenChange,
 }: ReportIssueDialogProps) => {
-  const origin = getReportOrigin()
-  const report = item && open ? buildIssueReport(item, origin) : undefined
+  const report = item && open ? buildIssueReport(item) : undefined
   const githubUrl = report ? buildGitHubIssueUrl(report) : undefined
-  const telegramUrl = report
-    ? buildTelegramReportUrl(report, origin)
-    : undefined
+  const telegramUrl = report ? buildTelegramReportUrl(report) : undefined
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

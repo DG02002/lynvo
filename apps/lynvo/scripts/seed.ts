@@ -885,6 +885,7 @@ const linkMetadata = (
         at: seedTime,
         pluginServerId,
         pluginId: fixture.pluginId,
+        requestId: "docs-seed-sopranos-failed-extraction",
         outcome: "failed",
         errorCode: "UNSUPPORTED_URL",
         detail: "This local fixture made no upstream request.",

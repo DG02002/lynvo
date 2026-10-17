@@ -19,19 +19,20 @@ const findFeaturedDebugLogEntry = (
     return undefined
   }
   for (let index = entries.length - 1; index >= 0; index -= 1) {
-    if (entries[index]?.outcome === "failed") {
-      return entries[index]
+    const entry = entries[index]
+    if (entry?.outcome === "failed") {
+      return entry
     }
   }
-  return entries[entries.length - 1]
+  return undefined
 }
 
 const formatOccurredAt = (at: number): string =>
   new Date(at).toISOString().replace("T", " ").replace(/\..+/, " UTC")
+
 const buildReportLines = (
   item: LinkViewItem,
-  featured: LinkDebugLogEntry | undefined,
-  origin: string
+  featured: LinkDebugLogEntry | undefined
 ): string[] => {
   const flatMeta = getLinkViewItemFlatMeta(item)
   const lines = [
@@ -58,22 +59,18 @@ const buildReportLines = (
     lines.push(`Occurred: ${formatOccurredAt(featured.at)}`)
   }
   lines.push(`Source: ${item.url}`)
-  lines.push(`Reported from: ${origin}`)
   if (featured?.detail) {
     lines.push("", featured.detail)
   }
   return lines
 }
 
-export const buildIssueReport = (
-  item: LinkViewItem,
-  origin: string
-): IssueReport => {
+export const buildIssueReport = (item: LinkViewItem): IssueReport => {
   const featured = findFeaturedDebugLogEntry(item)
   const errorCode = featured?.errorCode
   return {
     title: errorCode ? `Extraction failed: ${errorCode}` : "Extraction failed",
-    message: buildReportLines(item, featured, origin).join("\n"),
+    message: buildReportLines(item, featured).join("\n"),
   }
 }
 
@@ -88,8 +85,5 @@ const GITHUB_BODY_PROMPT = [
 export const buildGitHubIssueUrl = (report: IssueReport): string =>
   `${GITHUB_ISSUES_URL}?title=${encodeURIComponent(report.title)}&body=${encodeURIComponent(report.message + GITHUB_BODY_PROMPT)}`
 
-export const buildTelegramReportUrl = (
-  report: IssueReport,
-  origin: string
-): string =>
-  `${TELEGRAM_SHARE_URL}?url=${encodeURIComponent(origin)}&text=${encodeURIComponent(report.message)}`
+export const buildTelegramReportUrl = (report: IssueReport): string =>
+  `${TELEGRAM_SHARE_URL}?text=${encodeURIComponent(report.message)}`

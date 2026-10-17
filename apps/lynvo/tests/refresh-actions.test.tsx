@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { LinkViewItem } from "~/features/links/types"
 import { useRefreshActions } from "~/features/links/use-link-actions/refresh-actions"
+import { ApiClientError } from "~/lib/api/client"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 
 describe("link refresh actions", () => {
@@ -63,6 +64,55 @@ describe("link refresh actions", () => {
         attempt: 2,
       }),
     })
+  })
+
+  it("records the Worker request id when a refresh fails", async () => {
+    const item: LinkViewItem = {
+      url: "https://source.example/show",
+      timestamp: 1,
+      metadata: {
+        schemaVersion: 3,
+        source: { pluginServerId: "plugin-server-one" },
+        extraction: { extractedLinks: [] },
+        playback: { openedUrls: [] },
+      },
+    }
+    const requestId = "refresh-request-123"
+    const error = new ApiClientError({
+      body: { _tag: "BackendError", message: "Refresh failed" },
+      response: new Response(null, {
+        status: 503,
+        headers: { "x-request-id": requestId },
+      }),
+    })
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    vi.spyOn(extractionOrchestration, "refreshSource").mockRejectedValue(error)
+    const appendDebugLog = vi.fn()
+    const { result } = renderHook(() =>
+      useRefreshActions({
+        links: [{ ...item, kind: "saved" }],
+        updateLinks: vi.fn(),
+        appendDebugLog,
+        cacheResolvedMirrors: vi.fn(),
+        openSelectionDialog: vi.fn(),
+        extractingItems: new Set(),
+        runWithExtractingItem: async (_itemKey, task) => task(),
+        ensureSessionIdentity: async () => true,
+      })
+    )
+
+    await act(async () => {
+      await result.current.handleSoftRefresh(item.url)
+    })
+
+    expect(appendDebugLog).toHaveBeenCalledWith(
+      item.url,
+      expect.objectContaining({
+        outcome: "failed",
+        requestId,
+        httpStatus: 503,
+      })
+    )
   })
 
   it("records a pending attempt when refresh needs link selection", async () => {

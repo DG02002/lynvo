@@ -172,6 +172,7 @@ const settleCompletedExtraction = async ({
   database,
   claim,
   extraction,
+  requestId,
   startedAt,
 }: CompletedExtractionInput): Promise<void> => {
   const settled = await settleSavedLinkExtraction(database, claim.userId, {
@@ -186,6 +187,7 @@ const settleCompletedExtraction = async ({
       pluginServerId: extraction.meta?.pluginServerId,
       pluginId: extraction.meta?.pluginId,
       outcome: "complete",
+      requestId,
       nodeCount: extraction.links.length,
       attempt: claim.extractionAttempts,
       durationMs: Date.now() - startedAt,
