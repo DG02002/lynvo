@@ -45,7 +45,7 @@
     "@cloudflare/workers-types": "catalog:"
   },
   "engines": {
-    "node": ">=26.9.0"
+    "node": ">=26.12.0"
   },
   "lynvo": {
     "protocolPackageVersion": "0.1.5"

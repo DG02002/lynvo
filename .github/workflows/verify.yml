@@ -90,7 +90,7 @@ jobs:
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
           version: 12.5.1
-          runtime: node@26.9.0
+          runtime: node@26.12.0
           cache: true
           install: false
       - name: Update pnpm
@@ -186,7 +186,7 @@ jobs:
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
           version: 12.5.1
-          runtime: node@26.9.0
+          runtime: node@26.12.0
           cache: true
           install: false
 
