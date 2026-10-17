@@ -48,7 +48,7 @@ jobs:
         uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
         with:
           version: 12.5.1
-          runtime: node@26.9.0
+          runtime: node@26.12.0
           cache: true
           install: false
 
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26.9.0
+          node-version: 26.12.0
           package-manager-cache: false
 
       - name: Verify npm supports trusted publishing
