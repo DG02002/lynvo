@@ -63,6 +63,9 @@ const ResolvedMirrorRows = ({
   itemUrl,
   actions,
 }: ResolvedMirrorRowsProps) => {
+  const markOpened = () =>
+    actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
+
   return (
     <div
       className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
@@ -75,8 +78,6 @@ const ResolvedMirrorRows = ({
       />
       {mirrors.map((mirror) => {
         const mirrorTarget = getMediaNodeTarget(mirror)
-        const markOpened = () =>
-          actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
         const playMirror = () =>
           openInPlayerAndLogError(() => actions.play(mirror), {
             itemLabel: mirror.label,
