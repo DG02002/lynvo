@@ -57,7 +57,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const renderQueuedGrid = (item: LinkListItem) =>
+const renderQueuedGrid = (item: LinkListItem, actions = createActions()) =>
   render(
     <GallerySaveGrid
       groups={[
@@ -69,7 +69,7 @@ const renderQueuedGrid = (item: LinkListItem) =>
           items: [item],
         },
       ]}
-      actions={createActions()}
+      actions={actions}
       extractingItems={new Set()}
       isHydrating={false}
       highlightedId={null}
@@ -77,6 +77,41 @@ const renderQueuedGrid = (item: LinkListItem) =>
       onOpenGroup={vi.fn()}
     />
   )
+
+const createGroupItems = (): [LinkListItem, LinkListItem] => [
+  createQueuedItem(undefined),
+  {
+    ...createQueuedItem(undefined),
+    id: "group-item-2",
+    url: "https://media.example/group-item-2",
+  },
+]
+
+const renderGroupGrid = (
+  actions: LinkItemActions
+): [LinkListItem, LinkListItem] => {
+  const items = createGroupItems()
+  render(
+    <GallerySaveGrid
+      groups={[
+        {
+          key: "movie:moonlight",
+          displayTitle: "Moonlight",
+          artworkRequest: undefined,
+          lastAddedAt: Date.now(),
+          items,
+        },
+      ]}
+      actions={actions}
+      extractingItems={new Set()}
+      isHydrating={false}
+      highlightedId={null}
+      onOpenItem={vi.fn()}
+      onOpenGroup={vi.fn()}
+    />
+  )
+  return items
+}
 
 describe("GallerySaveGrid", () => {
   it("renders a queued item with a pulsing poster skeleton and shimmering title only", () => {
@@ -239,6 +274,73 @@ describe("GallerySaveGrid", () => {
     expect(screen.getByText("Copy Source link")).toBeInTheDocument()
   })
 
+  it("keeps Refresh reachable from a failed Saved link in Gallery view", () => {
+    vi.stubGlobal("localStorage", createMemoryStorage())
+    localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, "true")
+    const actions = createActions()
+    const failedItem = {
+      ...createQueuedItem({
+        state: "failed",
+        error: "Source unavailable",
+      }),
+      title: "Failed item",
+    }
+
+    renderQueuedGrid(failedItem, actions)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open menu for Failed item" })
+    )
+    fireEvent.click(screen.getByRole("menuitem", { name: "Refresh" }))
+
+    expect(actions.softRefresh).toHaveBeenCalledWith(failedItem.url)
+  })
+
+  it("opens the Gallery group menu after a touch long press", () => {
+    vi.useFakeTimers()
+    renderGroupGrid(createActions())
+
+    const groupButton = screen.getByRole("button", {
+      name: "Open Moonlight",
+    })
+    Object.defineProperties(groupButton, {
+      setPointerCapture: { value: vi.fn() },
+      hasPointerCapture: { value: vi.fn(() => false) },
+    })
+
+    fireEvent.pointerDown(groupButton, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 20,
+    })
+    void act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
+
+    expect(
+      screen.getByRole("menuitem", { name: "Delete all" })
+    ).toBeInTheDocument()
+  })
+
+  it("deletes every Saved link from a Gallery group menu", () => {
+    const actions = createActions()
+    const [firstItem, secondItem] = renderGroupGrid(actions)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open menu for Moonlight" })
+    )
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete all" }))
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Remove 2 items from your library?",
+      })
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }))
+
+    expect(actions.remove).toHaveBeenCalledWith(firstItem.url, firstItem.id)
+    expect(actions.remove).toHaveBeenCalledWith(secondItem.url, secondItem.id)
+  })
+
   it("shows a poster skeleton while artwork is being looked up", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       // SAFETY: never-settling promise mimics an in-flight lookup; the assertion-free mock needs no Response body
@@ -389,7 +491,7 @@ describe("GallerySaveGrid", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a failed member on the group card without blocking the group", () => {
+  it("shows a failed member in a Gallery group without blocking the group", () => {
     render(
       <GallerySaveGrid
         groups={[
@@ -495,7 +597,7 @@ describe("GallerySaveGrid", () => {
     expect(screen.getByText("Waiting to load…")).toBeInTheDocument()
   })
 
-  it("offers the card Choose links action in manual mode until a selection is confirmed", () => {
+  it("offers the Saved link Choose links action in manual mode until a selection is confirmed", () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
     localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, "false")
     const chooseLinks = vi.fn()

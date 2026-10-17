@@ -112,6 +112,7 @@ export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
     pluginServerId: Schema.optional(Schema.String),
     pluginId: Schema.optional(Schema.String),
     outcome: Schema.Literals(["complete", "failed", "pending", "requeued"]),
+    requestId: Schema.optional(Schema.String),
     errorCode: Schema.optional(Schema.String),
     detail: Schema.optional(Schema.String),
     httpStatus: Schema.optional(Schema.Number),

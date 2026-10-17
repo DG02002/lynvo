@@ -31,11 +31,17 @@ const reportRefreshFailure = (
   )
 }
 
-const getRefreshFailureDetails = (
-  cause: unknown
-): Pick<LinkDebugLogEntry, "errorCode" | "detail" | "httpStatus"> => {
+type RefreshDebugLogDetails = Pick<
+  LinkDebugLogEntry,
+  "requestId" | "errorCode" | "detail" | "httpStatus"
+>
+
+const getRefreshFailureDetails = (cause: unknown): RefreshDebugLogDetails => {
   if (cause instanceof ApiClientError) {
     return {
+      // The Worker echoes the request id it logged for this attempt, so a
+      // report referencing it can be found in Cloudflare observability.
+      requestId: cause.headers.get("x-request-id") ?? undefined,
       errorCode: cause.body?.message ?? cause._tag,
       detail: cause.message,
       httpStatus: cause.status,
@@ -49,11 +55,6 @@ const getRefreshFailureDetails = (
     detail: "The extraction request failed.",
   }
 }
-
-type RefreshDebugLogDetails = Pick<
-  LinkDebugLogEntry,
-  "errorCode" | "detail" | "httpStatus"
->
 
 type RefreshDebugLogOptions = {
   item: LinkViewItem

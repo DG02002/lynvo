@@ -47,7 +47,7 @@ If the URL is already in your Library, Lynvo shows **Link already saved**. Open 
 
 ### Choose links to save
 
-When automatic saving is off, Lynvo keeps the Save intent in your Library while Extraction runs. When links are ready, choose **Choose links** on the card, select the Playable links you want, then choose **Save**. **Select all** toggles every selectable link. **Cancel** closes the dialog without confirming a new selection; **Choose links** stays on the card until you confirm one. After a confirmed selection the card action disappears — open the item menu and choose **Refresh link choices** to review the links again.
+When automatic saving is off, Lynvo keeps the Save intent in your Library while Extraction runs. When links are ready, choose **Choose links** on the Saved link, select the Playable links you want, then choose **Save**. **Select all** toggles every selectable link. **Cancel** closes the dialog without confirming a new selection; **Choose links** stays available on the Saved link until you confirm one. After a confirmed selection, **Choose links** disappears — open the item menu and choose **Refresh link choices** to review the links again.
 
 <DocsScreenshot
   name="saving-links-choose-links"
@@ -56,11 +56,11 @@ When automatic saving is off, Lynvo keeps the Save intent in your Library while 
 
 ### Follow Extraction status
 
-A Saved link can show **Waiting to load…** while Extraction is queued, then **Loading links…** while it runs. If it fails, Lynvo shows the returned error and offers **Delete** and **View log**. Open the item menu and choose **Refresh** to try Extraction again. The log helps distinguish a Source response problem from a link-selection problem.
+A Saved link can show **Waiting to load…** while Extraction is queued, then **Loading links…** while it runs. If it fails, Lynvo shows the returned error and offers **Delete** and **Report issue**. Open the item menu and choose **Refresh** to try Extraction again. **Report issue** prefills a message with the Request ID and error details so maintainers can trace the failure in server logs; you can review or edit it before sending.
 
 <DocsScreenshot
   name="saving-links-extraction-failed"
-  alt="Saved link with a failed Extraction message and Delete and View log actions"
+  alt="Saved link with a failed Extraction message and Delete and Report issue actions"
 />
 
 ### Read Source status
@@ -118,15 +118,16 @@ After Lynvo recognizes a domain handled by a Plugin, it may ask **Add this domai
 
 <DocsFaq question="Can I close Choose links and return later?">
   Yes. **Cancel** closes the selection dialog without confirming the selection.
-  The Saved link remains in your Library with **Choose links** still on the
-  card. Once you confirm a selection, reopen the choice with **Refresh link
-  choices** in the item menu.
+  The Saved link remains in your Library with **Choose links** still available.
+  Once you confirm a selection, reopen the choice with **Refresh link choices**
+  in the item menu.
 </DocsFaq>
 
 <DocsFaq question="What should I do when Extraction fails?">
   Match the message under [Recover from Extraction
-  errors](#recover-from-extraction-errors), use **View log** for details, then
-  choose **Refresh** to retry. Choose **Delete** if you no longer want the Saved
+  errors](#recover-from-extraction-errors), then choose **Refresh** to retry. If
+  it keeps failing, use **Report issue** to send the Request ID and error
+  details to maintainers. Choose **Delete** if you no longer want the Saved
   link.
 </DocsFaq>
 

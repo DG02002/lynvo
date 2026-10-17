@@ -721,10 +721,10 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "View log"
+            "name": "Report issue"
           },
           "expectVisible": {
-            "text": "Link log",
+            "text": "Report an issue",
             "exact": true
           }
         }

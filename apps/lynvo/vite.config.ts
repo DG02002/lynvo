@@ -16,7 +16,11 @@ import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 import { defineConfig, type Plugin, type ViteDevServer } from "vite"
 
 import { parseDocumentationFrontmatter } from "./app/features/site/docs/docs-frontmatter.ts"
-import { DOCS_SHIKI_THEMES } from "./app/lib/shiki-theme-names.ts"
+
+const DOCS_SHIKI_THEMES = {
+  light: "night-owl-light",
+  dark: "houston",
+} as const
 
 // Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
 const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
