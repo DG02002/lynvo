@@ -1185,10 +1185,13 @@ export const SaveListBrowser = ({
                           />
                         )}
                       </span>
+                      {isRootItemNew && (
+                        // Stays inside the positioned content div: outside
+                        // it, the static badge paints under the activation
+                        // button's opaque hover tint and disappears.
+                        <NewBadge className="hidden md:inline-flex" />
+                      )}
                     </div>
-                    {isRootItemNew && (
-                      <NewBadge className="hidden md:inline-flex" />
-                    )}
                   </div>
                   <div
                     className={cn(

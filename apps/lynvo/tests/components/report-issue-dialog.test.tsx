@@ -34,7 +34,7 @@ describe("ReportIssueDialog", () => {
     vi.restoreAllMocks()
   })
 
-  it("shows the report that will be sent", () => {
+  it("reveals the report details behind a toggle instead of a code block", () => {
     render(
       <ReportIssueDialog
         item={createReportItem()}
@@ -43,9 +43,15 @@ describe("ReportIssueDialog", () => {
       />
     )
 
-    const preview = screen.getByText(/Lynvo issue report/)
-    expect(preview).toHaveTextContent("Request ID: request-failed")
-    expect(preview).toHaveTextContent("Error code: SOURCE_TIMEOUT")
+    expect(screen.queryByText("Request ID")).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Show details" }))
+
+    expect(screen.getByText("Request ID")).toBeVisible()
+    expect(screen.getByText("request-failed")).toBeVisible()
+    expect(screen.getByText("Error code")).toBeVisible()
+    expect(screen.getByText("SOURCE_TIMEOUT")).toBeVisible()
+    expect(screen.queryByText(/Lynvo issue report/)).not.toBeInTheDocument()
   })
 
   it("opens a prefilled GitHub issue report", () => {

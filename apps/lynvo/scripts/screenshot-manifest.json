@@ -510,7 +510,7 @@
           "path": "/settings/proxy",
           "expectVisible": {
             "role": "heading",
-            "name": "Scrape.do proxy",
+            "name": "Supported proxy",
             "exact": true
           }
         }
@@ -538,7 +538,7 @@
           "path": "/settings/proxy",
           "expectVisible": {
             "role": "heading",
-            "name": "Scrape.do proxy",
+            "name": "Supported proxy",
             "exact": true
           }
         },
@@ -546,7 +546,7 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Change proxy key for Lynvo Plugin Server"
+            "name": "Change proxy key"
           },
           "expectVisible": {
             "text": "Scrape.do API token",

@@ -106,7 +106,7 @@ describe("CustomPluginServerTable", () => {
     expect(screen.queryByText("View project")).not.toBeInTheDocument()
   })
 
-  it("links supported servers to the shared proxy settings", () => {
+  it("keeps proxy state out of the Plugins table rows", () => {
     const baseManifest = JSON.parse(pluginServer.manifest)
     const capableServer = {
       ...pluginServer,
@@ -129,15 +129,7 @@ describe("CustomPluginServerTable", () => {
     }
     renderTable([capableServer, pluginServer])
 
-    const proxyLink = screen.getByRole("link", {
-      name: "Manage proxy settings for Proxy Capable",
-    })
-    expect(proxyLink).toHaveAttribute("href", "/settings/proxy")
-    expect(screen.getByText("Proxy key set")).toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Actions for Proxy Capable" })
-    )
-    expect(screen.queryByText("Proxy key")).not.toBeInTheDocument()
+    expect(screen.queryByText("Proxy key set")).not.toBeInTheDocument()
+    expect(screen.queryByText("Proxy key not set")).not.toBeInTheDocument()
   })
 })

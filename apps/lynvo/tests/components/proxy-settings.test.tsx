@@ -77,24 +77,25 @@ describe("ProxySettings", () => {
     )
 
     expect(await screen.findByText("Proxy Capable")).toBeVisible()
-    expect(screen.getByText("Scrape.do")).toBeVisible()
+    expect(screen.getByRole("img", { name: "Scrape.do" })).toBeVisible()
+    expect(screen.getByText("Monthly credit usage")).toBeVisible()
+    expect(screen.getByText("3% used")).toBeVisible()
     expect(screen.getByText("27 of 1,000 credits used")).toBeVisible()
-    expect(screen.getByText("973 credits remaining")).toBeVisible()
     expect(
       screen.getByRole("switch", { name: "Disable proxy for Proxy Capable" })
     ).toBeChecked()
     expect(
       screen.getByRole("button", { name: "Refresh credits" })
     ).toBeVisible()
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Change proxy key for Proxy Capable",
-      })
-    )
-    expect(await screen.findByText("Source Alpha:")).toBeVisible()
     expect(
-      screen.getByText("Uses 5 proxy credits for rendering.")
+      screen.getByRole("button", { name: "Remove proxy key" })
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Change proxy key" }))
+    expect(
+      screen.getByText(
+        "Lynvo encrypts this key and sends it only to supported Custom Plugin Servers during Extraction."
+      )
     ).toBeVisible()
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
     expect(

@@ -4,9 +4,15 @@ import type { LinkDebugLogEntry, LinkViewItem } from "~/features/links/types"
 const GITHUB_ISSUES_URL = "https://github.com/DG02002/lynvo/issues/new"
 const TELEGRAM_SHARE_URL = "https://t.me/share/url"
 
+interface IssueReportDetail {
+  readonly label: string
+  readonly value: string
+}
+
 export interface IssueReport {
   readonly title: string
   readonly message: string
+  readonly details: readonly IssueReportDetail[]
 }
 
 /** Report the newest failure, so a later successful attempt does not hide its diagnosis. */
@@ -29,47 +35,54 @@ const findFeaturedDebugLogEntry = (
 const formatOccurredAt = (at: number): string =>
   new Date(at).toISOString().replace("T", " ").replace(/\..+/, " UTC")
 
-const buildReportLines = (
+const buildReportDetails = (
   item: LinkViewItem,
   featured: LinkDebugLogEntry | undefined
-): string[] => {
+): IssueReportDetail[] => {
   const flatMeta = getLinkViewItemFlatMeta(item)
-  const lines = [
-    "Lynvo issue report",
-    "",
-    `Request ID: ${featured?.requestId ?? "(not recorded)"}`,
-    `Error code: ${featured?.errorCode ?? "(not recorded)"}`,
+  const details: IssueReportDetail[] = [
+    { label: "Request ID", value: featured?.requestId ?? "(not recorded)" },
+    { label: "Error code", value: featured?.errorCode ?? "(not recorded)" },
   ]
   if (featured?.httpStatus !== undefined) {
-    lines.push(`HTTP status: ${featured.httpStatus}`)
+    details.push({ label: "HTTP status", value: String(featured.httpStatus) })
   }
   const pluginServerId = featured?.pluginServerId ?? flatMeta.pluginServerId
   if (pluginServerId) {
-    lines.push(`Plugin Server: ${pluginServerId}`)
+    details.push({ label: "Plugin Server", value: pluginServerId })
   }
   const pluginId = featured?.pluginId ?? flatMeta.pluginId
   if (pluginId) {
-    lines.push(`Plugin: ${pluginId}`)
+    details.push({ label: "Plugin", value: pluginId })
   }
   if (featured?.attempt !== undefined) {
-    lines.push(`Attempt: ${featured.attempt}`)
+    details.push({ label: "Attempt", value: String(featured.attempt) })
   }
   if (featured) {
-    lines.push(`Occurred: ${formatOccurredAt(featured.at)}`)
+    details.push({
+      label: "Occurred",
+      value: formatOccurredAt(featured.at),
+    })
   }
-  lines.push(`Source: ${item.url}`)
+  details.push({ label: "Source", value: item.url })
   if (featured?.detail) {
-    lines.push("", featured.detail)
+    details.push({ label: "Detail", value: featured.detail })
   }
-  return lines
+  return details
 }
 
 export const buildIssueReport = (item: LinkViewItem): IssueReport => {
   const featured = findFeaturedDebugLogEntry(item)
   const errorCode = featured?.errorCode
+  const details = buildReportDetails(item, featured)
   return {
     title: errorCode ? `Extraction failed: ${errorCode}` : "Extraction failed",
-    message: buildReportLines(item, featured).join("\n"),
+    message: [
+      "Lynvo issue report",
+      "",
+      ...details.map((detail) => `${detail.label}: ${detail.value}`),
+    ].join("\n"),
+    details,
   }
 }
 

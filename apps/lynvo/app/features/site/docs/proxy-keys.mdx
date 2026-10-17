@@ -7,7 +7,7 @@ contentType: How-to
 
 <DocsScreenshot
   name="settings-proxy"
-  alt="Settings > Proxy showing the Scrape.do provider card with credit usage and a supported Custom Plugin Server row with its switch"
+  alt="Settings > Proxy showing the Scrape.do provider row with monthly credit usage and a supported Custom Plugin Server row with its switch"
 />
 
 <DocSection id="overview">
@@ -30,19 +30,19 @@ Open [**Settings > Proxy**](/settings/proxy). Only Custom Plugin Servers that de
 
 ## Basics
 
-### Read the provider card
+### Read monthly credit usage
 
-The Scrape.do card summarizes your proxy account: how many of your monthly credits are used, how many remain, and when Lynvo last checked. Choose **Refresh credits** to check the account again. Servers that support Scrape.do appear below the card, each with a switch that turns proxy use on or off for that server.
+Under the Scrape.do logo, **Monthly credit usage** shows how many of your credits are used, the percentage used, and when Lynvo last checked your account. Choose **Refresh credits** to check the account again. Servers that support Scrape.do appear below, each with a switch that turns proxy use on or off for that server.
 
 ### Add or change a proxy key
 
-1. Choose the key button for a server to open its proxy key dialog.
+1. Choose the **+** next to the Scrape.do logo to open the key dialog.
 2. Enter your token in **Scrape.do API token**.
 3. Choose **Save key**.
 
-Lynvo encrypts the key for storage. It does not send the key to the browser in server settings data. Saving a key also turns that server's proxy use on, so Extractions can use your credits right away. During Extraction, Lynvo sends the key only to the matching Custom Plugin Server; that server can then use your Scrape.do account.
+Lynvo encrypts the key for storage. It does not send the key to the browser in server settings data. Saving a key also turns proxy use on for every supported server, so Extractions can use your credits right away.
 
-Choose **Remove saved key** in the dialog if you want Lynvo to delete the stored key. Closing the dialog without saving leaves the saved value unchanged. The dialog also lists each Plugin's proxy credit usage, so you know what a request costs before you spend credits.
+Choose the trash button next to the Scrape.do logo to delete the stored key. Closing the dialog without saving leaves a saved value unchanged.
 
 ### Choose when to use the key
 
@@ -52,11 +52,11 @@ Each supported server's switch has three states:
 - A key is saved and the switch is off: Extractions use the Custom Plugin Server's own proxy behavior.
 - A key is saved and the switch is on: that server can use your Scrape.do credits for Extractions.
 
-If the server is unavailable, Lynvo disables the switch until it is available again. Turning the switch off keeps the key. Remove the key separately when you no longer want Lynvo to retain it.
+If the server is unavailable, Lynvo disables the switch until it is available again. Turning the switch off keeps the key. Remove the key with the trash button when you no longer want Lynvo to retain it.
 
 <DocsScreenshot
   name="settings-proxy-key-dialog"
-  alt="Proxy key dialog showing the Scrape.do API token field, per-Plugin proxy usage, Save key, and Remove saved key"
+  alt="Proxy key dialog showing the Scrape.do logo, the API token field, and Save key"
 />
 
 </DocSection>
@@ -71,8 +71,8 @@ Only servers whose manifest declares Scrape.do proxy support appear in **Setting
 
 <DocsFaq question="Does turning a server's proxy switch off remove my token?">
   No. The switch controls whether Lynvo sends the saved token to that server
-  during Extraction. Choose the server's key button, then **Remove saved key**
-  to remove it.
+  during Extraction. Use the trash button next to the Scrape.do logo to remove
+  it.
 </DocsFaq>
 
 <DocsFaq question="Why can’t I refresh credits?">
