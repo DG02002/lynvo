@@ -22,8 +22,8 @@ catalogs:
       specifier: ^1.2.0
       version: 1.2.0
     effect:
-      specifier: rc
-      version: 4.0.0-rc.115
+      specifier: ~4.0.2
+      version: 4.0.2
     evlog:
       specifier: 2.29.0
       version: 2.29.0
@@ -139,7 +139,7 @@ importers:
         version: 0.3.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-rc.115
+        version: 4.0.2
       evlog:
         specifier: 'catalog:'
         version: 2.29.0(express@5.2.1(supports-color@10.2.2))(hono@4.13.7)(react-router@8.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
@@ -287,7 +287,7 @@ importers:
         version: 1.2.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-rc.115
+        version: 4.0.2
       evlog:
         specifier: 'catalog:'
         version: 2.29.0(express@5.2.1(supports-color@10.2.2))(hono@4.13.7)(react-router@8.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
@@ -336,7 +336,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-rc.115
+        version: 4.0.2
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -2950,8 +2950,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@4.0.0-rc.115:
-    resolution: {integrity: sha512-ogYulZ5ffeOzrJqQrG0XOkDO5lKn2s9KNHhoxJy/6wKUkF0i12dlVXWA9TgsgQ+zV/JzizyG0+XMPepZEQX6vw==}
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
 
   electron-to-chromium@1.5.422:
     resolution: {integrity: sha512-UvA/32XqrLDdZSn7Jllo1AYNcWji/G0d5M0GTViE7KoGBiMunw3a34Sb2KO4ZZyrSEhqsxFoVhWWJshdyfKqJA==}
@@ -7229,7 +7229,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.0-rc.115: {}
+  effect@4.0.2: {}
 
   electron-to-chromium@1.5.422: {}
 

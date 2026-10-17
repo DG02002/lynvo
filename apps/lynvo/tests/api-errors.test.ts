@@ -1,5 +1,5 @@
 import { Result, Schema } from "effect"
-import { HttpApiSchema } from "effect/unstable/httpapi"
+import { HttpApiSchema } from "effect/http-api"
 import { describe, expect, it } from "vitest"
 
 import {
