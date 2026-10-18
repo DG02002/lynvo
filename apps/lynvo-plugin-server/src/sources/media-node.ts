@@ -47,6 +47,5 @@ export const createSourcePlayableNode = ({
   if (rangeRequest !== undefined) {
     extras.rangeRequest = rangeRequest
   }
-  const hasExtras = size !== undefined || rangeRequest !== undefined
-  return hasExtras ? { ...node, ...extras } : node
+  return Object.keys(extras).length > 0 ? { ...node, ...extras } : node
 }

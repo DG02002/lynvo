@@ -133,18 +133,17 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
                 onRefreshCredits={() =>
                   handleRefreshPluginServerProxyBalance(pluginServer.id)
                 }
-                isToggling={
-                  serverOperations[`proxy-toggle:${pluginServer.id}`]
-                    ?.status === "pending"
-                }
-                isProxyKeyBusy={
-                  serverOperations[`proxy-key:${pluginServer.id}`]?.status ===
-                  "pending"
-                }
-                isRefreshingCredits={
-                  serverOperations[`proxy-balance:${pluginServer.id}`]
-                    ?.status === "pending"
-                }
+                operationStatus={{
+                  isToggling:
+                    serverOperations[`proxy-toggle:${pluginServer.id}`]
+                      ?.status === "pending",
+                  isProxyKeyBusy:
+                    serverOperations[`proxy-key:${pluginServer.id}`]?.status ===
+                    "pending",
+                  isRefreshingCredits:
+                    serverOperations[`proxy-balance:${pluginServer.id}`]
+                      ?.status === "pending",
+                }}
               />
             ))}
           </SettingsList>
@@ -173,6 +172,10 @@ interface ProxyServerSettingsRowProps {
     pluginServerId: string,
     currentEnabled: boolean
   ) => void
+  readonly operationStatus: ProxyServerSettingsRowOperationStatus
+}
+
+interface ProxyServerSettingsRowOperationStatus {
   readonly isProxyKeyBusy: boolean
   readonly isRefreshingCredits: boolean
   readonly isToggling: boolean
@@ -184,9 +187,7 @@ const ProxyServerSettingsRow = ({
   onSetProxyKey,
   onRefreshCredits,
   onToggleProxy,
-  isProxyKeyBusy,
-  isRefreshingCredits,
-  isToggling,
+  operationStatus: { isProxyKeyBusy, isRefreshingCredits, isToggling },
 }: ProxyServerSettingsRowProps) => {
   const isDown =
     pluginServer.verificationStatus === PLUGIN_SERVER_VERIFICATION_STATUS.down

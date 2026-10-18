@@ -39,6 +39,7 @@ import {
 } from "./extraction-status-utils"
 import { GalleryGroupMenu } from "./gallery-group-menu"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
+import { SaveDateGroupSection } from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
 import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import {
@@ -479,15 +480,7 @@ export const GallerySaveGrid = ({
   }
 
   return (
-    <section
-      aria-label="Recent"
-      className={cn(
-        "flex flex-col gap-4",
-        TVBRO_FILTER_FREE_ENTER_CLASS,
-        "animate-in fade-in fill-mode-both duration-500 motion-reduce:animate-none"
-      )}
-    >
-      <h2 className="font-heading text-2xl font-bold">Recent</h2>
+    <SaveDateGroupSection label="Recent">
       <div className={GALLERY_GRID_CLASS}>
         {groups.map((group) => (
           <GallerySaveItem
@@ -504,6 +497,6 @@ export const GallerySaveGrid = ({
           />
         ))}
       </div>
-    </section>
+    </SaveDateGroupSection>
   )
 }

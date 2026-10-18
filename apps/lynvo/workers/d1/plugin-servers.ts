@@ -538,7 +538,6 @@ export const finalizePluginServerCredential = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  // Saving a key must preserve the server's separate proxy switch.
   const mutation = buildServerMutationStatements({
     database,
     preparation,
@@ -896,6 +895,7 @@ export const updatePluginServerProxyKey = async (
   input: PluginServerProxyKeyUpdate
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
+  // Saving a key must preserve the server's separately controlled proxy switch.
   const nextRow: PluginServerRow = {
     ...existing,
     proxy_token_ciphertext: input.encrypted?.ciphertext ?? null,
