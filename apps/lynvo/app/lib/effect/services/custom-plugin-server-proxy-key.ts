@@ -4,10 +4,7 @@ import {
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect, Result, Schema } from "effect"
 
-import {
-  DOCS_SEED_PROXY_BALANCE,
-  DOCS_SEED_PROXY_KEY,
-} from "../../../../shared/docs-seed-constants"
+import { DOCS_SEED_PROXY_FIXTURES } from "../../../../shared/docs-seed-constants"
 import {
   findOwnedPluginServerById,
   updatePluginServerProxyBalance,
@@ -118,18 +115,23 @@ export const readScrapeDoAccountInfo = Effect.fn(
   }
 })
 
+// No-auth development seeds save these demo proxy keys so the proxy settings page
+// can show more than one credit balance without a real Scrape.do account.
+const DOCS_SEED_PROXY_DEMO_BALANCES = new Map<string, ProxyAccountInfo>(
+  Object.values(DOCS_SEED_PROXY_FIXTURES).map(
+    ({ key, balance }) => [key, balance] as const
+  )
+)
+
 const readProxyAccountInfo = (
   environment: DevelopmentAuthEnvironment,
   token: string
 ): Effect.Effect<ProxyAccountInfo, Error> => {
-  if (
-    isDevelopmentAuthBypassEnabled(environment) &&
-    token === DOCS_SEED_PROXY_KEY
-  ) {
-    return Effect.succeed<ProxyAccountInfo>({
-      remaining: DOCS_SEED_PROXY_BALANCE.remaining,
-      limit: DOCS_SEED_PROXY_BALANCE.limit,
-    })
+  if (isDevelopmentAuthBypassEnabled(environment)) {
+    const demoBalance = DOCS_SEED_PROXY_DEMO_BALANCES.get(token)
+    if (demoBalance) {
+      return Effect.succeed<ProxyAccountInfo>({ ...demoBalance })
+    }
   }
   return readScrapeDoAccountInfo(token)
 }

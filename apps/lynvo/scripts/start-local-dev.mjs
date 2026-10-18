@@ -1,10 +1,12 @@
 import { spawn, spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
+import {
+  DOCS_SEED_PLUGIN_SERVER_FIXTURES,
+  DOCS_SEED_PRIMARY_PLUGIN_SERVER_FIXTURE,
+} from "./docs-seed-fixtures.mjs"
 import { readSeedAppOrigin } from "./local-origin.mjs"
 
-const SEED_PLUGIN_SERVER_ORIGIN = "http://localhost:8788"
-const SEED_PLUGIN_SERVER_PORT = new URL(SEED_PLUGIN_SERVER_ORIGIN).port
 // The docs scenario is the only scenario registered in scripts/seed.ts today.
 const SEED_SCENARIO_NAME = "docs"
 const DEFAULT_DEV_SERVER_PORT = "5173"
@@ -15,6 +17,8 @@ const READINESS_TIMEOUT_MS = 120_000
 const READINESS_INTERVAL_MS = 500
 const READINESS_REQUEST_TIMEOUT_MS = 5_000
 const MAXIMUM_PROBE_BODY_BYTES = 256 * 1024
+
+const fixturePort = (fixture) => new URL(fixture.url).port
 
 // A readiness failure that retrying cannot fix, such as the dev server exiting
 // or a foreign service holding the fixture Worker port.
@@ -115,7 +119,10 @@ const appReadinessProbe = (appOrigin) => async () => {
 export const createSeedFixtureWorkerProbe =
   ({
     fetchFunction = fetch,
-    manifestUrl = new URL("/manifest", SEED_PLUGIN_SERVER_ORIGIN),
+    manifestUrl = new URL(
+      "/manifest",
+      DOCS_SEED_PRIMARY_PLUGIN_SERVER_FIXTURE.url
+    ),
   } = {}) =>
   async () => {
     let response
@@ -140,7 +147,7 @@ export const createSeedFixtureWorkerProbe =
     // Server whose manifest failed protocol validation, so the message must not
     // claim which one holds the port.
     throw new ReadinessAbortError(
-      `Port ${SEED_PLUGIN_SERVER_PORT} did not serve the Lynvo Plugin Server manifest. Free the port or restart the Lynvo Plugin Server on it, then rerun \`pnpm dev --seed\`.`
+      `Port ${manifestUrl.port} did not serve the Lynvo Plugin Server manifest. Free the port or restart the Lynvo Plugin Server on it, then rerun \`pnpm dev --seed\`.`
     )
   }
 
@@ -181,13 +188,35 @@ export const waitForLocalServer = async ({
   }
 }
 
-const spawnSeedFixtureWorker = () =>
-  spawn("pnpm", ["--filter", "@lynvo/lynvo-plugin-server", "dev:docs-seed"], {
-    stdio: "inherit",
-    // A detached process group lets the stop path signal the whole pnpm,
-    // wrangler, and workerd chain; pnpm alone does not forward signals.
-    detached: true,
-  })
+// `pnpm dev` builds the workspace protocol package before invoking this
+// launcher; keep the fixture Workers on that entry path for module resolution.
+const spawnSeedFixtureWorker = (fixtureWorker) =>
+  spawn(
+    "pnpm",
+    [
+      "--filter",
+      "@lynvo/lynvo-plugin-server",
+      "exec",
+      "wrangler",
+      "dev",
+      "--config",
+      "wrangler.jsonc",
+      "--env",
+      "local",
+      "--port",
+      fixturePort(fixtureWorker),
+      "--var",
+      "DOCS_SEED_PROXY_FIXTURE:true",
+      "--var",
+      `PLUGIN_SERVER_DISPLAY_NAME:${fixtureWorker.displayName}`,
+    ],
+    {
+      stdio: "inherit",
+      // A detached process group lets the stop path signal the whole pnpm,
+      // wrangler, and workerd chain; pnpm alone does not forward signals.
+      detached: true,
+    }
+  )
 
 const signalSeedFixtureWorker = (fixtureProcess, signal) => {
   try {
@@ -206,10 +235,9 @@ const stopSeedFixtureWorker = (fixtureProcess) => {
 const FIXTURE_STOP_TIMEOUT_MS = 15_000
 
 // The fixture runs under two pnpm layers that print their own shutdown noise
-// (ELIFECYCLE 130 and ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL), so the seed's
-// success message must wait for the teardown to finish. Otherwise the noise
-// lands after "Seeded the local development environment" and reads like the
-// dev session crashed.
+// (ELIFECYCLE 130 and ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL), so a pending failure
+// message must wait for the teardown to finish. Otherwise the noise lands
+// after the failure and reads like the dev session crashed on its own.
 const stopSeedFixtureWorkerAndWait = async (fixtureProcess) => {
   if (fixtureProcess.exitCode !== null || fixtureProcess.signalCode !== null) {
     return
@@ -290,34 +318,70 @@ const readSeedStartup = () => {
   return { appOrigin }
 }
 
-const waitForSeedReadiness = async (appOrigin, devProcess) => {
-  const guardedProbe = (probe) => async () => {
-    if (devProcess.exitCode !== null || devProcess.signalCode !== null) {
-      throw new ReadinessAbortError(
-        "The app dev server exited before seeding could begin."
-      )
-    }
-    return await probe()
+const createDevProcessGuardedProbe = (devProcess, probe) => async () => {
+  if (devProcess.exitCode !== null || devProcess.signalCode !== null) {
+    throw new ReadinessAbortError(
+      "The app dev server exited before seeding could begin."
+    )
   }
+  return await probe()
+}
+
+const waitForAppReadiness = async (appOrigin, devProcess) => {
   await waitForLocalServer({
     label: "The app dev server",
     origin: appOrigin.origin,
-    probe: guardedProbe(appReadinessProbe(appOrigin)),
+    probe: createDevProcessGuardedProbe(
+      devProcess,
+      appReadinessProbe(appOrigin)
+    ),
     timeoutHint:
       appOrigin.hostname === "localhost"
         ? undefined
         : `If the dev server listens on another loopback address, set LYNVO_SEED_ORIGIN to http://localhost:${appOrigin.port}.`,
   })
+}
+
+// Concurrent wrangler startups of the same Worker race inside workerd and die
+// with a bind error, so each fixture Worker must be ready before the next one
+// starts.
+const startSeedFixtureWorker = async (
+  fixtureWorker,
+  devProcess,
+  onSpawnedWorker
+) => {
+  const probe = createSeedFixtureWorkerProbe({
+    manifestUrl: new URL("/manifest", fixtureWorker.url),
+  })
+  const isAlreadyRunning = await probe()
+  if (isAlreadyRunning) {
+    writeMessage(
+      `Reusing the seeding Plugin Server already running at ${fixtureWorker.url}.`
+    )
+    return undefined
+  }
+  const workerProcess = spawnSeedFixtureWorker(fixtureWorker)
+  const spawnedWorker = {
+    process: workerProcess,
+    probe,
+    port: fixturePort(fixtureWorker),
+  }
+  onSpawnedWorker(spawnedWorker)
   await waitForLocalServer({
     label: "The seeding Plugin Server",
-    origin: SEED_PLUGIN_SERVER_ORIGIN,
-    probe: guardedProbe(seedFixtureWorkerProbe),
+    origin: fixtureWorker.url,
+    probe: createDevProcessGuardedProbe(devProcess, probe),
   })
+  return spawnedWorker
 }
 
 export const writeSpawnedWorkerExitNotice = async (
   fixtureProcess,
-  { probe = seedFixtureWorkerProbe, write = writeMessage } = {}
+  {
+    probe = seedFixtureWorkerProbe,
+    port = fixturePort(DOCS_SEED_PRIMARY_PLUGIN_SERVER_FIXTURE),
+    write = writeMessage,
+  } = {}
 ) => {
   if (
     !fixtureProcess ||
@@ -337,31 +401,48 @@ export const writeSpawnedWorkerExitNotice = async (
   }
   write(
     servedByAnotherWorker
-      ? `The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port ${SEED_PLUGIN_SERVER_PORT}, which stays running.`
+      ? `The spawned seeding Plugin Server exited; the seed ran against another Lynvo Plugin Server already serving port ${port}, which stays running.`
       : "The spawned seeding Plugin Server is no longer running."
   )
 }
 
-const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
-  const reuseRunningFixtureWorker = await seedFixtureWorkerProbe()
-  if (reuseRunningFixtureWorker) {
-    writeMessage(
-      `Reusing the seeding Plugin Server already running at ${SEED_PLUGIN_SERVER_ORIGIN}.`
-    )
+const stopSeedFixtureWorkers = async (spawnedWorkers) => {
+  for (const worker of spawnedWorkers) {
+    // SAFETY: Each fixture Worker must exit before the next is signalled so their teardown output cannot interleave.
+    // oxlint-disable-next-line eslint/no-await-in-loop
+    await stopSeedFixtureWorkerAndWait(worker.process)
   }
-  const fixtureProcess = reuseRunningFixtureWorker
-    ? undefined
-    : spawnSeedFixtureWorker()
-  const stopFixtureWorker = () => {
-    if (fixtureProcess) {
-      stopSeedFixtureWorker(fixtureProcess)
+}
+
+export const seedLocalDevelopmentEnvironment = async (
+  appOrigin,
+  devProcess,
+  {
+    waitForApp = waitForAppReadiness,
+    startFixtureWorker = startSeedFixtureWorker,
+    runSeed = runSeedProcess,
+    stopWorkers = stopSeedFixtureWorkers,
+    write = writeMessage,
+  } = {}
+) => {
+  const spawnedWorkers = []
+  const stopSpawnedWorkers = () => {
+    for (const worker of spawnedWorkers) {
+      stopSeedFixtureWorker(worker.process)
     }
   }
-  devProcess.on("exit", stopFixtureWorker)
+  devProcess.on("exit", stopSpawnedWorkers)
 
   try {
-    await waitForSeedReadiness(appOrigin, devProcess)
-    const seedResult = await runSeedProcess()
+    await waitForApp(appOrigin, devProcess)
+    for (const fixtureWorker of DOCS_SEED_PLUGIN_SERVER_FIXTURES) {
+      // SAFETY: Fixture Workers start one at a time so a slow wrangler startup cannot collide with the next one.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      await startFixtureWorker(fixtureWorker, devProcess, (worker) =>
+        spawnedWorkers.push(worker)
+      )
+    }
+    const seedResult = await runSeed()
     if (seedResult.signal) {
       throw new Error(`The seed CLI was terminated by ${seedResult.signal}.`)
     }
@@ -370,17 +451,25 @@ const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
         `The seed CLI exited with code ${seedResult.exitCode ?? 1}.`
       )
     }
-    // Prints only when the fixture died during seeding, such as when another
-    // Lynvo Plugin Server already held the port; the normal stop happens below.
-    await writeSpawnedWorkerExitNotice(fixtureProcess)
-    await stopSeedFixtureWorkerAndWait(fixtureProcess)
-    writeMessage(
-      `Seeded the local development environment. The app keeps running at ${appOrigin.origin}.`
-    )
-  } finally {
-    if (fixtureProcess) {
-      await stopSeedFixtureWorkerAndWait(fixtureProcess)
+    // Prints only when a fixture Worker died during seeding, such as when
+    // another Lynvo Plugin Server already held its port; the healthy workers
+    // keep serving the dev session below.
+    for (const worker of spawnedWorkers) {
+      // SAFETY: Each exit notice probe settles before the next worker's notice is written.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      await writeSpawnedWorkerExitNotice(worker.process, {
+        probe: worker.probe,
+        port: worker.port,
+      })
     }
+    write(
+      `Seeded the local development environment. The app keeps running at ${appOrigin.origin}, and the seeding Plugin Servers keep running on ${DOCS_SEED_PLUGIN_SERVER_FIXTURES.map(fixturePort).join(", ")} until the dev server exits.`
+    )
+  } catch (cause) {
+    // A failed seed stops only Workers this launcher spawned, so a retry after
+    // fixing the failure starts from a clean port state.
+    await stopWorkers(spawnedWorkers)
+    throw cause
   }
 }
 

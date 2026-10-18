@@ -43,6 +43,7 @@
         "COMMIT_HASH": "unknown",
         "PUBLIC_ASSET_ORIGIN": "http://localhost:5173/lynvo-plugin-server-assets",
         "DOCS_SEED_PROXY_FIXTURE": "false",
+        "PLUGIN_SERVER_DISPLAY_NAME": "",
       },
       "secrets": {
         "required": ["PLUGIN_SERVER_AUTH_KEY"],

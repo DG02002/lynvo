@@ -184,17 +184,25 @@ pnpm dev --seed
 moving to a free one. The launcher seeds the origin from `LYNVO_SEED_ORIGIN`,
 which defaults to `http://localhost:5173`; combining `--seed` with `--port`
 requires setting `LYNVO_SEED_ORIGIN` to the same port, and the launcher exits
-before migrations when the two disagree. A Lynvo Plugin Server already serving
-on port 8788 is reused and left running, even when it finishes starting while
-the launcher is starting its own; otherwise the launcher starts the seeding
-fixture Worker there and stops it after the seed finishes. When port 8788
-serves something else, seeding fails with an error while the app keeps
+before migrations when the two disagree.
+
+The scenario registers one Custom Plugin Server per fixture Worker so the
+Plugins and proxy settings pages render every state. The current ports, names,
+and enabled/proxy states are defined in
+`apps/lynvo/scripts/docs-seed-fixtures.mjs`; proxy keys and balances are in
+`apps/lynvo/shared/docs-seed-constants.ts`.
+
+A Lynvo Plugin Server already serving one of these ports is reused and left
+running; otherwise the launcher starts the fixture Worker there. The Workers
+keep serving the dev session after the seed finishes and stop when the dev
+server exits, so the seeded servers stay verified while you browse. Stop one
+of the Workers and reopen Settings > Plugins to see the down state. When a
+port serves something else, seeding fails with an error while the app keeps
 running.
 
-To run the steps by hand instead, start `pnpm dev --no-auth`, start
-`pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed` in a second terminal,
-run `pnpm seed docs` from the repository root, then stop the standalone Worker
-with Ctrl-C when the seed finishes.
+Run `pnpm dev --seed` to start the no-auth app, start and verify the fixture
+Workers in sequence, and seed the docs scenario. The app and Workers stay
+available until the dev server exits.
 
 ## Capture the screenshot manifest
 
@@ -204,8 +212,8 @@ Install Playwright's Chromium browser once after installing dependencies:
 pnpm --filter @lynvo/app exec playwright install chromium
 ```
 
-Keep the no-auth app and `dev:docs-seed` Worker running as above, then capture
-the checked-in screenshot manifest:
+Keep `pnpm dev --seed` running as above, then capture the checked-in screenshot
+manifest:
 
 ```sh
 pnpm capture:screenshots

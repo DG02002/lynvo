@@ -178,6 +178,22 @@ describe("Lynvo plugin catalog", () => {
     })
   })
 
+  it("uses the fixture display name and falls back to the default", () => {
+    expect(
+      createLynvoPluginServerManifest("https://lynvo.example", {
+        displayName: "  Home Drive Index  ",
+      }).displayName
+    ).toBe("Home Drive Index")
+    expect(
+      createLynvoPluginServerManifest("https://lynvo.example", {
+        displayName: "   ",
+      }).displayName
+    ).toBe("Lynvo Plugin Server")
+    expect(
+      createLynvoPluginServerManifest("https://lynvo.example").displayName
+    ).toBe("Lynvo Plugin Server")
+  })
+
   it("discovers a OneDrive index from its upstream repository link", async () => {
     vi.stubGlobal(
       "fetch",
