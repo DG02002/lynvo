@@ -1,9 +1,12 @@
 import { spawnSync } from "node:child_process"
+import { EventEmitter } from "node:events"
 
 import { describe, expect, it } from "vitest"
 
+import { DOCS_SEED_PLUGIN_SERVER_FIXTURES } from "../scripts/docs-seed-fixtures.mjs"
 import {
   createSeedFixtureWorkerProbe,
+  seedLocalDevelopmentEnvironment,
   waitForLocalServer,
   writeSpawnedWorkerExitNotice,
 } from "../scripts/start-local-dev.mjs"
@@ -166,5 +169,110 @@ describe("spawned Worker exit notice", () => {
     )
 
     expect(messages).toEqual([])
+  })
+})
+
+describe("docs seed launcher orchestration", () => {
+  const createSpawnedWorker = (port: string) => ({
+    process: { exitCode: null, signalCode: null },
+    probe: async () => true,
+    port,
+  })
+
+  it("starts fixture Workers sequentially and reports their ports", async () => {
+    const events: string[] = []
+    const messages: string[] = []
+
+    await seedLocalDevelopmentEnvironment(
+      new URL("http://localhost:5173"),
+      new EventEmitter(),
+      {
+        waitForApp: async () => {
+          events.push("app-ready")
+        },
+        startFixtureWorker: async (fixture, _devProcess, onSpawnedWorker) => {
+          const { port } = new URL(fixture.url)
+          events.push(`start:${port}`)
+          const worker = createSpawnedWorker(port)
+          onSpawnedWorker(worker)
+          events.push(`ready:${port}`)
+          return worker
+        },
+        runSeed: async () => {
+          events.push("seed")
+          return { exitCode: 0, signal: null }
+        },
+        write: (message) => messages.push(message),
+      }
+    )
+
+    expect(events).toEqual([
+      "app-ready",
+      "start:8788",
+      "ready:8788",
+      "start:8789",
+      "ready:8789",
+      "start:8790",
+      "ready:8790",
+      "seed",
+    ])
+    expect(messages).toEqual([
+      "Seeded the local development environment. The app keeps running at http://localhost:5173, and the seeding Plugin Servers keep running on 8788, 8789, 8790 until the dev server exits.",
+    ])
+    expect(DOCS_SEED_PLUGIN_SERVER_FIXTURES).toHaveLength(3)
+  })
+
+  it("stops every spawned Worker when seeding fails", async () => {
+    const stoppedWorkers: string[] = []
+
+    await expect(
+      seedLocalDevelopmentEnvironment(
+        new URL("http://localhost:5173"),
+        new EventEmitter(),
+        {
+          waitForApp: async () => {},
+          startFixtureWorker: async (fixture, _devProcess, onSpawnedWorker) => {
+            const { port } = new URL(fixture.url)
+            const worker = createSpawnedWorker(port)
+            onSpawnedWorker(worker)
+            return worker
+          },
+          runSeed: async () => ({ exitCode: 1, signal: null }),
+          stopWorkers: async (workers) => {
+            stoppedWorkers.push(...workers.map((worker) => worker.port))
+          },
+        }
+      )
+    ).rejects.toThrow("The seed CLI exited with code 1.")
+
+    expect(stoppedWorkers).toEqual(["8788", "8789", "8790"])
+  })
+
+  it("tracks a Worker before waiting for its readiness probe", async () => {
+    const stoppedWorkers: string[] = []
+    const worker = createSpawnedWorker("8788")
+
+    await expect(
+      seedLocalDevelopmentEnvironment(
+        new URL("http://localhost:5173"),
+        new EventEmitter(),
+        {
+          waitForApp: async () => {},
+          startFixtureWorker: async (
+            _fixture,
+            _devProcess,
+            onSpawnedWorker
+          ) => {
+            onSpawnedWorker(worker)
+            throw new Error("Worker readiness failed")
+          },
+          stopWorkers: async (workers) => {
+            stoppedWorkers.push(...workers.map((spawned) => spawned.port))
+          },
+        }
+      )
+    ).rejects.toThrow("Worker readiness failed")
+
+    expect(stoppedWorkers).toEqual(["8788"])
   })
 })

@@ -293,7 +293,7 @@ describe("saveCustomPluginServerProxyKey", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("uses the nearly spent docs fixture balance for its low token", async () => {
+  it("uses the nearly spent docs fixture balance for its low-balance proxy key", async () => {
     const serverRow = createProxyServerRow()
     let keyUpdateArgs: unknown[] | undefined
     const database = createFakeD1Database((sql, args) => {

@@ -38,33 +38,19 @@ initLogger({
   },
 })
 
-// Wrangler's generated type keeps the configured "false" literal, while dev:docs-seed overrides it with --var.
-const isDocsSeedProxyFixtureEnabled = (
-  environment: string,
-  fixtureFlag: string | undefined
-): boolean => environment === "development" && fixtureFlag === "true"
-
-// dev:docs-seed-* scripts override this with --var so each fixture Worker on
-// its own port advertises a distinct server name in the docs seed.
-const isPluginServerDisplayNameSet = (
-  environment: string,
-  displayName: string | undefined
-): boolean => environment === "development" && Boolean(displayName?.trim())
-
 const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
-  manifest: ({ env }) =>
-    createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN, {
-      docsSeedProxyFixture: isDocsSeedProxyFixtureEnabled(
-        env.ENVIRONMENT,
-        env.DOCS_SEED_PROXY_FIXTURE
-      ),
-      displayName: isPluginServerDisplayNameSet(
-        env.ENVIRONMENT,
-        env.PLUGIN_SERVER_DISPLAY_NAME
-      )
+  manifest: ({ env }) => {
+    const isDevelopmentEnvironment = env.ENVIRONMENT === "development"
+    const docsSeedProxyFixtureFlag: string | undefined =
+      env.DOCS_SEED_PROXY_FIXTURE
+    return createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN, {
+      docsSeedProxyFixture:
+        isDevelopmentEnvironment && docsSeedProxyFixtureFlag === "true",
+      displayName: isDevelopmentEnvironment
         ? env.PLUGIN_SERVER_DISPLAY_NAME
         : undefined,
-    }),
+    })
+  },
   auth: {
     validate: ({ request, env }) => {
       const apiKey = env.PLUGIN_SERVER_AUTH_KEY

@@ -187,13 +187,10 @@ requires setting `LYNVO_SEED_ORIGIN` to the same port, and the launcher exits
 before migrations when the two disagree.
 
 The scenario registers one Custom Plugin Server per fixture Worker so the
-Plugins and proxy settings pages render every state:
-
-| Port | Manifest name | State |
-| --- | --- | --- |
-| 8788 | Lynvo Plugin Server | enabled, proxy on, healthy credit balance |
-| 8789 | Home Drive Index | enabled, proxy off, nearly spent credit balance |
-| 8790 | Archive Index | disabled, no proxy key |
+Plugins and proxy settings pages render every state. The current ports, names,
+and enabled/proxy states are defined in
+`apps/lynvo/scripts/docs-seed-fixtures.mjs`; proxy keys and balances are in
+`apps/lynvo/shared/docs-seed-constants.ts`.
 
 A Lynvo Plugin Server already serving one of these ports is reused and left
 running; otherwise the launcher starts the fixture Worker there. The Workers
@@ -203,11 +200,9 @@ of the Workers and reopen Settings > Plugins to see the down state. When a
 port serves something else, seeding fails with an error while the app keeps
 running.
 
-To run the steps by hand instead, start `pnpm dev --no-auth`, start
-`pnpm --filter @lynvo/lynvo-plugin-server dev:docs-seed`,
-`dev:docs-seed-home`, and `dev:docs-seed-archive` in separate terminals, run
-`pnpm seed docs` from the repository root, then stop the standalone Workers
-with Ctrl-C when you no longer need them.
+Run `pnpm dev --seed` to start the no-auth app, start and verify the fixture
+Workers in sequence, and seed the docs scenario. The app and Workers stay
+available until the dev server exits.
 
 ## Capture the screenshot manifest
 
@@ -217,8 +212,8 @@ Install Playwright's Chromium browser once after installing dependencies:
 pnpm --filter @lynvo/app exec playwright install chromium
 ```
 
-Keep the no-auth app and the three `dev:docs-seed*` Workers running as above,
-then capture the checked-in screenshot manifest:
+Keep `pnpm dev --seed` running as above, then capture the checked-in screenshot
+manifest:
 
 ```sh
 pnpm capture:screenshots

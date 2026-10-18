@@ -68,6 +68,11 @@ const findMediaNode = (
   label: string
 ): ExtractedLink | undefined => nodes?.find((node) => node.label === label)
 
+const findGalleryGroupItems = (
+  galleryGroups: ReturnType<typeof getGalleryGroups>,
+  displayTitle: string
+) => galleryGroups.find((group) => group.displayTitle === displayTitle)?.items
+
 const createApi = (overrides: Partial<Env> = {}): SeedApiClient => {
   // SAFETY: The Cloudflare test environment supplies the generated Env bindings; only the two local development flags are overridden.
   const environment = {
@@ -160,29 +165,35 @@ describe("docs seed CLI Saved link fixtures", () => {
       [...dateGroupCounts.values()].toSorted((left, right) => left - right)
     ).toEqual([1, 1, 1, 7, 7, 8, 8, 12])
 
-    // Only the original four Today fixtures share the exact seed timestamp;
-    // the newer overlap fixtures sit one minute below them so the first row
-    // keeps its checked-in screenshot order.
-    const todayGalleryGroups = getGalleryGroups(
-      snapshot.links
-        .filter((link) => link.createdAt === SEED_TIME)
-        .map(toLinkViewItem)
+    const todayLinks = snapshot.links.filter(
+      (link) => link.createdAt === SEED_TIME
     )
     expect(
-      todayGalleryGroups
-        .map(({ artworkRequest }) => artworkRequest?.title ?? "")
+      todayLinks
+        .map((link) => link.title)
+        .filter((title): title is string => title !== null)
         .toSorted((left, right) => left.localeCompare(right))
     ).toEqual([
       "12 Angry Men",
       "Mindhunter",
+      "Severance",
       "Taxi Driver",
+      "The Bear",
+      "The Sandman",
       "When Life Gives You Tangerines",
     ])
+    const todayGalleryItems = todayLinks.map(toLinkViewItem)
+    const todayGalleryTitles = getGalleryGroups(todayGalleryItems).map(
+      (group) => group.displayTitle
+    )
+    expect(todayGalleryTitles).toEqual(
+      todayGalleryTitles.toSorted((left, right) => left.localeCompare(right))
+    )
     expect(
-      todayGalleryGroups
-        .map(({ artworkRequest }) => artworkRequest?.mediaKind ?? "")
-        .toSorted((left, right) => left.localeCompare(right))
-    ).toEqual(["movie", "movie", "tv", "tv"])
+      getGalleryGroups(todayGalleryItems.toReversed()).map(
+        (group) => group.displayTitle
+      )
+    ).toEqual(todayGalleryTitles)
 
     const weekdayGroup = getSaveDateGroupLabel(
       SEED_TIME - 2 * DAY_MS,
@@ -233,6 +244,25 @@ describe("docs seed CLI Saved link fixtures", () => {
     expect(twelveAngryMenMetadata?.playback.openedUrls).toContain(
       "https://media.example.invalid/lynvo-demo/12-angry-men-1957.mkv"
     )
+    const severanceSeason = snapshot.links.find((link) =>
+      link.url.endsWith("Severance/Season%2001/")
+    )
+    const frierenSeason = snapshot.links.find((link) =>
+      link.url.endsWith("Frieren/Season%2001/")
+    )
+    expect(
+      severanceSeason && readMetadata(severanceSeason).playback.openedUrls
+    ).toEqual([
+      "https://media.example.invalid/lynvo-demo/severance-s01e01.mkv",
+      "https://media.example.invalid/lynvo-demo/severance-s01e02.mkv",
+    ])
+    expect(
+      frierenSeason && readMetadata(frierenSeason).playback.openedUrls
+    ).toEqual([
+      "https://media.example.invalid/lynvo-demo/frieren-s01e01.mkv",
+      "https://media.example.invalid/lynvo-demo/frieren-s01e02.mkv",
+      "https://media.example.invalid/lynvo-demo/frieren-s01e03.mkv",
+    ])
     expect(
       getSavedLinkInteractionState(toLinkViewItem(tvLibrary), SEED_TIME).isNew
     ).toBe(true)
@@ -294,8 +324,7 @@ describe("docs seed CLI Saved link fixtures", () => {
     // The Season 02 folder and the separately saved direct episode share one
     // gallery group: the same episode reached through two Sources.
     expect(
-      galleryGroups.find((group) => group.displayTitle === "The Sandman S02")
-        ?.items
+      findGalleryGroupItems(galleryGroups, "The Sandman S02")
     ).toHaveLength(2)
 
     // A show folder saved first and the same first episode saved as a new
@@ -309,14 +338,10 @@ describe("docs seed CLI Saved link fixtures", () => {
       severanceGalleryGroups.map((group) => group.displayTitle).toSorted()
     ).toEqual(["Severance (2022) S01", "Severance (2022) S02"])
     expect(
-      severanceGalleryGroups.find(
-        (group) => group.displayTitle === "Severance (2022) S01"
-      )?.items
+      findGalleryGroupItems(severanceGalleryGroups, "Severance (2022) S01")
     ).toHaveLength(2)
     expect(
-      severanceGalleryGroups.find(
-        (group) => group.displayTitle === "Severance (2022) S02"
-      )?.items
+      findGalleryGroupItems(severanceGalleryGroups, "Severance (2022) S02")
     ).toHaveLength(1)
 
     // A folder spanning several titles keeps its own name instead of posing

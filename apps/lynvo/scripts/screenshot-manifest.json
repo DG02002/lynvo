@@ -471,6 +471,7 @@
       "seedScenario": "docs",
       "route": "/settings/plugins",
       "context": "desktop",
+      "captureStyles": "main section > section > div:first-child{display:none!important}",
       "viewport": {
         "width": 1470,
         "height": 836,
@@ -484,6 +485,45 @@
           "expectVisible": {
             "role": "heading",
             "name": "Plugins"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Collapse plugins",
+            "index": 0
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "Expand plugins",
+            "index": 0
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Collapse plugins",
+            "index": 0
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "Expand plugins",
+            "index": 1
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Collapse plugins",
+            "index": 0
+          },
+          "expectVisible": {
+            "role": "button",
+            "name": "Expand plugins",
+            "index": 2
           }
         }
       ],
@@ -509,7 +549,8 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "text": "Key saved"
+            "text": "Key saved",
+            "index": 0
           }
         }
       ],
@@ -535,7 +576,8 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "text": "Key saved"
+            "text": "Key saved",
+            "index": 0
           }
         },
         {
@@ -543,7 +585,8 @@
           "target": {
             "role": "button",
             "name": "Change Scrape.do key",
-            "exact": false
+            "exact": false,
+            "index": 0
           },
           "expectVisible": {
             "text": "Scrape.do API token",

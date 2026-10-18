@@ -12,16 +12,17 @@ import { Result, Schema } from "effect"
 import type { ExtractedLink } from "../app/features/links/types"
 import { LYNVO_PLUGIN_SERVER_ID } from "../shared/constants"
 import {
-  DOCS_SEED_PROXY_BALANCE,
-  DOCS_SEED_PROXY_BALANCE_LOW,
-  DOCS_SEED_PROXY_KEY,
-  DOCS_SEED_PROXY_KEY_LOW,
   DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
+  DOCS_SEED_PROXY_FIXTURES,
 } from "../shared/docs-seed-constants"
 import {
   LynvoUsageSnapshotSchema,
   PluginServerUsageSchema,
 } from "../shared/usage-contracts"
+import {
+  DOCS_SEED_PLUGIN_SERVER_FIXTURES,
+  DOCS_SEED_PRIMARY_PLUGIN_SERVER_FIXTURE,
+} from "./docs-seed-fixtures.mjs"
 import { readSeedAppOrigin } from "./local-origin.mjs"
 
 const DEVELOPMENT_USER_ID = "lynvo-development-user"
@@ -456,11 +457,10 @@ interface LinkFixture {
   readonly pluginId: string
   readonly pluginName: string
   readonly nodes: readonly LinkNode[]
+  readonly openedPlayableSlugs?: readonly string[]
   readonly failure?: string
   readonly failureCode?: string
   readonly failureHttpStatus?: number
-  /** Shifts the backdated createdAt within its day; negative sorts newer. */
-  readonly createdAtOffsetMs?: number
 }
 
 interface PlayableNodeInput {
@@ -539,8 +539,8 @@ interface DocsMediaFixtureInput {
   readonly filename: string
   readonly daysAgo: number
   readonly size: string
+  readonly openedPlayableSlugs?: readonly string[] | "self"
   readonly expiry?: number
-  readonly createdAtOffsetMs?: number
 }
 
 const docsMediaFixture = ({
@@ -549,27 +549,33 @@ const docsMediaFixture = ({
   filename,
   daysAgo,
   size,
+  openedPlayableSlugs,
   expiry,
-  createdAtOffsetMs,
-}: DocsMediaFixtureInput): LinkFixture => ({
-  slug,
-  url: sourceUrl(`Media/${encodeURIComponent(filename)}`),
-  title,
-  daysAgo,
-  pluginId: "direct-media",
-  pluginName: "Direct Media",
-  nodes: [
-    playableNode({
-      key: `${slug}-file`,
-      label: filename,
-      url: playableUrl(slug),
-      expiry,
-      expirySource: expiry === undefined ? undefined : "signed-url",
-      size,
-    }),
-  ],
-  createdAtOffsetMs,
-})
+}: DocsMediaFixtureInput): LinkFixture => {
+  const playableSlugs =
+    openedPlayableSlugs === "self" ? [slug] : openedPlayableSlugs
+  const fixture = {
+    slug,
+    url: sourceUrl(`Media/${encodeURIComponent(filename)}`),
+    title,
+    daysAgo,
+    pluginId: "direct-media",
+    pluginName: "Direct Media",
+    nodes: [
+      playableNode({
+        key: `${slug}-file`,
+        label: filename,
+        url: playableUrl(slug),
+        expiry,
+        expirySource: expiry === undefined ? undefined : "signed-url",
+        size,
+      }),
+    ],
+  }
+  return playableSlugs
+    ? { ...fixture, openedPlayableSlugs: playableSlugs }
+    : fixture
+}
 
 const SANDMAN_EPISODES = [
   { season: "01", episode: "01", size: "4.2 GB" },
@@ -705,14 +711,10 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
       ]),
     ],
   },
-  // The newest fixtures sit one minute below the original four Today items so
-  // the library's first row keeps its checked-in screenshot order instead of
-  // relying on tie-broken ordering.
   {
     // A season folder with a single episode is normal for a weekly release;
     // this one covers the state where only the latest episode has aired.
     slug: "the-bear-season-03",
-    createdAtOffsetMs: -60_000,
     url: sourceUrl("The%20Bear/Season%2003/"),
     title: "The Bear",
     daysAgo: 0,
@@ -740,7 +742,6 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
       "Severance (2022) - S01E01 - Good News About Hell - 1080p Blu-ray HEVC.mkv",
     daysAgo: 0,
     size: "2.2 GB",
-    createdAtOffsetMs: -60_000,
   }),
   // The same episode the OneDrive Season 02 folder contains, this time
   // extracted as a direct file: the same episode from two different Sources.
@@ -750,7 +751,6 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     filename: "The Sandman S02E02 2160p Blu-ray DV.mkv",
     daysAgo: 0,
     size: "4.3 GB",
-    createdAtOffsetMs: -60_000,
   }),
   docsMediaFixture({
     slug: "12-angry-men-1957",
@@ -758,6 +758,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     filename: "12 Angry Men (1957) - 2160p Blu-ray HEVC.mkv",
     daysAgo: 0,
     size: "1.6 GB",
+    openedPlayableSlugs: "self",
   }),
   docsMediaFixture({
     slug: "taxi-driver-1976",
@@ -780,6 +781,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
       "When Life Gives You Tangerines (2025) - S01E01 - Episode 1 - 1080p Blu-ray HEVC.mkv",
     daysAgo: 0,
     size: "1.3 GB",
+    openedPlayableSlugs: "self",
   }),
   docsMediaFixture({
     slug: "frieren-s01e01",
@@ -816,6 +818,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     filename: "Breaking Bad (2008) - S01E01 - Pilot - 1080p Blu-ray HEVC.mkv",
     daysAgo: 1,
     size: "1.8 GB",
+    openedPlayableSlugs: "self",
   }),
   {
     slug: "sopranos-failed-extraction",
@@ -952,6 +955,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     daysAgo: 1,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
+    openedPlayableSlugs: ["severance-s01e01", "severance-s01e02"],
     nodes: [
       groupNode("severance-s01-show", "Severance", [
         groupNode("severance-s01-folder", "Season 01", [
@@ -1024,6 +1028,7 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     daysAgo: 2,
     pluginId: "bhadoo-google-drive-index",
     pluginName: "Bhadoo’s Google Drive Index",
+    openedPlayableSlugs: ["frieren-s01e01", "frieren-s01e02", "frieren-s01e03"],
     nodes: [
       groupNode("frieren-s01-show", "Frieren: Beyond Journey's End", [
         groupNode("frieren-s01-folder", "Season 01", [
@@ -1308,9 +1313,10 @@ const createOperationId = (): string => randomUUID()
 // inside folder browsers and on library rows.
 const markDocsOpenedStates = async (
   api: SeedApiClient,
+  fixtures: readonly LinkFixture[],
   idsBySlug: ReadonlyMap<string, string>
 ): Promise<void> => {
-  const markFixtureEpisodesOpened = async (
+  const markFixturePlayableLinksOpened = async (
     slug: string,
     playableSlugs: readonly string[]
   ): Promise<void> => {
@@ -1336,22 +1342,17 @@ const markDocsOpenedStates = async (
       })
     }
   }
-  await markFixtureEpisodesOpened("12-angry-men-1957", ["12-angry-men-1957"])
-  await markFixtureEpisodesOpened("severance-season-01", [
-    "severance-s01e01",
-    "severance-s01e02",
-  ])
-  await markFixtureEpisodesOpened("frieren-season-01", [
-    "frieren-s01e01",
-    "frieren-s01e02",
-    "frieren-s01e03",
-  ])
-  await markFixtureEpisodesOpened("breaking-bad-s01e01", [
-    "breaking-bad-s01e01",
-  ])
-  await markFixtureEpisodesOpened("when-life-gives-you-tangerines-s01e01", [
-    "when-life-gives-you-tangerines-s01e01",
-  ])
+  for (const fixture of fixtures) {
+    if (!fixture.openedPlayableSlugs?.length) {
+      continue
+    }
+    // SAFETY: Each fixture's opened marks settle before marks for the next link.
+    // oxlint-disable-next-line eslint/no-await-in-loop
+    await markFixturePlayableLinksOpened(
+      fixture.slug,
+      fixture.openedPlayableSlugs
+    )
+  }
 }
 
 export const seedDocsLinks = async (
@@ -1391,10 +1392,7 @@ export const seedDocsLinks = async (
         title: fixture.title,
         meta: linkMetadata(fixture, input.pluginServerId, input.seedTime),
         seedFixture: {
-          createdAt:
-            input.seedTime -
-            fixture.daysAgo * DAY_MS +
-            (fixture.createdAtOffsetMs ?? 0),
+          createdAt: input.seedTime - fixture.daysAgo * DAY_MS,
           extractionFailure: fixture.failure,
         },
       },
@@ -1407,7 +1405,7 @@ export const seedDocsLinks = async (
     idsBySlug.set(fixture.slug, result.id)
   }
 
-  await markDocsOpenedStates(api, idsBySlug)
+  await markDocsOpenedStates(api, fixtures, idsBySlug)
 
   const updated = await api.get<LinksResponse>(
     "/api/data/links",
@@ -1447,44 +1445,27 @@ const normalizedServerUrl = (value: string): string => {
   return `${url.origin}${url.pathname.replace(/\/$/, "")}`
 }
 
-interface DocsProxyFixture {
-  readonly key: string
-  readonly balance: { readonly remaining: number; readonly limit: number }
-  readonly enabled: boolean
+const findPluginServerByUrl = (
+  servers: readonly PluginServerEntry[],
+  url: string
+): PluginServerEntry | undefined => {
+  const normalizedUrl = normalizedServerUrl(url)
+  return servers.find(
+    (server) => normalizedServerUrl(server.baseUrl) === normalizedUrl
+  )
 }
 
-interface DocsPluginServerFixture {
-  readonly url: string
-  readonly enabled: boolean
-  readonly proxy: DocsProxyFixture | undefined
-}
+const findPluginServerById = (
+  servers: readonly PluginServerEntry[],
+  id: string
+): PluginServerEntry | undefined => servers.find((server) => server.id === id)
 
-// One Custom Plugin Server per local fixture Worker. The states differ on
-// purpose so the Plugins and proxy settings pages render every state: the
-// primary server runs the proxy with a healthy balance, the second keeps a
-// nearly spent key with the proxy off, and the archive server is disabled
-// with no key at all.
-const DOCS_PLUGIN_SERVERS: readonly DocsPluginServerFixture[] = [
-  {
-    url: "http://localhost:8788",
-    enabled: true,
-    proxy: {
-      key: DOCS_SEED_PROXY_KEY,
-      balance: DOCS_SEED_PROXY_BALANCE,
-      enabled: true,
-    },
-  },
-  {
-    url: "http://localhost:8789",
-    enabled: true,
-    proxy: {
-      key: DOCS_SEED_PROXY_KEY_LOW,
-      balance: DOCS_SEED_PROXY_BALANCE_LOW,
-      enabled: false,
-    },
-  },
-  { url: "http://localhost:8790", enabled: false, proxy: undefined },
-]
+type DocsProxyFixture =
+  (typeof DOCS_SEED_PROXY_FIXTURES)[keyof typeof DOCS_SEED_PROXY_FIXTURES] & {
+    readonly enabled: boolean
+  }
+
+type DocsPluginServerFixture = (typeof DOCS_SEED_PLUGIN_SERVER_FIXTURES)[number]
 
 const clearPluginDomains = async (api: SeedApiClient): Promise<void> => {
   const domains = await api.get<readonly PluginDomainEntry[]>(
@@ -1527,50 +1508,42 @@ const listPluginServers = async (
     PluginServerListSchema
   )
 
-const applyPluginServerFixture = async (
+const removePluginServerProxyFixture = async (
   api: SeedApiClient,
-  fixture: DocsPluginServerFixture
+  pluginServerId: string,
+  current: PluginServerEntry
 ): Promise<void> => {
-  const fixtureUrl = normalizedServerUrl(fixture.url)
-  const existing = (await listPluginServers(api)).find(
-    (server) => normalizedServerUrl(server.baseUrl) === fixtureUrl
-  )
-
-  if (!existing) {
-    const apiKey = await readDevelopmentPluginServerKey()
+  let didChange = false
+  if (current.proxyEnabled) {
     await api.mutate({
       method: "POST",
-      path: "/api/plugin-servers",
-      body: { baseUrl: fixture.url, apiKey },
+      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
+      body: { enabled: false },
     })
-  } else {
-    await api.mutate({
-      method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(existing.id)}/refresh`,
-    })
+    didChange = true
   }
-
-  const registered = (await listPluginServers(api)).find(
-    (server) => normalizedServerUrl(server.baseUrl) === fixtureUrl
-  )
-  if (!registered) {
+  if (current.hasProxyKey) {
+    await api.mutate({
+      method: "POST",
+      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
+      body: { token: "" },
+    })
+    didChange = true
+  }
+  const configured = didChange
+    ? findPluginServerById(await listPluginServers(api), pluginServerId)
+    : current
+  if (
+    !configured ||
+    configured.hasProxyKey ||
+    configured.proxyEnabled ||
+    configured.proxyBalanceRemaining !== null ||
+    configured.proxyBalanceLimit !== null
+  ) {
     throw new Error(
-      `The Custom Plugin Server at ${fixture.url} was not registered.`
+      `The docs scenario could not remove the proxy key for ${pluginServerId}.`
     )
   }
-  if (registered.verificationStatus !== "verified") {
-    throw new Error(
-      `The Custom Plugin Server at ${fixture.url} could not be verified.`
-    )
-  }
-  if (registered.enabled !== fixture.enabled) {
-    await api.mutate({
-      method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(registered.id)}/toggle`,
-      body: { enabled: fixture.enabled },
-    })
-  }
-  await applyProxyFixture(api, registered.id, fixture.proxy)
 }
 
 const applyProxyFixture = async (
@@ -1578,21 +1551,16 @@ const applyProxyFixture = async (
   pluginServerId: string,
   proxy: DocsProxyFixture | undefined
 ): Promise<void> => {
-  const current = (await listPluginServers(api)).find(
-    (server) => server.id === pluginServerId
+  const current = findPluginServerById(
+    await listPluginServers(api),
+    pluginServerId
   )
   if (!current) {
     throw new Error("The Custom Plugin Server disappeared mid-seed.")
   }
 
   if (!proxy) {
-    if (current.hasProxyKey) {
-      await api.mutate({
-        method: "POST",
-        path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
-        body: { token: "" },
-      })
-    }
+    await removePluginServerProxyFixture(api, pluginServerId, current)
     return
   }
 
@@ -1601,23 +1569,17 @@ const applyProxyFixture = async (
     path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
     body: { token: proxy.key },
   })
-  if (!current.proxyEnabled && proxy.enabled) {
+  if (current.proxyEnabled !== proxy.enabled) {
     await api.mutate({
       method: "POST",
       path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
-      body: { enabled: true },
-    })
-  }
-  if (current.proxyEnabled && !proxy.enabled) {
-    await api.mutate({
-      method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
-      body: { enabled: false },
+      body: { enabled: proxy.enabled },
     })
   }
 
-  const configured = (await listPluginServers(api)).find(
-    (server) => server.id === pluginServerId
+  const configured = findPluginServerById(
+    await listPluginServers(api),
+    pluginServerId
   )
   if (
     !configured?.hasProxyKey ||
@@ -1668,24 +1630,86 @@ const requirePrimaryProxyManifest = (primary: PluginServerEntry): void => {
   }
 }
 
+interface ApplyDocsPluginServerFixtureOptions {
+  readonly api: SeedApiClient
+  readonly fixture: DocsPluginServerFixture
+  readonly readPluginServerKey: typeof readDevelopmentPluginServerKey
+}
+
+const applyDocsPluginServerFixture = async ({
+  api,
+  fixture,
+  readPluginServerKey,
+}: ApplyDocsPluginServerFixtureOptions): Promise<void> => {
+  const existing = findPluginServerByUrl(
+    await listPluginServers(api),
+    fixture.url
+  )
+
+  if (!existing) {
+    const apiKey = await readPluginServerKey()
+    await api.mutate({
+      method: "POST",
+      path: "/api/plugin-servers",
+      body: { baseUrl: fixture.url, apiKey },
+    })
+  } else {
+    await api.mutate({
+      method: "POST",
+      path: `/api/plugin-servers/${encodeURIComponent(existing.id)}/refresh`,
+    })
+  }
+
+  const registered = findPluginServerByUrl(
+    await listPluginServers(api),
+    fixture.url
+  )
+  if (!registered) {
+    throw new Error(
+      `The Custom Plugin Server at ${fixture.url} was not registered.`
+    )
+  }
+  if (registered.verificationStatus !== "verified") {
+    throw new Error(
+      `The Custom Plugin Server at ${fixture.url} could not be verified.`
+    )
+  }
+  if (registered.enabled !== fixture.enabled) {
+    await api.mutate({
+      method: "POST",
+      path: `/api/plugin-servers/${encodeURIComponent(registered.id)}/toggle`,
+      body: { enabled: fixture.enabled },
+    })
+  }
+  const proxy = fixture.proxy
+    ? {
+        ...DOCS_SEED_PROXY_FIXTURES[fixture.proxy.balance],
+        enabled: fixture.proxy.enabled,
+      }
+    : undefined
+  await applyProxyFixture(api, registered.id, proxy)
+}
+
 const requireDocsPluginServers = async (
-  api: SeedApiClient
+  api: SeedApiClient,
+  readPluginServerKey: typeof readDevelopmentPluginServerKey
 ): Promise<PluginServerEntry> => {
   const keepUrls = new Set(
-    DOCS_PLUGIN_SERVERS.map((fixture) => normalizedServerUrl(fixture.url))
+    DOCS_SEED_PLUGIN_SERVER_FIXTURES.map((fixture) =>
+      normalizedServerUrl(fixture.url)
+    )
   )
   await deleteOtherPluginServers(api, await listPluginServers(api), keepUrls)
-  for (const fixture of DOCS_PLUGIN_SERVERS) {
+  for (const fixture of DOCS_SEED_PLUGIN_SERVER_FIXTURES) {
     // SAFETY: Server fixtures converge one at a time so each registration and proxy mutation settles in order.
     // oxlint-disable-next-line eslint/no-await-in-loop
-    await applyPluginServerFixture(api, fixture)
+    await applyDocsPluginServerFixture({ api, fixture, readPluginServerKey })
   }
 
   const servers = await listPluginServers(api)
-  const primary = servers.find(
-    (server) =>
-      normalizedServerUrl(server.baseUrl) ===
-      normalizedServerUrl(DOCS_PLUGIN_SERVERS[0].url)
+  const primary = findPluginServerByUrl(
+    servers,
+    DOCS_SEED_PRIMARY_PLUGIN_SERVER_FIXTURE.url
   )
   if (!primary) {
     throw new Error("The primary Custom Plugin Server was not registered.")
@@ -1781,12 +1805,17 @@ const seedDocsManagedUsage = async (
   })
 }
 
-const seedDocsSettings = async (
+export const seedDocsSettings = async (
   api: SeedApiClient,
-  seedTime: number
+  seedTime: number,
+  {
+    readPluginServerKey = readDevelopmentPluginServerKey,
+  }: {
+    readonly readPluginServerKey?: typeof readDevelopmentPluginServerKey
+  } = {}
 ): Promise<string> => {
   await clearPluginDomains(api)
-  const pluginServer = await requireDocsPluginServers(api)
+  const pluginServer = await requireDocsPluginServers(api, readPluginServerKey)
   await createDocsPluginDomains(api)
   await seedDocsManagedUsage(api, seedTime)
   await verifyPluginUsageRows(api, pluginServer.id)
