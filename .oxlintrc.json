@@ -17,6 +17,8 @@
     ".repos/**",
     ".roo/**",
     ".windsurf/**",
+    // These CLI-generated shadcn primitives are read-only. This excludes
+    // every lint rule here, including shadcn's raw-color and inline-style rules.
     "apps/lynvo/app/components/ui/**",
     "tools/oxlint/anti-slop/**",
     "**/worker-configuration.d.ts"
@@ -25,6 +27,10 @@
     {
       "name": "sonarjs",
       "specifier": "eslint-plugin-sonarjs"
+    },
+    {
+      "name": "shadcn",
+      "specifier": "@shadcn/lint"
     },
     {
       "name": "anti-slop",

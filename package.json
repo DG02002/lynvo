@@ -23,7 +23,8 @@
   },
   "devDependencies": {
     "@oxlint/plugins": "catalog:",
-    "eslint-plugin-sonarjs": "^4.2.2",
+    "@shadcn/lint": "0.2.1",
+    "eslint-plugin-sonarjs": "4.2.2",
     "husky": "catalog:",
     "knip": "^6.41.0",
     "lint-staged": "catalog:",
