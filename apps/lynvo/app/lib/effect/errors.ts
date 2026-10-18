@@ -88,11 +88,27 @@ export class PluginServerRegistrationError extends Schema.TaggedError<PluginServ
   }
 ) {}
 
+export class ProxyProviderError extends Schema.TaggedError<ProxyProviderError>()(
+  "ProxyProviderError",
+  {
+    message: Schema.String,
+    details: Schema.optional(Schema.Unknown),
+  }
+) {}
+
+const ensureTerminalPeriod = (message: string): string =>
+  message.endsWith(".") ? message : `${message}.`
+
 export const toPluginServerRegistrationError = (
   error: Pick<BackendError, "message">
 ) =>
   new PluginServerRegistrationError({
-    message: error.message.endsWith(".") ? error.message : `${error.message}.`,
+    message: ensureTerminalPeriod(error.message),
+  })
+
+export const toProxyProviderError = (error: Pick<BackendError, "message">) =>
+  new ProxyProviderError({
+    message: ensureTerminalPeriod(error.message),
   })
 
 export class CredentialVaultError extends Schema.TaggedError<CredentialVaultError>()(
@@ -141,6 +157,9 @@ export const CsrfApiError = publicError("CsrfError").pipe(
 export const PluginServerRegistrationApiError = publicError(
   "PluginServerRegistrationError"
 ).pipe(HttpApiSchema.status(422))
+export const ProxyProviderApiError = publicError("ProxyProviderError").pipe(
+  HttpApiSchema.status(422)
+)
 export const CredentialVaultApiError = publicError("CredentialVaultError").pipe(
   HttpApiSchema.status(503)
 )

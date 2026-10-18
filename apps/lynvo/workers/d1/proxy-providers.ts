@@ -1,3 +1,7 @@
+import type {
+  SealedProxyProviderCredential,
+  StoredProxyProviderCredential,
+} from "../../shared/proxy-provider-credentials"
 import { executeOwnedWrite } from "./data-version"
 import { PROXY_PROVIDER_COLUMNS, type ProxyProviderRow } from "./rows"
 import {
@@ -7,13 +11,6 @@ import {
 } from "./storage-ledger"
 
 const PROXY_PROVIDER_SCRAPE_DO = "scrape-do" as const
-
-export interface SealedProxyProviderToken {
-  readonly ciphertext: string
-  readonly nonce: string
-  readonly algorithm: "AES-256-GCM"
-  readonly version: number
-}
 
 export interface ProxyProviderState {
   readonly provider: typeof PROXY_PROVIDER_SCRAPE_DO
@@ -62,7 +59,7 @@ export const readProxyProviderState = async (
 export const readSealedProxyProviderToken = async (
   database: D1Database,
   userId: string
-): Promise<SealedProxyProviderToken | null> => {
+): Promise<StoredProxyProviderCredential | null> => {
   const row = await readProxyProviderRow(database, userId)
   if (
     !row ||
@@ -73,16 +70,19 @@ export const readSealedProxyProviderToken = async (
   ) {
     return null
   }
-  return {
+  const sealed: StoredProxyProviderCredential = {
     ciphertext: row.token_ciphertext,
     nonce: row.token_nonce,
     algorithm: row.token_algorithm,
     version: row.token_version,
   }
+  return row.legacy_plugin_server_id
+    ? { ...sealed, legacyPluginServerId: row.legacy_plugin_server_id }
+    : sealed
 }
 
 interface SaveProxyProviderKeyInput {
-  readonly encrypted: SealedProxyProviderToken | null
+  readonly encrypted: SealedProxyProviderCredential | null
   readonly balance: {
     readonly remaining: number
     readonly limit: number
@@ -109,6 +109,7 @@ export const saveProxyProviderKey = async (
         ? byteLength({
             user_id: userId,
             provider: PROXY_PROVIDER_SCRAPE_DO,
+            legacy_plugin_server_id: null,
             token_ciphertext: input.encrypted.ciphertext,
             token_nonce: input.encrypted.nonce,
             token_algorithm: input.encrypted.algorithm,
@@ -127,9 +128,10 @@ export const saveProxyProviderKey = async (
   const writeStatement = input.encrypted
     ? database
         .prepare(
-          `INSERT INTO user_proxy_providers (user_id, provider, token_ciphertext, token_nonce, token_algorithm, token_version, balance_remaining, balance_limit, balance_checked_at, created_at, updated_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+          `INSERT INTO user_proxy_providers (user_id, provider, legacy_plugin_server_id, token_ciphertext, token_nonce, token_algorithm, token_version, balance_remaining, balance_limit, balance_checked_at, created_at, updated_at)
+           VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
            ON CONFLICT (user_id, provider) DO UPDATE SET
+             legacy_plugin_server_id = NULL,
              token_ciphertext = excluded.token_ciphertext,
              token_nonce = excluded.token_nonce,
              token_algorithm = excluded.token_algorithm,

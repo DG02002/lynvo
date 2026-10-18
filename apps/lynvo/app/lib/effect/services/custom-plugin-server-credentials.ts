@@ -1,5 +1,9 @@
 import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect, Schema } from "effect"
+import type {
+  SealedProxyProviderCredential,
+  StoredProxyProviderCredential,
+} from "~shared/proxy-provider-credentials"
 
 import { CredentialVaultError } from "../errors"
 
@@ -30,7 +34,7 @@ const DecryptedResponse = Schema.Struct({ apiKey: Schema.String })
 interface VaultRequestInput {
   readonly environment: Env
   readonly userId: string
-  /** Vault namespace; a plugin server id, or a provider scope for proxy keys. */
+  /** Vault namespace and authenticated-data scope. */
   readonly scopeId: string
   readonly path: "/encrypt" | "/decrypt"
   readonly body: Record<string, JsonValue>
@@ -51,7 +55,7 @@ const vaultRequest = Effect.fn("CustomPluginServerCredentials.vaultRequest")(
         ).fetch(`https://credential-vault.internal${path}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, pluginServerId: scopeId, ...body }),
+          body: JSON.stringify({ userId, scopeId, ...body }),
         }),
       catch: (cause) =>
         new CredentialVaultError({
@@ -172,13 +176,6 @@ export const decryptCustomPluginServer = Effect.fn(
   return { ...pluginServer, apiKey: decoded.apiKey }
 })
 
-export interface SealedProxyProviderCredential {
-  readonly ciphertext: string
-  readonly nonce: string
-  readonly algorithm: "AES-256-GCM"
-  readonly version: number
-}
-
 interface ProxyProviderVaultScopeInput {
   readonly environment: Env
   readonly userId: string
@@ -233,12 +230,13 @@ export const decryptProxyProviderToken = Effect.fn(
   provider,
   sealed,
 }: ProxyProviderVaultScopeInput & {
-  readonly sealed: SealedProxyProviderCredential
+  readonly sealed: StoredProxyProviderCredential
 }): Effect.fn.Return<string, CredentialVaultError> {
   const decrypted = yield* vaultRequest({
     environment,
     userId,
-    scopeId: proxyProviderScopeId(provider),
+    // Legacy ciphertext is authenticated against the server id used before migration.
+    scopeId: sealed.legacyPluginServerId ?? proxyProviderScopeId(provider),
     path: "/decrypt",
     body: {
       credential: {

@@ -19,8 +19,8 @@ import {
 import { isProxyTokenRemoval } from "../../plugin-server-proxy"
 import {
   BackendError,
-  PluginServerRegistrationError,
-  toPluginServerRegistrationError,
+  ProxyProviderError,
+  toProxyProviderError,
 } from "../errors"
 import {
   requireDatabaseEffect,
@@ -61,6 +61,8 @@ interface ProxyAccountInfo {
 
 const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
 const SCRAPE_DO_INFO_MAX_RESPONSE_BYTES = 16 * 1024
+const SCRAPE_DO_INFO_UNAVAILABLE_MESSAGE =
+  "Scrape.do account information is unavailable. Try again."
 
 /**
  * Validates a Scrape.do token against the free account-info endpoint. The
@@ -75,24 +77,20 @@ export const readScrapeDoAccountInfo = Effect.fn(
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(10_000),
       }),
-    catch: () =>
-      new Error("Scrape.do account information is unavailable. Try again."),
+    catch: () => new Error(SCRAPE_DO_INFO_UNAVAILABLE_MESSAGE),
   })
   if (response.status === 401 || response.status === 403) {
     return yield* Effect.fail(new Error("Scrape.do rejected this API token."))
   }
   if (!response.ok) {
-    return yield* Effect.fail(
-      new Error("Scrape.do account information is unavailable. Try again.")
-    )
+    return yield* Effect.fail(new Error(SCRAPE_DO_INFO_UNAVAILABLE_MESSAGE))
   }
   const text = yield* Effect.tryPromise({
     try: () =>
       readBoundedResponseText(response, {
         maximumResponseBytes: SCRAPE_DO_INFO_MAX_RESPONSE_BYTES,
       }),
-    catch: () =>
-      new Error("Scrape.do account information is unavailable. Try again."),
+    catch: () => new Error(SCRAPE_DO_INFO_UNAVAILABLE_MESSAGE),
   })
   const value = yield* Effect.try({
     // SAFETY: JSON.parse returns arbitrary data validated by ScrapeDoAccountInfo.
@@ -154,15 +152,11 @@ export const readProxyProviderState = Effect.fn("ProxyProviderKey.readState")(
 export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
   function* (
     input: SaveProxyProviderKeyInput
-  ): Effect.fn.Return<
-    ProxyKeyBalance,
-    PluginServerRegistrationError,
-    CloudflareEnv
-  > {
+  ): Effect.fn.Return<ProxyKeyBalance, ProxyProviderError, CloudflareEnv> {
     const environment = yield* CloudflareEnv
     const database = yield* requireDatabaseEffectAs(
       environment,
-      toPluginServerRegistrationError
+      toProxyProviderError
     )
 
     if (isProxyTokenRemoval(input.token)) {
@@ -174,7 +168,7 @@ export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
             now: Date.now(),
           }),
         catch: (cause) =>
-          new PluginServerRegistrationError({
+          new ProxyProviderError({
             message: "The proxy key couldn’t be removed.",
             details: cause,
           }),
@@ -186,7 +180,7 @@ export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
     const balance = yield* readProxyAccountInfo(environment, token).pipe(
       Effect.mapError(
         (cause) =>
-          new PluginServerRegistrationError({
+          new ProxyProviderError({
             message:
               cause instanceof Error
                 ? cause.message
@@ -201,7 +195,7 @@ export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
       token,
     }).pipe(
       Effect.mapError(
-        (error) => new PluginServerRegistrationError({ message: error.message })
+        (error) => new ProxyProviderError({ message: error.message })
       )
     )
     const { dataVersion } = yield* Effect.tryPromise({
@@ -212,7 +206,7 @@ export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
           now: Date.now(),
         }),
       catch: (cause) =>
-        new PluginServerRegistrationError({
+        new ProxyProviderError({
           message: "The proxy key couldn’t be saved.",
           details: cause,
         }),
@@ -235,25 +229,25 @@ export const refreshProxyProviderBalance = Effect.fn(
     checkedAt: number
     dataVersion: number
   },
-  PluginServerRegistrationError,
+  ProxyProviderError,
   CloudflareEnv
 > {
   const environment = yield* CloudflareEnv
   const database = yield* requireDatabaseEffectAs(
     environment,
-    toPluginServerRegistrationError
+    toProxyProviderError
   )
 
   const sealed = yield* Effect.tryPromise({
     try: () => readSealedProxyProviderToken(database, input.user.id),
     catch: (cause) =>
-      new PluginServerRegistrationError({
+      new ProxyProviderError({
         message: "The proxy balance couldn’t be refreshed.",
         details: cause,
       }),
   })
   if (!sealed) {
-    return yield* new PluginServerRegistrationError({
+    return yield* new ProxyProviderError({
       message: "Save a proxy key before refreshing its balance.",
     })
   }
@@ -265,14 +259,14 @@ export const refreshProxyProviderBalance = Effect.fn(
     sealed,
   }).pipe(
     Effect.mapError(
-      (error) => new PluginServerRegistrationError({ message: error.message })
+      (error) => new ProxyProviderError({ message: error.message })
     )
   )
 
   const balance = yield* readProxyAccountInfo(environment, proxyToken).pipe(
     Effect.mapError(
       (cause) =>
-        new PluginServerRegistrationError({
+        new ProxyProviderError({
           message:
             cause instanceof Error
               ? cause.message
@@ -288,7 +282,7 @@ export const refreshProxyProviderBalance = Effect.fn(
         now: checkedAt,
       }),
     catch: (cause) =>
-      new PluginServerRegistrationError({
+      new ProxyProviderError({
         message: "The proxy balance couldn’t be saved.",
         details: cause,
       }),

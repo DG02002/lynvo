@@ -3,6 +3,8 @@
 CREATE TABLE user_proxy_providers (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   provider TEXT NOT NULL CHECK (provider = 'scrape-do'),
+  -- Migrated ciphertext stays bound to its original vault scope.
+  legacy_plugin_server_id TEXT,
   token_ciphertext TEXT,
   token_nonce TEXT,
   token_algorithm TEXT CHECK (token_algorithm IS NULL OR token_algorithm = 'AES-256-GCM'),
@@ -15,14 +17,15 @@ CREATE TABLE user_proxy_providers (
   PRIMARY KEY (user_id, provider)
 );
 
--- Migrate existing per-server keys: the earliest-updated server row per
--- account wins (INSERT OR IGNORE keeps the first row per primary key from
--- the ordered select). Storage ledgers keep counting the dropped column
--- bytes in plugin_server_bytes until they are reconstructed; the small
--- overstatement is conservative and self-corrects on reconstruction.
+-- Migrate existing per-server keys: the row with the earliest updated_at per
+-- account wins, then created_at and id make ties deterministic. The old schema
+-- did not record when a proxy key was first saved. Storage ledgers keep
+-- counting the dropped column bytes in plugin_server_bytes until they are
+-- reconstructed; the small overstatement is conservative and self-corrects.
 INSERT OR IGNORE INTO user_proxy_providers (
   user_id,
   provider,
+  legacy_plugin_server_id,
   token_ciphertext,
   token_nonce,
   token_algorithm,
@@ -36,6 +39,7 @@ INSERT OR IGNORE INTO user_proxy_providers (
 SELECT
   user_id,
   'scrape-do',
+  id,
   proxy_token_ciphertext,
   proxy_token_nonce,
   proxy_token_algorithm,
@@ -47,7 +51,7 @@ SELECT
   updated_at
 FROM user_plugin_servers
 WHERE proxy_token_ciphertext IS NOT NULL
-ORDER BY user_id, updated_at, created_at;
+ORDER BY user_id, updated_at, created_at, id;
 
 ALTER TABLE user_plugin_servers DROP COLUMN proxy_token_ciphertext;
 ALTER TABLE user_plugin_servers DROP COLUMN proxy_token_nonce;

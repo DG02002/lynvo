@@ -1,6 +1,7 @@
 import { type PluginServerManifest } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 
+import { getErrorMessage } from "../app/lib/effect/errors"
 import {
   decryptCustomPluginServer,
   decryptProxyProviderToken,
@@ -68,6 +69,29 @@ interface RefreshProxyProviderBalanceInput {
   database: D1Database
   userId: string
   now: number
+}
+
+interface ProxyProviderBalanceRefreshStepInput<Value> {
+  readonly userId: string
+  readonly step: string
+  readonly operation: () => Promise<Value>
+}
+
+const runProxyProviderBalanceRefreshStep = async <Value>({
+  userId,
+  step,
+  operation,
+}: ProxyProviderBalanceRefreshStepInput<Value>): Promise<Value | undefined> => {
+  try {
+    return await operation()
+  } catch (error) {
+    console.warn("proxy_provider_balance_refresh_failed", {
+      step,
+      user_id: userId,
+      error: getErrorMessage(error),
+    })
+    return undefined
+  }
 }
 
 const groupRefreshRowsByUser = (
@@ -163,19 +187,29 @@ const refreshProxyProviderBalanceIfDue = async ({
   userId,
   now,
 }: RefreshProxyProviderBalanceInput): Promise<void> => {
-  const sealed = await readSealedProxyProviderToken(database, userId).catch(
-    () => null
-  )
+  const sealed = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "read_key",
+    operation: () => readSealedProxyProviderToken(database, userId),
+  })
   if (!sealed) {
     return
   }
-  const stateRow = await database
-    .prepare(
-      "SELECT balance_checked_at FROM user_proxy_providers WHERE user_id = ?1 AND provider = 'scrape-do'"
-    )
-    .bind(userId)
-    .first<{ balance_checked_at: number | null }>()
-    .catch(() => null)
+  const stateRow = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "read_balance_state",
+    operation: () =>
+      database
+        .prepare(
+          "SELECT balance_checked_at FROM user_proxy_providers WHERE user_id = ?1 AND provider = 'scrape-do'"
+        )
+        .bind(userId)
+        .first<{ balance_checked_at: number | null }>(),
+  })
+  if (stateRow === undefined) {
+    // Retry on the next scheduled run instead of making an unconditional provider call.
+    return
+  }
   if (
     stateRow &&
     stateRow.balance_checked_at !== null &&
@@ -184,26 +218,39 @@ const refreshProxyProviderBalanceIfDue = async ({
   ) {
     return
   }
-  const proxyToken = await Effect.runPromise(
-    decryptProxyProviderToken({
-      environment: env,
-      userId,
-      provider: "scrape-do",
-      sealed,
-    })
-  ).catch(() => undefined)
-  if (!proxyToken) {
+  const proxyToken = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "decrypt_key",
+    operation: () =>
+      Effect.runPromise(
+        decryptProxyProviderToken({
+          environment: env,
+          userId,
+          provider: "scrape-do",
+          sealed,
+        })
+      ),
+  })
+  if (proxyToken === undefined) {
     return
   }
-  const balance = await Effect.runPromise(
-    readScrapeDoAccountInfo(proxyToken)
-  ).catch(() => undefined)
-  if (balance) {
-    await updateProxyProviderBalance(database, userId, {
-      balance,
-      now,
-    }).catch(() => undefined)
+  const balance = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "read_balance",
+    operation: () => Effect.runPromise(readScrapeDoAccountInfo(proxyToken)),
+  })
+  if (!balance) {
+    return
   }
+  await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "save_balance",
+    operation: () =>
+      updateProxyProviderBalance(database, userId, {
+        balance,
+        now,
+      }),
+  })
 }
 
 export const refreshCustomPluginServerManifests = async (

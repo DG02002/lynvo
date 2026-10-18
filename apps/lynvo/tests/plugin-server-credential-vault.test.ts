@@ -28,7 +28,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     const encryptedResponse = await vault.fetch(
       request("/encrypt", {
         userId: "user-1",
-        pluginServerId: "plugin-server-1",
+        scopeId: "plugin-server-1",
         apiKey: "plugin-server-key",
       })
     )
@@ -40,7 +40,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     const decryptedResponse = await vault.fetch(
       request("/decrypt", {
         userId: "user-1",
-        pluginServerId: "plugin-server-1",
+        scopeId: "plugin-server-1",
         credential: encrypted,
       })
     )
@@ -50,7 +50,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     })
   })
 
-  it("rejects copied ciphertext in a different user or Plugin Server context", async () => {
+  it("rejects copied ciphertext in a different user or credential scope", async () => {
     // SAFETY: The vault only reads the encryption-key binding supplied by this test.
     const vault = new PluginServerCredentialVault(createState(), {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
@@ -58,7 +58,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     const encryptedResponse = await vault.fetch(
       request("/encrypt", {
         userId: "user-1",
-        pluginServerId: "plugin-server-1",
+        scopeId: "plugin-server-1",
         apiKey: "plugin-server-key",
       })
     )
@@ -67,7 +67,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     const copiedResponse = await vault.fetch(
       request("/decrypt", {
         userId: "user-1",
-        pluginServerId: "plugin-server-2",
+        scopeId: "plugin-server-2",
         credential,
       })
     )
@@ -81,7 +81,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     const response = await vault.fetch(
       request("/encrypt", {
         userId: "user-1",
-        pluginServerId: "plugin-server-1",
+        scopeId: "plugin-server-1",
         apiKey: "plugin-server-key",
       })
     )

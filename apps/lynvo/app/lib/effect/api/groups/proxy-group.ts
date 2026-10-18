@@ -9,7 +9,7 @@ import {
 import {
   BackendApiError,
   CsrfApiError,
-  PluginServerRegistrationApiError,
+  ProxyProviderApiError,
   UnauthorizedApiError,
   ValidationApiError,
 } from "../../errors"
@@ -35,7 +35,7 @@ export class ProxyGroup extends HttpApiGroup.make("proxy")
       payload: SetProxyKeyPayloadSchema,
       success: SetProxyKeyResponseWithHeadersSchema,
       error: [
-        PluginServerRegistrationApiError,
+        ProxyProviderApiError,
         ValidationApiError,
         UnauthorizedApiError,
         BackendApiError,
@@ -47,7 +47,7 @@ export class ProxyGroup extends HttpApiGroup.make("proxy")
     HttpApiEndpoint.post("refreshBalance", "/balance/refresh", {
       success: RefreshProxyBalanceResponseWithHeadersSchema,
       error: [
-        PluginServerRegistrationApiError,
+        ProxyProviderApiError,
         UnauthorizedApiError,
         BackendApiError,
         CsrfApiError,

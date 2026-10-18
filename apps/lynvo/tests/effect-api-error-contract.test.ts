@@ -12,6 +12,8 @@ import {
   PluginServerUnavailableError,
   PluginServerRegistrationApiError,
   PluginServerRegistrationError,
+  ProxyProviderApiError,
+  ProxyProviderError,
 } from "~/lib/effect/errors"
 
 describe("public Effect API error contracts", () => {
@@ -33,6 +35,14 @@ describe("public Effect API error contracts", () => {
         })
       )
     )
+    const proxyProviderEncoded = await Effect.runPromise(
+      Schema.encodeUnknownEffect(ProxyProviderApiError)(
+        new ProxyProviderError({
+          message: "Proxy provider request failed",
+          details: { apiKey: sentinel },
+        })
+      )
+    )
 
     expect(backendEncoded).toEqual({
       _tag: "BackendError",
@@ -42,9 +52,17 @@ describe("public Effect API error contracts", () => {
       _tag: "PluginServerRegistrationError",
       message: "Plugin Server request failed",
     })
-    expect(JSON.stringify([backendEncoded, registrationEncoded])).not.toContain(
-      sentinel
-    )
+    expect(proxyProviderEncoded).toEqual({
+      _tag: "ProxyProviderError",
+      message: "Proxy provider request failed",
+    })
+    expect(
+      JSON.stringify([
+        backendEncoded,
+        registrationEncoded,
+        proxyProviderEncoded,
+      ])
+    ).not.toContain(sentinel)
   })
 
   it("keeps plugin-domain conflict kinds at the public boundary", async () => {

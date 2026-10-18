@@ -50,7 +50,7 @@ export const PLUGIN_SERVER_COLUMNS =
   "id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, proxy_enabled, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, created_at, updated_at"
 
 export const PROXY_PROVIDER_COLUMNS =
-  "user_id, provider, token_ciphertext, token_nonce, token_algorithm, token_version, balance_remaining, balance_limit, balance_checked_at, created_at, updated_at"
+  "user_id, provider, legacy_plugin_server_id, token_ciphertext, token_nonce, token_algorithm, token_version, balance_remaining, balance_limit, balance_checked_at, created_at, updated_at"
 
 export const PLUGIN_DOMAIN_COLUMNS =
   "id, user_id, plugin_server_id, domain, plugin_id, credential_generation, credential_attempt_id, credential_finalized_attempt_id"
@@ -86,6 +86,7 @@ export interface PluginServerRow {
 export interface ProxyProviderRow {
   user_id: string
   provider: "scrape-do"
+  legacy_plugin_server_id: string | null
   token_ciphertext: string | null
   token_nonce: string | null
   token_algorithm: "AES-256-GCM" | null

@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { loadRegisteredPluginServers } from "~/lib/effect/services/authenticated-extraction-context"
 import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import {
   readProxyProviderState,
@@ -31,6 +32,7 @@ const accountJson = (value: ScrapeDoAccountPayload) => JSON.stringify(value)
 const proxyProviderRow = {
   user_id: "user-1",
   provider: "scrape-do",
+  legacy_plugin_server_id: null,
   token_ciphertext: "proxy-ciphertext",
   token_nonce: "proxy-nonce",
   token_algorithm: "AES-256-GCM",
@@ -176,6 +178,41 @@ describe("readProxyProviderState", () => {
       balanceLimit: null,
       balanceCheckedAt: null,
     })
+  })
+})
+
+describe("loadRegisteredPluginServers", () => {
+  it("decrypts a migrated proxy token with its original Plugin Server scope", async () => {
+    const database = createFakeD1Database((sql) => {
+      if (sql.includes("FROM user_proxy_providers")) {
+        return {
+          row: {
+            ...proxyProviderRow,
+            legacy_plugin_server_id: "legacy-server-1",
+          },
+          rows: [],
+        }
+      }
+      return undefined
+    })
+    const { vault, vaultNames } = createVault(() =>
+      Response.json({ apiKey: "legacy-proxy-token" })
+    )
+    // SAFETY: The extraction-context test only needs the database and credential-vault bindings.
+    const environment = {
+      DB: database,
+      PLUGIN_SERVER_CREDENTIAL_VAULT: vault,
+    } as Env
+
+    const context = await Effect.runPromise(
+      loadRegisteredPluginServers(environment, "user-1")
+    )
+
+    expect(context).toEqual({
+      pluginServers: [],
+      proxyToken: "legacy-proxy-token",
+    })
+    expect(vaultNames).toEqual(["user-1:legacy-server-1"])
   })
 })
 
@@ -419,6 +456,51 @@ describe("refreshProxyProviderBalance", () => {
       1_000,
     ])
     expect(vaultNames).toEqual(["user-1:proxy-provider:scrape-do"])
+  })
+
+  it("decrypts a migrated token with its original Plugin Server scope", async () => {
+    const database = createFakeD1Database((sql) => {
+      if (sql.includes("FROM user_proxy_providers")) {
+        return {
+          row: {
+            ...proxyProviderRow,
+            legacy_plugin_server_id: "legacy-server-1",
+          },
+          rows: [],
+        }
+      }
+      return undefined
+    })
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        IsActive: true,
+        RemainingMonthlyRequest: 901,
+        MaxMonthlyRequest: 1_000,
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const { vault, vaultNames } = createVault(() =>
+      Response.json({ apiKey: "legacy-proxy-token" })
+    )
+    // SAFETY: The refresh test only needs the database and credential-vault bindings.
+    const environment = {
+      DB: database,
+      PLUGIN_SERVER_CREDENTIAL_VAULT: vault,
+    } as Env
+
+    await Effect.runPromise(
+      refreshProxyProviderBalance({ user: { id: "user-1" } }).pipe(
+        Effect.provide(
+          Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+        )
+      )
+    )
+
+    expect(vaultNames).toEqual(["user-1:legacy-server-1"])
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.scrape.do/info?token=legacy-proxy-token",
+      expect.objectContaining({ headers: { Accept: "application/json" } })
+    )
   })
 
   it("fails when no key is saved", async () => {

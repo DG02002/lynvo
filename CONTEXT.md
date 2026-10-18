@@ -194,9 +194,9 @@ Avoid: saved password, link password.
 
 ### Proxy key
 
-A user-supplied proxy provider token attached to a Custom Plugin Server. Its
-extractions use the user's proxy account instead of the server's shared proxy
-credits.
+A user-supplied token stored once per account for a supported proxy provider.
+Extractions send it to proxy-enabled Custom Plugin Servers that declare support
+for that provider.
 
 Avoid: proxy API key, proxy token. Those names can be confused with a Plugin
 Server's own API key.

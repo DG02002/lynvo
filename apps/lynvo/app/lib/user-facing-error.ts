@@ -23,6 +23,7 @@ const taggedErrorMessage = (cause: unknown): string | undefined => {
     case "NotFoundError":
     case "UsageLimitError":
     case "PluginServerRegistrationError":
+    case "ProxyProviderError":
     case "PluginDomainNotFoundError":
     case "PluginServerUnavailableError":
     case "PluginCredentialChangeSupersededError":
