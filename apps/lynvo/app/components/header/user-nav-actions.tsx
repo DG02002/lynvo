@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
 
 import { RemotePlayButton } from "~/components/remote-play-button"
-import { buttonVariants } from "~/components/ui/button-variants"
+import { buttonVariants } from "~/components/ui/button"
 import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
 

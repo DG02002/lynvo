@@ -1,4 +1,4 @@
-import { buttonVariants } from "~/components/ui/button-variants"
+import { buttonVariants } from "~/components/ui/button"
 import { authCopy } from "~/features/auth/auth.copy"
 import { cn } from "~/lib/utils"
 
