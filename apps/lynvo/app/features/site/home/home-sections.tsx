@@ -108,7 +108,7 @@ export const AndroidScreensSection = () => (
       />
 
       <div className="relative mx-auto w-full max-w-3xl pb-12 sm:pb-20">
-        <div className="relative rounded-[10px] bg-gradient-to-b from-neutral-600 via-neutral-900 to-neutral-950 p-[5px] shadow-[0_30px_60px_-28px_rgba(0,0,0,0.7)]">
+        <div className="relative rounded-[10px] bg-gradient-to-b from-frame-600 via-frame-900 to-frame-950 p-[5px] shadow-[0_30px_60px_-28px_rgba(0,0,0,0.7)]">
           <div className="overflow-hidden rounded-[6px] bg-black">
             <img
               src="/images/device-previews/lynvo-tv-screen.webp"
@@ -120,11 +120,11 @@ export const AndroidScreensSection = () => (
             />
           </div>
           <div className="absolute bottom-1 left-1/2 h-px w-10 -translate-x-1/2 rounded-full bg-white/25" />
-          <div className="absolute -bottom-5 left-1/2 h-5 w-14 -translate-x-1/2 bg-gradient-to-b from-neutral-700 to-neutral-950 [clip-path:polygon(35%_0,65%_0,100%_100%,0_100%)] sm:-bottom-7 sm:h-7 sm:w-20" />
-          <div className="absolute -bottom-6 left-1/2 h-1.5 w-28 -translate-x-1/2 rounded-full bg-neutral-900 shadow-lg sm:-bottom-9 sm:w-40" />
+          <div className="absolute -bottom-5 left-1/2 h-5 w-14 -translate-x-1/2 bg-gradient-to-b from-frame-700 to-frame-950 [clip-path:polygon(35%_0,65%_0,100%_100%,0_100%)] sm:-bottom-7 sm:h-7 sm:w-20" />
+          <div className="absolute -bottom-6 left-1/2 h-1.5 w-28 -translate-x-1/2 rounded-full bg-frame-900 shadow-lg sm:-bottom-9 sm:w-40" />
         </div>
 
-        <div className="absolute -bottom-2 right-[5%] w-[24%] min-w-24 max-w-44 rounded-[14px] bg-neutral-800 p-[3px] shadow-[0_24px_40px_-14px_rgba(0,0,0,0.75)] sm:rounded-[18px] sm:p-1">
+        <div className="absolute -bottom-2 right-[5%] w-[24%] min-w-24 max-w-44 rounded-[14px] bg-frame-800 p-[3px] shadow-[0_24px_40px_-14px_rgba(0,0,0,0.75)] sm:rounded-[18px] sm:p-1">
           <div className="relative overflow-hidden rounded-[11px] bg-black sm:rounded-[14px]">
             <img
               src="/images/device-previews/lynvo-phone-screen.webp"

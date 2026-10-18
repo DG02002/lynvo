@@ -124,7 +124,7 @@ function OutlineRail({ height, paths }: OutlineRailGeometry) {
       />
       <path
         d={paths.basePath}
-        className="docs-outline-active stroke-blue-500 dark:stroke-blue-400"
+        className="docs-outline-active stroke-link"
         strokeDasharray={`${paths.activeDash.length} ${paths.activeDash.total}`}
         strokeDashoffset={paths.activeDash.offset}
         strokeLinecap="butt"

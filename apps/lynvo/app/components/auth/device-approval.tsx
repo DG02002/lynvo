@@ -90,14 +90,8 @@ const DeviceApprovalStatusMessage = ({
         role="status"
       >
         <span className="sr-only">Checking code…</span>
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse h-4 w-40"
-        />
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse h-7 w-36"
-        />
+        <Skeleton aria-hidden="true" className="h-4 w-40" />
+        <Skeleton aria-hidden="true" className="h-7 w-36" />
       </div>
     )
   }

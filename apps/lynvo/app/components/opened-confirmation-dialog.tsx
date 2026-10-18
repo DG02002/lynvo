@@ -34,7 +34,7 @@ export const OpenedConfirmationDialog = () => {
       media={
         <HugeiconsIcon
           icon={TickDouble02Icon}
-          className="mx-auto size-16 text-sky-500"
+          className="mx-auto size-16 text-link"
         />
       }
       confirmLabel="Mark as watched"

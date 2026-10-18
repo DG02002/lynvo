@@ -112,7 +112,8 @@ export const SaveListLoadingState = ({
 export const SaveListCardSkeleton = ({ label }: { readonly label: string }) => (
   <Skeleton
     aria-label={label}
-    className="loading-skeleton-pulse size-full rounded-none bg-muted"
+    radius="none"
+    className="size-full"
     role="status"
   />
 )
@@ -124,15 +125,12 @@ interface SaveListImmersiveLoadingStateProps {
 
 const FolderAside = () => (
   <aside className="min-w-0 overflow-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
-    <Skeleton
-      aria-hidden="true"
-      className="loading-skeleton-pulse h-9 w-full md:hidden"
-    />
+    <Skeleton aria-hidden="true" className="h-9 w-full md:hidden" />
     <div className="hidden flex-col gap-2 md:flex" aria-hidden="true">
       {Array.from({ length: 5 }, (_, index) => (
         <div key={index} className="flex h-9 items-center gap-2 px-2">
-          <Skeleton className="loading-skeleton-pulse size-4 rounded-md" />
-          <Skeleton className="loading-skeleton-pulse h-4 flex-1" />
+          <Skeleton radius="md" className="size-4" />
+          <Skeleton className="h-4 flex-1" />
         </div>
       ))}
     </div>
@@ -191,22 +189,13 @@ export const SaveListImmersiveLoadingState = ({
       <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
         <SaveListBackButton onNavigateBack={onNavigateBack} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-          <Skeleton
-            aria-hidden="true"
-            className="loading-skeleton-pulse hidden h-5 w-48 md:block"
-          />
+          <Skeleton aria-hidden="true" className="hidden h-5 w-48 md:block" />
         </div>
         <div className="flex items-center justify-center">
-          <Skeleton
-            aria-hidden="true"
-            className="loading-skeleton-pulse size-5 rounded-sm"
-          />
+          <Skeleton aria-hidden="true" radius="sm" className="size-5" />
         </div>
         <div className="flex items-center justify-center border-l">
-          <Skeleton
-            aria-hidden="true"
-            className="loading-skeleton-pulse size-9 rounded-lg"
-          />
+          <Skeleton aria-hidden="true" radius="lg" className="size-9" />
         </div>
       </header>
       <div className={preset.contentGridClass}>

@@ -188,7 +188,8 @@ export function LinkSelectionDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex h-svh max-h-none w-screen min-w-0 max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100vw-2rem)] sm:rounded-4xl md:w-[calc(100vw-4rem)] md:max-w-[60rem]"
+        size="sheet"
+        className="flex h-svh max-h-none w-screen min-w-0 max-w-none flex-col overflow-hidden sm:h-auto sm:max-h-[85vh] sm:w-[calc(100vw-2rem)] md:w-[calc(100vw-4rem)] md:max-w-[60rem]"
       >
         <LinkSelectionHeader
           pluginIcon={pluginIcon}

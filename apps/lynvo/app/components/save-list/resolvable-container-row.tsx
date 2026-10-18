@@ -73,7 +73,7 @@ const ResolvedMirrorRows = ({
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 start-9 z-10 w-0.5 bg-sky-500 md:start-11"
+        className="pointer-events-none absolute inset-y-0 start-9 z-10 w-0.5 bg-link md:start-11"
         data-container-connector
       />
       {mirrors.map((mirror) => {
@@ -88,7 +88,7 @@ const ResolvedMirrorRows = ({
           <div key={getLinkKey(mirror)} className="relative">
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute -start-3 top-1/2 z-10 h-0.5 w-3 -translate-y-1/2 bg-sky-500"
+              className="pointer-events-none absolute -start-3 top-1/2 z-10 h-0.5 w-3 -translate-y-1/2 bg-link"
               data-container-connector
             />
             <MediaListRow

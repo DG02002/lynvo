@@ -7,6 +7,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
 
+import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,16 +34,17 @@ export const UserMenu = ({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="adaptive"
             aria-label={name || email || "Account"}
-            className="flex h-9 items-center gap-2 rounded-full px-2 hover:bg-accent transition-colors outline-none sm:px-4"
           >
             <HugeiconsIcon icon={UserIcon} className="size-4" />
             <span className="hidden text-base font-normal sm:inline">
               {name || email}
             </span>
-          </button>
+          </Button>
         }
       />
       <DropdownMenuContent align="end" className="w-max min-w-max">

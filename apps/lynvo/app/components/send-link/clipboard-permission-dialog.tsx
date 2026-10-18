@@ -82,7 +82,7 @@ export function ClipboardPermissionDialog({
           </div>
 
           <div
-            className={`flex h-13.5 w-full items-center rounded-full border-2 bg-background/30 pl-5 pr-1 transition-colors duration-500 ${step >= 1 ? "border-blue-500" : "border-default-medium"}`}
+            className={`flex h-13.5 w-full items-center rounded-full border-2 bg-background/30 pl-5 pr-1 transition-colors duration-500 ${step >= 1 ? "border-link" : ""}`}
           >
             <span className="flex-1 text-base text-muted-foreground">
               Paste link
@@ -98,6 +98,9 @@ export function ClipboardPermissionDialog({
         </div>
 
         <svg
+          // A pointer glyph renders white fill on a black outline, like an OS
+          // cursor, regardless of theme.
+          // oxlint-disable shadcn/no-raw-colors -- OS cursor glyph colors, not a theme color
           viewBox="0 0 28 28"
           className={`absolute z-10 size-6 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] transition-[left,top,opacity] duration-700 ease-out motion-reduce:hidden ${getClipboardCursorClassName(step)}`}
         >
@@ -109,6 +112,7 @@ export function ClipboardPermissionDialog({
             strokeLinejoin="round"
           />
         </svg>
+        {/* oxlint-enable shadcn/no-raw-colors */}
       </div>
 
       <ClipboardAccessIcon className="mt-6 size-12" />

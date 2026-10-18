@@ -61,12 +61,9 @@ export function LinkActionsDotMenu({
         render={
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             size="icon"
-            className={cn(
-              "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
-              className
-            )}
+            className={cn(className)}
             onClick={(event) => event.stopPropagation()}
           >
             <HugeiconsIcon icon={EllipsisIcon} />

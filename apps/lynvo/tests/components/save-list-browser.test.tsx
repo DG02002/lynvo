@@ -216,7 +216,7 @@ describe("SaveListBrowser", () => {
       "size-full!",
       "rounded-none!",
       "[&_svg]:size-7!",
-      "text-foreground!"
+      "text-foreground"
     )
     expect(headerMenu.parentElement).toHaveClass(
       "flex",
@@ -1148,7 +1148,7 @@ describe("SaveListBrowser", () => {
     ).not.toBeInTheDocument()
     expect(markOpened).not.toHaveBeenCalled()
     expect(playableItemButton).not.toHaveClass("bg-destructive/15")
-    expect(playableItemButton).not.toHaveClass("bg-sky-500/15")
+    expect(playableItemButton).not.toHaveClass("bg-link/15")
     expect(playableItemButton).toHaveClass("bg-muted/60")
     expect(playableItemRow).toHaveAttribute("data-resolution-state", "expanded")
     expect(
@@ -1161,9 +1161,7 @@ describe("SaveListBrowser", () => {
         .getAllByRole("button", {
           name: /Open menu for Play from Source Route/,
         })
-        .every((menuButton) =>
-          menuButton.classList.contains("text-foreground!")
-        )
+        .every((menuButton) => menuButton.classList.contains("text-foreground"))
     ).toBe(true)
     expect(
       screen.getByRole("button", { name: "Open menu for Playable Item One" })
@@ -1181,13 +1179,8 @@ describe("SaveListBrowser", () => {
       "[data-container-connector]"
     )
     expect(connectors).toHaveLength(3)
-    expect(connectors?.[0]).toHaveClass("w-0.5", "bg-sky-500")
-    expect(connectors?.[1]).toHaveClass(
-      "-start-3",
-      "h-0.5",
-      "w-3",
-      "bg-sky-500"
-    )
+    expect(connectors?.[0]).toHaveClass("w-0.5", "bg-link")
+    expect(connectors?.[1]).toHaveClass("-start-3", "h-0.5", "w-3", "bg-link")
     expect(
       screen
         .getAllByRole("button", {
@@ -1209,7 +1202,7 @@ describe("SaveListBrowser", () => {
         "https://resolver-beta.example/playable-item-one"
       )
     )
-    expect(playableItemButton).toHaveClass("bg-sky-500/15")
+    expect(playableItemButton).toHaveClass("bg-link/15")
 
     fireEvent.click(playableItemButton)
     await waitFor(() => {
@@ -1700,7 +1693,7 @@ describe("SaveListBrowser", () => {
 
     expect(
       screen.getByRole("button", { name: "Open video.mp4, opened" })
-    ).toHaveClass("bg-sky-500/15")
+    ).toHaveClass("bg-link/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")

@@ -248,9 +248,11 @@ const MobileFolderTreeToggle = ({
   isOpen,
   onToggle,
 }: MobileFolderTreeToggleProps) => (
-  <Button
-    variant="ghost"
-    className="h-auto min-h-11 w-full justify-start gap-3 rounded-lg px-0 text-left font-normal md:hidden"
+  // The mobile folder-tree toggle is a finder row rendered as a button, so it
+  // is plain chrome rather than a design-system Button.
+  <button
+    type="button"
+    className="flex h-auto min-h-11 w-full items-center justify-start gap-3 rounded-lg px-0 text-left text-sm font-normal transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
     aria-expanded={isOpen}
     aria-label={isOpen ? "Collapse folder tree" : "Expand folder tree"}
     onClick={onToggle}
@@ -265,7 +267,7 @@ const MobileFolderTreeToggle = ({
         className={cn("size-4 transition-transform", isOpen && "rotate-180")}
       />
     </span>
-  </Button>
+  </button>
 )
 
 const FolderTree = ({
@@ -299,7 +301,7 @@ const FolderTree = ({
               aria-hidden="true"
               className={cn(
                 "absolute inset-y-0 -left-3 w-px",
-                doesActiveBranchContinue ? "bg-sky-500" : "bg-border/60"
+                doesActiveBranchContinue ? "bg-link" : "bg-border/60"
               )}
             />
           )}
@@ -307,9 +309,9 @@ const FolderTree = ({
             className={cn(
               "group relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
               isInPath || doesActiveBranchContinue
-                ? "before:bg-sky-500"
+                ? "before:bg-link"
                 : "before:bg-border/60",
-              isInPath ? "after:bg-sky-500" : "after:bg-border/60"
+              isInPath ? "after:bg-link" : "after:bg-border/60"
             )}
           >
             <button

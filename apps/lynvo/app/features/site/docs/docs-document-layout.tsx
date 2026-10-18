@@ -63,20 +63,15 @@ const DocsSidebarContents = ({
         <Accordion
           key={group.group}
           multiple
-          className="rounded-none border-0"
+          variant="plain"
           defaultValue={
             !currentSlug || currentGroup === group ? [group.group] : []
           }
         >
-          <AccordionItem
-            value={group.group}
-            className="border-b-0 data-open:bg-transparent"
-          >
-            <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium hover:no-underline">
-              {group.group}
-            </AccordionTrigger>
-            <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
-              <ul className="flex flex-col gap-0.5">
+          <AccordionItem value={group.group} variant="borderless">
+            <AccordionTrigger variant="nav">{group.group}</AccordionTrigger>
+            <AccordionContent variant="nav" className="-mx-4">
+              <ul className="flex flex-col gap-0.5 [&_a]:no-underline">
                 {group.pages.map((page) => {
                   const isCurrentPage = page.slug === currentSlug
 

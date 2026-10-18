@@ -52,39 +52,35 @@ const Plugins = () => {
         aria-label="Lynvo Plugins"
         className="mx-auto mt-10 max-w-4xl md:mt-14"
       >
-        <Table>
+        <Table variant="plain">
           <TableHeader className="hidden md:table-header-group">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-0">Plugin</TableHead>
+            <TableRow>
+              <TableHead>Plugin</TableHead>
               <TableHead>Description</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {lynvoPlugins === null ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={2}
-                  className="px-0 py-8 whitespace-normal text-muted-foreground"
-                >
-                  <LoadErrorRetry
-                    message="Lynvo Plugin information is currently unavailable."
-                    isRetrying={revalidator.state === "loading"}
-                    onRetry={() => revalidator.revalidate()}
-                  />
+              <TableRow>
+                <TableCell colSpan={2}>
+                  <div className="py-8 text-muted-foreground">
+                    <LoadErrorRetry
+                      message="Lynvo Plugin information is currently unavailable."
+                      isRetrying={revalidator.state === "loading"}
+                      onRetry={() => revalidator.revalidate()}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               lynvoPlugins.map((plugin) => (
-                <TableRow
-                  key={plugin.id}
-                  className="block hover:bg-transparent md:table-row"
-                >
-                  <TableCell className="block px-0 pt-6 pb-0 whitespace-normal md:table-cell md:py-5">
+                <TableRow key={plugin.id} className="block md:table-row">
+                  <TableCell className="block md:table-cell">
                     <a
                       href={plugin.sourceUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex min-h-11 items-center gap-3 font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
+                      className="inline-flex min-h-11 items-center gap-3 mt-6 font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 md:my-5"
                     >
                       <PluginIcon icon={plugin.icon} className="size-9" />
                       <span>{plugin.name}</span>
@@ -96,8 +92,10 @@ const Plugins = () => {
                       />
                     </a>
                   </TableCell>
-                  <TableCell className="block max-w-none px-0 pt-2 pb-6 pl-12 whitespace-normal text-muted-foreground text-pretty md:table-cell md:max-w-md md:px-3 md:py-5">
-                    {plugin.description}
+                  <TableCell className="block max-w-none md:table-cell md:max-w-md">
+                    <p className="mt-2 mb-6 pl-12 text-muted-foreground text-pretty md:px-3 md:py-5">
+                      {plugin.description}
+                    </p>
                   </TableCell>
                 </TableRow>
               ))

@@ -126,16 +126,13 @@ export const LinkItemMenu = ({
         <DropdownMenuTrigger
           render={
             <Button
-              variant="ghost"
-              size="icon"
+              variant="quiet"
+              size="icon-sm"
               disabled={isRefreshing}
               aria-label={
                 isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`
               }
-              className={cn(
-                "size-8 shrink-0 text-foreground! hover:bg-transparent hover:text-foreground! aria-expanded:bg-transparent aria-expanded:text-foreground!",
-                triggerClassName
-              )}
+              className={cn("shrink-0", triggerClassName)}
             >
               {isRefreshing ? (
                 <Spinner aria-hidden="true" />

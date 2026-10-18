@@ -43,12 +43,9 @@ export const ResolvableLinkMenu = ({
         <DropdownMenuTrigger
           render={
             <Button
-              variant="ghost"
+              variant="quiet"
               size="icon"
-              className={cn(
-                "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
-                triggerClassName
-              )}
+              className={cn(triggerClassName)}
             >
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">Open menu for {itemLabel}</span>

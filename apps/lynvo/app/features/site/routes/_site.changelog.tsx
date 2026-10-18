@@ -196,9 +196,9 @@ const ChangelogDescription = ({
       {isOverflowing ? (
         <Button
           type="button"
-          variant="ghost"
+          variant="quiet"
           size="sm"
-          className="-ml-3 bg-transparent hover:bg-transparent"
+          className="-ml-3"
           aria-controls={id}
           aria-expanded={isExpanded}
           onClick={() => setIsExpanded((current) => !current)}
@@ -237,7 +237,9 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
                   {entry.date}
                 </time>
                 <Badge
-                  className="ml-auto h-7 bg-lime-950 px-3 text-sm text-lime-200 md:ml-0"
+                  variant="stable"
+                  size="lg"
+                  className="ml-auto md:ml-0"
                   aria-label="Stable"
                 >
                   Stable
@@ -253,9 +255,7 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
                 />
               </div>
             </article>
-            {index < visibleEntries.length - 1 ? (
-              <Separator className="bg-foreground/20" />
-            ) : null}
+            {index < visibleEntries.length - 1 ? <Separator /> : null}
           </Fragment>
         )
       })}
@@ -318,25 +318,22 @@ export default function Changelog() {
       >
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           <TabsList
-            variant="line"
+            variant="text"
             aria-label="Changelog categories"
-            className="w-fit max-w-full min-w-0 gap-4 p-0 sm:gap-6 md:gap-8"
+            className="w-fit max-w-full min-w-0 gap-4 sm:gap-6 md:gap-8"
           >
-            <TabsTrigger
-              value="all"
-              className="h-11 min-w-0 flex-none p-0 text-sm after:hidden data-active:bg-transparent hover:bg-transparent sm:h-10 sm:text-base"
-            >
+            <TabsTrigger value="all" className="h-11 min-w-0 flex-none sm:h-10">
               All
             </TabsTrigger>
             <TabsTrigger
               value="general"
-              className="h-11 min-w-0 flex-none p-0 text-sm after:hidden data-active:bg-transparent hover:bg-transparent sm:h-10 sm:text-base"
+              className="h-11 min-w-0 flex-none sm:h-10"
             >
               Product
             </TabsTrigger>
             <TabsTrigger
               value="plugin-server"
-              className="h-11 min-w-0 flex-none p-0 text-sm after:hidden data-active:bg-transparent hover:bg-transparent sm:h-10 sm:text-base"
+              className="h-11 min-w-0 flex-none sm:h-10"
             >
               Plugin Server
             </TabsTrigger>
@@ -345,7 +342,7 @@ export default function Changelog() {
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button type="button" variant="ghost" size="sm" />}
-              className="ml-auto min-h-11 px-2 sm:min-h-0 sm:px-3"
+              className="ml-auto min-h-11 sm:min-h-0"
             >
               Sort
               <HugeiconsIcon

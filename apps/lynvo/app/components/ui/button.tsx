@@ -17,6 +17,19 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        quiet:
+          "text-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-foreground dark:hover:bg-transparent",
+        tonal: "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary aria-expanded:bg-primary/10 aria-expanded:text-primary",
+        "destructive-outline":
+          "border-destructive bg-transparent text-destructive hover:bg-transparent hover:text-destructive hover:border-destructive",
+        "destructive-quiet":
+          "text-destructive hover:bg-transparent hover:text-destructive aria-expanded:bg-transparent aria-expanded:text-destructive",
+        "outline-soft":
+          "border-muted-foreground/20 bg-input/30 hover:bg-input/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+        "outline-quiet":
+          "border-muted-foreground/30 bg-transparent hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent",
+        overlay:
+          "bg-background/80 text-foreground shadow-none hover:bg-background/80 hover:text-foreground aria-expanded:bg-background/80 dark:hover:bg-background/80",
       },
       size: {
         default:
@@ -28,6 +41,7 @@ const buttonVariants = cva(
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",
         "icon-lg": "size-10",
+        adaptive: "size-9 gap-2 p-0 sm:h-9 sm:w-auto sm:px-3",
       },
     },
     defaultVariants: {
