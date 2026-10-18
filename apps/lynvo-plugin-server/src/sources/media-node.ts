@@ -17,6 +17,18 @@ interface SourcePlayableNodeExtras {
   rangeRequest?: RangeRequestCapability
 }
 
+export const readRangeRequestCapability = (
+  response: Pick<Response, "status" | "headers">
+): RangeRequestCapability => {
+  if (response.status === 206 && response.headers.has("content-range")) {
+    return "supported"
+  }
+  if (response.status === 200) {
+    return "unsupported"
+  }
+  return "unknown"
+}
+
 export const createSourcePlayableNode = ({
   size,
   rangeRequest,

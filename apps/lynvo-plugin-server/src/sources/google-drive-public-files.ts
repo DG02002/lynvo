@@ -22,7 +22,10 @@ import {
 } from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { formatFileSize } from "./file-size"
-import { createSourcePlayableNode } from "./media-node"
+import {
+  createSourcePlayableNode,
+  readRangeRequestCapability,
+} from "./media-node"
 import { isVideoFile } from "./video-file"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
@@ -141,9 +144,7 @@ export const fetchGoogleDrivePublicFileMetadata = async (
   // The probe above already asked for one byte, so its response decides the
   // range capability instead of a second request at handoff time.
   const rangeRequest: RangeRequestCapability =
-    response.status === 206 && response.headers.has("content-range")
-      ? "supported"
-      : "unsupported"
+    readRangeRequestCapability(response)
   return { filename, size: formatFileSize(totalBytes), rangeRequest }
 }
 

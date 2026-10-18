@@ -252,7 +252,9 @@ describe("Direct Media source adapter", () => {
     })
   })
 
-  it("drops an Expires value in the past because the probe just succeeded", async () => {
+  it("treats a short past-looking Expires value as a duration", async () => {
+    const now = 1_800_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(new Uint8Array([0]), {
         status: 206,
@@ -271,6 +273,34 @@ describe("Direct Media source adapter", () => {
         },
       },
       targetUrl: "https://media.example/video.mp4?Expires=3600",
+      plugin,
+    })
+
+    expect(result.nodes[0]).toMatchObject({
+      expiry: now + 3_600_000,
+      expirySource: "signed-url",
+    })
+  })
+
+  it("drops an old absolute Expires value that is not a plausible duration", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Range": "bytes 0-0/1105713",
+        },
+      })
+    )
+
+    const result = await extractDirectMedia({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://media.example/video.mp4?Expires=1000000000",
+        },
+      },
+      targetUrl: "https://media.example/video.mp4?Expires=1000000000",
       plugin,
     })
 
@@ -405,11 +435,17 @@ describe("Bhadoo source adapter", () => {
         nodeUrl: "https://drive.example/0:/Collections/Folder%20%25%201/",
         resolutionKind: "folder",
       },
-      { kind: "playable", label: "playable-item.mkv", size: "469.28 MB" },
+      {
+        kind: "playable",
+        label: "playable-item.mkv",
+        size: "469.28 MB",
+        rangeRequest: "unknown",
+      },
       {
         kind: "playable",
         label: "raw % video.mkv",
         url: "https://drive.example/0:/Collections/raw%20%25%20video.mkv",
+        rangeRequest: "unknown",
       },
     ])
     expect(formatBhadooFileSize("492077810")).toBe("469.28 MB")
@@ -698,7 +734,12 @@ describe("OneDrive source adapter", () => {
         nodeUrl: "https://index.example/Collections/Folder%20%25%201",
         resolutionKind: "folder",
       },
-      { kind: "playable", label: "playable-item.mp4", size: "193.65 MB" },
+      {
+        kind: "playable",
+        label: "playable-item.mp4",
+        size: "193.65 MB",
+        rangeRequest: "unknown",
+      },
     ])
   })
 
@@ -1081,6 +1122,35 @@ describe("Google Drive public files source adapter", () => {
         rangeRequest: "supported",
       },
     ])
+  })
+
+  it("reports unsupported range requests for Google Drive files", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 200,
+        headers: {
+          "Content-Disposition": 'attachment; filename="example-video.mkv"',
+          "Content-Length": "1105713",
+        },
+      })
+    )
+
+    const result = await extractGoogleDrivePublicFile({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://drive.google.com/file/d/1AbCdEfGh123/view",
+        },
+      },
+      targetUrl: "https://drive.google.com/file/d/1AbCdEfGh123/view",
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(result.nodes[0]).toMatchObject({
+      kind: "playable",
+      rangeRequest: "unsupported",
+    })
   })
 
   it("maps malformed encoded content-disposition filenames to unsupported URLs", async () => {

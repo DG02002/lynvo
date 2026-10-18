@@ -509,9 +509,7 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "role": "heading",
-            "name": "Supported proxy",
-            "exact": true
+            "text": "Key saved"
           }
         }
       ],
@@ -537,16 +535,15 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "role": "heading",
-            "name": "Supported proxy",
-            "exact": true
+            "text": "Key saved"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Change proxy key"
+            "name": "Change Scrape.do key",
+            "exact": false
           },
           "expectVisible": {
             "text": "Scrape.do API token",

@@ -122,23 +122,24 @@ const remainingPercentOf = (metrics: readonly UsageMetric[]): number => {
 // Monthly budgets are what people manage; daily rate limits sort below them.
 const PERIOD_ORDER = { monthly: 0, daily: 1 } as const
 
-// The worker stores the raw error code per failed server; map the codes people
-// actually hit to a cause they can act on instead of a bare "couldn't load".
-const describeCustomUsageFailure = (error: string): string => {
-  if (error.includes("UNSAFE_DESTINATION")) {
-    return "Lynvo cannot reach that address from this deployment."
-  }
-  if (error.includes("PROTOCOL_MISMATCH")) {
-    return "The server’s usage response does not match the Plugin Server Protocol."
-  }
-  if (error.includes("RATE_LIMITED")) {
-    return "The server is rate limiting Lynvo right now."
-  }
-  if (error.includes("TEMPORARY_FAILURE") || error.includes("TIMEOUT")) {
-    return "The server could not be reached."
-  }
-  return error
-}
+// The worker stores one protocol error code per failed server. Match those
+// codes exactly so unrelated values containing the same text stay untouched.
+const CUSTOM_USAGE_FAILURE_DESCRIPTIONS: ReadonlyMap<string, string> = new Map([
+  [
+    "UNSAFE_DESTINATION",
+    "Lynvo cannot reach that address from this deployment.",
+  ],
+  [
+    "PROTOCOL_MISMATCH",
+    "The server’s usage response does not match the Plugin Server Protocol.",
+  ],
+  ["RATE_LIMITED", "The server is rate limiting Lynvo right now."],
+  ["TEMPORARY_FAILURE", "The server could not be reached."],
+  ["TIMEOUT", "The server could not be reached."],
+])
+
+const describeCustomUsageFailure = (error: string): string =>
+  CUSTOM_USAGE_FAILURE_DESCRIPTIONS.get(error) ?? error
 
 const normalizeCustomSection = (
   usage: readonly PluginServerUsage[],

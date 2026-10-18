@@ -15,6 +15,60 @@ const lynvoPlugins = [
 ]
 
 describe("Usage Read module", () => {
+  it.each([
+    [
+      "UNSAFE_DESTINATION",
+      "Lynvo cannot reach that address from this deployment.",
+    ],
+    [
+      "PROTOCOL_MISMATCH",
+      "The server’s usage response does not match the Plugin Server Protocol.",
+    ],
+    ["RATE_LIMITED", "The server is rate limiting Lynvo right now."],
+    ["TEMPORARY_FAILURE", "The server could not be reached."],
+    ["TIMEOUT", "The server could not be reached."],
+  ])("explains the %s usage failure", async (error, description) => {
+    const usageRead = createUsageReadModule({
+      readLynvo: async () => ({ metrics: [] }),
+      readCustom: async () => [
+        {
+          pluginServerId: "custom-1",
+          name: "Custom One",
+          metrics: [],
+          error,
+        },
+      ],
+    })
+
+    await expect(usageRead.read({ lynvoPlugins: [] })).resolves.toMatchObject({
+      custom: {
+        failures: [`Usage for Custom One couldn’t be loaded: ${description}.`],
+      },
+    })
+  })
+
+  it("does not match a usage error by a code substring", async () => {
+    const usageRead = createUsageReadModule({
+      readLynvo: async () => ({ metrics: [] }),
+      readCustom: async () => [
+        {
+          pluginServerId: "custom-1",
+          name: "Custom One",
+          metrics: [],
+          error: "RATE_LIMITED_UPSTREAM",
+        },
+      ],
+    })
+
+    await expect(usageRead.read({ lynvoPlugins: [] })).resolves.toMatchObject({
+      custom: {
+        failures: [
+          "Usage for Custom One couldn’t be loaded: RATE_LIMITED_UPSTREAM.",
+        ],
+      },
+    })
+  })
+
   it("recognizes the canonical Direct Media Plugin identity", async () => {
     const usageRead = createUsageReadModule({
       readLynvo: async () => ({

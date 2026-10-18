@@ -1974,4 +1974,56 @@ describe("SaveListBrowser", () => {
     ).toBeDisabled()
     expect(row?.querySelector(".loading-skeleton-pulse")).toBeInTheDocument()
   })
+
+  it("retries a failed Saved link through a hard refresh", () => {
+    const item: LinkViewItem = {
+      id: "failed-link",
+      url: "https://source.example/failed",
+      timestamp: Date.now(),
+      title: "Failed Source",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "failed-link-playable",
+              url: "https://media.example/failed.mp4",
+              label: "Failed Source.mp4",
+              type: "file",
+              mediaNodeKind: "playable",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+      extractionStatus: {
+        state: "failed",
+        error: "The Source could not be reached.",
+      },
+    }
+    const actions = createActions()
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={actions}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(document.querySelector("[data-extraction-state]")).toHaveAttribute(
+      "data-extraction-state",
+      "failed"
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+
+    expect(actions.hardRefresh).toHaveBeenCalledOnce()
+    expect(actions.hardRefresh).toHaveBeenCalledWith(item.url)
+  })
 })

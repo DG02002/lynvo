@@ -538,6 +538,7 @@ export const finalizePluginServerCredential = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
+  // Saving a key must preserve the server's separate proxy switch.
   const mutation = buildServerMutationStatements({
     database,
     preparation,
@@ -895,9 +896,6 @@ export const updatePluginServerProxyKey = async (
   input: PluginServerProxyKeyUpdate
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  // Saving a key opts the server back into proxy use: extraction should use
-  // the user's credits without a second manual toggle. Removing the key
-  // leaves the toggle as-is; the UI already renders it off without a key.
   const nextRow: PluginServerRow = {
     ...existing,
     proxy_token_ciphertext: input.encrypted?.ciphertext ?? null,
@@ -907,7 +905,6 @@ export const updatePluginServerProxyKey = async (
     proxy_balance_remaining: input.balance?.remaining ?? null,
     proxy_balance_limit: input.balance?.limit ?? null,
     proxy_balance_checked_at: input.balance ? input.now : null,
-    proxy_enabled: input.encrypted ? 1 : existing.proxy_enabled,
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
@@ -923,7 +920,6 @@ export const updatePluginServerProxyKey = async (
       "proxy_balance_remaining",
       "proxy_balance_limit",
       "proxy_balance_checked_at",
-      "proxy_enabled",
     ],
     currentRow: existing,
     nextRow,

@@ -39,10 +39,6 @@ import {
 } from "./extraction-status-utils"
 import { GalleryGroupMenu } from "./gallery-group-menu"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
-import {
-  SAVE_LIST_SECTION_STACK_CLASS,
-  SaveDateGroupSection,
-} from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
 import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import {
@@ -483,25 +479,31 @@ export const GallerySaveGrid = ({
   }
 
   return (
-    <div className={SAVE_LIST_SECTION_STACK_CLASS}>
-      <SaveDateGroupSection key="recent" label="Recent">
-        <div className={GALLERY_GRID_CLASS}>
-          {groups.map((group) => (
-            <GallerySaveItem
-              key={group.key}
-              group={group}
-              actions={actions}
-              extractingItems={extractingItems}
-              isHighlighted={group.items.some(
-                (item) => item.id === highlightedId
-              )}
-              currentTimeMs={currentTimeMs}
-              onOpenItem={onOpenItem}
-              onOpenGroup={onOpenGroup}
-            />
-          ))}
-        </div>
-      </SaveDateGroupSection>
-    </div>
+    <section
+      aria-label="Recent"
+      className={cn(
+        "flex flex-col gap-4",
+        TVBRO_FILTER_FREE_ENTER_CLASS,
+        "animate-in fade-in fill-mode-both duration-500 motion-reduce:animate-none"
+      )}
+    >
+      <h2 className="font-heading text-2xl font-bold">Recent</h2>
+      <div className={GALLERY_GRID_CLASS}>
+        {groups.map((group) => (
+          <GallerySaveItem
+            key={group.key}
+            group={group}
+            actions={actions}
+            extractingItems={extractingItems}
+            isHighlighted={group.items.some(
+              (item) => item.id === highlightedId
+            )}
+            currentTimeMs={currentTimeMs}
+            onOpenItem={onOpenItem}
+            onOpenGroup={onOpenGroup}
+          />
+        ))}
+      </div>
+    </section>
   )
 }
