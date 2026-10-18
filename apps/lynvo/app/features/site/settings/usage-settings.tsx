@@ -3,6 +3,7 @@ import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
+import { clampPercentage } from "~/lib/usage/usage-read"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
@@ -74,7 +75,7 @@ const UsageSummary = ({
 
 const remainingPercentOfTotal = (total: UsageReadTotal): number =>
   total.limit > 0
-    ? Math.max(Math.round(100 - (total.used / total.limit) * 100), 0)
+    ? clampPercentage(Math.round(100 - (total.used / total.limit) * 100))
     : 0
 
 const UsageItem = ({

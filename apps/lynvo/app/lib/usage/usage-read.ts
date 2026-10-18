@@ -101,6 +101,9 @@ const normalizeLynvoSection = (
   }
 }
 
+export const clampPercentage = (value: number): number =>
+  Math.min(Math.max(value, 0), 100)
+
 const remainingPercentOf = (metrics: readonly UsageMetric[]): number => {
   let minimumRemainingRatio: number | undefined
   for (const metric of metrics) {
@@ -116,7 +119,7 @@ const remainingPercentOf = (metrics: readonly UsageMetric[]): number => {
   if (minimumRemainingRatio === undefined) {
     return 100
   }
-  return Math.max(0, Math.round(minimumRemainingRatio * 100))
+  return clampPercentage(Math.round(minimumRemainingRatio * 100))
 }
 
 // Monthly budgets are what people manage; daily rate limits sort below them.
