@@ -13,7 +13,8 @@ import type { ExtractedLink } from "../app/features/links/types"
 import { LYNVO_PLUGIN_SERVER_ID } from "../shared/constants"
 import {
   DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
-  DOCS_SEED_PROXY_FIXTURES,
+  DOCS_SEED_PROXY_BALANCE,
+  DOCS_SEED_PROXY_KEY,
 } from "../shared/docs-seed-constants"
 import {
   LynvoUsageSnapshotSchema,
@@ -232,12 +233,17 @@ const PluginServerListSchema = Schema.Array(
     manifest: Schema.String,
     enabled: Schema.Boolean,
     verificationStatus: Schema.String,
-    hasProxyKey: Schema.Boolean,
     proxyEnabled: Schema.Boolean,
-    proxyBalanceRemaining: Schema.NullOr(Schema.Number),
-    proxyBalanceLimit: Schema.NullOr(Schema.Number),
   })
 )
+
+const ProxyProviderStateSchema = Schema.Struct({
+  provider: Schema.Literal("scrape-do"),
+  hasKey: Schema.Boolean,
+  balanceRemaining: Schema.NullOr(Schema.Number),
+  balanceLimit: Schema.NullOr(Schema.Number),
+  balanceCheckedAt: Schema.NullOr(Schema.Number),
+})
 const PluginDomainListSchema = Schema.Array(
   Schema.Struct({ id: Schema.String })
 )
@@ -1455,18 +1461,6 @@ const findPluginServerByUrl = (
   )
 }
 
-const findPluginServerById = (
-  servers: readonly PluginServerEntry[],
-  id: string
-): PluginServerEntry | undefined => servers.find((server) => server.id === id)
-
-type DocsProxyFixture =
-  (typeof DOCS_SEED_PROXY_FIXTURES)[keyof typeof DOCS_SEED_PROXY_FIXTURES] & {
-    readonly enabled: boolean
-  }
-
-type DocsPluginServerFixture = (typeof DOCS_SEED_PLUGIN_SERVER_FIXTURES)[number]
-
 const clearPluginDomains = async (api: SeedApiClient): Promise<void> => {
   const domains = await api.get<readonly PluginDomainEntry[]>(
     "/api/plugin-domains",
@@ -1508,89 +1502,45 @@ const listPluginServers = async (
     PluginServerListSchema
   )
 
-const removePluginServerProxyFixture = async (
-  api: SeedApiClient,
-  pluginServerId: string,
-  current: PluginServerEntry
-): Promise<void> => {
-  let didChange = false
-  if (current.proxyEnabled) {
-    await api.mutate({
-      method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
-      body: { enabled: false },
-    })
-    didChange = true
+const ensureProxyProviderKey = async (api: SeedApiClient): Promise<void> => {
+  const state = await api.get<typeof ProxyProviderStateSchema.Type>(
+    "/api/proxy",
+    ProxyProviderStateSchema
+  )
+  if (state.hasKey) {
+    return
   }
-  if (current.hasProxyKey) {
-    await api.mutate({
-      method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
-      body: { token: "" },
-    })
-    didChange = true
-  }
-  const configured = didChange
-    ? findPluginServerById(await listPluginServers(api), pluginServerId)
-    : current
+  await api.mutate({
+    method: "POST",
+    path: "/api/proxy/key",
+    body: { token: DOCS_SEED_PROXY_KEY },
+  })
+  const configured = await api.get<typeof ProxyProviderStateSchema.Type>(
+    "/api/proxy",
+    ProxyProviderStateSchema
+  )
   if (
-    !configured ||
-    configured.hasProxyKey ||
-    configured.proxyEnabled ||
-    configured.proxyBalanceRemaining !== null ||
-    configured.proxyBalanceLimit !== null
+    !configured.hasKey ||
+    configured.balanceRemaining !== DOCS_SEED_PROXY_BALANCE.remaining ||
+    configured.balanceLimit !== DOCS_SEED_PROXY_BALANCE.limit
   ) {
-    throw new Error(
-      `The docs scenario could not remove the proxy key for ${pluginServerId}.`
-    )
+    throw new Error("The docs scenario could not save the proxy key.")
   }
 }
 
-const applyProxyFixture = async (
+const applyProxyEnabled = async (
   api: SeedApiClient,
-  pluginServerId: string,
-  proxy: DocsProxyFixture | undefined
+  server: PluginServerEntry,
+  proxyEnabled: boolean
 ): Promise<void> => {
-  const current = findPluginServerById(
-    await listPluginServers(api),
-    pluginServerId
-  )
-  if (!current) {
-    throw new Error("The Custom Plugin Server disappeared mid-seed.")
-  }
-
-  if (!proxy) {
-    await removePluginServerProxyFixture(api, pluginServerId, current)
+  if (server.proxyEnabled === proxyEnabled) {
     return
   }
-
   await api.mutate({
     method: "POST",
-    path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
-    body: { token: proxy.key },
+    path: `/api/plugin-servers/${encodeURIComponent(server.id)}/proxy/toggle`,
+    body: { enabled: proxyEnabled },
   })
-  if (current.proxyEnabled !== proxy.enabled) {
-    await api.mutate({
-      method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
-      body: { enabled: proxy.enabled },
-    })
-  }
-
-  const configured = findPluginServerById(
-    await listPluginServers(api),
-    pluginServerId
-  )
-  if (
-    !configured?.hasProxyKey ||
-    configured.proxyEnabled !== proxy.enabled ||
-    configured.proxyBalanceRemaining !== proxy.balance.remaining ||
-    configured.proxyBalanceLimit !== proxy.balance.limit
-  ) {
-    throw new Error(
-      `The docs scenario could not configure the proxy for ${pluginServerId}.`
-    )
-  }
 }
 
 // The primary fixture Worker must advertise the proxy extension the proxy
@@ -1681,13 +1631,7 @@ const applyDocsPluginServerFixture = async ({
       body: { enabled: fixture.enabled },
     })
   }
-  const proxy = fixture.proxy
-    ? {
-        ...DOCS_SEED_PROXY_FIXTURES[fixture.proxy.balance],
-        enabled: fixture.proxy.enabled,
-      }
-    : undefined
-  await applyProxyFixture(api, registered.id, proxy)
+  await applyProxyEnabled(api, registered, fixture.proxyEnabled)
 }
 
 const requireDocsPluginServers = async (
@@ -1715,6 +1659,7 @@ const requireDocsPluginServers = async (
     throw new Error("The primary Custom Plugin Server was not registered.")
   }
   requirePrimaryProxyManifest(primary)
+  await ensureProxyProviderKey(api)
   return primary
 }
 

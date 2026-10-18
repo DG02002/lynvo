@@ -24,7 +24,7 @@ Plugin Server manifest through the binding and reuses it for the request.
 
 Lynvo reads:
 
-- Plugin Server `pluginServerId`, `displayName`, and `iconUrl`
+- Plugin Server `pluginServerId` and `displayName`
 - Plugin `id`, `displayName`, `iconUrl`, `status`, `version`
 - Plugin `hosts` and `matchers`
 

@@ -158,7 +158,6 @@ const normalizeCustomSection = (
       return {
         key: pluginServer.pluginServerId,
         serverName: pluginServer.name,
-        iconUrl: pluginServer.iconUrl,
         remainingPercent: remainingPercentOf(barMetrics),
         resetsAt: earliestValidReset(barMetrics),
         entries: pluginServer.metrics

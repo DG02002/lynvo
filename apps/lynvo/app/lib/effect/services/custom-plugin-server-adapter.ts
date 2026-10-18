@@ -68,13 +68,10 @@ export const getCustomPluginServerUsage = Effect.fn(
         ? { id: source.id, name: source.displayName, iconUrl: source.iconUrl }
         : { id: source.id, name: source.displayName }
   )
-  const usageWithPlugins = { ...baseUsage, plugins }
-  return manifest.iconUrl
-    ? { ...usageWithPlugins, iconUrl: manifest.iconUrl }
-    : usageWithPlugins
+  return { ...baseUsage, plugins }
 })
 
-export const decodePluginServerManifest = Effect.fn(
+const decodePluginServerManifest = Effect.fn(
   "CustomPluginServerAdapter.decodePluginServerManifest"
 )(function* (value: string) {
   const json = yield* Effect.try(() => JSON.parse(value)).pipe(
@@ -195,6 +192,8 @@ interface ExtractFromCustomPluginServerInput {
   readonly targetUrl: string
   readonly kind: "source" | "node"
   readonly credentials?: CustomPluginServerCredentials
+  /** Decrypted account-level proxy key, attached when this server is proxy-enabled. */
+  readonly proxyToken?: string
   readonly requestId?: string
   readonly source?: PluginMetadata
 }
@@ -206,6 +205,7 @@ export const extractFromCustomPluginServer = Effect.fn(
   targetUrl,
   kind,
   credentials,
+  proxyToken,
   requestId,
   source,
 }: ExtractFromCustomPluginServerInput): Effect.fn.Return<
@@ -223,10 +223,10 @@ export const extractFromCustomPluginServer = Effect.fn(
     isSupportedProxyProvider(
       getLynvoManifestExtension(manifest).proxyProvider
     ) &&
-    pluginServer.proxyToken
+    proxyToken
       ? {
           provider: SCRAPE_DO_PROXY_PROVIDER,
-          token: pluginServer.proxyToken,
+          token: proxyToken,
         }
       : undefined
   const client = createCustomPluginServerClient(pluginServer)

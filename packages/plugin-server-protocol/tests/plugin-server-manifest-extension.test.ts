@@ -30,7 +30,6 @@ describe("Lynvo manifest source credentials", () => {
       protocolVersion: "1.0",
       pluginServerId: "dev.lynvo.test",
       displayName: "Test",
-      hasIcon: false,
       auth: { type: "bearer" },
       usage: { endpoint: "/usage" },
       matchers: [{ hosts: ["example.com"] }],
@@ -68,23 +67,26 @@ describe("Lynvo manifest source credentials", () => {
     })
   })
 
-  it("rejects explicit icon capabilities that disagree with iconUrl", () => {
+  it("rejects Plugin icon capabilities that disagree with iconUrl", () => {
     const manifest = Schema.decodeUnknownSync(pluginServerManifestSchema)({
       protocolVersion: "1.0",
       pluginServerId: "dev.lynvo.test",
       displayName: "Test",
-      hasIcon: true,
       auth: { type: "bearer" },
       usage: { endpoint: "/usage" },
       matchers: [{ hosts: ["example.com"] }],
       features: {},
-      extensions: { lynvo: { plugins: [] } },
+      extensions: {
+        lynvo: {
+          plugins: [{ id: "source", displayName: "Source", hasIcon: true }],
+        },
+      },
     })
 
     expect(
       validatePluginServerManifestContract(manifest).issues
     ).toContainEqual({
-      path: "iconUrl",
+      path: "extensions.lynvo.plugins.0.iconUrl",
       message: "Provide iconUrl when hasIcon is true.",
     })
   })
@@ -149,11 +151,9 @@ describe("Lynvo manifest source credentials", () => {
     })
   })
 
-  it("reports icon capability and URL mismatches", () => {
+  it("reports Plugin icon capability and URL mismatches", () => {
     const invalidIconManifest = {
       ...validPluginServerManifestFixture,
-      hasIcon: false,
-      iconUrl: "https://icons.example/server.jpg",
       extensions: {
         lynvo: {
           plugins: [
@@ -161,7 +161,7 @@ describe("Lynvo manifest source credentials", () => {
               id: "example-plugin",
               displayName: "Example Plugin",
               hasIcon: false,
-              iconUrl: "https://icons.example/plugin.webp",
+              iconUrl: "https://icons.example/plugin.jpg",
               status: "active",
               version: "1.0.0",
               hosts: ["example.com"],
@@ -176,13 +176,8 @@ describe("Lynvo manifest source credentials", () => {
     ).toEqual(
       expect.arrayContaining([
         {
-          path: "iconUrl",
-          message:
-            "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin Server icons.",
-        },
-        {
-          path: "hasIcon",
-          message: "Set hasIcon to true when iconUrl is present.",
+          path: "extensions.lynvo.plugins.0.iconUrl",
+          message: "Use a direct HTTPS WebP, PNG, or SVG URL.",
         },
         {
           path: "extensions.lynvo.plugins.0.hasIcon",

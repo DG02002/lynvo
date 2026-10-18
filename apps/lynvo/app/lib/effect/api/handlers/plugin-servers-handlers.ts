@@ -18,10 +18,6 @@ import {
   refreshCustomPluginServer,
   registerCustomPluginServer,
 } from "../../services/custom-plugin-server-lifecycle"
-import {
-  refreshCustomPluginServerProxyBalance,
-  saveCustomPluginServerProxyKey,
-} from "../../services/custom-plugin-server-proxy-key"
 import { RequestEventService } from "../../services/request-event-service"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
@@ -157,39 +153,6 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               user,
             })
           )
-        })
-      )
-      .handle("setProxyKey", ({ params, payload }) =>
-        Effect.gen(function* () {
-          const user = yield* CurrentUser
-          const requestEvent = yield* RequestEventService
-          requestEvent.add({
-            operation: "plugin_server_proxy_key",
-            user_id: user.id,
-            plugin_server_id: params.pluginServerId,
-          })
-          const balance = yield* saveCustomPluginServerProxyKey({
-            pluginServerId: params.pluginServerId,
-            token: payload.token,
-            user,
-          })
-          return withDataVersionHeaders({ success: true, ...balance })
-        })
-      )
-      .handle("refreshProxyBalance", ({ params }) =>
-        Effect.gen(function* () {
-          const user = yield* CurrentUser
-          const requestEvent = yield* RequestEventService
-          requestEvent.add({
-            operation: "plugin_server_proxy_balance_refresh",
-            user_id: user.id,
-            plugin_server_id: params.pluginServerId,
-          })
-          const result = yield* refreshCustomPluginServerProxyBalance({
-            pluginServerId: params.pluginServerId,
-            user,
-          })
-          return withDataVersionHeaders(result)
         })
       )
       .handle("delete", ({ params }) =>

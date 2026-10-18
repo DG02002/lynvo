@@ -1,14 +1,12 @@
-import {
-  getLynvoManifestExtension,
-  type PluginServerManifest,
-} from "@dg02002/lynvo-plugin-server-protocol"
+import { type PluginServerManifest } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 
+import { getErrorMessage } from "../app/lib/effect/errors"
 import {
   decryptCustomPluginServer,
-  decryptCustomPluginServerProxyToken,
+  decryptProxyProviderToken,
 } from "../app/lib/effect/services/custom-plugin-server-credentials"
-import { readScrapeDoAccountInfo } from "../app/lib/effect/services/custom-plugin-server-proxy-key"
+import { readScrapeDoAccountInfo } from "../app/lib/effect/services/proxy-provider-key"
 import {
   HttpPluginServerTransport,
   PluginServerClient,
@@ -24,15 +22,16 @@ import { notifyAccountDataChanged } from "./d1/data-version-notification"
 import {
   recordPluginServerRefreshSuccess,
   recordPluginServerVerificationFailure,
-  updatePluginServerProxyBalance,
 } from "./d1/plugin-servers"
+import {
+  readSealedProxyProviderToken,
+  updateProxyProviderBalance,
+} from "./d1/proxy-providers"
 
 interface RefreshablePluginServer {
   readonly id: string
   readonly baseUrl: string
   readonly apiKey: string
-  readonly proxyToken?: string
-  readonly proxyBalanceCheckedAt?: number | null
 }
 
 interface RefreshablePluginServerRow {
@@ -43,11 +42,6 @@ interface RefreshablePluginServerRow {
   readonly api_key_nonce: string | null
   readonly api_key_algorithm: "AES-256-GCM" | null
   readonly api_key_version: number | null
-  readonly proxy_token_ciphertext: string | null
-  readonly proxy_token_nonce: string | null
-  readonly proxy_token_algorithm: "AES-256-GCM" | null
-  readonly proxy_token_version: number | null
-  readonly proxy_balance_checked_at: number | null
 }
 
 interface RefreshOnePluginServerInput {
@@ -70,12 +64,34 @@ interface RefreshPluginServerInput {
   now: number
 }
 
-interface RefreshProxyBalanceInput {
+interface RefreshProxyProviderBalanceInput {
+  env: Env
   database: D1Database
   userId: string
-  manifest: PluginServerManifest
-  pluginServer: RefreshablePluginServer
   now: number
+}
+
+interface ProxyProviderBalanceRefreshStepInput<Value> {
+  readonly userId: string
+  readonly step: string
+  readonly operation: () => Promise<Value>
+}
+
+const runProxyProviderBalanceRefreshStep = async <Value>({
+  userId,
+  step,
+  operation,
+}: ProxyProviderBalanceRefreshStepInput<Value>): Promise<Value | undefined> => {
+  try {
+    return await operation()
+  } catch (error) {
+    console.warn("proxy_provider_balance_refresh_failed", {
+      step,
+      user_id: userId,
+      error: getErrorMessage(error),
+    })
+    return undefined
+  }
 }
 
 const groupRefreshRowsByUser = (
@@ -103,25 +119,8 @@ const loadRefreshablePluginServer = Effect.fn(
     apiKeyNonce: row.api_key_nonce ?? undefined,
     apiKeyAlgorithm: row.api_key_algorithm ?? undefined,
     apiKeyVersion: row.api_key_version ?? undefined,
-    proxyTokenCiphertext: row.proxy_token_ciphertext,
-    proxyTokenNonce: row.proxy_token_nonce,
-    proxyTokenAlgorithm: row.proxy_token_algorithm,
-    proxyTokenVersion: row.proxy_token_version,
-    proxyBalanceCheckedAt: row.proxy_balance_checked_at,
   }
-  const decryptedPluginServer = yield* decryptCustomPluginServer(
-    env,
-    row.user_id,
-    storedPluginServer
-  )
-  const proxyToken = yield* decryptCustomPluginServerProxyToken(
-    env,
-    row.user_id,
-    storedPluginServer
-  )
-  return proxyToken === undefined
-    ? decryptedPluginServer
-    : { ...decryptedPluginServer, proxyToken }
+  return yield* decryptCustomPluginServer(env, row.user_id, storedPluginServer)
 })
 
 const refreshPluginServer = async ({
@@ -134,13 +133,8 @@ const refreshPluginServer = async ({
   const client = new PluginServerClient(
     new HttpPluginServerTransport(pluginServer.baseUrl)
   )
-  const manifest = await client.getManifest({ apiKey: pluginServer.apiKey })
-  await refreshProxyBalanceIfDue({
-    database,
-    userId,
-    manifest,
-    pluginServer,
-    now,
+  const manifest: PluginServerManifest = await client.getManifest({
+    apiKey: pluginServer.apiKey,
   })
   const result = await recordPluginServerRefreshSuccess(database, userId, {
     id: pluginServer.id,
@@ -185,33 +179,78 @@ const refreshOnePluginServer = async ({
   }
 }
 
-const refreshProxyBalanceIfDue = async ({
+// The proxy key is account-level, so its balance refreshes once per user
+// instead of once per server.
+const refreshProxyProviderBalanceIfDue = async ({
+  env,
   database,
   userId,
-  manifest,
-  pluginServer,
   now,
-}: RefreshProxyBalanceInput): Promise<void> => {
+}: RefreshProxyProviderBalanceInput): Promise<void> => {
+  const sealed = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "read_key",
+    operation: () => readSealedProxyProviderToken(database, userId),
+  })
+  if (!sealed) {
+    return
+  }
+  const stateRow = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "read_balance_state",
+    operation: () =>
+      database
+        .prepare(
+          "SELECT balance_checked_at FROM user_proxy_providers WHERE user_id = ?1 AND provider = 'scrape-do'"
+        )
+        .bind(userId)
+        .first<{ balance_checked_at: number | null }>(),
+  })
+  if (stateRow === undefined) {
+    // Retry on the next scheduled run instead of making an unconditional provider call.
+    return
+  }
   if (
-    getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do" ||
-    !pluginServer.proxyToken ||
-    (pluginServer.proxyBalanceCheckedAt !== null &&
-      pluginServer.proxyBalanceCheckedAt !== undefined &&
-      now - pluginServer.proxyBalanceCheckedAt <
-        PLUGIN_SERVER_PROXY_BALANCE_REFRESH_INTERVAL_MS)
+    stateRow &&
+    stateRow.balance_checked_at !== null &&
+    now - stateRow.balance_checked_at <
+      PLUGIN_SERVER_PROXY_BALANCE_REFRESH_INTERVAL_MS
   ) {
     return
   }
-  const balance = await Effect.runPromise(
-    readScrapeDoAccountInfo(pluginServer.proxyToken)
-  ).catch(() => undefined)
-  if (balance) {
-    await updatePluginServerProxyBalance(database, userId, {
-      id: pluginServer.id,
-      balance,
-      now,
-    }).catch(() => undefined)
+  const proxyToken = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "decrypt_key",
+    operation: () =>
+      Effect.runPromise(
+        decryptProxyProviderToken({
+          environment: env,
+          userId,
+          provider: "scrape-do",
+          sealed,
+        })
+      ),
+  })
+  if (proxyToken === undefined) {
+    return
   }
+  const balance = await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "read_balance",
+    operation: () => Effect.runPromise(readScrapeDoAccountInfo(proxyToken)),
+  })
+  if (!balance) {
+    return
+  }
+  await runProxyProviderBalanceRefreshStep({
+    userId,
+    step: "save_balance",
+    operation: () =>
+      updateProxyProviderBalance(database, userId, {
+        balance,
+        now,
+      }),
+  })
 }
 
 export const refreshCustomPluginServerManifests = async (
@@ -222,9 +261,7 @@ export const refreshCustomPluginServerManifests = async (
   const { results } = await database
     .prepare(
       `SELECT id, user_id, base_url, api_key_ciphertext, api_key_nonce,
-              api_key_algorithm, api_key_version, proxy_token_ciphertext,
-              proxy_token_nonce, proxy_token_algorithm, proxy_token_version,
-              proxy_balance_checked_at
+              api_key_algorithm, api_key_version
        FROM user_plugin_servers
        WHERE credential_status = 'ready'
          AND (
@@ -244,15 +281,27 @@ export const refreshCustomPluginServerManifests = async (
       PLUGIN_SERVER_MANIFEST_REFRESH_BATCH_SIZE
     )
     .all<RefreshablePluginServerRow>()
+  const userGroups = groupRefreshRowsByUser(results)
   const refreshResultGroups = await Effect.runPromise(
     Effect.forEach(
-      groupRefreshRowsByUser(results),
+      userGroups,
       (userRows) =>
-        Effect.forEach(userRows, (row) =>
-          Effect.promise(() =>
-            refreshOnePluginServer({ env, database, row, now })
+        Effect.gen(function* () {
+          const refreshResults = yield* Effect.forEach(userRows, (row) =>
+            Effect.promise(() =>
+              refreshOnePluginServer({ env, database, row, now })
+            )
           )
-        ),
+          yield* Effect.promise(() =>
+            refreshProxyProviderBalanceIfDue({
+              env,
+              database,
+              userId: userRows[0].user_id,
+              now,
+            })
+          )
+          return refreshResults
+        }),
       { concurrency: PLUGIN_SERVER_MANIFEST_REFRESH_CONCURRENCY_COUNT }
     )
   )

@@ -4,13 +4,65 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ProxySettings } from "~/features/site/settings/proxy-settings"
 
+const makeServer = (
+  id: string,
+  displayName: string,
+  proxyEnabled: boolean,
+  verificationStatus = "verified"
+) => ({
+  id,
+  userId: "user-1",
+  baseUrl: `https://${id}.example.com`,
+  manifest: JSON.stringify({
+    protocolVersion: "1.0",
+    pluginServerId: `dev.example.${id}`,
+    displayName,
+    auth: { type: "bearer" },
+    usage: { endpoint: "/usage" },
+    matchers: [{ hosts: [`${id}.example.com`] }],
+    features: {},
+    extensions: { lynvo: { proxyProvider: "scrape-do", plugins: [] } },
+  }),
+  enabled: true,
+  priority: 0,
+  verificationStatus,
+  proxyEnabled,
+  lastVerifiedAt: 1,
+  lastManifestRefreshAt: 1,
+  createdAt: 1,
+  updatedAt: 1,
+})
+
+interface ProxyState {
+  readonly hasKey: boolean
+  readonly balanceRemaining: number | null
+  readonly balanceLimit: number | null
+  readonly balanceCheckedAt: number | null
+}
+
+const createProxyStateFetch = (readState: () => ProxyState) => async () =>
+  Response.json({
+    provider: "scrape-do",
+    ...readState(),
+  })
+
 describe("ProxySettings", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it("shows a supported server's key status, balance, and usage", async () => {
+  it("shows the provider key with one usage block and a switch per server", async () => {
     const checkedAt = Date.now() - 60_000
+    const servers = [
+      makeServer("first", "First Server", false),
+      makeServer("second", "Second Server", true),
+    ]
+    const proxyState: ProxyState = {
+      hasKey: true,
+      balanceRemaining: 973,
+      balanceLimit: 1_000,
+      balanceCheckedAt: checkedAt,
+    }
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -19,52 +71,13 @@ describe("ProxySettings", () => {
           "https://lynvo.test"
         )
         if (url.pathname === "/api/plugin-servers") {
-          return Response.json([
-            {
-              id: "plugin-server-1",
-              userId: "user-1",
-              baseUrl: "https://plugins.example.com",
-              manifest: JSON.stringify({
-                protocolVersion: "1.0",
-                pluginServerId: "dev.example.plugin-server",
-                displayName: "Proxy Capable",
-                auth: { type: "bearer" },
-                usage: { endpoint: "/usage" },
-                matchers: [{ hosts: ["example.com"] }],
-                features: {},
-                extensions: {
-                  lynvo: {
-                    proxyProvider: "scrape-do",
-                    plugins: [
-                      {
-                        id: "source-alpha",
-                        displayName: "Source Alpha",
-                        status: "active",
-                        version: "1.0.0",
-                        proxyCreditUsage: "Uses 5 proxy credits for rendering.",
-                        hosts: ["example.com"],
-                      },
-                    ],
-                  },
-                },
-              }),
-              enabled: true,
-              priority: 0,
-              verificationStatus: "verified",
-              hasProxyKey: true,
-              proxyBalanceRemaining: 973,
-              proxyBalanceLimit: 1000,
-              proxyBalanceCheckedAt: checkedAt,
-              proxyEnabled: true,
-              lastVerifiedAt: checkedAt,
-              lastManifestRefreshAt: checkedAt,
-              createdAt: checkedAt,
-              updatedAt: checkedAt,
-            },
-          ])
+          return Response.json(servers)
         }
         if (url.pathname === "/api/plugin-domains") {
           return Response.json([])
+        }
+        if (url.pathname === "/api/proxy") {
+          return await createProxyStateFetch(() => proxyState)()
         }
         return new Response(null, { status: 404 })
       })
@@ -76,35 +89,33 @@ describe("ProxySettings", () => {
       </MemoryRouter>
     )
 
-    expect(await screen.findByText("Proxy Capable")).toBeVisible()
+    expect(await screen.findByText("First Server")).toBeVisible()
     expect(screen.getByRole("img", { name: "Scrape.do" })).toBeVisible()
+    expect(screen.getByText("Key saved")).toBeVisible()
     expect(screen.getByText("Monthly credit usage")).toBeVisible()
     expect(screen.getByText("3% used")).toBeVisible()
     expect(screen.getByText("27 of 1,000 credits used")).toBeVisible()
-    expect(screen.getByText("Use proxy")).toBeVisible()
-    expect(screen.getByText("Key saved")).toBeVisible()
+    // One provider usage block, even with two proxy-capable servers.
+    expect(screen.getAllByText("Monthly credit usage")).toHaveLength(1)
     expect(
-      screen.getByRole("switch", { name: "Use proxy for Proxy Capable" })
+      screen.getByRole("switch", { name: "Use proxy for First Server" })
+    ).not.toBeChecked()
+    expect(
+      screen.getByRole("switch", { name: "Use proxy for Second Server" })
     ).toBeChecked()
     expect(
-      screen.getByRole("button", {
-        name: "Refresh credits for Proxy Capable",
-      })
+      screen.getByRole("button", { name: "Refresh Scrape.do credits" })
     ).toBeVisible()
     expect(
-      screen.getByRole("button", {
-        name: "Remove Scrape.do key for Proxy Capable",
-      })
+      screen.getByRole("button", { name: "Remove Scrape.do key" })
     ).toBeVisible()
 
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Change Scrape.do key for Proxy Capable",
-      })
+      screen.getByRole("button", { name: "Change Scrape.do key" })
     )
     expect(
       screen.getByText(
-        "Lynvo encrypts this key and sends it only to this server during Extraction."
+        "Lynvo encrypts this key and sends it only to servers whose proxy switch is on during Extraction."
       )
     ).toBeVisible()
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
@@ -114,6 +125,12 @@ describe("ProxySettings", () => {
   })
 
   it("renders the empty-state navigation as a link", async () => {
+    const proxyState: ProxyState = {
+      hasKey: false,
+      balanceRemaining: null,
+      balanceLimit: null,
+      balanceCheckedAt: null,
+    }
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -126,6 +143,9 @@ describe("ProxySettings", () => {
         }
         if (url.pathname === "/api/plugin-domains") {
           return Response.json([])
+        }
+        if (url.pathname === "/api/proxy") {
+          return await createProxyStateFetch(() => proxyState)()
         }
         return new Response(null, { status: 404 })
       })
@@ -143,44 +163,17 @@ describe("ProxySettings", () => {
       "href",
       "/settings/plugins"
     )
+    expect(await screen.findByText("No key saved")).toBeVisible()
   })
 
   it("shows the refreshed balance and checked time after a refresh", async () => {
     const initialCheckedAt = Date.now()
     const refreshedCheckedAt = initialCheckedAt + 60_000
-    let serverListCalls = 0
-    const manifest = JSON.stringify({
-      protocolVersion: "1.0",
-      pluginServerId: "dev.example.plugin-server",
-      displayName: "Proxy Capable",
-      auth: { type: "bearer" },
-      usage: { endpoint: "/usage" },
-      matchers: [{ hosts: ["example.com"] }],
-      features: {},
-      extensions: {
-        lynvo: {
-          proxyProvider: "scrape-do",
-          plugins: [],
-        },
-      },
-    })
-    const server = {
-      id: "plugin-server-1",
-      userId: "user-1",
-      baseUrl: "https://plugins.example.com",
-      manifest,
-      enabled: true,
-      priority: 0,
-      verificationStatus: "verified",
-      hasProxyKey: true,
-      proxyBalanceRemaining: 973,
-      proxyBalanceLimit: 1000,
-      proxyBalanceCheckedAt: initialCheckedAt,
-      proxyEnabled: true,
-      lastVerifiedAt: initialCheckedAt,
-      lastManifestRefreshAt: initialCheckedAt,
-      createdAt: initialCheckedAt,
-      updatedAt: initialCheckedAt,
+    let proxyState: ProxyState = {
+      hasKey: true,
+      balanceRemaining: 973,
+      balanceLimit: 1_000,
+      balanceCheckedAt: initialCheckedAt,
     }
     vi.stubGlobal(
       "fetch",
@@ -190,29 +183,26 @@ describe("ProxySettings", () => {
           "https://lynvo.test"
         )
         if (url.pathname === "/api/plugin-servers") {
-          serverListCalls += 1
-          return Response.json([
-            serverListCalls === 1
-              ? server
-              : {
-                  ...server,
-                  proxyBalanceRemaining: 901,
-                  proxyBalanceCheckedAt: refreshedCheckedAt,
-                },
-          ])
+          return Response.json([makeServer("first", "First Server", true)])
         }
         if (url.pathname === "/api/plugin-domains") {
           return Response.json([])
         }
-        if (
-          url.pathname ===
-          "/api/plugin-servers/plugin-server-1/proxy/balance/refresh"
-        ) {
+        if (url.pathname === "/api/proxy") {
+          return await createProxyStateFetch(() => proxyState)()
+        }
+        if (url.pathname === "/api/proxy/balance/refresh") {
           expect(init?.method).toBe("POST")
+          proxyState = {
+            hasKey: true,
+            balanceRemaining: 901,
+            balanceLimit: 1_000,
+            balanceCheckedAt: refreshedCheckedAt,
+          }
           return Response.json({
             success: true,
             remaining: 901,
-            limit: 1000,
+            limit: 1_000,
             checkedAt: refreshedCheckedAt,
             dataVersion: 2,
           })
@@ -229,9 +219,7 @@ describe("ProxySettings", () => {
 
     expect(await screen.findByText("27 of 1,000 credits used")).toBeVisible()
     fireEvent.click(
-      screen.getByRole("button", {
-        name: "Refresh credits for Proxy Capable",
-      })
+      screen.getByRole("button", { name: "Refresh Scrape.do credits" })
     )
 
     expect(await screen.findByText("99 of 1,000 credits used")).toBeVisible()
@@ -242,45 +230,13 @@ describe("ProxySettings", () => {
     ).not.toBeNull()
   })
 
-  it("keeps proxy keys and credit balances scoped to their server", async () => {
-    const checkedAt = Date.now()
-    const makeServer = (
-      id: string,
-      displayName: string,
-      remaining: number,
-      limit: number,
-      proxyEnabled: boolean
-    ) => ({
-      id,
-      userId: "user-1",
-      baseUrl: `https://${id}.example.com`,
-      manifest: JSON.stringify({
-        protocolVersion: "1.0",
-        pluginServerId: `dev.example.${id}`,
-        displayName,
-        auth: { type: "bearer" },
-        usage: { endpoint: "/usage" },
-        matchers: [{ hosts: [`${id}.example.com`] }],
-        features: {},
-        extensions: { lynvo: { proxyProvider: "scrape-do", plugins: [] } },
-      }),
-      enabled: true,
-      priority: 0,
-      verificationStatus: "verified",
-      hasProxyKey: true,
-      proxyBalanceRemaining: remaining,
-      proxyBalanceLimit: limit,
-      proxyBalanceCheckedAt: checkedAt,
-      proxyEnabled,
-      lastVerifiedAt: checkedAt,
-      lastManifestRefreshAt: checkedAt,
-      createdAt: checkedAt,
-      updatedAt: checkedAt,
-    })
-    const servers = [
-      makeServer("first", "First Server", 100, 1_000, false),
-      makeServer("second", "Second Server", 1_400, 2_000, true),
-    ]
+  it("saves the account key once for every server", async () => {
+    let proxyState: ProxyState = {
+      hasKey: false,
+      balanceRemaining: null,
+      balanceLimit: null,
+      balanceCheckedAt: null,
+    }
     const calls: { path: string; method: string }[] = []
     vi.stubGlobal(
       "fetch",
@@ -300,13 +256,25 @@ describe("ProxySettings", () => {
             init?.method ?? (input instanceof Request ? input.method : "GET"),
         })
         if (url.pathname === "/api/plugin-servers") {
-          return Response.json(servers)
+          return Response.json([
+            makeServer("first", "First Server", false),
+            makeServer("second", "Second Server", true),
+          ])
         }
         if (url.pathname === "/api/plugin-domains") {
           return Response.json([])
         }
-        if (url.pathname === "/api/plugin-servers/first/proxy/key") {
+        if (url.pathname === "/api/proxy") {
+          return await createProxyStateFetch(() => proxyState)()
+        }
+        if (url.pathname === "/api/proxy/key") {
           expect(init?.body).toBe('{"token":"replacement-token"}')
+          proxyState = {
+            hasKey: true,
+            balanceRemaining: 900,
+            balanceLimit: 1_000,
+            balanceCheckedAt: Date.now(),
+          }
           return Response.json(
             { success: true, remaining: 900, limit: 1_000, dataVersion: 2 },
             { headers: { "X-Lynvo-Data-Version": "2" } }
@@ -323,20 +291,7 @@ describe("ProxySettings", () => {
     )
 
     expect(await screen.findByText("First Server")).toBeVisible()
-    expect(screen.getByText("900 of 1,000 credits used")).toBeVisible()
-    expect(screen.getByText("600 of 2,000 credits used")).toBeVisible()
-    expect(
-      screen.getByRole("switch", { name: "Use proxy for First Server" })
-    ).not.toBeChecked()
-    expect(
-      screen.getByRole("switch", { name: "Use proxy for Second Server" })
-    ).toBeChecked()
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Change Scrape.do key for First Server",
-      })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Add Scrape.do key" }))
     fireEvent.change(screen.getByLabelText("Scrape.do API token"), {
       target: { value: "replacement-token" },
     })
@@ -345,13 +300,20 @@ describe("ProxySettings", () => {
     await waitFor(() => {
       expect(
         calls.some(
-          ({ path, method }) =>
-            path === "/api/plugin-servers/first/proxy/key" && method === "POST"
+          ({ path, method }) => path === "/api/proxy/key" && method === "POST"
         )
       ).toBe(true)
     })
+    // The account key is saved exactly once; no per-server key endpoints exist.
+    expect(calls.filter(({ path }) => path === "/api/proxy/key")).toHaveLength(
+      1
+    )
     expect(
-      calls.some(({ path }) => path === "/api/plugin-servers/second/proxy/key")
+      calls.some(
+        ({ path }) =>
+          path.includes("/api/plugin-servers/") && path.endsWith("/proxy/key")
+      )
     ).toBe(false)
+    expect(await screen.findByText("100 of 1,000 credits used")).toBeVisible()
   })
 })

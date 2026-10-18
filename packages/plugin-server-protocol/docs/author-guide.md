@@ -244,27 +244,11 @@ The manifest is not the place for:
 - dynamic per-user state
 - source-specific extraction examples that can go stale quickly
 
-### Icons
+### Plugin Server identity
 
-Custom Plugin Servers should publish `hasIcon` explicitly. Set it to `true` and provide `iconUrl` when a stable HTTPS icon exists. Set it to `false` and omit `iconUrl` when Lynvo should render its Plugin Server fallback.
-
-Recommended:
-
-- serve a small square WebP icon
-- use an HTTPS URL
-- keep the image stable after users register the Plugin Server
-- set `hasIcon` to `false` and omit `iconUrl` when no public asset URL exists
-
-If the icon is served by the Plugin Server itself, expose it as a static asset such as `/icons/sources/example.webp` and set `iconUrl` to the deployed HTTPS origin plus that path.
-
-When a reverse proxy or development tunnel terminates TLS, the request seen by
-the Plugin Server may use HTTP even though its public origin uses HTTPS. Do not
-construct public icon URLs from `new URL(request.url).origin` without accounting
-for the proxy. Either configure the public origin explicitly or upgrade the
-derived URL when the trusted proxy sends `X-Forwarded-Proto: https`. Add a
-contract test that sends an HTTP request with that header and verifies that the
-manifest succeeds with HTTPS icon URLs. Local HTTP icon URLs are valid only on
-loopback development hosts.
+The manifest does not declare a Plugin Server icon. Lynvo assigns each
+registered server a decorative icon of its own, so do not add icon fields at
+the manifest top level.
 
 ### Plugin icons
 
@@ -307,7 +291,7 @@ Example:
 }
 ```
 
-Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Set Plugin `hasIcon` to `false` and omit `iconUrl` to request Lynvo's Plugin fallback. This is distinct from the top-level Plugin Server icon.
+Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Set Plugin `hasIcon` to `false` and omit `iconUrl` to request Lynvo's Plugin fallback.
 
 `status` is optional and may be `active`, `maintenance`, `degraded`, or `down`. `version` is optional and should describe the Plugin Server's source-specific adapter version, not the upstream site's version.
 
@@ -492,7 +476,6 @@ as `mirrors`.
 You may return minimal source metadata:
 
 - `displayName`
-- `iconUrl`
 - `pluginId`
 - `pluginName`
 - `pluginIconUrl`
@@ -591,25 +574,16 @@ const sources = [
 ]
 
 const runtime = createPluginServerRuntime({
-  manifest: ({ request }) => {
-    const url = new URL(request.url)
-    const iconUrl =
-      url.protocol === "https:"
-        ? `${url.origin}/icons/sources/source.webp`
-        : undefined
-
-    return {
-      protocolVersion: "1.0",
-      pluginServerId: "com.example.lynvo.plugin-server",
-      displayName: "Example Plugin Server",
-      ...(iconUrl ? { iconUrl } : {}),
-      auth: { type: "bearer" },
-      matchers: [{ hosts: ["example.com"], pathPatterns: ["/**"] }],
-      features: { password: true, lazyNodes: true, basicAuth: true },
-      extensions: {
-        lynvo: { plugins: sources },
-      },
-    }
+  manifest: {
+    protocolVersion: "1.0",
+    pluginServerId: "com.example.lynvo.plugin-server",
+    displayName: "Example Plugin Server",
+    auth: { type: "bearer" },
+    matchers: [{ hosts: ["example.com"], pathPatterns: ["/**"] }],
+    features: { password: true, lazyNodes: true, basicAuth: true },
+    extensions: {
+      lynvo: { plugins: sources },
+    },
   },
   auth: {
     validate: ({ request }) =>

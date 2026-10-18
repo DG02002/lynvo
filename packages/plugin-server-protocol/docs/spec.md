@@ -208,8 +208,6 @@ Auth:
   "protocolVersion": "1.0",
   "pluginServerId": "com.example.lynvo.source-alpha",
   "displayName": "Example source-alpha Plugin Server",
-  "hasIcon": true,
-  "iconUrl": "https://example.com/icon.webp",
   "homepage": "https://example.com",
   "auth": {
     "type": "bearer"
@@ -248,8 +246,6 @@ Auth:
   `PROTOCOL_MISMATCH`.
 - `pluginServerId`: required stable identifier. Do not use `displayName` as the stable id.
 - `displayName`: required human-readable name.
-- `hasIcon`: optional boolean. When present, `true` requires `iconUrl`; `false` forbids it.
-- `iconUrl`: optional HTTPS URL only. Existing manifests may omit `hasIcon`; Lynvo infers it from this field.
 - `homepage`: optional HTTPS URL.
 - `auth.type`: required. v1 supports only `bearer`.
 - `usage.endpoint`: required and must be `/usage`.
@@ -447,7 +443,6 @@ node fields.
   "plugin": {
     "pluginServerId": "com.example.lynvo.source-alpha",
     "displayName": "Example source-alpha Plugin Server",
-    "iconUrl": "https://example.com/icon.webp",
     "pageTitle": "Example Title",
     "audio": "Hindi + English"
   },
@@ -489,8 +484,7 @@ node fields.
 {
   "plugin": {
     "pluginServerId": "com.example.lynvo.resolver-beta",
-    "displayName": "Example Resolver Beta Plugin Server",
-    "iconUrl": "https://example.com/icon.webp"
+    "displayName": "Example Resolver Beta Plugin Server"
   },
   "nodes": [
     {

@@ -86,8 +86,6 @@ export const pluginServerManifestSchema = Schema.Struct({
   protocolVersion: protocolVersionSchema,
   pluginServerId: Schema.NonEmptyString,
   displayName: Schema.NonEmptyString,
-  hasIcon: Schema.optional(Schema.Boolean),
-  iconUrl: Schema.optional(iconUrlSchema),
   homepage: Schema.optional(httpsUrlSchema),
   auth: Schema.Struct({
     type: Schema.Literal("bearer"),
@@ -283,7 +281,6 @@ export const extractSuccessSchema = Schema.Struct({
   plugin: Schema.Struct({
     pluginServerId: Schema.String,
     displayName: Schema.String,
-    iconUrl: Schema.optional(iconUrlSchema),
     pluginId: Schema.optional(Schema.String),
     pluginName: Schema.optional(Schema.String),
     pluginIconUrl: Schema.optional(iconUrlSchema),

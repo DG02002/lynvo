@@ -39,7 +39,7 @@ Each source should include:
 
 - Stable `id`.
 - Human readable `displayName`.
-- Direct HTTPS WebP `iconUrl`.
+- Direct HTTPS WebP `iconUrl` on each Plugin.
 - `status`: `active`, `maintenance`, `degraded`, or `down`.
 - `version`, updated when source behavior changes.
 - `hosts` or `matchers` when `matchStrategy` is `static`, so Lynvo can match

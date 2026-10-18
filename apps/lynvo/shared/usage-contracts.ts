@@ -14,7 +14,6 @@ const UsageMetricSchema = Schema.Struct({
 export const PluginServerUsageSchema = Schema.Struct({
   pluginServerId: Schema.String,
   name: Schema.String,
-  iconUrl: Schema.optional(Schema.String),
   plugins: Schema.optional(
     Schema.Array(
       Schema.Struct({

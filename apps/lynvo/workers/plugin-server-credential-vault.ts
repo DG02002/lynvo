@@ -12,7 +12,7 @@ interface EncryptedPluginServerCredential extends SealedRecord {}
 
 interface CredentialVaultContext {
   readonly userId: string
-  readonly pluginServerId: string
+  readonly scopeId: string
 }
 
 export type CredentialVaultRequest =
@@ -26,17 +26,18 @@ type CredentialVaultEnvironment = Partial<
 const UNAVAILABLE_RESPONSE = { error: "Credential protection is unavailable." }
 const credentialContextSchema = Schema.Struct({
   userId: Schema.NonEmptyString,
-  pluginServerId: Schema.NonEmptyString,
+  scopeId: Schema.NonEmptyString,
 })
 const encryptCredentialPayloadSchema = Schema.Struct({
   userId: Schema.NonEmptyString,
-  pluginServerId: Schema.NonEmptyString,
+  scopeId: Schema.NonEmptyString,
   apiKey: Schema.NonEmptyString,
 })
 
-const additionalData = ({ userId, pluginServerId }: CredentialVaultContext) =>
+// Persisted ciphertext uses this domain prefix, so retain it as scopes evolve.
+const additionalData = ({ userId, scopeId }: CredentialVaultContext) =>
   new TextEncoder().encode(
-    `plugin-server\u0000v${SEALED_RECORD_KEY_VERSION}\u0000${userId}\u0000${pluginServerId}`
+    `plugin-server\u0000v${SEALED_RECORD_KEY_VERSION}\u0000${userId}\u0000${scopeId}`
   )
 
 const isContext = <Value>(

@@ -29,7 +29,6 @@ interface MutablePluginServerMetadata {
   filename: string
   pluginName: string
   pluginServerId: string
-  pluginIcon?: string
   pluginId?: string
   sourceName?: string
   sourceIconUrl?: string
@@ -85,17 +84,11 @@ const addRouteSourceMetadata = (
 const createPluginServerMetadata = (
   manifest: PluginServerManifest,
   pluginServerId: string
-): MutablePluginServerMetadata => {
-  const metadata: MutablePluginServerMetadata = {
-    filename: "",
-    pluginName: decodeExtractionText(manifest.displayName),
-    pluginServerId,
-  }
-  if (manifest.iconUrl) {
-    metadata.pluginIcon = manifest.iconUrl
-  }
-  return metadata
-}
+): MutablePluginServerMetadata => ({
+  filename: "",
+  pluginName: decodeExtractionText(manifest.displayName),
+  pluginServerId,
+})
 
 const getRouteSource = (
   manifest: PluginServerManifest,
@@ -115,9 +108,6 @@ const addExtractionPluginMetadata = (
   plugin: ExtractSuccessResponse["plugin"],
   source: PluginMetadata | undefined
 ): void => {
-  if (plugin.iconUrl) {
-    metadata.pluginIcon = plugin.iconUrl
-  }
   const sourceId = plugin.pluginId || source?.id
   if (sourceId) {
     metadata.pluginId = sourceId

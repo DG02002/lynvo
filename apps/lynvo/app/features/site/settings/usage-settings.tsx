@@ -1,5 +1,5 @@
 import { LoadErrorRetry } from "~/components/load-error-retry"
-import { PluginIcon } from "~/components/plugin-icon"
+import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
@@ -81,23 +81,16 @@ const UsageItem = ({
   icon,
   iconUrl,
   hideIcon,
-  fallback,
   name,
   used,
   limit,
 }: UsageReadEntry & {
   hideIcon: boolean
-  fallback: "plugin-server" | "source"
 }) => (
   <SettingsRow className="py-2">
     <div className="flex min-w-0 items-center gap-2.5">
       {!hideIcon && (
-        <PluginIcon
-          icon={icon}
-          iconUrl={iconUrl}
-          fallback={fallback}
-          className="size-6"
-        />
+        <PluginIcon icon={icon} iconUrl={iconUrl} className="size-6" />
       )}
       <span className="truncate text-sm text-foreground">{name}</span>
     </div>
@@ -197,7 +190,6 @@ export const UsageSettings = ({
               key={item.key}
               icon={item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon}
               hideIcon={item.iconKind === "hidden"}
-              fallback="source"
             />
           ))}
         </SettingsList>
@@ -213,10 +205,10 @@ export const UsageSettings = ({
           {snapshot.custom.groups.map((group) => (
             <div key={group.key} className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
-                <PluginIcon
-                  iconUrl={group.iconUrl}
-                  fallback="plugin-server"
-                  className="size-10 shrink-0 text-foreground"
+                <PluginServerAvatar
+                  serverId={group.key}
+                  name={group.serverName}
+                  className="size-10"
                 />
                 <span className="text-base font-normal text-foreground">
                   {group.serverName}
@@ -234,7 +226,6 @@ export const UsageSettings = ({
                     {...item}
                     key={item.key}
                     hideIcon={item.iconKind === "hidden"}
-                    fallback="source"
                   />
                 ))}
               </SettingsList>

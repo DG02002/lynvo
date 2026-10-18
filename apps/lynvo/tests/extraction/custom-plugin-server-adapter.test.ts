@@ -86,7 +86,6 @@ const createProxyPluginServer = (proxyEnabled: boolean) => ({
   manifest: proxyManifest,
   enabled: true,
   priority: 0,
-  proxyToken: "user-proxy-token",
   proxyEnabled,
 })
 
@@ -172,6 +171,7 @@ describe("extractFromCustomPluginServer", () => {
         pluginServer: createProxyPluginServer(false),
         targetUrl: "https://source.example/title",
         kind: "source",
+        proxyToken: "user-proxy-token",
       })
     )
 
@@ -198,6 +198,7 @@ describe("extractFromCustomPluginServer", () => {
         pluginServer: createProxyPluginServer(true),
         targetUrl: "https://source.example/title",
         kind: "source",
+        proxyToken: "user-proxy-token",
       })
     )
 

@@ -28,6 +28,8 @@ export interface CustomExtractionAdapterOptions {
   readonly pluginId?: string
   readonly kind: "source" | "node"
   readonly inlineBasicAuth?: HttpBasicAuth
+  /** Decrypted account-level proxy key for proxy-enabled servers. */
+  readonly proxyToken?: string
 }
 
 // Discovery asks the Plugin Server which plugin owns a URL. The answer is
@@ -168,6 +170,7 @@ export const extractWithCustomPluginServer = Effect.fn(
       targetUrl: options.targetUrl,
       kind: options.kind,
       credentials: { pluginId: route.plugin?.id, ...credentials },
+      proxyToken: options.proxyToken,
       requestId: options.requestId,
       source: route.plugin,
     })

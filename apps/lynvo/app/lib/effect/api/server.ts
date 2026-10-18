@@ -16,6 +16,7 @@ import { Api } from "./api"
 import { ExtractionHandlers } from "./handlers/extraction-handlers"
 import { PluginDomainsHandlers } from "./handlers/plugin-domains-handlers"
 import { PluginServersHandlers } from "./handlers/plugin-servers-handlers"
+import { ProxyHandlers } from "./handlers/proxy-handlers"
 import { RemoteHandlers } from "./handlers/remote-handlers"
 import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./middleware"
@@ -101,6 +102,7 @@ const MiddlewaresLive = Layer.mergeAll(WebAuthLive, CsrfLive)
 
 const HandlersLive = Layer.mergeAll(
   PluginServersHandlers,
+  ProxyHandlers,
   PluginDomainsHandlers,
   ExtractionHandlers,
   RemoteHandlers,

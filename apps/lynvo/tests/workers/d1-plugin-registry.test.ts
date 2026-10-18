@@ -24,9 +24,13 @@ import {
   recordPluginServerVerificationSuccess,
   setPluginServerEnabled,
   setPluginServerProxyEnabled,
-  updatePluginServerProxyBalance,
-  updatePluginServerProxyKey,
 } from "../../workers/d1/plugin-servers"
+import {
+  readProxyProviderState,
+  readSealedProxyProviderToken,
+  saveProxyProviderKey,
+  updateProxyProviderBalance,
+} from "../../workers/d1/proxy-providers"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
@@ -331,7 +335,7 @@ describe("d1 plugin registry", () => {
     await expectLedgerMatchesInventory(user.id)
   })
 
-  it("stores proxy balances and clears all proxy data when the key is removed", async () => {
+  it("stores the account proxy provider key and deletes it on removal", async () => {
     const user = await createUser()
     const registration = await registerReadyServer(
       user.id,
@@ -343,71 +347,72 @@ describe("d1 plugin registry", () => {
       now: NOW + 500,
     })
 
-    const saved = await updatePluginServerProxyKey(env.DB, user.id, {
-      id: registration.id,
-      encrypted: credential(),
+    const saved = await saveProxyProviderKey(env.DB, user.id, {
+      encrypted: {
+        ciphertext: "ciphertext",
+        nonce: "nonce",
+        algorithm: "AES-256-GCM",
+        version: 1,
+      },
       balance: { remaining: 973, limit: 1_000 },
       now: NOW + 1_000,
     })
     expect(saved.dataVersion).toBeGreaterThan(0)
+    // Saving the account key must preserve the server's proxy switch.
     const settingsAfterKeySave = await env.DB.prepare(
       "SELECT proxy_enabled FROM user_plugin_servers WHERE id = ?1"
     )
       .bind(registration.id)
       .first<{ proxy_enabled: number }>()
     expect(settingsAfterKeySave?.proxy_enabled).toBe(0)
-    await updatePluginServerProxyBalance(env.DB, user.id, {
-      id: registration.id,
+    await expect(readProxyProviderState(env.DB, user.id)).resolves.toEqual({
+      provider: "scrape-do",
+      hasKey: true,
+      balanceRemaining: 973,
+      balanceLimit: 1_000,
+      balanceCheckedAt: NOW + 1_000,
+    })
+    await expect(
+      readSealedProxyProviderToken(env.DB, user.id)
+    ).resolves.toEqual({
+      ciphertext: "ciphertext",
+      nonce: "nonce",
+      algorithm: "AES-256-GCM",
+      version: 1,
+    })
+
+    await updateProxyProviderBalance(env.DB, user.id, {
       balance: { remaining: 950, limit: 1_000 },
       now: NOW + 2_000,
     })
-
-    let row = await env.DB.prepare(
-      "SELECT proxy_token_ciphertext, proxy_balance_remaining, proxy_balance_limit, proxy_balance_checked_at FROM user_plugin_servers WHERE id = ?1"
-    )
-      .bind(registration.id)
-      .first<{
-        proxy_token_ciphertext: string | null
-        proxy_balance_remaining: number | null
-        proxy_balance_limit: number | null
-        proxy_balance_checked_at: number | null
-      }>()
-    expect(row).toMatchObject({
-      proxy_token_ciphertext: "ciphertext",
-      proxy_balance_remaining: 950,
-      proxy_balance_limit: 1_000,
-      proxy_balance_checked_at: NOW + 2_000,
+    await expect(
+      readProxyProviderState(env.DB, user.id)
+    ).resolves.toMatchObject({
+      balanceRemaining: 950,
+      balanceLimit: 1_000,
+      balanceCheckedAt: NOW + 2_000,
     })
 
-    const removed = await updatePluginServerProxyKey(env.DB, user.id, {
-      id: registration.id,
+    const removed = await saveProxyProviderKey(env.DB, user.id, {
       encrypted: null,
       balance: null,
       now: NOW + 3_000,
     })
     expect(removed.dataVersion).toBeGreaterThan(saved.dataVersion)
-    row = await env.DB.prepare(
-      "SELECT proxy_token_ciphertext, proxy_token_nonce, proxy_token_algorithm, proxy_token_version, proxy_balance_remaining, proxy_balance_limit, proxy_balance_checked_at FROM user_plugin_servers WHERE id = ?1"
-    )
-      .bind(registration.id)
-      .first<{
-        proxy_token_ciphertext: string | null
-        proxy_token_nonce: string | null
-        proxy_token_algorithm: string | null
-        proxy_token_version: number | null
-        proxy_balance_remaining: number | null
-        proxy_balance_limit: number | null
-        proxy_balance_checked_at: number | null
-      }>()
-    expect(row).toEqual({
-      proxy_token_ciphertext: null,
-      proxy_token_nonce: null,
-      proxy_token_algorithm: null,
-      proxy_token_version: null,
-      proxy_balance_remaining: null,
-      proxy_balance_limit: null,
-      proxy_balance_checked_at: null,
+    await expect(readProxyProviderState(env.DB, user.id)).resolves.toEqual({
+      provider: "scrape-do",
+      hasKey: false,
+      balanceRemaining: null,
+      balanceLimit: null,
+      balanceCheckedAt: null,
     })
+    const providerRows = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM user_proxy_providers WHERE user_id = ?1"
+    )
+      .bind(user.id)
+      .first<{ count: number }>()
+    expect(providerRows?.count).toBe(0)
+    await expectLedgerMatchesInventory(user.id)
   })
 
   it("upserts domains, reassigns plugins, and manages credentials", async () => {
