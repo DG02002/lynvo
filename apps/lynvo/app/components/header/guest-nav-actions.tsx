@@ -1,6 +1,6 @@
 import { Link } from "react-router"
 
-import { buttonVariants } from "~/components/ui/button-variants"
+import { buttonVariants } from "~/components/ui/button"
 import { authCopy } from "~/features/auth/auth.copy"
 import { useViewTransition } from "~/lib/client-profile"
 import { authPaths } from "~/lib/paths"
