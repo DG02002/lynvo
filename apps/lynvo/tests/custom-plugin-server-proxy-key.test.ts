@@ -8,7 +8,10 @@ import {
   saveCustomPluginServerProxyKey,
 } from "~/lib/effect/services/custom-plugin-server-proxy-key"
 
-import { DOCS_SEED_PROXY_KEY } from "../shared/docs-seed-constants"
+import {
+  DOCS_SEED_PROXY_KEY,
+  DOCS_SEED_PROXY_KEY_LOW,
+} from "../shared/docs-seed-constants"
 import { createFakeD1Database } from "./support/fake-d1"
 
 const accountResponse = (body: string, status = 200) =>
@@ -287,6 +290,61 @@ describe("saveCustomPluginServerProxyKey", () => {
       5_000,
       expect.any(Number),
     ])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("uses the nearly spent docs fixture balance for its low token", async () => {
+    const serverRow = createProxyServerRow()
+    let keyUpdateArgs: unknown[] | undefined
+    const database = createFakeD1Database((sql, args) => {
+      if (sql.includes("FROM user_plugin_servers")) {
+        return { row: serverRow, rows: [serverRow] }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers SET proxy_token_ciphertext")
+      ) {
+        keyUpdateArgs = args
+      }
+      return undefined
+    })
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal("fetch", fetchMock)
+    // SAFETY: This test enables only the development bypass and mocks the database and credential vault.
+    const environment = {
+      DB: database,
+      ENVIRONMENT: "development",
+      LYNVO_NO_AUTH: "true",
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () =>
+            Response.json({
+              ciphertext: "encrypted-proxy-token",
+              nonce: "proxy-nonce",
+              algorithm: "AES-256-GCM",
+              keyVersion: 1,
+            }),
+        }),
+      },
+    } as Env
+
+    const result = await Effect.runPromise(
+      saveCustomPluginServerProxyKey({
+        pluginServerId: "plugin-server-1",
+        token: DOCS_SEED_PROXY_KEY_LOW,
+        user: { id: "user-1" },
+      }).pipe(
+        Effect.provide(
+          Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+        )
+      )
+    )
+
+    expect(result).toEqual({
+      remaining: 137,
+      limit: 5_000,
+      dataVersion: 2,
+    })
+    expect(keyUpdateArgs?.slice(5, 7)).toEqual([137, 5_000])
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

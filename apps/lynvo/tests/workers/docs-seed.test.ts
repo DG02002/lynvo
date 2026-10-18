@@ -118,7 +118,7 @@ describe("docs seed CLI Saved link fixtures", () => {
     const firstIds = new Map(firstSeed.map((link) => [link.url, link.id]))
     const secondIds = new Map(secondSeed.map((link) => [link.url, link.id]))
 
-    expect(snapshot.links).toHaveLength(29)
+    expect(snapshot.links).toHaveLength(45)
     expect(snapshot.links.some((link) => link.url === staleUrl)).toBe(false)
     expect(
       [...secondIds.entries()].toSorted(([leftUrl], [rightUrl]) =>
@@ -129,9 +129,14 @@ describe("docs seed CLI Saved link fixtures", () => {
         leftUrl.localeCompare(rightUrl)
       )
     )
-    const dateByTitle = new Map(
-      snapshot.links.map((link) => [link.title, link.createdAt])
-    )
+    // Several titles now have more than one Saved link, so the newest entry
+    // (the list is newest-first) wins for each title.
+    const dateByTitle = new Map<string, number>()
+    for (const link of snapshot.links) {
+      if (!dateByTitle.has(link.title)) {
+        dateByTitle.set(link.title, link.createdAt)
+      }
+    }
     expect(dateByTitle.get("TV Shows")).toBe(SEED_TIME - 12 * DAY_MS)
     expect(dateByTitle.get("Movies")).toBe(SEED_TIME - 12 * DAY_MS)
     expect(dateByTitle.get("12 Angry Men")).toBe(SEED_TIME)
@@ -139,7 +144,6 @@ describe("docs seed CLI Saved link fixtures", () => {
     expect(dateByTitle.get("Mindhunter")).toBe(SEED_TIME)
     expect(dateByTitle.get("When Life Gives You Tangerines")).toBe(SEED_TIME)
     expect(dateByTitle.get("The Prestige")).toBe(SEED_TIME - 4 * DAY_MS)
-    expect(dateByTitle.get("Severance")).toBe(SEED_TIME - 4 * DAY_MS)
     expect(dateByTitle.get("The Godfather Part II")).toBe(
       SEED_TIME - 10 * DAY_MS
     )
@@ -151,11 +155,14 @@ describe("docs seed CLI Saved link fixtures", () => {
       const label = getSaveDateGroupLabel(link.createdAt, SEED_TIME)
       dateGroupCounts.set(label, (dateGroupCounts.get(label) ?? 0) + 1)
     }
-    expect(dateGroupCounts.get("Today")).toBe(4)
+    expect(dateGroupCounts.get("Today")).toBe(7)
     expect(
       [...dateGroupCounts.values()].toSorted((left, right) => left - right)
-    ).toEqual([4, 6, 6, 6, 7])
+    ).toEqual([1, 1, 1, 7, 7, 8, 8, 12])
 
+    // Only the original four Today fixtures share the exact seed timestamp;
+    // the newer overlap fixtures sit one minute below them so the first row
+    // keeps its checked-in screenshot order.
     const todayGalleryGroups = getGalleryGroups(
       snapshot.links
         .filter((link) => link.createdAt === SEED_TIME)
@@ -199,7 +206,7 @@ describe("docs seed CLI Saved link fixtures", () => {
     const sandmanSeasons = snapshot.links.filter(
       (link) => link.title === "The Sandman"
     )
-    expect(sandmanSeasons).toHaveLength(2)
+    expect(sandmanSeasons).toHaveLength(3)
     expect(
       sandmanSeasons.find((link) => link.url.endsWith("Season%2001/"))
         ?.createdAt
@@ -284,6 +291,61 @@ describe("docs seed CLI Saved link fixtures", () => {
     expect(galleryGroups.map((group) => group.displayTitle).toSorted()).toEqual(
       ["The Sandman S01", "The Sandman S02"]
     )
+    // The Season 02 folder and the separately saved direct episode share one
+    // gallery group: the same episode reached through two Sources.
+    expect(
+      galleryGroups.find((group) => group.displayTitle === "The Sandman S02")
+        ?.items
+    ).toHaveLength(2)
+
+    // A show folder saved first and the same first episode saved as a new
+    // direct link afterwards still land in one gallery group.
+    const severanceGalleryGroups = getGalleryGroups(
+      snapshot.links
+        .filter((link) => link.title === "Severance")
+        .map(toLinkViewItem)
+    )
+    expect(
+      severanceGalleryGroups.map((group) => group.displayTitle).toSorted()
+    ).toEqual(["Severance (2022) S01", "Severance (2022) S02"])
+    expect(
+      severanceGalleryGroups.find(
+        (group) => group.displayTitle === "Severance (2022) S01"
+      )?.items
+    ).toHaveLength(2)
+    expect(
+      severanceGalleryGroups.find(
+        (group) => group.displayTitle === "Severance (2022) S02"
+      )?.items
+    ).toHaveLength(1)
+
+    // A folder spanning several titles keeps its own name instead of posing
+    // as one of its contents.
+    const downloadsFolder = snapshot.links.find(
+      (link) => link.title === "Downloads"
+    )
+    if (!downloadsFolder) {
+      throw new Error("The docs scenario is missing its Downloads fixture.")
+    }
+    const downloadsGalleryGroups = getGalleryGroups([
+      toLinkViewItem(downloadsFolder),
+    ])
+    expect(downloadsGalleryGroups).toHaveLength(1)
+    expect(downloadsGalleryGroups[0]?.displayTitle).toBe("Downloads")
+    expect(downloadsGalleryGroups[0]?.artworkRequest).toBeUndefined()
+
+    // The same title with different years stays split into two groups.
+    const officeGalleryGroups = getGalleryGroups(
+      snapshot.links
+        .filter(
+          (link) =>
+            link.title === "The Office (US)" || link.title === "The Office (UK)"
+        )
+        .map(toLinkViewItem)
+    )
+    expect(
+      officeGalleryGroups.map((group) => group.displayTitle).toSorted()
+    ).toEqual(["The Office (2001) S01", "The Office (2005) S01"])
 
     const failedMetadata = failed && readMetadata(failed)
     expect(failed?.extractionState).toBe("failed")
@@ -292,7 +354,25 @@ describe("docs seed CLI Saved link fixtures", () => {
     )
     expect(failedMetadata?.debugLog).toHaveLength(1)
 
-    const severance = snapshot.links.find((link) => link.title === "Severance")
+    const mrRobotFailed = snapshot.links.find(
+      (link) => link.title === "Mr. Robot"
+    )
+    const mrRobotFailedMetadata = mrRobotFailed && readMetadata(mrRobotFailed)
+    expect(mrRobotFailed?.extractionState).toBe("failed")
+    expect(mrRobotFailed?.extractionError).toBe(
+      "The Source timed out while resolving this link."
+    )
+    expect(mrRobotFailedMetadata?.debugLog?.[0]?.errorCode).toBe(
+      "TEMPORARY_FAILURE"
+    )
+
+    const severance = snapshot.links.find((link) =>
+      readMetadata(link).extraction.extractedLinks.some(
+        (node) =>
+          node.label ===
+          "Severance (2022) - S02E03 - Who Is Alive? - 2160p Blu-ray HEVC HDR10.mkv"
+      )
+    )
     const severanceMetadata = severance && readMetadata(severance)
     const severanceNode = severanceMetadata?.extraction.extractedLinks[0]
     expect(severanceNode).toMatchObject({

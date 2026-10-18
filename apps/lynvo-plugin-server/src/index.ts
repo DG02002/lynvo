@@ -44,6 +44,13 @@ const isDocsSeedProxyFixtureEnabled = (
   fixtureFlag: string | undefined
 ): boolean => environment === "development" && fixtureFlag === "true"
 
+// dev:docs-seed-* scripts override this with --var so each fixture Worker on
+// its own port advertises a distinct server name in the docs seed.
+const isPluginServerDisplayNameSet = (
+  environment: string,
+  displayName: string | undefined
+): boolean => environment === "development" && Boolean(displayName?.trim())
+
 const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   manifest: ({ env }) =>
     createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN, {
@@ -51,6 +58,12 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
         env.ENVIRONMENT,
         env.DOCS_SEED_PROXY_FIXTURE
       ),
+      displayName: isPluginServerDisplayNameSet(
+        env.ENVIRONMENT,
+        env.PLUGIN_SERVER_DISPLAY_NAME
+      )
+        ? env.PLUGIN_SERVER_DISPLAY_NAME
+        : undefined,
     }),
   auth: {
     validate: ({ request, env }) => {

@@ -128,9 +128,12 @@ export const findLynvoPlugin = (
 
 export const createLynvoPluginServerManifest = (
   publicAssetOrigin?: string,
-  options: { readonly docsSeedProxyFixture?: boolean } = {}
+  options: {
+    readonly docsSeedProxyFixture?: boolean
+    readonly displayName?: string
+  } = {}
 ): PluginServerManifest => {
-  const { docsSeedProxyFixture = false } = options
+  const { docsSeedProxyFixture = false, displayName } = options
   const plugins = LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
     const publishedMatchers = isProbePlugin(plugin)
       ? undefined
@@ -173,7 +176,7 @@ export const createLynvoPluginServerManifest = (
   return {
     protocolVersion: "1.0",
     pluginServerId: PLUGIN_SERVER_ID,
-    displayName: PLUGIN_SERVER_NAME,
+    displayName: displayName?.trim() || PLUGIN_SERVER_NAME,
     hasIcon: false,
     homepage: "https://lynvo.dg02002.workers.dev",
     auth: { type: "bearer" },

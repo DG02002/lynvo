@@ -13,7 +13,9 @@ import type { ExtractedLink } from "../app/features/links/types"
 import { LYNVO_PLUGIN_SERVER_ID } from "../shared/constants"
 import {
   DOCS_SEED_PROXY_BALANCE,
+  DOCS_SEED_PROXY_BALANCE_LOW,
   DOCS_SEED_PROXY_KEY,
+  DOCS_SEED_PROXY_KEY_LOW,
   DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX,
 } from "../shared/docs-seed-constants"
 import {
@@ -24,7 +26,6 @@ import { readSeedAppOrigin } from "./local-origin.mjs"
 
 const DEVELOPMENT_USER_ID = "lynvo-development-user"
 const DEVELOPMENT_SESSION_ID = "lynvo-development-session"
-const DEVELOPMENT_PLUGIN_SERVER_URL = "http://localhost:8788"
 const DEFAULT_DEVELOPMENT_PLUGIN_SERVER_KEY = "dev-local-api-key"
 const API_RESPONSE_LIMIT_BYTES = 8 * 1024 * 1024
 const DAY_MS = 24 * 60 * 60 * 1_000
@@ -456,6 +457,10 @@ interface LinkFixture {
   readonly pluginName: string
   readonly nodes: readonly LinkNode[]
   readonly failure?: string
+  readonly failureCode?: string
+  readonly failureHttpStatus?: number
+  /** Shifts the backdated createdAt within its day; negative sorts newer. */
+  readonly createdAtOffsetMs?: number
 }
 
 interface PlayableNodeInput {
@@ -535,6 +540,7 @@ interface DocsMediaFixtureInput {
   readonly daysAgo: number
   readonly size: string
   readonly expiry?: number
+  readonly createdAtOffsetMs?: number
 }
 
 const docsMediaFixture = ({
@@ -544,6 +550,7 @@ const docsMediaFixture = ({
   daysAgo,
   size,
   expiry,
+  createdAtOffsetMs,
 }: DocsMediaFixtureInput): LinkFixture => ({
   slug,
   url: sourceUrl(`Media/${encodeURIComponent(filename)}`),
@@ -561,6 +568,7 @@ const docsMediaFixture = ({
       size,
     }),
   ],
+  createdAtOffsetMs,
 })
 
 const SANDMAN_EPISODES = [
@@ -583,6 +591,36 @@ const createSandmanEpisodeNodes = (season: SandmanSeason, keyPrefix: string) =>
       })
     }
   )
+
+interface ShowEpisodeInput {
+  readonly episode: string
+  readonly title?: string
+  readonly size: string
+  readonly expiry?: number
+}
+
+// Builds one playable node per episode with the show's release naming. Episodes
+// that must overlap a separately saved single-file fixture pass the same slug
+// that fixture uses, so both Saved links point at one underlying file. An
+// episode without a title renders the numbered-only naming common for weekly
+// dramas; an expiry mirrors a Source that signs its newest links.
+const createEpisodeNodes = (
+  show: { readonly name: string; readonly year: number; readonly slug: string },
+  season: string,
+  episodes: readonly ShowEpisodeInput[]
+): LinkNode[] =>
+  episodes.map(({ episode, title, size, expiry }) => {
+    const seasonEpisode = `s${season}e${episode}`
+    const titleSegment = title === undefined ? "" : ` - ${title}`
+    return playableNode({
+      key: `${show.slug}-${seasonEpisode}`,
+      label: `${show.name} (${show.year}) - S${season}E${episode}${titleSegment} - 1080p Blu-ray HEVC.mkv`,
+      url: playableUrl(`${show.slug}-${seasonEpisode}`),
+      expiry,
+      expirySource: expiry === undefined ? undefined : "signed-url",
+      size,
+    })
+  })
 
 const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
   {
@@ -667,6 +705,53 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
       ]),
     ],
   },
+  // The newest fixtures sit one minute below the original four Today items so
+  // the library's first row keeps its checked-in screenshot order instead of
+  // relying on tie-broken ordering.
+  {
+    // A season folder with a single episode is normal for a weekly release;
+    // this one covers the state where only the latest episode has aired.
+    slug: "the-bear-season-03",
+    createdAtOffsetMs: -60_000,
+    url: sourceUrl("The%20Bear/Season%2003/"),
+    title: "The Bear",
+    daysAgo: 0,
+    pluginId: "onedrive-index",
+    pluginName: "Spencerwooo’s OneDrive Vercel Index",
+    nodes: [
+      groupNode("the-bear-show", "The Bear", [
+        groupNode("the-bear-s03", "Season 03", [
+          playableNode({
+            key: "the-bear-s03e01",
+            label: "The Bear (2024) - S03E01 - Next - 1080p WEB-DL H.264.mkv",
+            url: playableUrl("the-bear-s03e01"),
+            size: "1.9 GB",
+          }),
+        ]),
+      ]),
+    ],
+  },
+  // The same first episode as the Season 01 folder below, saved separately
+  // after the show folder: two Saved links for one episode.
+  docsMediaFixture({
+    slug: "severance-s01e01",
+    title: "Severance",
+    filename:
+      "Severance (2022) - S01E01 - Good News About Hell - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 0,
+    size: "2.2 GB",
+    createdAtOffsetMs: -60_000,
+  }),
+  // The same episode the OneDrive Season 02 folder contains, this time
+  // extracted as a direct file: the same episode from two different Sources.
+  docsMediaFixture({
+    slug: "the-sandman-s02e02",
+    title: "The Sandman",
+    filename: "The Sandman S02E02 2160p Blu-ray DV.mkv",
+    daysAgo: 0,
+    size: "4.3 GB",
+    createdAtOffsetMs: -60_000,
+  }),
   docsMediaFixture({
     slug: "12-angry-men-1957",
     title: "12 Angry Men",
@@ -857,6 +942,326 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     daysAgo: 10,
     size: "3.6 GB",
   }),
+  // Full-season folders mirror how a library actually grows: several episodes
+  // per season, overlapping the single-episode fixtures above, mixed Sources,
+  // and naming styles that stress the parser and the gallery grouping.
+  {
+    slug: "severance-season-01",
+    url: sourceUrl("Severance/Season%2001/"),
+    title: "Severance",
+    daysAgo: 1,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      groupNode("severance-s01-show", "Severance", [
+        groupNode("severance-s01-folder", "Season 01", [
+          ...createEpisodeNodes(
+            { name: "Severance", year: 2022, slug: "severance" },
+            "01",
+            [
+              { episode: "01", title: "Good News About Hell", size: "2.2 GB" },
+              { episode: "02", title: "Half Loop", size: "2.3 GB" },
+              { episode: "03", title: "In Perpetuity", size: "2.1 GB" },
+              { episode: "04", title: "The You You Are", size: "2.2 GB" },
+              {
+                episode: "05",
+                title: "The Grim Barbarity of Optics and Design",
+                size: "2.4 GB",
+              },
+              {
+                episode: "06",
+                title: "Hide and Seek",
+                size: "2.3 GB",
+                expiry: seedTime + 2 * DAY_MS,
+              },
+            ]
+          ),
+        ]),
+      ]),
+    ],
+  },
+  {
+    slug: "tangerines-season-01",
+    url: sourceUrl("When%20Life%20Gives%20You%20Tangerines/Season%2001/"),
+    title: "When Life Gives You Tangerines",
+    daysAgo: 1,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      groupNode("tangerines-s01-show", "When Life Gives You Tangerines", [
+        groupNode("tangerines-s01-folder", "Season 01", [
+          ...createEpisodeNodes(
+            {
+              name: "When Life Gives You Tangerines",
+              year: 2025,
+              slug: "when-life-gives-you-tangerines",
+            },
+            "01",
+            [
+              { episode: "01", title: "Episode 1", size: "1.3 GB" },
+              { episode: "02", title: "Episode 2", size: "1.2 GB" },
+              { episode: "05", title: "Episode 5", size: "1.3 GB" },
+              { episode: "06", title: "Episode 6", size: "1.2 GB" },
+            ]
+          ),
+          // Two episodes in one file, the double-episode naming Korean dramas
+          // commonly ship.
+          playableNode({
+            key: "tangerines-s01e03e04",
+            label:
+              "When Life Gives You Tangerines (2025) - S01E03-E04 - 1080p Blu-ray HEVC.mkv",
+            url: playableUrl("when-life-gives-you-tangerines-s01e03e04"),
+            size: "2.6 GB",
+          }),
+        ]),
+      ]),
+    ],
+  },
+  {
+    slug: "frieren-season-01",
+    url: sourceUrl("Frieren/Season%2001/"),
+    title: "Frieren: Beyond Journey's End",
+    daysAgo: 2,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      groupNode("frieren-s01-show", "Frieren: Beyond Journey's End", [
+        groupNode("frieren-s01-folder", "Season 01", [
+          ...createEpisodeNodes(
+            {
+              name: "Frieren Beyond Journey's End",
+              year: 2023,
+              slug: "frieren",
+            },
+            "01",
+            [
+              {
+                episode: "01",
+                title: "The End of the Journey",
+                size: "1.4 GB",
+              },
+              {
+                episode: "02",
+                title: "It Would Be Embarrassing When We Ran Into Each Other",
+                size: "1.3 GB",
+              },
+              { episode: "03", title: "Killing Magic", size: "1.4 GB" },
+              {
+                episode: "04",
+                title: "The Land Where the Soul Sleeps",
+                size: "1.3 GB",
+              },
+              {
+                episode: "05",
+                title:
+                  "A Real Hero, a True Hero, Such Things Don't Exist, and I Refuse to Accept It",
+                size: "1.4 GB",
+              },
+              {
+                episode: "06",
+                title: "The Village of the Dead",
+                size: "1.3 GB",
+              },
+              {
+                episode: "07",
+                title: "Like Any Ordinary Murderer",
+                size: "1.4 GB",
+              },
+              { episode: "08", title: "Frieren the Slayer", size: "1.3 GB" },
+              { episode: "09", title: "Aura the Guillotine", size: "1.4 GB" },
+              { episode: "10", title: "A Powerful Mage", size: "1.3 GB" },
+              {
+                episode: "11",
+                title: "Winter in the Northern Lands",
+                size: "1.4 GB",
+              },
+              { episode: "12", title: "A Real Hero", size: "1.3 GB" },
+            ]
+          ),
+        ]),
+      ]),
+    ],
+  },
+  docsMediaFixture({
+    slug: "oppenheimer-2023",
+    title: "Oppenheimer",
+    filename: "Oppenheimer (2023) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 2,
+    size: "21.3 GB",
+    expiry: seedTime + 45 * MINUTE_MS,
+  }),
+  {
+    slug: "breaking-bad-season-01",
+    url: sourceUrl("Breaking%20Bad/Season%2001/"),
+    title: "Breaking Bad",
+    daysAgo: 3,
+    pluginId: "onedrive-index",
+    pluginName: "Spencerwooo’s OneDrive Vercel Index",
+    nodes: [
+      groupNode("breaking-bad-show", "Breaking Bad", [
+        groupNode("breaking-bad-s01", "Season 01", [
+          ...createEpisodeNodes(
+            { name: "Breaking Bad", year: 2008, slug: "breaking-bad" },
+            "01",
+            [
+              { episode: "01", title: "Pilot", size: "1.8 GB" },
+              { episode: "02", title: "Cat's in the Bag...", size: "1.7 GB" },
+              {
+                episode: "03",
+                title: "...And the Bag's in the River",
+                size: "1.7 GB",
+              },
+              { episode: "04", title: "Cancer Man", size: "1.8 GB" },
+              { episode: "05", title: "Gray Matter", size: "1.7 GB" },
+              {
+                episode: "06",
+                title: "Crazy Handful of Nothin'",
+                size: "1.8 GB",
+              },
+              {
+                episode: "07",
+                title: "A No-Rough-Stuff-Type Deal",
+                size: "1.9 GB",
+              },
+            ]
+          ),
+        ]),
+        // Season 00 specials sit beside the regular seasons in real libraries
+        // and exercise season-number-zero parsing.
+        groupNode("breaking-bad-specials", "Specials", [
+          playableNode({
+            key: "breaking-bad-s00e01",
+            label:
+              "Breaking Bad (2008) - S00E01 - Original Minisode: Wedding Day - 1080p Blu-ray HEVC.mkv",
+            url: playableUrl("breaking-bad-s00e01"),
+            size: "320 MB",
+          }),
+        ]),
+      ]),
+    ],
+  },
+  docsMediaFixture({
+    slug: "paperman-2012",
+    title: "Paperman",
+    filename: "Paperman (2012) - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 4,
+    size: "310 MB",
+  }),
+  {
+    slug: "the-last-of-us-season-01",
+    url: sourceUrl("The%20Last%20of%20Us/Season%2001/"),
+    title: "The Last of Us",
+    daysAgo: 5,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      groupNode("the-last-of-us-show", "The Last of Us", [
+        groupNode("the-last-of-us-s01", "Season 01", [
+          playableNode({
+            key: "the-last-of-us-s01e01",
+            label:
+              "The Last of Us (2023) - S01E01 - When You're Lost in the Darkness - 2160p Blu-ray HEVC HDR10.mkv",
+            url: playableUrl("the-last-of-us-s01e01"),
+            size: "5.8 GB",
+          }),
+          playableNode({
+            key: "the-last-of-us-s01e02",
+            label:
+              "The Last of Us (2023) - S01E02 - Infected - 2160p Blu-ray HEVC HDR10.mkv",
+            url: playableUrl("the-last-of-us-s01e02"),
+            size: "5.2 GB",
+          }),
+          playableNode({
+            key: "the-last-of-us-s01e03",
+            label:
+              "The Last of Us (2023) - S01E03 - Long, Long Time - 2160p Blu-ray HEVC HDR10.mkv",
+            url: playableUrl("the-last-of-us-s01e03"),
+            size: "6.1 GB",
+          }),
+        ]),
+        resolvableNode("the-last-of-us-season-02", "Season 02"),
+      ]),
+    ],
+  },
+  {
+    // A folder whose contents span several titles must keep its own name in
+    // the gallery instead of posing as any one of them.
+    slug: "downloads-mixed-folder",
+    url: sourceUrl("Downloads/"),
+    title: "Downloads",
+    daysAgo: 6,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [
+      playableNode({
+        key: "downloads-everything-everywhere",
+        label:
+          "Everything Everywhere All at Once (2022) - 2160p Blu-ray HEVC HDR10.mkv",
+        url: playableUrl("everything-everywhere-all-at-once-2022"),
+        size: "11.9 GB",
+      }),
+      playableNode({
+        key: "downloads-whiplash",
+        label: "Whiplash (2014) - 1080p Blu-ray AVC.mkv",
+        url: playableUrl("whiplash-2014"),
+        size: "2.6 GB",
+      }),
+      playableNode({
+        key: "downloads-succession-s04e01",
+        label:
+          "Succession (2018) - S04E01 - The Munsters - 1080p WEB-DL H.264.mkv",
+        url: playableUrl("succession-s04e01"),
+        size: "1.5 GB",
+      }),
+    ],
+  },
+  // Two shows with the same title and different years must stay separate in
+  // the gallery.
+  docsMediaFixture({
+    slug: "the-office-us-s01e01",
+    title: "The Office (US)",
+    filename: "The Office (2005) - S01E01 - Pilot - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 7,
+    size: "1.1 GB",
+  }),
+  docsMediaFixture({
+    slug: "the-office-uk-s01e01",
+    title: "The Office (UK)",
+    filename: "The Office (2001) - S01E01 - Downsize - 1080p Blu-ray HEVC.mkv",
+    daysAgo: 7,
+    size: "740 MB",
+  }),
+  docsMediaFixture({
+    slug: "parasite-2019",
+    title: "Parasite",
+    filename: "기생충 (2019) - 2160p Blu-ray HEVC HDR10.mkv",
+    daysAgo: 8,
+    size: "6.8 GB",
+  }),
+  {
+    // A second failed Extraction with a different error than The Sopranos,
+    // so the failure states are not all identical.
+    slug: "mr-robot-failed-extraction",
+    url: sourceUrl(
+      `TV%20Shows/${encodeURIComponent("Mr. Robot (2015) - S01E01 - eps1.0_hellofriend.mkv - 1080p Blu-ray HEVC.mkv")}`
+    ),
+    title: "Mr. Robot",
+    daysAgo: 9,
+    pluginId: "bhadoo-google-drive-index",
+    pluginName: "Bhadoo’s Google Drive Index",
+    nodes: [],
+    failure: "The Source timed out while resolving this link.",
+    failureCode: "TEMPORARY_FAILURE",
+    failureHttpStatus: 500,
+  },
+  docsMediaFixture({
+    slug: "blade-runner-2049-2017",
+    title: "Blade Runner 2049",
+    filename:
+      "Blade Runner 2049 (2017) - 2160p Blu-ray HEVC TrueHD 7.1 Atmos.mkv",
+    daysAgo: 10,
+    size: "68.5 GB",
+  }),
 ]
 
 const linkMetadata = (
@@ -885,11 +1290,11 @@ const linkMetadata = (
         at: seedTime,
         pluginServerId,
         pluginId: fixture.pluginId,
-        requestId: "docs-seed-sopranos-failed-extraction",
+        requestId: `docs-seed-${fixture.slug}`,
         outcome: "failed",
-        errorCode: "UNSUPPORTED_URL",
+        errorCode: fixture.failureCode ?? "UNSUPPORTED_URL",
         detail: "This local fixture made no upstream request.",
-        httpStatus: 422,
+        httpStatus: fixture.failureHttpStatus ?? 422,
         durationMs: 0,
         attempt: 1,
       },
@@ -898,6 +1303,56 @@ const linkMetadata = (
 }
 
 const createOperationId = (): string => randomUUID()
+
+// Partially watched shows and finished singles populate the opened states
+// inside folder browsers and on library rows.
+const markDocsOpenedStates = async (
+  api: SeedApiClient,
+  idsBySlug: ReadonlyMap<string, string>
+): Promise<void> => {
+  const markFixtureEpisodesOpened = async (
+    slug: string,
+    playableSlugs: readonly string[]
+  ): Promise<void> => {
+    const savedLinkId = idsBySlug.get(slug)
+    if (!savedLinkId) {
+      throw new Error(`The ${slug} Saved link is missing.`)
+    }
+    for (const playableSlug of playableSlugs) {
+      // SAFETY: Each opened mark settles before the next mutation on the same link.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      await api.mutate({
+        method: "POST",
+        path: "/api/data/links/apply-metadata-operation",
+        body: {
+          operationId: createOperationId(),
+          id: savedLinkId,
+          operation: {
+            kind: "markOpened",
+            linkUrl: playableUrl(playableSlug),
+          },
+        },
+        retryWithOperationId: true,
+      })
+    }
+  }
+  await markFixtureEpisodesOpened("12-angry-men-1957", ["12-angry-men-1957"])
+  await markFixtureEpisodesOpened("severance-season-01", [
+    "severance-s01e01",
+    "severance-s01e02",
+  ])
+  await markFixtureEpisodesOpened("frieren-season-01", [
+    "frieren-s01e01",
+    "frieren-s01e02",
+    "frieren-s01e03",
+  ])
+  await markFixtureEpisodesOpened("breaking-bad-s01e01", [
+    "breaking-bad-s01e01",
+  ])
+  await markFixtureEpisodesOpened("when-life-gives-you-tangerines-s01e01", [
+    "when-life-gives-you-tangerines-s01e01",
+  ])
+}
 
 export const seedDocsLinks = async (
   api: SeedApiClient,
@@ -936,7 +1391,10 @@ export const seedDocsLinks = async (
         title: fixture.title,
         meta: linkMetadata(fixture, input.pluginServerId, input.seedTime),
         seedFixture: {
-          createdAt: input.seedTime - fixture.daysAgo * DAY_MS,
+          createdAt:
+            input.seedTime -
+            fixture.daysAgo * DAY_MS +
+            (fixture.createdAtOffsetMs ?? 0),
           extractionFailure: fixture.failure,
         },
       },
@@ -949,23 +1407,7 @@ export const seedDocsLinks = async (
     idsBySlug.set(fixture.slug, result.id)
   }
 
-  const openedSavedLinkId = idsBySlug.get("12-angry-men-1957")
-  if (!openedSavedLinkId) {
-    throw new Error("The 12 Angry Men Saved link is missing.")
-  }
-  await api.mutate({
-    method: "POST",
-    path: "/api/data/links/apply-metadata-operation",
-    body: {
-      operationId: createOperationId(),
-      id: openedSavedLinkId,
-      operation: {
-        kind: "markOpened",
-        linkUrl: playableUrl("12-angry-men-1957"),
-      },
-    },
-    retryWithOperationId: true,
-  })
+  await markDocsOpenedStates(api, idsBySlug)
 
   const updated = await api.get<LinksResponse>(
     "/api/data/links",
@@ -1005,6 +1447,45 @@ const normalizedServerUrl = (value: string): string => {
   return `${url.origin}${url.pathname.replace(/\/$/, "")}`
 }
 
+interface DocsProxyFixture {
+  readonly key: string
+  readonly balance: { readonly remaining: number; readonly limit: number }
+  readonly enabled: boolean
+}
+
+interface DocsPluginServerFixture {
+  readonly url: string
+  readonly enabled: boolean
+  readonly proxy: DocsProxyFixture | undefined
+}
+
+// One Custom Plugin Server per local fixture Worker. The states differ on
+// purpose so the Plugins and proxy settings pages render every state: the
+// primary server runs the proxy with a healthy balance, the second keeps a
+// nearly spent key with the proxy off, and the archive server is disabled
+// with no key at all.
+const DOCS_PLUGIN_SERVERS: readonly DocsPluginServerFixture[] = [
+  {
+    url: "http://localhost:8788",
+    enabled: true,
+    proxy: {
+      key: DOCS_SEED_PROXY_KEY,
+      balance: DOCS_SEED_PROXY_BALANCE,
+      enabled: true,
+    },
+  },
+  {
+    url: "http://localhost:8789",
+    enabled: true,
+    proxy: {
+      key: DOCS_SEED_PROXY_KEY_LOW,
+      balance: DOCS_SEED_PROXY_BALANCE_LOW,
+      enabled: false,
+    },
+  },
+  { url: "http://localhost:8790", enabled: false, proxy: undefined },
+]
+
 const clearPluginDomains = async (api: SeedApiClient): Promise<void> => {
   const domains = await api.get<readonly PluginDomainEntry[]>(
     "/api/plugin-domains",
@@ -1023,10 +1504,10 @@ const clearPluginDomains = async (api: SeedApiClient): Promise<void> => {
 const deleteOtherPluginServers = async (
   api: SeedApiClient,
   servers: readonly PluginServerEntry[],
-  keepServerId: string | undefined
+  keepUrls: ReadonlySet<string>
 ): Promise<void> => {
   for (const server of servers) {
-    if (server.id === keepServerId) {
+    if (keepUrls.has(normalizedServerUrl(server.baseUrl))) {
       continue
     }
     // SAFETY: Remove other Plugin Servers in sequence to preserve their public API data-version mutations.
@@ -1038,123 +1519,124 @@ const deleteOtherPluginServers = async (
   }
 }
 
-const registerOrRefreshLocalPluginServer = async (
+const listPluginServers = async (
+  api: SeedApiClient
+): Promise<readonly PluginServerEntry[]> =>
+  await api.get<readonly PluginServerEntry[]>(
+    "/api/plugin-servers",
+    PluginServerListSchema
+  )
+
+const applyPluginServerFixture = async (
   api: SeedApiClient,
-  existingServer: PluginServerEntry | undefined
+  fixture: DocsPluginServerFixture
 ): Promise<void> => {
-  if (!existingServer) {
+  const fixtureUrl = normalizedServerUrl(fixture.url)
+  const existing = (await listPluginServers(api)).find(
+    (server) => normalizedServerUrl(server.baseUrl) === fixtureUrl
+  )
+
+  if (!existing) {
     const apiKey = await readDevelopmentPluginServerKey()
     await api.mutate({
       method: "POST",
       path: "/api/plugin-servers",
-      body: {
-        baseUrl: DEVELOPMENT_PLUGIN_SERVER_URL,
-        apiKey,
-      },
+      body: { baseUrl: fixture.url, apiKey },
     })
-    return
-  }
-  if (!existingServer.enabled) {
+  } else {
     await api.mutate({
       method: "POST",
-      path: `/api/plugin-servers/${encodeURIComponent(existingServer.id)}/toggle`,
-      body: { enabled: true },
+      path: `/api/plugin-servers/${encodeURIComponent(existing.id)}/refresh`,
     })
   }
-  await api.mutate({
-    method: "POST",
-    path: `/api/plugin-servers/${encodeURIComponent(existingServer.id)}/refresh`,
-  })
-}
 
-const requireLocalPluginServer = async (
-  api: SeedApiClient
-): Promise<PluginServerEntry> => {
-  const servers = await api.get<readonly PluginServerEntry[]>(
-    "/api/plugin-servers",
-    PluginServerListSchema
+  const registered = (await listPluginServers(api)).find(
+    (server) => normalizedServerUrl(server.baseUrl) === fixtureUrl
   )
-  const targetUrl = normalizedServerUrl(DEVELOPMENT_PLUGIN_SERVER_URL)
-  const target = servers.find(
-    (server) => normalizedServerUrl(server.baseUrl) === targetUrl
-  )
-  await deleteOtherPluginServers(api, servers, target?.id)
-  await registerOrRefreshLocalPluginServer(api, target)
-
-  const refreshedServers = await api.get<readonly PluginServerEntry[]>(
-    "/api/plugin-servers",
-    PluginServerListSchema
-  )
-  const pluginServer = refreshedServers.find(
-    (server) => normalizedServerUrl(server.baseUrl) === targetUrl
-  )
-  if (!pluginServer) {
-    throw new Error("The local Custom Plugin Server was not registered.")
+  if (!registered) {
+    throw new Error(
+      `The Custom Plugin Server at ${fixture.url} was not registered.`
+    )
   }
-  if (pluginServer.verificationStatus !== "verified") {
-    throw new Error("The local Custom Plugin Server could not be verified.")
+  if (registered.verificationStatus !== "verified") {
+    throw new Error(
+      `The Custom Plugin Server at ${fixture.url} could not be verified.`
+    )
   }
-  return pluginServer
+  if (registered.enabled !== fixture.enabled) {
+    await api.mutate({
+      method: "POST",
+      path: `/api/plugin-servers/${encodeURIComponent(registered.id)}/toggle`,
+      body: { enabled: fixture.enabled },
+    })
+  }
+  await applyProxyFixture(api, registered.id, fixture.proxy)
 }
 
-const createDocsPluginDomains = async (api: SeedApiClient): Promise<void> => {
-  await api.mutate({
-    method: "POST",
-    path: "/api/plugin-domains",
-    body: {
-      domain: "drive.example.invalid",
-      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-      pluginId: "bhadoo-google-drive-index",
-      username: "docs-reader",
-      password: "demo-library-password",
-    },
-  })
-  await api.mutate({
-    method: "POST",
-    path: "/api/plugin-domains",
-    body: {
-      domain: "onedrive.example.invalid",
-      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-      pluginId: "onedrive-index",
-      password: "demo-index-password",
-    },
-  })
-}
-
-const configureAndVerifyProxy = async (
+const applyProxyFixture = async (
   api: SeedApiClient,
-  pluginServerId: string
+  pluginServerId: string,
+  proxy: DocsProxyFixture | undefined
 ): Promise<void> => {
+  const current = (await listPluginServers(api)).find(
+    (server) => server.id === pluginServerId
+  )
+  if (!current) {
+    throw new Error("The Custom Plugin Server disappeared mid-seed.")
+  }
+
+  if (!proxy) {
+    if (current.hasProxyKey) {
+      await api.mutate({
+        method: "POST",
+        path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
+        body: { token: "" },
+      })
+    }
+    return
+  }
+
   await api.mutate({
     method: "POST",
     path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/key`,
-    body: { token: DOCS_SEED_PROXY_KEY },
+    body: { token: proxy.key },
   })
-  await api.mutate({
-    method: "POST",
-    path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
-    body: { enabled: true },
-  })
-  const configuredServers = await api.get<readonly PluginServerEntry[]>(
-    "/api/plugin-servers",
-    PluginServerListSchema
-  )
-  const configuredServer = configuredServers.find(
+  if (!current.proxyEnabled && proxy.enabled) {
+    await api.mutate({
+      method: "POST",
+      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
+      body: { enabled: true },
+    })
+  }
+  if (current.proxyEnabled && !proxy.enabled) {
+    await api.mutate({
+      method: "POST",
+      path: `/api/plugin-servers/${encodeURIComponent(pluginServerId)}/proxy/toggle`,
+      body: { enabled: false },
+    })
+  }
+
+  const configured = (await listPluginServers(api)).find(
     (server) => server.id === pluginServerId
   )
   if (
-    !configuredServer?.hasProxyKey ||
-    !configuredServer.proxyEnabled ||
-    configuredServer.proxyBalanceRemaining !==
-      DOCS_SEED_PROXY_BALANCE.remaining ||
-    configuredServer.proxyBalanceLimit !== DOCS_SEED_PROXY_BALANCE.limit
+    !configured?.hasProxyKey ||
+    configured.proxyEnabled !== proxy.enabled ||
+    configured.proxyBalanceRemaining !== proxy.balance.remaining ||
+    configured.proxyBalanceLimit !== proxy.balance.limit
   ) {
-    throw new Error("The docs scenario could not configure its proxy balance.")
+    throw new Error(
+      `The docs scenario could not configure the proxy for ${pluginServerId}.`
+    )
   }
+}
 
+// The primary fixture Worker must advertise the proxy extension the proxy
+// settings page and its screenshots depend on.
+const requirePrimaryProxyManifest = (primary: PluginServerEntry): void => {
   let manifestJson: unknown
   try {
-    manifestJson = JSON.parse(configuredServer.manifest)
+    manifestJson = JSON.parse(primary.manifest)
   } catch (cause) {
     const detail = getCauseMessage(cause)
     throw new Error(
@@ -1184,6 +1666,67 @@ const configureAndVerifyProxy = async (
       "The local Custom Plugin Server has no per-Plugin proxy usage."
     )
   }
+}
+
+const requireDocsPluginServers = async (
+  api: SeedApiClient
+): Promise<PluginServerEntry> => {
+  const keepUrls = new Set(
+    DOCS_PLUGIN_SERVERS.map((fixture) => normalizedServerUrl(fixture.url))
+  )
+  await deleteOtherPluginServers(api, await listPluginServers(api), keepUrls)
+  for (const fixture of DOCS_PLUGIN_SERVERS) {
+    // SAFETY: Server fixtures converge one at a time so each registration and proxy mutation settles in order.
+    // oxlint-disable-next-line eslint/no-await-in-loop
+    await applyPluginServerFixture(api, fixture)
+  }
+
+  const servers = await listPluginServers(api)
+  const primary = servers.find(
+    (server) =>
+      normalizedServerUrl(server.baseUrl) ===
+      normalizedServerUrl(DOCS_PLUGIN_SERVERS[0].url)
+  )
+  if (!primary) {
+    throw new Error("The primary Custom Plugin Server was not registered.")
+  }
+  requirePrimaryProxyManifest(primary)
+  return primary
+}
+
+const createDocsPluginDomains = async (api: SeedApiClient): Promise<void> => {
+  await api.mutate({
+    method: "POST",
+    path: "/api/plugin-domains",
+    body: {
+      domain: "drive.example.invalid",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "bhadoo-google-drive-index",
+      username: "docs-reader",
+      password: "demo-library-password",
+    },
+  })
+  await api.mutate({
+    method: "POST",
+    path: "/api/plugin-domains",
+    body: {
+      domain: "onedrive.example.invalid",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "onedrive-index",
+      password: "demo-index-password",
+    },
+  })
+  // Kept without a credential so the Plugins page also renders its
+  // "no password saved yet" state.
+  await api.mutate({
+    method: "POST",
+    path: "/api/plugin-domains",
+    body: {
+      domain: "index.example.invalid",
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      pluginId: "bhadoo-google-drive-index",
+    },
+  })
 }
 
 const verifyPluginUsageRows = async (
@@ -1243,9 +1786,8 @@ const seedDocsSettings = async (
   seedTime: number
 ): Promise<string> => {
   await clearPluginDomains(api)
-  const pluginServer = await requireLocalPluginServer(api)
+  const pluginServer = await requireDocsPluginServers(api)
   await createDocsPluginDomains(api)
-  await configureAndVerifyProxy(api, pluginServer.id)
   await seedDocsManagedUsage(api, seedTime)
   await verifyPluginUsageRows(api, pluginServer.id)
   return pluginServer.id
