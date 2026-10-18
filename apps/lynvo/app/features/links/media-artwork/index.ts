@@ -5,7 +5,6 @@ import "./media-artwork-types"
 export type { GalleryGroup } from "./media-artwork-types"
 export {
   getGalleryGroups,
-  getGalleryGroupSections,
   getGalleryItemLabel,
   getSharedSeasonIdentity,
 } from "./gallery-grouping"

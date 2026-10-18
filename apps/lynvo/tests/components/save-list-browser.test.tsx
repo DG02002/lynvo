@@ -1707,7 +1707,7 @@ describe("SaveListBrowser", () => {
     expect(expiryMetadata).toBeInTheDocument()
     expect(expiryMetadata).toHaveAttribute(
       "title",
-      "Expiry for this playable link; the saved item itself does not expire."
+      "Estimated expiry for this playable link from the source. The link may still work after it — refresh the saved link if playback fails. The saved item itself does not expire."
     )
   })
 
@@ -1750,7 +1750,7 @@ describe("SaveListBrowser", () => {
     expect(menuTrigger.parentElement).not.toHaveClass("border-s")
   })
 
-  it("disables and mutes an expired playable link", () => {
+  it("keeps a past-expiry playable link openable while muting it", () => {
     const play = vi.fn()
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/expired-video.mp4",
@@ -1786,20 +1786,20 @@ describe("SaveListBrowser", () => {
     const itemButton = screen.getByRole("button", {
       name: "Open expired-video.mp4",
     })
-    expect(itemButton).toBeDisabled()
-    expect(filename.closest("button")).toBeNull()
-    expect(filename.closest("div")).toHaveClass(
-      "text-muted-foreground",
-      "opacity-60"
-    )
-    expect(filename).toHaveClass("line-through")
-    expect(screen.getByText("Link expired").querySelector("svg")).toBeNull()
+    expect(itemButton).toBeEnabled()
+    expect(filename.closest("div")).toHaveClass("text-muted-foreground")
+    expect(filename).not.toHaveClass("line-through")
+    expect(
+      screen.getByText("Link may have expired").querySelector("svg")
+    ).toBeNull()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     fireEvent.click(itemButton)
-    expect(play).not.toHaveBeenCalled()
+    expect(play).toHaveBeenCalledWith(
+      expect.objectContaining({ url: directLink.url, label: directLink.label })
+    )
   })
 
-  it("disables a playable row when the minute clock reaches its expiry", () => {
+  it("keeps a playable row openable when the minute clock reaches its expiry", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-07-22T10:00:30.000Z"))
     const directLink: ExtractedLink = {
@@ -1841,8 +1841,9 @@ describe("SaveListBrowser", () => {
 
     void act(() => vi.advanceTimersByTime(30_000))
 
-    expect(itemButton).toBeDisabled()
-    expect(filename).toHaveClass("line-through")
+    expect(itemButton).toBeEnabled()
+    expect(filename).not.toHaveClass("line-through")
+    expect(screen.getByText("Link may have expired")).toBeInTheDocument()
   })
 
   it("shows New on a root folder before it is opened and marks it opened on open", () => {
@@ -1972,5 +1973,57 @@ describe("SaveListBrowser", () => {
       screen.getByRole("button", { name: "Loading links… for Queued Source" })
     ).toBeDisabled()
     expect(row?.querySelector(".loading-skeleton-pulse")).toBeInTheDocument()
+  })
+
+  it("retries a failed Saved link through a hard refresh", () => {
+    const item: LinkViewItem = {
+      id: "failed-link",
+      url: "https://source.example/failed",
+      timestamp: Date.now(),
+      title: "Failed Source",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "failed-link-playable",
+              url: "https://media.example/failed.mp4",
+              label: "Failed Source.mp4",
+              type: "file",
+              mediaNodeKind: "playable",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+      extractionStatus: {
+        state: "failed",
+        error: "The Source could not be reached.",
+      },
+    }
+    const actions = createActions()
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={actions}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(document.querySelector("[data-extraction-state]")).toHaveAttribute(
+      "data-extraction-state",
+      "failed"
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+
+    expect(actions.hardRefresh).toHaveBeenCalledOnce()
+    expect(actions.hardRefresh).toHaveBeenCalledWith(item.url)
   })
 })

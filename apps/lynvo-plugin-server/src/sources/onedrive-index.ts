@@ -187,6 +187,9 @@ export const createOneDriveNodes = ({
       label: item.name,
       url: playableUrl.toString(),
       size,
+      // This authenticated index endpoint cannot safely probe the final media
+      // URL, so range capability remains unknown.
+      rangeRequest: "unknown",
     })
     return [node]
   })

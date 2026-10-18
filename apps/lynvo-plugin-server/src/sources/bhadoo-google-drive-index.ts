@@ -181,6 +181,9 @@ export const createBhadooNodes = (
       label: item.name,
       url: playableUrl.toString(),
       size,
+      // The index supplies the final URL but does not expose a safe probe
+      // endpoint, so range capability remains unknown.
+      rangeRequest: "unknown",
     })
     return [node]
   })

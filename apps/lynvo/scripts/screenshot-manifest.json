@@ -509,8 +509,7 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "role": "heading",
-            "name": "Proxy keys"
+            "text": "Key saved"
           }
         }
       ],
@@ -536,15 +535,15 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "role": "heading",
-            "name": "Proxy keys"
+            "text": "Key saved"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Change key"
+            "name": "Change Scrape.do key",
+            "exact": false
           },
           "expectVisible": {
             "text": "Scrape.do API token",
@@ -556,33 +555,6 @@
       "framing": {
         "mode": "postprocess",
         "theme": "aurora-029"
-      }
-    },
-    {
-      "name": "settings-proxy-balance",
-      "seedScenario": "docs",
-      "route": "/settings/proxy",
-      "context": "desktop",
-      "viewport": {
-        "width": 1470,
-        "height": 836,
-        "deviceScaleFactor": 2
-      },
-      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-      "steps": [
-        {
-          "action": "navigate",
-          "path": "/settings/proxy",
-          "expectVisible": {
-            "text": "Refresh balance",
-            "exact": true
-          }
-        }
-      ],
-      "output": "app/features/site/docs/images/settings-proxy-balance.webp",
-      "framing": {
-        "mode": "postprocess",
-        "theme": "aurora-030"
       }
     },
     {

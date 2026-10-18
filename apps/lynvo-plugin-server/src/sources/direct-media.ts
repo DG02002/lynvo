@@ -14,10 +14,12 @@ import {
 import { fetchValidatedUpstream } from "../upstream-response"
 import { decodeUrlComponent } from "../url-policy"
 import { formatFileSize } from "./file-size"
+import { readRangeRequestCapability } from "./media-node"
 
 const CONTENT_DISPOSITION_FILENAME =
   /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i
 const CONTENT_RANGE_TOTAL = /\/(\d+)$/
+const MAX_SIGNED_URL_DURATION_SECONDS = 31_536_000
 
 const getFilename = (targetUrl: string, headers: Headers): string => {
   const headerFilename = CONTENT_DISPOSITION_FILENAME.exec(
@@ -57,17 +59,32 @@ const getFileSize = (status: number, headers: Headers): string | undefined => {
   )
 }
 
-const getSignedUrlExpiry = (targetUrl: string) => {
+const getSignedUrlExpiry = (targetUrl: string, now: number) => {
   const value = new URL(targetUrl).searchParams.get("Expires")
   const timestamp = Number(value)
   if (!value || !Number.isFinite(timestamp) || timestamp <= 0) {
     return {}
   }
+  const absoluteExpiry =
+    timestamp < MILLISECONDS_EPOCH_THRESHOLD
+      ? timestamp * MILLISECONDS_PER_SECOND
+      : timestamp
+  // A successful probe proves the URL works now. Some hosts put a short
+  // relative duration in Expires; preserve it as an estimate instead of
+  // interpreting it as a 1970 timestamp. Older values stay unknown because
+  // they could be stale absolute timestamps rather than useful durations.
+  const isShortRelativeDuration =
+    timestamp < MILLISECONDS_EPOCH_THRESHOLD &&
+    timestamp <= MAX_SIGNED_URL_DURATION_SECONDS
+  const expiry =
+    absoluteExpiry <= now && isShortRelativeDuration
+      ? now + timestamp * MILLISECONDS_PER_SECOND
+      : absoluteExpiry
+  if (expiry <= now) {
+    return {}
+  }
   return {
-    expiry:
-      timestamp < MILLISECONDS_EPOCH_THRESHOLD
-        ? timestamp * MILLISECONDS_PER_SECOND
-        : timestamp,
+    expiry,
     expirySource: "signed-url" as const,
   }
 }
@@ -105,12 +122,9 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       label: filename,
       url: options.targetUrl,
       status: "up" as const,
-      rangeRequest:
-        response.status === 206 && response.headers.has("Content-Range")
-          ? ("supported" as const)
-          : ("unsupported" as const),
+      rangeRequest: readRangeRequestCapability(response),
       size: getFileSize(response.status, response.headers),
-      ...getSignedUrlExpiry(options.targetUrl),
+      ...getSignedUrlExpiry(options.targetUrl, Date.now()),
     }
     return {
       plugin: createPluginResponseMetadata(

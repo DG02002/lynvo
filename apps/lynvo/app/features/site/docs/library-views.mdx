@@ -63,7 +63,7 @@ Open the item menu for actions that depend on the selected Saved link:
 
 ### Read expiry and opened states
 
-**New** means a link has not been opened. **Opened** marks a link that you already opened; it is not a playback position. If a Playable link reports expiry, its badge can show a value such as **Link valid for 3d 4h** or **Link expired**. Expiry applies to that Playable link, not the Saved link; refresh the Saved link to request current choices.
+**New** means a link has not been opened. **Opened** marks a link that you already opened; it is not a playback position. If a Playable link reports expiry, its badge can show a value such as **Link valid for 3d 4h** or **Link may have expired**. Expiry is an estimate from the Source; a link past its estimate can still play, so the item stays openable. Open it as usual, and use **Refresh** if playback fails.
 
 </DocSection>
 
@@ -76,9 +76,10 @@ Open the item menu for actions that depend on the selected Saved link:
   Library. It does not delete anything from the Source.
 </DocsFaq>
 
-<DocsFaq question="Why does the link say expired while the Saved link is still there?">
-  The badge describes the Playable link URL. The Saved link remains in your
-  Library, and **Refresh** can request a current Playable link from its Source.
+<DocsFaq question="Why does the link say it may have expired while it still plays?">
+  The badge shows an expiry estimate from the Source, and hosts often keep
+  serving past it. The Saved link stays openable either way; **Refresh**
+  requests a current Playable link when playback actually fails.
 </DocsFaq>
 
 </DocSection>

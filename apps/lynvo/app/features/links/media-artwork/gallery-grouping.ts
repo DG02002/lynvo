@@ -1,11 +1,6 @@
 import type { MediaArtworkRequest } from "~shared/api-contracts"
 
 import {
-  getSaveDateGroupKey,
-  getSaveDateGroupLabel,
-} from "~/lib/save-date-groups"
-
-import {
   getLinkViewItemExtractedLinks,
   getLinkViewItemMetadata,
 } from "../link-metadata-accessors"
@@ -41,12 +36,6 @@ interface MutableGalleryGroup {
   displayTitle: string
   lastAddedAt: number
   items: LinkListItem[]
-}
-
-interface GalleryGroupDateSection {
-  readonly key: string
-  readonly label: string
-  readonly groups: readonly GalleryGroup[]
 }
 
 export const getGalleryItemLabel = (item: LinkListItem): string => {
@@ -443,28 +432,4 @@ export const getGalleryGroups = (
     ...[...titleBuckets.values()].flat().map(toImmutableGroup),
     ...unmatchedGroups.map(toImmutableGroup),
   ])
-}
-
-export const getGalleryGroupSections = (
-  groups: readonly GalleryGroup[],
-  currentTimeMs = Date.now()
-): readonly GalleryGroupDateSection[] => {
-  const dateGroups = new Map<string, GalleryGroupDateSection>()
-  for (const group of groups) {
-    const key = getSaveDateGroupKey(group.lastAddedAt, currentTimeMs)
-    const existingDateGroup = dateGroups.get(key)
-    if (existingDateGroup) {
-      dateGroups.set(key, {
-        ...existingDateGroup,
-        groups: [...existingDateGroup.groups, group],
-      })
-      continue
-    }
-    dateGroups.set(key, {
-      key,
-      label: getSaveDateGroupLabel(group.lastAddedAt, currentTimeMs),
-      groups: [group],
-    })
-  }
-  return [...dateGroups.values()]
 }

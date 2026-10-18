@@ -337,6 +337,11 @@ describe("d1 plugin registry", () => {
       user.id,
       "https://proxy.example"
     )
+    await setPluginServerProxyEnabled(env.DB, user.id, {
+      id: registration.id,
+      enabled: false,
+      now: NOW + 500,
+    })
 
     const saved = await updatePluginServerProxyKey(env.DB, user.id, {
       id: registration.id,
@@ -345,6 +350,12 @@ describe("d1 plugin registry", () => {
       now: NOW + 1_000,
     })
     expect(saved.dataVersion).toBeGreaterThan(0)
+    const settingsAfterKeySave = await env.DB.prepare(
+      "SELECT proxy_enabled FROM user_plugin_servers WHERE id = ?1"
+    )
+      .bind(registration.id)
+      .first<{ proxy_enabled: number }>()
+    expect(settingsAfterKeySave?.proxy_enabled).toBe(0)
     await updatePluginServerProxyBalance(env.DB, user.id, {
       id: registration.id,
       balance: { remaining: 950, limit: 1_000 },

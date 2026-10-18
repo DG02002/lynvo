@@ -2,13 +2,11 @@ import {
   Alert01Icon,
   ArrowDown01Icon,
   Delete02Icon,
-  Key01Icon,
   MoreHorizontalIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
-import { Link } from "react-router"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { PluginIcon } from "~/components/plugin-icon"
@@ -26,7 +24,6 @@ import {
   isPluginServerUsable,
   PLUGIN_SERVER_VERIFICATION_STATUS,
 } from "~/lib/effect/services/plugin-server-verification-status"
-import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
 import { sourceStatusVariant } from "~/lib/source-status-variant"
 import { cn } from "~/lib/utils"
 
@@ -64,8 +61,6 @@ const CustomPluginServerRow = ({
   const isDown =
     pluginServer.verificationStatus === PLUGIN_SERVER_VERIFICATION_STATUS.down
   const isUsable = isPluginServerUsable(pluginServer)
-  const supportsProxy = isSupportedProxyProvider(manifest.proxyProvider)
-  const hasProxyKey = supportsProxy && pluginServer.hasProxyKey
 
   return (
     <div className="flex flex-col">
@@ -93,21 +88,6 @@ const CustomPluginServerRow = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          {supportsProxy && (
-            <Badge
-              variant={hasProxyKey ? "secondary" : "outline"}
-              render={
-                <Link
-                  prefetch="intent"
-                  to="/settings/proxy"
-                  aria-label={`Manage proxy settings for ${manifest.name}`}
-                />
-              }
-            >
-              <HugeiconsIcon icon={Key01Icon} data-icon="inline-start" />
-              Proxy key {hasProxyKey ? "set" : "not set"}
-            </Badge>
-          )}
           <Switch
             checked={isUsable}
             disabled={isDown}

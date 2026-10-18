@@ -114,6 +114,16 @@ const renderGroupGrid = (
 }
 
 describe("GallerySaveGrid", () => {
+  it("shows its groups in one Recent section", () => {
+    renderQueuedGrid(createQueuedItem())
+
+    const recentSections = screen.getAllByRole("region", { name: "Recent" })
+    expect(recentSections).toHaveLength(1)
+    expect(recentSections[0]).toContainElement(
+      screen.getByTestId("gallery-save-item")
+    )
+  })
+
   it("renders a queued item with a pulsing poster skeleton and shimmering title only", () => {
     renderQueuedGrid(createQueuedItem({ state: "queued" }))
 

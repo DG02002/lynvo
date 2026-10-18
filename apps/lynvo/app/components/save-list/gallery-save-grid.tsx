@@ -15,7 +15,6 @@ import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import {
-  getGalleryGroupSections,
   type GalleryGroup,
   useMediaArtwork,
 } from "~/features/links/media-artwork"
@@ -40,10 +39,7 @@ import {
 } from "./extraction-status-utils"
 import { GalleryGroupMenu } from "./gallery-group-menu"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
-import {
-  SAVE_LIST_SECTION_STACK_CLASS,
-  SaveDateGroupSection,
-} from "./save-date-group-heading"
+import { SaveDateGroupSection } from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
 import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import {
@@ -186,7 +182,6 @@ interface GallerySingleItemState {
   readonly failedItem: LinkListItem | undefined
   readonly isSingleItem: boolean
   readonly directLink: ExtractedLink | undefined
-  readonly isDirectLinkExpired: boolean
   readonly extractionState: LinkExtractionState
   readonly isExtracting: boolean
   readonly isExtractionVisual: boolean
@@ -244,7 +239,6 @@ const getGallerySingleItemState = (
     failedItem: failedMember,
     isSingleItem,
     directLink,
-    isDirectLinkExpired: interactionState?.isDirectLinkExpired ?? false,
     extractionState,
     isExtracting,
     isExtractionVisual:
@@ -275,7 +269,6 @@ const GallerySaveItem = ({
     failedItem,
     isSingleItem,
     directLink,
-    isDirectLinkExpired,
     extractionState,
     isExtracting,
     isExtractionVisual,
@@ -360,8 +353,7 @@ const GallerySaveItem = ({
           "relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m transition-colors duration-150 motion-reduce:transition-none sm:rounded-3xl",
           "group-hover:border-foreground/25 group-has-[:focus-visible]:border-foreground/25 has-aria-expanded:border-foreground/25",
           SAVE_LIST_FEEDBACK_RING_CLASSES.gallery.highlighted,
-          SAVE_LIST_FEEDBACK_RING_CLASSES.gallery.failed,
-          isDirectLinkExpired && isSingleItem && "opacity-60"
+          SAVE_LIST_FEEDBACK_RING_CLASSES.gallery.failed
         )}
       >
         <GallerySaveItemArtwork
@@ -408,7 +400,6 @@ const GallerySaveItem = ({
                 item={item}
                 actions={actions}
                 playableLink={directLink}
-                isPlayableLinkExpired={isDirectLinkExpired}
                 showRemove
                 isRefreshing={isExtracting}
                 triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
@@ -432,20 +423,12 @@ const GallerySaveItem = ({
           {...statusSpec}
           titleClassName="font-heading text-base font-normal"
         >
-          <h3
-            className={cn(
-              "font-heading text-base font-normal break-words",
-              isDirectLinkExpired && "line-through"
-            )}
-          >
+          <h3 className="font-heading text-base font-normal break-words">
             {group.displayTitle}
           </h3>
           {isSingleItem && directLink?.expiry !== undefined && (
             <span className="mt-1 flex justify-center text-xs text-muted-foreground">
-              <PlayableExpiryBadge
-                expiresAt={directLink.expiry}
-                expirySource={directLink.expirySource}
-              />
+              <PlayableExpiryBadge expiresAt={directLink.expiry} />
             </span>
           )}
         </ExtractionStatusTitle>
@@ -496,30 +479,24 @@ export const GallerySaveGrid = ({
     return <SaveListEmptyState />
   }
 
-  const groupedSections = getGalleryGroupSections(groups, currentTimeMs)
-
   return (
-    <div className={SAVE_LIST_SECTION_STACK_CLASS}>
-      {groupedSections.map((section) => (
-        <SaveDateGroupSection key={section.key} label={section.label}>
-          <div className={GALLERY_GRID_CLASS}>
-            {section.groups.map((group) => (
-              <GallerySaveItem
-                key={group.key}
-                group={group}
-                actions={actions}
-                extractingItems={extractingItems}
-                isHighlighted={group.items.some(
-                  (item) => item.id === highlightedId
-                )}
-                currentTimeMs={currentTimeMs}
-                onOpenItem={onOpenItem}
-                onOpenGroup={onOpenGroup}
-              />
-            ))}
-          </div>
-        </SaveDateGroupSection>
-      ))}
-    </div>
+    <SaveDateGroupSection label="Recent">
+      <div className={GALLERY_GRID_CLASS}>
+        {groups.map((group) => (
+          <GallerySaveItem
+            key={group.key}
+            group={group}
+            actions={actions}
+            extractingItems={extractingItems}
+            isHighlighted={group.items.some(
+              (item) => item.id === highlightedId
+            )}
+            currentTimeMs={currentTimeMs}
+            onOpenItem={onOpenItem}
+            onOpenGroup={onOpenGroup}
+          />
+        ))}
+      </div>
+    </SaveDateGroupSection>
   )
 }

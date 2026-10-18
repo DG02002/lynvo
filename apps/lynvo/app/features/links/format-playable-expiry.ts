@@ -19,7 +19,7 @@ export const formatPlayableExpiry = (
 ): string => {
   const remainingMinutes = Math.ceil((expiry - now) / MINUTE_MS)
   if (remainingMinutes <= 0) {
-    return "Playable link expired"
+    return "Playable link may have expired"
   }
 
   if (remainingMinutes > RELATIVE_EXPIRY_WINDOW_MINUTES) {
@@ -55,7 +55,7 @@ export const formatPlayableValidity = (
 ): string => {
   const remainingMinutes = Math.ceil((expiry - now) / MINUTE_MS)
   if (remainingMinutes <= 0) {
-    return "Link expired"
+    return "Link may have expired"
   }
 
   if (remainingMinutes > RELATIVE_EXPIRY_WINDOW_MINUTES) {

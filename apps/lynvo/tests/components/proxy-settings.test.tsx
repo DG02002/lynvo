@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -77,17 +77,37 @@ describe("ProxySettings", () => {
     )
 
     expect(await screen.findByText("Proxy Capable")).toBeVisible()
-    expect(screen.getByText("973 of 1,000 credits remaining")).toBeVisible()
+    expect(screen.getByRole("img", { name: "Scrape.do" })).toBeVisible()
+    expect(screen.getByText("Monthly credit usage")).toBeVisible()
+    expect(screen.getByText("3% used")).toBeVisible()
+    expect(screen.getByText("27 of 1,000 credits used")).toBeVisible()
+    expect(screen.getByText("Use proxy")).toBeVisible()
+    expect(screen.getByText("Key saved")).toBeVisible()
     expect(
-      screen.getByRole("switch", { name: "Disable proxy for Proxy Capable" })
+      screen.getByRole("switch", { name: "Use proxy for Proxy Capable" })
     ).toBeChecked()
     expect(
-      screen.getByRole("button", { name: "Refresh balance" })
+      screen.getByRole("button", {
+        name: "Refresh credits for Proxy Capable",
+      })
     ).toBeVisible()
-    expect(screen.getByText("Source Alpha:")).toBeVisible()
     expect(
-      screen.getByText("Uses 5 proxy credits for rendering.")
+      screen.getByRole("button", {
+        name: "Remove Scrape.do key for Proxy Capable",
+      })
     ).toBeVisible()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Change Scrape.do key for Proxy Capable",
+      })
+    )
+    expect(
+      screen.getByText(
+        "Lynvo encrypts this key and sends it only to this server during Extraction."
+      )
+    ).toBeVisible()
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }))
     expect(
       screen.getByRole("link", { name: "Learn about proxy keys" })
     ).toHaveAttribute("href", "/docs/proxy-keys")
@@ -207,18 +227,131 @@ describe("ProxySettings", () => {
       </MemoryRouter>
     )
 
-    expect(
-      await screen.findByText("973 of 1,000 credits remaining")
-    ).toBeVisible()
-    fireEvent.click(screen.getByRole("button", { name: "Refresh balance" }))
+    expect(await screen.findByText("27 of 1,000 credits used")).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Refresh credits for Proxy Capable",
+      })
+    )
 
-    expect(
-      await screen.findByText("901 of 1,000 credits remaining")
-    ).toBeVisible()
+    expect(await screen.findByText("99 of 1,000 credits used")).toBeVisible()
     expect(
       document.querySelector(
         `time[datetime="${new Date(refreshedCheckedAt).toISOString()}"]`
       )
     ).not.toBeNull()
+  })
+
+  it("keeps proxy keys and credit balances scoped to their server", async () => {
+    const checkedAt = Date.now()
+    const makeServer = (
+      id: string,
+      displayName: string,
+      remaining: number,
+      limit: number,
+      proxyEnabled: boolean
+    ) => ({
+      id,
+      userId: "user-1",
+      baseUrl: `https://${id}.example.com`,
+      manifest: JSON.stringify({
+        protocolVersion: "1.0",
+        pluginServerId: `dev.example.${id}`,
+        displayName,
+        auth: { type: "bearer" },
+        usage: { endpoint: "/usage" },
+        matchers: [{ hosts: [`${id}.example.com`] }],
+        features: {},
+        extensions: { lynvo: { proxyProvider: "scrape-do", plugins: [] } },
+      }),
+      enabled: true,
+      priority: 0,
+      verificationStatus: "verified",
+      hasProxyKey: true,
+      proxyBalanceRemaining: remaining,
+      proxyBalanceLimit: limit,
+      proxyBalanceCheckedAt: checkedAt,
+      proxyEnabled,
+      lastVerifiedAt: checkedAt,
+      lastManifestRefreshAt: checkedAt,
+      createdAt: checkedAt,
+      updatedAt: checkedAt,
+    })
+    const servers = [
+      makeServer("first", "First Server", 100, 1_000, false),
+      makeServer("second", "Second Server", 1_400, 2_000, true),
+    ]
+    const calls: { path: string; method: string }[] = []
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        let inputUrl: string
+        if (input instanceof Request) {
+          inputUrl = input.url
+        } else if (input instanceof URL) {
+          inputUrl = input.href
+        } else {
+          inputUrl = input
+        }
+        const url = new URL(inputUrl, "https://lynvo.test")
+        calls.push({
+          path: url.pathname,
+          method:
+            init?.method ?? (input instanceof Request ? input.method : "GET"),
+        })
+        if (url.pathname === "/api/plugin-servers") {
+          return Response.json(servers)
+        }
+        if (url.pathname === "/api/plugin-domains") {
+          return Response.json([])
+        }
+        if (url.pathname === "/api/plugin-servers/first/proxy/key") {
+          expect(init?.body).toBe('{"token":"replacement-token"}')
+          return Response.json(
+            { success: true, remaining: 900, limit: 1_000, dataVersion: 2 },
+            { headers: { "X-Lynvo-Data-Version": "2" } }
+          )
+        }
+        return new Response(null, { status: 404 })
+      })
+    )
+
+    render(
+      <MemoryRouter>
+        <ProxySettings requestOrigin="https://lynvo.test" />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText("First Server")).toBeVisible()
+    expect(screen.getByText("900 of 1,000 credits used")).toBeVisible()
+    expect(screen.getByText("600 of 2,000 credits used")).toBeVisible()
+    expect(
+      screen.getByRole("switch", { name: "Use proxy for First Server" })
+    ).not.toBeChecked()
+    expect(
+      screen.getByRole("switch", { name: "Use proxy for Second Server" })
+    ).toBeChecked()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Change Scrape.do key for First Server",
+      })
+    )
+    fireEvent.change(screen.getByLabelText("Scrape.do API token"), {
+      target: { value: "replacement-token" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save key" }))
+
+    await waitFor(() => {
+      expect(
+        calls.some(
+          ({ path, method }) =>
+            path === "/api/plugin-servers/first/proxy/key" && method === "POST"
+        )
+      ).toBe(true)
+    })
+    expect(
+      calls.some(({ path }) => path === "/api/plugin-servers/second/proxy/key")
+    ).toBe(false)
   })
 })

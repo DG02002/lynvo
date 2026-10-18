@@ -189,15 +189,55 @@ const spawnSeedFixtureWorker = () =>
     detached: true,
   })
 
-const stopSeedFixtureWorker = (fixtureProcess) => {
+const signalSeedFixtureWorker = (fixtureProcess, signal) => {
   try {
     // SIGINT to the group matches Ctrl-C, which wrangler dev handles by
     // shutting down cleanly.
-    process.kill(-fixtureProcess.pid, "SIGINT")
+    process.kill(-fixtureProcess.pid, signal)
   } catch {
     // The fixture Worker process group already exited.
   }
 }
+
+const stopSeedFixtureWorker = (fixtureProcess) => {
+  signalSeedFixtureWorker(fixtureProcess, "SIGINT")
+}
+
+const FIXTURE_STOP_TIMEOUT_MS = 15_000
+
+// The fixture runs under two pnpm layers that print their own shutdown noise
+// (ELIFECYCLE 130 and ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL), so the seed's
+// success message must wait for the teardown to finish. Otherwise the noise
+// lands after "Seeded the local development environment" and reads like the
+// dev session crashed.
+const stopSeedFixtureWorkerAndWait = async (fixtureProcess) => {
+  if (fixtureProcess.exitCode !== null || fixtureProcess.signalCode !== null) {
+    return
+  }
+  stopSeedFixtureWorker(fixtureProcess)
+  const didExit = await waitForProcessExit(
+    fixtureProcess,
+    FIXTURE_STOP_TIMEOUT_MS
+  )
+  if (didExit) {
+    return
+  }
+  signalSeedFixtureWorker(fixtureProcess, "SIGKILL")
+  await waitForProcessExit(fixtureProcess, FIXTURE_STOP_TIMEOUT_MS)
+}
+
+const waitForProcessExit = (childProcess, timeoutMs) =>
+  new Promise((resolve) => {
+    const exitListener = () => {
+      clearTimeout(timeout)
+      resolve(true)
+    }
+    const timeout = setTimeout(() => {
+      childProcess.removeListener("exit", exitListener)
+      resolve(false)
+    }, timeoutMs)
+    childProcess.once("exit", exitListener)
+  })
 
 const runSeedProcess = async () => {
   const seedProcess = spawn("pnpm", ["run", "seed", SEED_SCENARIO_NAME], {
@@ -330,12 +370,17 @@ const seedLocalDevelopmentEnvironment = async (appOrigin, devProcess) => {
         `The seed CLI exited with code ${seedResult.exitCode ?? 1}.`
       )
     }
+    // Prints only when the fixture died during seeding, such as when another
+    // Lynvo Plugin Server already held the port; the normal stop happens below.
     await writeSpawnedWorkerExitNotice(fixtureProcess)
+    await stopSeedFixtureWorkerAndWait(fixtureProcess)
     writeMessage(
       `Seeded the local development environment. The app keeps running at ${appOrigin.origin}.`
     )
   } finally {
-    stopFixtureWorker()
+    if (fixtureProcess) {
+      await stopSeedFixtureWorkerAndWait(fixtureProcess)
+    }
   }
 }
 

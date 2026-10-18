@@ -26,7 +26,10 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
+import {
+  getMediaNodeInteractionState,
+  getMediaNodeTargetOrUndefined,
+} from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
@@ -60,7 +63,6 @@ interface LinkItemMenuProps {
   showRemove?: boolean
   onRemoved?: () => void
   playableLink?: ExtractedLink
-  isPlayableLinkExpired?: boolean
   isRefreshing?: boolean
   triggerClassName?: string
   menuOpen?: boolean
@@ -73,7 +75,6 @@ export const LinkItemMenu = ({
   showRemove = false,
   onRemoved,
   playableLink,
-  isPlayableLinkExpired = false,
   isRefreshing = false,
   triggerClassName,
   menuOpen,
@@ -164,50 +165,49 @@ export const LinkItemMenu = ({
                   {linkCopy.actions.changeArtwork}
                 </DropdownMenuItem>
               )}
-              {!playableLink && (
-                <DropdownMenuItem onClick={() => refreshLink(item.url)}>
-                  <HugeiconsIcon icon={RefreshDotIcon} />
-                  {refreshActionLabel}
-                </DropdownMenuItem>
-              )}
-              {playableLink && !isPlayableLinkExpired && (
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <HugeiconsIcon icon={ArrowUpRight01Icon} />
-                    Open in
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-56">
-                    <DropdownMenuGroup>
-                      {PLAYER_DEFINITIONS.map((player) => (
-                        <DropdownMenuItem
-                          key={player.id}
-                          onClick={() => {
-                            const playableUrl =
-                              getMediaNodeTargetOrUndefined(playableLink)
-                            if (playableUrl === undefined) {
-                              return
-                            }
-                            openInPlayerAndLogError(
-                              () =>
-                                openInSpecificPlayerForHandoff(
-                                  playableUrl,
-                                  player
-                                ),
-                              {
-                                itemLabel: playableLink.label,
-                                markOpened: () =>
-                                  actions.markOpened(item.url, playableUrl),
+              <DropdownMenuItem onClick={() => refreshLink(item.url)}>
+                <HugeiconsIcon icon={RefreshDotIcon} />
+                {refreshActionLabel}
+              </DropdownMenuItem>
+              {playableLink &&
+                !getMediaNodeInteractionState(playableLink).isFolder && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <HugeiconsIcon icon={ArrowUpRight01Icon} />
+                      Open in
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
+                      <DropdownMenuGroup>
+                        {PLAYER_DEFINITIONS.map((player) => (
+                          <DropdownMenuItem
+                            key={player.id}
+                            onClick={() => {
+                              const playableUrl =
+                                getMediaNodeTargetOrUndefined(playableLink)
+                              if (playableUrl === undefined) {
+                                return
                               }
-                            )
-                          }}
-                        >
-                          <PlayerOption player={player} />
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              )}
+                              openInPlayerAndLogError(
+                                () =>
+                                  openInSpecificPlayerForHandoff(
+                                    playableUrl,
+                                    player
+                                  ),
+                                {
+                                  itemLabel: playableLink.label,
+                                  markOpened: () =>
+                                    actions.markOpened(item.url, playableUrl),
+                                }
+                              )
+                            }}
+                          >
+                            <PlayerOption player={player} />
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
             </DropdownMenuGroup>
             {showRemove && (
               <>

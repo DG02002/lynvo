@@ -1,14 +1,19 @@
-import { Key01Icon, Refresh01Icon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  Delete02Icon,
+  Refresh01Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 import { Link } from "react-router"
 
+import { ScrapeDoLogo } from "~/components/brand-marks"
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
 import { PluginIcon } from "~/components/plugin-icon"
-import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Dialog, DialogTrigger } from "~/components/ui/dialog"
+import { Progress } from "~/components/ui/progress"
 import { Switch } from "~/components/ui/switch"
 import { PLUGIN_SERVER_VERIFICATION_STATUS } from "~/lib/effect/services/plugin-server-verification-status"
 import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
@@ -31,43 +36,34 @@ const CHECKED_AT_FORMATTER = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 })
 
-const formatBalance = (remaining: number, limit: number) =>
-  `${BALANCE_FORMATTER.format(remaining)} of ${BALANCE_FORMATTER.format(limit)} credits remaining`
-
 const formatCheckedAt = (timestamp: number) =>
   CHECKED_AT_FORMATTER.format(new Date(timestamp))
 
-const getProxyDescription = (hasProxyKey: boolean, isProxyEnabled: boolean) => {
-  if (!hasProxyKey) {
-    return "Add a proxy key before turning this on."
-  }
-  if (isProxyEnabled) {
-    return "Extractions can use your Scrape.do credits."
-  }
-  return "Extractions use the Custom Plugin Server’s own proxy behavior."
+interface ProxyCredits {
+  readonly remaining: number
+  readonly limit: number
+  readonly checkedAt: number | null
 }
 
-const getBalanceDescription = ({
-  hasProxyKey,
-  remaining,
-  limit,
-}: {
-  readonly hasProxyKey: boolean
-  readonly remaining?: number | null
-  readonly limit?: number | null
-}) => {
+const readProxyCredits = (
+  pluginServer: CustomPluginServer
+): ProxyCredits | undefined => {
+  const { proxyBalanceRemaining, proxyBalanceLimit, proxyBalanceCheckedAt } =
+    pluginServer
   if (
-    remaining !== null &&
-    remaining !== undefined &&
-    limit !== null &&
-    limit !== undefined
+    !pluginServer.hasProxyKey ||
+    proxyBalanceRemaining === null ||
+    proxyBalanceRemaining === undefined ||
+    proxyBalanceLimit === null ||
+    proxyBalanceLimit === undefined
   ) {
-    return formatBalance(remaining, limit)
+    return undefined
   }
-  if (hasProxyKey) {
-    return "Not checked yet"
+  return {
+    remaining: proxyBalanceRemaining,
+    limit: proxyBalanceLimit,
+    checkedAt: proxyBalanceCheckedAt ?? null,
   }
-  return "Add a proxy key to check balance"
 }
 
 interface ProxySettingsProps {
@@ -100,8 +96,8 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
     <SettingsPanel className="gap-8">
       <div className="flex flex-col gap-3">
         <SectionHeading
-          title="Proxy keys"
-          description="Bring your own Scrape.do proxy key for supported Custom Plugin Servers. Lynvo stores the key encrypted and sends it only when you turn proxy use on."
+          title="Supported proxy"
+          description="Use your own Scrape.do credits with supported Custom Plugin Servers. Each server keeps its own encrypted key and proxy setting."
         />
         {proxyServers.length === 0 ? (
           <SettingsRow className="items-start gap-4">
@@ -130,17 +126,24 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
                 key={pluginServer.id}
                 manifest={manifest}
                 pluginServer={pluginServer}
-                onSetProxyKey={handleSetPluginServerProxyKey}
                 onToggleProxy={handleTogglePluginServerProxy}
-                onRefreshBalance={handleRefreshPluginServerProxyBalance}
-                isToggling={
-                  serverOperations[`proxy-toggle:${pluginServer.id}`]
-                    ?.status === "pending"
+                onSetProxyKey={(token) =>
+                  handleSetPluginServerProxyKey(pluginServer.id, token)
                 }
-                isRefreshingBalance={
-                  serverOperations[`proxy-balance:${pluginServer.id}`]
-                    ?.status === "pending"
+                onRefreshCredits={() =>
+                  handleRefreshPluginServerProxyBalance(pluginServer.id)
                 }
+                operationStatus={{
+                  isToggling:
+                    serverOperations[`proxy-toggle:${pluginServer.id}`]
+                      ?.status === "pending",
+                  isProxyKeyBusy:
+                    serverOperations[`proxy-key:${pluginServer.id}`]?.status ===
+                    "pending",
+                  isRefreshingCredits:
+                    serverOperations[`proxy-balance:${pluginServer.id}`]
+                      ?.status === "pending",
+                }}
               />
             ))}
           </SettingsList>
@@ -163,173 +166,204 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
 interface ProxyServerSettingsRowProps {
   readonly manifest: ReturnType<typeof getPluginServerManifestView>
   readonly pluginServer: CustomPluginServer
-  readonly onSetProxyKey: (
-    pluginServerId: string,
-    token: string
-  ) => Promise<boolean>
+  readonly onSetProxyKey: (token: string) => Promise<boolean>
+  readonly onRefreshCredits: () => void
   readonly onToggleProxy: (
     pluginServerId: string,
     currentEnabled: boolean
   ) => void
-  readonly onRefreshBalance: (pluginServerId: string) => void
+  readonly operationStatus: ProxyServerSettingsRowOperationStatus
+}
+
+interface ProxyServerSettingsRowOperationStatus {
+  readonly isProxyKeyBusy: boolean
+  readonly isRefreshingCredits: boolean
   readonly isToggling: boolean
-  readonly isRefreshingBalance: boolean
 }
 
 const ProxyServerSettingsRow = ({
   manifest,
   pluginServer,
   onSetProxyKey,
+  onRefreshCredits,
   onToggleProxy,
-  onRefreshBalance,
-  isToggling,
-  isRefreshingBalance,
+  operationStatus: { isProxyKeyBusy, isRefreshingCredits, isToggling },
 }: ProxyServerSettingsRowProps) => {
   const isDown =
     pluginServer.verificationStatus === PLUGIN_SERVER_VERIFICATION_STATUS.down
   const isProxyEnabled = pluginServer.hasProxyKey && pluginServer.proxyEnabled
-  const proxyUsage = manifest.plugins.flatMap((source) =>
-    source.proxyCreditUsage
-      ? [{ name: source.displayName, usage: source.proxyCreditUsage }]
-      : []
-  )
-  const proxyDescription = getProxyDescription(
-    pluginServer.hasProxyKey,
-    isProxyEnabled
-  )
-  const balanceDescription = getBalanceDescription({
-    hasProxyKey: pluginServer.hasProxyKey,
-    remaining: pluginServer.proxyBalanceRemaining,
-    limit: pluginServer.proxyBalanceLimit,
-  })
+  const credits = readProxyCredits(pluginServer)
+  const proxySwitchId = React.useId()
+  const usedCredits =
+    credits !== undefined ? Math.max(credits.limit - credits.remaining, 0) : 0
+  const usedPercent =
+    credits !== undefined && credits.limit > 0
+      ? Math.min(Math.round((usedCredits / credits.limit) * 100), 100)
+      : 0
 
   return (
-    <div className="flex min-w-0 flex-col gap-5 py-5 first:pt-4 last:pb-4">
-      <div className="flex min-w-0 items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
+    <SettingsRow className="flex-col items-stretch gap-4 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <PluginIcon
             iconUrl={manifest.icon ?? undefined}
             fallback="plugin-server"
-            className="size-10 text-foreground"
+            className="size-10 shrink-0 text-foreground"
           />
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-sm text-foreground">
-                {manifest.name}
-              </span>
-              <Badge variant="outline">Scrape.do</Badge>
-            </div>
-            <span
-              className="truncate font-mono text-xs text-muted-foreground"
-              title={pluginServer.baseUrl}
-            >
-              {pluginServer.baseUrl}
-            </span>
-          </div>
+          <span className="truncate text-sm text-foreground">
+            {manifest.name}
+          </span>
         </div>
-        <ProxyKeyDialog
-          pluginServer={pluginServer}
-          serverName={manifest.name}
-          onSetProxyKey={onSetProxyKey}
-        />
-      </div>
-
-      <div className="flex flex-col gap-4 rounded-2xl bg-muted/40 p-4">
-        <div className="flex min-h-11 items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-sm text-foreground">Use proxy key</p>
-            <p className="text-xs leading-normal text-muted-foreground">
-              {proxyDescription}
-            </p>
-          </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <label
+            htmlFor={proxySwitchId}
+            className="text-xs text-muted-foreground"
+          >
+            Use proxy <span className="sr-only">for {manifest.name}</span>
+          </label>
           <Switch
+            id={proxySwitchId}
             checked={isProxyEnabled}
             disabled={!pluginServer.hasProxyKey || isDown || isToggling}
             onCheckedChange={() =>
               onToggleProxy(pluginServer.id, pluginServer.proxyEnabled)
             }
-            aria-label={`${isProxyEnabled ? "Disable" : "Enable"} proxy for ${manifest.name}`}
             aria-busy={isToggling}
           />
         </div>
-
-        <div className="flex flex-col gap-2 border-t border-border/60 pt-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <span className="text-sm text-foreground">Balance</span>
-            <span className="text-sm tabular-nums text-foreground">
-              {balanceDescription}
-            </span>
-          </div>
-          {pluginServer.proxyBalanceCheckedAt ? (
-            <p className="text-xs text-muted-foreground">
-              Checked{" "}
-              <time
-                dateTime={new Date(
-                  pluginServer.proxyBalanceCheckedAt
-                ).toISOString()}
-              >
-                {formatCheckedAt(pluginServer.proxyBalanceCheckedAt)}
-              </time>
-            </p>
-          ) : null}
-          {pluginServer.hasProxyKey ? (
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 shrink-0 items-center rounded-lg bg-white px-2.5">
+            <ScrapeDoLogo className="h-4 w-auto" />
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {pluginServer.hasProxyKey ? "Key saved" : "No key saved"}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {pluginServer.hasProxyKey && (
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="self-start"
-              disabled={isRefreshingBalance}
-              onClick={() => onRefreshBalance(pluginServer.id)}
-              aria-busy={isRefreshingBalance}
+              size="icon"
+              className="size-8"
+              disabled={isProxyKeyBusy}
+              aria-busy={isProxyKeyBusy}
+              aria-label={`Remove Scrape.do key for ${manifest.name}`}
+              onClick={() => {
+                void onSetProxyKey("")
+              }}
             >
-              <HugeiconsIcon
-                icon={Refresh01Icon}
-                data-icon="inline-start"
-                className={
-                  isRefreshingBalance
-                    ? "animate-spin motion-reduce:animate-none"
-                    : undefined
-                }
-              />
-              Refresh balance
+              <HugeiconsIcon icon={Delete02Icon} />
             </Button>
-          ) : null}
+          )}
+          <ProxyKeyDialog
+            pluginServerName={manifest.name}
+            hasProxyKey={pluginServer.hasProxyKey}
+            onSetProxyKey={onSetProxyKey}
+          />
         </div>
-
-        {proxyUsage.length > 0 ? (
-          <div className="flex flex-col gap-1 border-t border-border/60 pt-4">
-            <p className="text-sm text-foreground">Proxy usage</p>
-            <ul className="flex flex-col gap-1 text-xs leading-normal text-muted-foreground">
-              {proxyUsage.map(({ name, usage }) => (
-                <li key={name}>
-                  <span className="text-foreground">{name}:</span> {usage}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
       </div>
-    </div>
+      {pluginServer.hasProxyKey && (
+        <div className="flex flex-col gap-3">
+          {credits === undefined ? (
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">
+                Monthly credit usage is unavailable.
+              </span>
+              <RefreshCreditsButton
+                pluginServerName={manifest.name}
+                isRefreshing={isRefreshingCredits}
+                onRefresh={onRefreshCredits}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-base font-normal text-foreground">
+                  Monthly credit usage
+                </span>
+                <span className="flex shrink-0 items-center gap-2 text-base font-normal tabular-nums text-foreground">
+                  {BALANCE_FORMATTER.format(usedPercent)}% used
+                  <RefreshCreditsButton
+                    pluginServerName={manifest.name}
+                    isRefreshing={isRefreshingCredits}
+                    onRefresh={onRefreshCredits}
+                  />
+                </span>
+              </div>
+              <Progress
+                value={usedPercent}
+                aria-label={`${manifest.name} monthly credits used`}
+              />
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-muted-foreground">
+                  {BALANCE_FORMATTER.format(usedCredits)} of{" "}
+                  {BALANCE_FORMATTER.format(credits.limit)} credits used
+                </span>
+                {credits.checkedAt !== null && (
+                  <span className="text-sm text-muted-foreground">
+                    Checked{" "}
+                    <time dateTime={new Date(credits.checkedAt).toISOString()}>
+                      {formatCheckedAt(credits.checkedAt)}
+                    </time>
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </SettingsRow>
   )
 }
 
+interface RefreshCreditsButtonProps {
+  readonly pluginServerName: string
+  readonly isRefreshing: boolean
+  readonly onRefresh: () => void
+}
+
+const RefreshCreditsButton = ({
+  pluginServerName,
+  isRefreshing,
+  onRefresh,
+}: RefreshCreditsButtonProps) => (
+  <Button
+    type="button"
+    variant="ghost"
+    size="icon"
+    className="size-8"
+    disabled={isRefreshing}
+    onClick={onRefresh}
+    aria-busy={isRefreshing}
+    aria-label={`Refresh credits for ${pluginServerName}`}
+  >
+    <HugeiconsIcon
+      icon={Refresh01Icon}
+      className={
+        isRefreshing ? "animate-spin motion-reduce:animate-none" : undefined
+      }
+    />
+  </Button>
+)
+
 interface ProxyKeyDialogProps {
-  readonly pluginServer: CustomPluginServer
-  readonly serverName: string
-  readonly onSetProxyKey: (
-    pluginServerId: string,
-    token: string
-  ) => Promise<boolean>
+  readonly pluginServerName: string
+  readonly hasProxyKey: boolean
+  readonly onSetProxyKey: (token: string) => Promise<boolean>
 }
 
 const ProxyKeyDialog = ({
-  pluginServer,
-  serverName,
+  pluginServerName,
+  hasProxyKey,
   onSetProxyKey,
 }: ProxyKeyDialogProps) => {
   const [open, setOpen] = React.useState(false)
   const [token, setToken] = React.useState("")
   const [isSaving, setIsSaving] = React.useState(false)
+  const inputId = React.useId()
 
   const reset = () => {
     setToken("")
@@ -348,20 +382,23 @@ const ProxyKeyDialog = ({
     >
       <DialogTrigger
         render={
-          <Button variant={pluginServer.hasProxyKey ? "outline" : "default"}>
-            <HugeiconsIcon icon={Key01Icon} data-icon="inline-start" />
-            {pluginServer.hasProxyKey ? "Change key" : "Add proxy key"}
+          <Button
+            variant={hasProxyKey ? "ghost" : "outline"}
+            size="sm"
+            aria-label={`${hasProxyKey ? "Change" : "Add"} Scrape.do key for ${pluginServerName}`}
+          >
+            {!hasProxyKey && <HugeiconsIcon icon={Add01Icon} />}
+            {hasProxyKey ? "Change key" : "Add key"}
           </Button>
         }
       />
       <FormDialogContent
-        title={`Proxy key for ${serverName}`}
-        description="Lynvo encrypts this key and sends it only to this Custom Plugin Server during Extraction. Scrape.do charges its proxy credits to your account."
+        title={`Scrape.do proxy key for ${pluginServerName}`}
+        description="Lynvo encrypts this key and sends it only to this server during Extraction."
         media={
-          <HugeiconsIcon
-            icon={Key01Icon}
-            className="mx-auto size-16 text-muted-foreground"
-          />
+          <span className="mx-auto flex h-16 items-center rounded-2xl bg-white px-4">
+            <ScrapeDoLogo className="h-7 w-auto" />
+          </span>
         }
         submitLabel="Save key"
         submitPending={isSaving}
@@ -370,7 +407,7 @@ const ProxyKeyDialog = ({
         onSubmit={async (event) => {
           event.preventDefault()
           setIsSaving(true)
-          const didSave = await onSetProxyKey(pluginServer.id, token)
+          const didSave = await onSetProxyKey(token)
           if (didSave) {
             setOpen(false)
             reset()
@@ -380,7 +417,7 @@ const ProxyKeyDialog = ({
         }}
       >
         <FormDialogInput
-          id={`proxy-key-${pluginServer.id}`}
+          id={inputId}
           label="Scrape.do API token"
           type="password"
           value={token}
@@ -391,26 +428,6 @@ const ProxyKeyDialog = ({
           required
           autoFocus
         />
-        {pluginServer.hasProxyKey ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="self-start text-muted-foreground"
-            disabled={isSaving}
-            onClick={async () => {
-              setIsSaving(true)
-              const didRemove = await onSetProxyKey(pluginServer.id, "")
-              if (didRemove) {
-                setOpen(false)
-                reset()
-              } else {
-                setIsSaving(false)
-              }
-            }}
-          >
-            Remove saved key
-          </Button>
-        ) : null}
       </FormDialogContent>
     </Dialog>
   )

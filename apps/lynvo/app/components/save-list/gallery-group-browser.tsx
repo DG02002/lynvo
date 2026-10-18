@@ -175,10 +175,7 @@ const GalleryGroupItemRow = ({
           rowFallbackIcon
         )
       }
-      title={{
-        value: rowDisplayTitle,
-        isStruckThrough: isDirectLinkExpired,
-      }}
+      title={{ value: rowDisplayTitle }}
       titleExtractionStatus={getExtractionStatusTitleSpec(item, isExtracting)}
       meta={
         <>
@@ -188,10 +185,7 @@ const GalleryGroupItemRow = ({
             itemCount={directLink ? undefined : view.extractedLinks.length}
           />
           {directLink?.expiry !== undefined && (
-            <PlayableExpiryBadge
-              expiresAt={directLink.expiry}
-              expirySource={directLink.expirySource}
-            />
+            <PlayableExpiryBadge expiresAt={directLink.expiry} />
           )}
         </>
       }
@@ -209,14 +203,12 @@ const GalleryGroupItemRow = ({
           item={item}
           actions={actions}
           playableLink={directLink}
-          isPlayableLinkExpired={isDirectLinkExpired}
           showRemove
           isRefreshing={isExtracting}
           triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
         />
       }
       onActivate={handleActivate}
-      disabled={directLink !== undefined && isDirectLinkExpired}
       isOpened={directLink?.opened === true}
       shouldStackIconOnMobile={shouldShowRowArtwork}
     />
