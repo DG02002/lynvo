@@ -36,13 +36,6 @@ const pluginServerRow = {
   api_key_nonce: "api-nonce",
   api_key_algorithm: "AES-256-GCM",
   api_key_version: 1,
-  proxy_token_ciphertext: "proxy-ciphertext",
-  proxy_token_nonce: "proxy-nonce",
-  proxy_token_algorithm: "AES-256-GCM",
-  proxy_token_version: 1,
-  proxy_balance_remaining: 973,
-  proxy_balance_limit: 1_000,
-  proxy_balance_checked_at: 1,
   proxy_enabled: 0,
   credential_status: "ready",
   credential_generation: 1,
@@ -61,6 +54,21 @@ const pluginServerRow = {
 
 const enabledPluginServerRow = { ...pluginServerRow, proxy_enabled: 1 }
 
+// The account-level Scrape.do key the extraction context decrypts.
+const proxyProviderRow = {
+  user_id: "user-1",
+  provider: "scrape-do",
+  token_ciphertext: "proxy-ciphertext",
+  token_nonce: "proxy-nonce",
+  token_algorithm: "AES-256-GCM",
+  token_version: 1,
+  balance_remaining: 973,
+  balance_limit: 1_000,
+  balance_checked_at: 1,
+  created_at: 1,
+  updated_at: 1,
+}
+
 const createDatabase = (row: typeof pluginServerRow) =>
   createFakeD1Database((sql, args) => {
     if (sql.includes("INNER JOIN users u")) {
@@ -73,6 +81,9 @@ const createDatabase = (row: typeof pluginServerRow) =>
           expires_at: Date.now() + 60_000,
         },
       }
+    }
+    if (sql.includes("FROM user_proxy_providers")) {
+      return { row: proxyProviderRow, rows: [proxyProviderRow] }
     }
     if (sql.includes("FROM user_plugin_servers")) {
       const ownedById =

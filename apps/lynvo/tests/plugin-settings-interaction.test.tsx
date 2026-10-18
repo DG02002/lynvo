@@ -189,9 +189,9 @@ describe("Plugin settings interaction", () => {
       togglePluginServer: async () => await success("toggle-server"),
       refreshPluginServer: async () => await success("refresh-server"),
       deletePluginServer: async () => await success("delete-server"),
-      setPluginServerProxyKey: async () => await success("save-proxy-key"),
+      setProxyProviderKey: async () => await success("save-proxy-key"),
       togglePluginServerProxy: async () => await success("toggle-proxy"),
-      refreshPluginServerProxyBalance: async () =>
+      refreshProxyProviderBalance: async () =>
         await success("refresh-proxy-balance"),
     }
     const { result } = renderHook(() =>
@@ -208,9 +208,9 @@ describe("Plugin settings interaction", () => {
       await result.current.handleTogglePluginServer("server", false)
       await result.current.handleRefreshPluginServer("server")
       await result.current.handleDeletePluginServer("server")
-      await result.current.handleSetPluginServerProxyKey("server", "secret")
+      await result.current.setProxyProviderKey("secret")
       await result.current.handleTogglePluginServerProxy("server", true)
-      await result.current.handleRefreshPluginServerProxyBalance("server")
+      await result.current.refreshProxyProviderBalance()
     })
 
     expect(calls).toEqual([

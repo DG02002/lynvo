@@ -32,7 +32,7 @@ import {
   type StorageLedgerPreparation,
 } from "./storage-ledger"
 
-export interface PluginServerRecord {
+interface PluginServerRecord {
   id: string
   userId: string
   baseUrl: string
@@ -41,13 +41,6 @@ export interface PluginServerRecord {
   apiKeyNonce: string | null
   apiKeyAlgorithm: "AES-256-GCM" | null
   apiKeyVersion: number | null
-  proxyTokenCiphertext: string | null
-  proxyTokenNonce: string | null
-  proxyTokenAlgorithm: "AES-256-GCM" | null
-  proxyTokenVersion: number | null
-  proxyBalanceRemaining: number | null
-  proxyBalanceLimit: number | null
-  proxyBalanceCheckedAt: number | null
   proxyEnabled: boolean
   credentialStatus: "pending" | "ready" | "failed"
   credentialGeneration: number | null
@@ -73,13 +66,6 @@ const mapPluginServerRow = (row: PluginServerRow): PluginServerRecord => ({
   apiKeyNonce: row.api_key_nonce,
   apiKeyAlgorithm: row.api_key_algorithm,
   apiKeyVersion: row.api_key_version,
-  proxyTokenCiphertext: row.proxy_token_ciphertext,
-  proxyTokenNonce: row.proxy_token_nonce,
-  proxyTokenAlgorithm: row.proxy_token_algorithm,
-  proxyTokenVersion: row.proxy_token_version,
-  proxyBalanceRemaining: row.proxy_balance_remaining,
-  proxyBalanceLimit: row.proxy_balance_limit,
-  proxyBalanceCheckedAt: row.proxy_balance_checked_at,
   proxyEnabled: row.proxy_enabled === 1,
   credentialStatus: row.credential_status,
   credentialGeneration: row.credential_generation,
@@ -163,10 +149,6 @@ export interface PublicPluginServerRecord {
   enabled: boolean
   priority: number
   verificationStatus: string
-  hasProxyKey: boolean
-  proxyBalanceRemaining: number | null
-  proxyBalanceLimit: number | null
-  proxyBalanceCheckedAt: number | null
   proxyEnabled: boolean
   lastVerifiedAt: number | null
   lastManifestRefreshAt: number | null
@@ -184,10 +166,6 @@ const toPublicPluginServer = (
   enabled: record.enabled,
   priority: record.priority,
   verificationStatus: record.verificationStatus,
-  hasProxyKey: Boolean(record.proxyTokenCiphertext),
-  proxyBalanceRemaining: record.proxyBalanceRemaining,
-  proxyBalanceLimit: record.proxyBalanceLimit,
-  proxyBalanceCheckedAt: record.proxyBalanceCheckedAt,
   proxyEnabled: record.proxyEnabled,
   lastVerifiedAt: record.lastVerifiedAt,
   lastManifestRefreshAt: record.lastManifestRefreshAt,
@@ -212,24 +190,11 @@ export const listPluginServers = async (
   return pluginServers
 }
 
-export const findOwnedPluginServerById = async (
-  database: D1Database,
-  userId: string,
-  pluginServerId: string
-): Promise<PluginServerRecord | null> => {
-  const row = await findOwnedPluginServerRow(database, userId, pluginServerId)
-  return row ? mapPluginServerRow(row) : null
-}
-
 export interface ServicePluginServerRecord extends PublicPluginServerRecord {
   apiKeyCiphertext: string
   apiKeyNonce: string
   apiKeyAlgorithm: "AES-256-GCM"
   apiKeyVersion: number
-  proxyTokenCiphertext: string | null
-  proxyTokenNonce: string | null
-  proxyTokenAlgorithm: "AES-256-GCM" | null
-  proxyTokenVersion: number | null
 }
 
 export const listReadyPluginServersForService = async (
@@ -253,10 +218,6 @@ export const listReadyPluginServersForService = async (
             apiKeyNonce: row.api_key_nonce,
             apiKeyAlgorithm: row.api_key_algorithm,
             apiKeyVersion: row.api_key_version,
-            proxyTokenCiphertext: row.proxy_token_ciphertext,
-            proxyTokenNonce: row.proxy_token_nonce,
-            proxyTokenAlgorithm: row.proxy_token_algorithm,
-            proxyTokenVersion: row.proxy_token_version,
           },
         ]
       : []
@@ -410,13 +371,6 @@ export const beginPluginServerRegistration = async (
     api_key_nonce: null,
     api_key_algorithm: null,
     api_key_version: null,
-    proxy_token_ciphertext: null,
-    proxy_token_nonce: null,
-    proxy_token_algorithm: null,
-    proxy_token_version: null,
-    proxy_balance_remaining: null,
-    proxy_balance_limit: null,
-    proxy_balance_checked_at: null,
     proxy_enabled: 1,
     credential_status: "pending",
     credential_generation: 1,
@@ -829,109 +783,6 @@ export const setPluginServerProxyEnabled = async (
     ...input,
     column: "proxy_enabled",
   })
-
-export interface PluginServerProxyBalanceUpdate {
-  readonly id: string
-  readonly balance: {
-    readonly remaining: number
-    readonly limit: number
-  }
-  readonly now: number
-}
-
-export const updatePluginServerProxyBalance = async (
-  database: D1Database,
-  userId: string,
-  input: PluginServerProxyBalanceUpdate
-): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  const nextRow: PluginServerRow = {
-    ...existing,
-    proxy_balance_remaining: input.balance.remaining,
-    proxy_balance_limit: input.balance.limit,
-    proxy_balance_checked_at: input.now,
-    updated_at: input.now,
-  }
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements({
-    database,
-    preparation,
-    pluginServerId: existing.id,
-    columns: [
-      "proxy_balance_remaining",
-      "proxy_balance_limit",
-      "proxy_balance_checked_at",
-    ],
-    currentRow: existing,
-    nextRow,
-    now: input.now,
-  })
-  const { dataVersion } = await executeOwnedWrite({
-    database,
-    userId,
-    statements: [...preparation.statements, ...mutation],
-  })
-  return { success: true, dataVersion }
-}
-
-export interface PluginServerProxyKeyUpdate {
-  readonly id: string
-  readonly encrypted: {
-    readonly ciphertext: string
-    readonly nonce: string
-    readonly algorithm: "AES-256-GCM"
-    readonly version: number
-  } | null
-  readonly balance: {
-    readonly remaining: number
-    readonly limit: number
-  } | null
-  readonly now: number
-}
-
-export const updatePluginServerProxyKey = async (
-  database: D1Database,
-  userId: string,
-  input: PluginServerProxyKeyUpdate
-): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  // Saving a key must preserve the server's separately controlled proxy switch.
-  const nextRow: PluginServerRow = {
-    ...existing,
-    proxy_token_ciphertext: input.encrypted?.ciphertext ?? null,
-    proxy_token_nonce: input.encrypted?.nonce ?? null,
-    proxy_token_algorithm: input.encrypted?.algorithm ?? null,
-    proxy_token_version: input.encrypted?.version ?? null,
-    proxy_balance_remaining: input.balance?.remaining ?? null,
-    proxy_balance_limit: input.balance?.limit ?? null,
-    proxy_balance_checked_at: input.balance ? input.now : null,
-    updated_at: input.now,
-  }
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements({
-    database,
-    preparation,
-    pluginServerId: existing.id,
-    columns: [
-      "proxy_token_ciphertext",
-      "proxy_token_nonce",
-      "proxy_token_algorithm",
-      "proxy_token_version",
-      "proxy_balance_remaining",
-      "proxy_balance_limit",
-      "proxy_balance_checked_at",
-    ],
-    currentRow: existing,
-    nextRow,
-    now: input.now,
-  })
-  const { dataVersion } = await executeOwnedWrite({
-    database,
-    userId,
-    statements: [...preparation.statements, ...mutation],
-  })
-  return { success: true, dataVersion }
-}
 
 export const deletePluginServerById = async (
   database: D1Database,

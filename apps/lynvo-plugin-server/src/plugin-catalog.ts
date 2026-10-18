@@ -177,7 +177,6 @@ export const createLynvoPluginServerManifest = (
     protocolVersion: "1.0",
     pluginServerId: PLUGIN_SERVER_ID,
     displayName: displayName?.trim() || PLUGIN_SERVER_NAME,
-    hasIcon: false,
     homepage: "https://lynvo.dg02002.workers.dev",
     auth: { type: "bearer" },
     usage: { endpoint: "/usage" },

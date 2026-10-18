@@ -30,10 +30,6 @@ const CustomPluginServerSchema = Schema.Struct({
   enabled: Schema.Boolean,
   priority: Schema.Number,
   verificationStatus: Schema.String,
-  hasProxyKey: Schema.Boolean,
-  proxyBalanceRemaining: Schema.optional(Schema.NullOr(Schema.Number)),
-  proxyBalanceLimit: Schema.optional(Schema.NullOr(Schema.Number)),
-  proxyBalanceCheckedAt: Schema.optional(Schema.NullOr(Schema.Number)),
   proxyEnabled: Schema.Boolean,
   lastVerifiedAt: Schema.optional(Schema.NullOr(Schema.Number)),
   lastManifestRefreshAt: Schema.optional(Schema.NullOr(Schema.Number)),
@@ -67,6 +63,14 @@ export const RefreshProxyBalanceResponseSchema = Schema.Struct({
   limit: Schema.Number,
   checkedAt: Schema.Number,
   dataVersion: Schema.Number,
+})
+
+export const ProxyProviderStateSchema = Schema.Struct({
+  provider: Schema.Literal("scrape-do"),
+  hasKey: Schema.Boolean,
+  balanceRemaining: Schema.NullOr(Schema.Number),
+  balanceLimit: Schema.NullOr(Schema.Number),
+  balanceCheckedAt: Schema.NullOr(Schema.Number),
 })
 
 export const CreatePluginDomainPayloadSchema = Schema.Struct({
@@ -199,6 +203,7 @@ export type SetProxyKeyPayload = typeof SetProxyKeyPayloadSchema.Type
 export type SetProxyKeyResponse = typeof SetProxyKeyResponseSchema.Type
 export type RefreshProxyBalanceResponse =
   typeof RefreshProxyBalanceResponseSchema.Type
+export type ProxyProviderState = typeof ProxyProviderStateSchema.Type
 export type CreatePluginDomainPayload =
   typeof CreatePluginDomainPayloadSchema.Type
 export type SetCredentialPayload = typeof SetCredentialPayloadSchema.Type

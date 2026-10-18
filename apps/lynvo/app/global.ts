@@ -38,7 +38,6 @@ declare global {
   interface UsageReadCustomGroup {
     key: string
     serverName: string
-    iconUrl?: string
     remainingPercent: number
     resetsAt?: string
     entries: readonly UsageReadEntry[]

@@ -9,7 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { PluginIcon } from "~/components/plugin-icon"
+import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
@@ -66,10 +66,10 @@ const CustomPluginServerRow = ({
     <div className="flex flex-col">
       <SettingsRow className="gap-4">
         <div className="-ml-1 flex min-w-0 items-center gap-3">
-          <PluginIcon
-            iconUrl={manifest.icon ?? undefined}
-            fallback="plugin-server"
-            className="size-10 text-foreground"
+          <PluginServerAvatar
+            serverId={pluginServer.id}
+            name={manifest.name}
+            className="size-10"
           />
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -165,11 +165,7 @@ const CustomPluginServerRow = ({
             return (
               <SettingsRow key={source.id} className="gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <PluginIcon
-                    iconUrl={source.iconUrl}
-                    fallback="source"
-                    className="size-10"
-                  />
+                  <PluginIcon iconUrl={source.iconUrl} className="size-10" />
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-sm text-foreground">
                       {source.displayName}

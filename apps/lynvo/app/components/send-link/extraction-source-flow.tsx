@@ -1,7 +1,7 @@
 import { Route01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
-import { PluginIcon } from "~/components/plugin-icon"
+import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
 import type { MetaData } from "~/features/links/types"
 
 export const ExtractionSourceFlow = ({
@@ -22,7 +22,6 @@ export const ExtractionSourceFlow = ({
       >
         <PluginIcon
           iconUrl={meta.sourceIconUrl || meta.pluginIcon}
-          fallback={meta.sourceName ? "source" : "plugin-server"}
           className="size-4 shrink-0"
         />
         <span className="shimmer min-w-0 text-pretty font-medium text-foreground">
@@ -46,7 +45,15 @@ export const ExtractionSourceFlow = ({
     >
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] items-center gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <PluginIcon fallback="plugin-server" className="size-4 shrink-0" />
+          {meta.pluginServerId ? (
+            <PluginServerAvatar
+              serverId={meta.pluginServerId}
+              name={meta.pluginName || "Plugin Server"}
+              className="size-5"
+            />
+          ) : (
+            <PluginIcon className="size-4 shrink-0" />
+          )}
           <span className="flex min-w-0 flex-col">
             <span className="shimmer text-[10px] leading-none text-muted-foreground">
               Plugin Server
@@ -75,7 +82,6 @@ export const ExtractionSourceFlow = ({
           </span>
           <PluginIcon
             iconUrl={meta.sourceIconUrl || meta.pluginIcon}
-            fallback="source"
             className="size-4 shrink-0"
           />
         </div>
@@ -95,7 +101,6 @@ export const ExtractionSourceFlow = ({
               <HugeiconsIcon icon={Route01Icon} className="size-4 shrink-0" />
               <PluginIcon
                 iconUrl={meta.routeSourceIconUrl}
-                fallback="source"
                 className="size-4 shrink-0"
               />
               <span className="shimmer min-w-0 font-medium text-foreground">

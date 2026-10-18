@@ -4,13 +4,12 @@ import { describe, expect, it } from "vitest"
 import { getPluginServerManifestView } from "~/features/site/settings/plugin-server-manifest"
 
 describe("getPluginServerManifestView", () => {
-  it("exposes Custom Plugin Server icons from protocol manifests", () => {
+  it("ignores manifest-level icon fields and reads the display identity", () => {
     const view = getPluginServerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
         pluginServerId: "dev.example.plugin-server",
         displayName: "Example Plugin Server",
-        iconUrl: "https://plugin-server.example/icon.webp",
         auth: { type: "bearer" },
         usage: { endpoint: "/usage" },
         matchers: [{ hosts: ["example.com"], pathPatterns: ["/**"] }],
@@ -32,7 +31,7 @@ describe("getPluginServerManifestView", () => {
     )
 
     expect(view.name).toBe("Example Plugin Server")
-    expect(view.icon).toBe("https://plugin-server.example/icon.webp")
+    expect(view).not.toHaveProperty("icon")
     expect(view.hosts).toBe("example.com")
   })
 
@@ -61,9 +60,9 @@ describe("getPluginServerManifestView", () => {
 
     expect(view).toEqual({
       name: "Unknown",
-      icon: null,
       hosts: "None",
       plugins: [],
+      proxyProvider: undefined,
     })
   })
 

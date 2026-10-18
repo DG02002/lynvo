@@ -6,6 +6,7 @@ import {
   PluginServerListSchema,
   PluginServerUsageListSchema,
   PlayerPreferencesSchema,
+  ProxyProviderStateSchema,
   RefreshProxyBalanceResponseSchema,
   RemotePollResponseSchema,
   SetProxyKeyResponseSchema,
@@ -22,6 +23,7 @@ import {
   type PluginDomainList,
   type PluginServerList,
   type PluginServerUsageList,
+  type ProxyProviderState,
   type RefreshProxyBalanceResponse,
   type RemotePollResponse,
   type RemotePollQuery,
@@ -299,29 +301,36 @@ export const client = {
         "POST",
         { schema: VersionedMutationBodySchema }
       ),
-    setProxyKey: (
-      input: PluginServerParams & {
-        readonly payload: SetProxyKeyPayload
-      }
-    ): Promise<SetProxyKeyResponse> =>
-      mutation<SetProxyKeyResponse, SetProxyKeyPayload>(
-        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy/key`,
-        "POST",
-        { payload: input.payload, schema: SetProxyKeyResponseSchema }
-      ),
-    refreshProxyBalance: (
-      input: PluginServerParams
-    ): Promise<RefreshProxyBalanceResponse> =>
-      mutation<RefreshProxyBalanceResponse>(
-        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy/balance/refresh`,
-        "POST",
-        { schema: RefreshProxyBalanceResponseSchema }
-      ),
     delete: (input: PluginServerParams): Promise<VersionedMutationBody> =>
       mutation<VersionedMutationBody>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}`,
         "DELETE",
         { schema: VersionedMutationBodySchema }
+      ),
+  },
+  proxy: {
+    state: (): Promise<ProxyProviderState> =>
+      requestJson<ProxyProviderState>(
+        "/api/proxy",
+        {},
+        ProxyProviderStateSchema
+      ),
+    setKey: (input: {
+      readonly payload: SetProxyKeyPayload
+    }): Promise<SetProxyKeyResponse> =>
+      mutation<SetProxyKeyResponse, SetProxyKeyPayload>(
+        "/api/proxy/key",
+        "POST",
+        {
+          payload: input.payload,
+          schema: SetProxyKeyResponseSchema,
+        }
+      ),
+    refreshBalance: (): Promise<RefreshProxyBalanceResponse> =>
+      mutation<RefreshProxyBalanceResponse>(
+        "/api/proxy/balance/refresh",
+        "POST",
+        { schema: RefreshProxyBalanceResponseSchema }
       ),
   },
   pluginDomains: {

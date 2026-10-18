@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   GitHubMark,
-  ScrapeDoLogo,
+  ScrapeDoMark,
   TelegramMark,
 } from "~/components/brand-marks"
 
@@ -11,8 +11,8 @@ describe("brand marks", () => {
   it("keeps SVG definition ids unique when marks repeat on a page", () => {
     const { container } = render(
       <>
-        <ScrapeDoLogo />
-        <ScrapeDoLogo />
+        <ScrapeDoMark />
+        <ScrapeDoMark />
         <TelegramMark />
         <TelegramMark />
         <GitHubMark />

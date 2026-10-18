@@ -27,7 +27,6 @@ export function AddPluginDomainAlertDialog({
       media={
         <PluginIcon
           iconUrl={suggestion?.pluginIconUrl}
-          fallback="source"
           className="mx-auto size-16"
         />
       }

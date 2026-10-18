@@ -347,11 +347,7 @@ export default function Pricing() {
                     <TableCell className="py-5 pr-4 pl-0 font-medium whitespace-normal sm:pr-6">
                       <span className="flex min-w-0 items-center gap-2.5">
                         {icon && (
-                          <PluginIcon
-                            icon={icon}
-                            fallback="source"
-                            className="size-6 shrink-0"
-                          />
+                          <PluginIcon icon={icon} className="size-6 shrink-0" />
                         )}
                         <span className="min-w-0 text-pretty">{feature}</span>
                       </span>

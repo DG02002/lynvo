@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest"
 
 import { DOCS_SEED_PLUGIN_SERVER_FIXTURES } from "../scripts/docs-seed-fixtures.mjs"
 import { SeedApiClient, seedDocsSettings } from "../scripts/seed"
-import { DOCS_SEED_PROXY_FIXTURES } from "../shared/docs-seed-constants"
+import {
+  DOCS_SEED_PROXY_BALANCE,
+  DOCS_SEED_PROXY_KEY,
+} from "../shared/docs-seed-constants"
 
 interface MockPluginServer {
   readonly id: string
@@ -12,10 +15,7 @@ interface MockPluginServer {
   readonly manifest: string
   enabled: boolean
   verificationStatus: string
-  hasProxyKey: boolean
   proxyEnabled: boolean
-  proxyBalanceRemaining: number | null
-  proxyBalanceLimit: number | null
 }
 
 interface ApiCall {
@@ -46,6 +46,13 @@ const createDocsSeedSettingsApi = () => {
   const servers: MockPluginServer[] = []
   const domains: { readonly id: string }[] = []
   const calls: ApiCall[] = []
+  let proxyProviderState = {
+    provider: "scrape-do" as const,
+    hasKey: false,
+    balanceRemaining: null,
+    balanceLimit: null,
+    balanceCheckedAt: null,
+  }
   const manifest = JSON.stringify({
     ...validPluginServerManifestFixture,
     pluginServerId: "dev.lynvo.plugin-server",
@@ -135,10 +142,7 @@ const createDocsSeedSettingsApi = () => {
           manifest,
           enabled: true,
           verificationStatus: "verified",
-          hasProxyKey: false,
           proxyEnabled: false,
-          proxyBalanceRemaining: null,
-          proxyBalanceLimit: null,
         })
         return Response.json({})
       }
@@ -169,6 +173,32 @@ const createDocsSeedSettingsApi = () => {
       ) {
         return Response.json({})
       }
+      if (method === "GET" && target.pathname === "/api/proxy") {
+        return Response.json(proxyProviderState)
+      }
+      if (method === "POST" && target.pathname === "/api/proxy/key") {
+        const token = body?.token ?? ""
+        if (token === "") {
+          proxyProviderState = {
+            ...proxyProviderState,
+            hasKey: false,
+            balanceRemaining: null,
+            balanceLimit: null,
+            balanceCheckedAt: null,
+          }
+        } else if (token === DOCS_SEED_PROXY_KEY) {
+          proxyProviderState = {
+            ...proxyProviderState,
+            hasKey: true,
+            balanceRemaining: DOCS_SEED_PROXY_BALANCE.remaining,
+            balanceLimit: DOCS_SEED_PROXY_BALANCE.limit,
+            balanceCheckedAt: 1,
+          }
+        } else {
+          throw new Error("The docs seed sent an unknown proxy key.")
+        }
+        return Response.json({})
+      }
 
       const serverId = decodeURIComponent(target.pathname.split("/")[3] ?? "")
       const server = servers.find((entry) => entry.id === serverId)
@@ -189,25 +219,6 @@ const createDocsSeedSettingsApi = () => {
         server.enabled = body?.enabled === true
         return Response.json({})
       }
-      if (method === "POST" && target.pathname.endsWith("/proxy/key")) {
-        const token = body?.token ?? ""
-        if (token === "") {
-          server.hasProxyKey = false
-          server.proxyBalanceRemaining = null
-          server.proxyBalanceLimit = null
-        } else {
-          const proxyFixture = Object.values(DOCS_SEED_PROXY_FIXTURES).find(
-            (fixture) => fixture.key === token
-          )
-          if (!proxyFixture) {
-            throw new Error("The docs seed sent an unknown proxy key.")
-          }
-          server.hasProxyKey = true
-          server.proxyBalanceRemaining = proxyFixture.balance.remaining
-          server.proxyBalanceLimit = proxyFixture.balance.limit
-        }
-        return Response.json({})
-      }
 
       throw new Error(
         `Unexpected docs settings API request: ${method} ${target.pathname}`
@@ -215,12 +226,18 @@ const createDocsSeedSettingsApi = () => {
     }
   )
 
-  return { api, calls, servers }
+  return {
+    api,
+    calls,
+    servers,
+    readProxyProviderState: () => proxyProviderState,
+  }
 }
 
 describe("docs seed settings fixtures", () => {
-  it("registers and converges every server and proxy state across reseeds", async () => {
-    const { api, calls, servers } = createDocsSeedSettingsApi()
+  it("registers and converges every server and the account proxy state across reseeds", async () => {
+    const { api, calls, servers, readProxyProviderState } =
+      createDocsSeedSettingsApi()
     const readPluginServerKey = async () => "docs-test-plugin-server-key"
     const seedTime = Date.parse("2026-10-18T00:00:00.000Z")
 
@@ -231,52 +248,42 @@ describe("docs seed settings fixtures", () => {
       servers.map((server) => ({
         baseUrl: server.baseUrl,
         enabled: server.enabled,
-        hasProxyKey: server.hasProxyKey,
         proxyEnabled: server.proxyEnabled,
-        proxyBalanceRemaining: server.proxyBalanceRemaining,
-        proxyBalanceLimit: server.proxyBalanceLimit,
         verificationStatus: server.verificationStatus,
       }))
     ).toEqual([
       {
         baseUrl: "http://localhost:8788",
         enabled: true,
-        hasProxyKey: true,
         proxyEnabled: true,
-        proxyBalanceRemaining: 4_210,
-        proxyBalanceLimit: 5_000,
         verificationStatus: "verified",
       },
       {
         baseUrl: "http://localhost:8789",
         enabled: true,
-        hasProxyKey: true,
         proxyEnabled: false,
-        proxyBalanceRemaining: 137,
-        proxyBalanceLimit: 5_000,
         verificationStatus: "verified",
       },
       {
         baseUrl: "http://localhost:8790",
         enabled: false,
-        hasProxyKey: false,
         proxyEnabled: false,
-        proxyBalanceRemaining: null,
-        proxyBalanceLimit: null,
         verificationStatus: "verified",
       },
     ])
+    expect(readProxyProviderState()).toMatchObject({
+      provider: "scrape-do",
+      hasKey: true,
+      balanceRemaining: DOCS_SEED_PROXY_BALANCE.remaining,
+      balanceLimit: DOCS_SEED_PROXY_BALANCE.limit,
+    })
 
     const archive = servers.find((server) => server.baseUrl.endsWith(":8790"))
     if (!archive) {
       throw new Error("The archive fixture server was not registered.")
     }
     archive.verificationStatus = "stale"
-    archive.hasProxyKey = true
     archive.proxyEnabled = true
-    archive.proxyBalanceRemaining =
-      DOCS_SEED_PROXY_FIXTURES.healthy.balance.remaining
-    archive.proxyBalanceLimit = DOCS_SEED_PROXY_FIXTURES.healthy.balance.limit
 
     const reseedCallStart = calls.length
     await seedDocsSettings(api, seedTime, { readPluginServerKey })
@@ -287,26 +294,22 @@ describe("docs seed settings fixtures", () => {
         (call) => call.method === "POST" && call.path.endsWith("/refresh")
       )
     ).toHaveLength(3)
+    // The account key is already saved, so the reseed only converges switches.
+    expect(reseedCalls.some((call) => call.path === "/api/proxy/key")).toBe(
+      false
+    )
     const archiveProxyToggleIndex = reseedCalls.findIndex(
       (call) =>
         call.path === "/api/plugin-servers/8790/proxy/toggle" &&
         call.body?.enabled === false
     )
-    const archiveKeyRemovalIndex = reseedCalls.findIndex(
-      (call) =>
-        call.path === "/api/plugin-servers/8790/proxy/key" &&
-        call.body?.token === ""
-    )
     expect(archiveProxyToggleIndex).toBeGreaterThanOrEqual(0)
-    expect(archiveKeyRemovalIndex).toBeGreaterThan(archiveProxyToggleIndex)
     expect(archive).toMatchObject({
       enabled: false,
       verificationStatus: "verified",
-      hasProxyKey: false,
       proxyEnabled: false,
-      proxyBalanceRemaining: null,
-      proxyBalanceLimit: null,
     })
+    expect(readProxyProviderState().hasKey).toBe(true)
     expect(
       DOCS_SEED_PLUGIN_SERVER_FIXTURES.map((fixture) => fixture.url)
     ).toEqual(servers.map((server) => server.baseUrl))

@@ -5,9 +5,6 @@ import {
   CreatePluginServerPayloadSchema,
   PluginServerListSchema,
   PluginServerUsageListSchema,
-  RefreshProxyBalanceResponseSchema,
-  SetProxyKeyPayloadSchema,
-  SetProxyKeyResponseSchema,
   TogglePluginServerPayloadSchema,
 } from "../../../api-contracts"
 import {
@@ -18,17 +15,7 @@ import {
   BackendApiError,
 } from "../../errors"
 import { WebAuth, CsrfMiddleware } from "../middleware"
-import {
-  VersionedMutationResponseSchema,
-  withDataVersionResponseSchema,
-} from "../versioned-response"
-
-const SetProxyKeyResponseWithHeadersSchema = withDataVersionResponseSchema(
-  SetProxyKeyResponseSchema
-)
-
-const RefreshProxyBalanceResponseWithHeadersSchema =
-  withDataVersionResponseSchema(RefreshProxyBalanceResponseSchema)
+import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
@@ -79,36 +66,6 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         CsrfApiError,
       ],
     }),
-    HttpApiEndpoint.post("setProxyKey", "/:pluginServerId/proxy/key", {
-      params: {
-        pluginServerId: Schema.String,
-      },
-      payload: SetProxyKeyPayloadSchema,
-      success: SetProxyKeyResponseWithHeadersSchema,
-      error: [
-        PluginServerRegistrationApiError,
-        ValidationApiError,
-        UnauthorizedApiError,
-        BackendApiError,
-        CsrfApiError,
-      ],
-    }),
-    HttpApiEndpoint.post(
-      "refreshProxyBalance",
-      "/:pluginServerId/proxy/balance/refresh",
-      {
-        params: {
-          pluginServerId: Schema.String,
-        },
-        success: RefreshProxyBalanceResponseWithHeadersSchema,
-        error: [
-          PluginServerRegistrationApiError,
-          UnauthorizedApiError,
-          BackendApiError,
-          CsrfApiError,
-        ],
-      }
-    ),
     HttpApiEndpoint.delete("delete", "/:pluginServerId", {
       params: {
         pluginServerId: Schema.String,

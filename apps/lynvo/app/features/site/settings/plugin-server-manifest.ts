@@ -9,7 +9,6 @@ import type { SupportedProxyProvider } from "~/lib/plugin-server-proxy"
 
 export interface PluginServerManifestView {
   name: string
-  icon: string | null
   hosts: string
   proxyProvider?: SupportedProxyProvider
   plugins: PluginMetadata[]
@@ -27,7 +26,7 @@ const parsePluginServerManifestForDisplay = (
   }
 }
 
-const resolveCustomPluginServerIconUrl = (
+const resolvePluginIconUrl = (
   iconUrl: string | undefined,
   requestOrigin?: string
 ): string | undefined => {
@@ -60,14 +59,11 @@ export const getPluginServerManifestView = (
 
   return {
     name: manifest?.displayName || manifest?.pluginServerId || "Unknown",
-    icon:
-      resolveCustomPluginServerIconUrl(manifest?.iconUrl, requestOrigin) ??
-      null,
     hosts,
     proxyProvider: extension?.proxyProvider,
     plugins: (extension?.plugins ?? []).map((source) =>
       Object.assign({}, source, {
-        iconUrl: resolveCustomPluginServerIconUrl(
+        iconUrl: resolvePluginIconUrl(
           source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),
           requestOrigin
         ),

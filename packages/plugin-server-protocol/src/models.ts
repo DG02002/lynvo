@@ -17,8 +17,6 @@ export interface PluginServerManifest {
   readonly protocolVersion: string
   readonly pluginServerId: string
   readonly displayName: string
-  readonly hasIcon?: boolean
-  readonly iconUrl?: string
   readonly homepage?: string
   readonly auth: {
     readonly type: "bearer"
@@ -193,7 +191,6 @@ export interface ExtractSuccessResponse {
   readonly plugin: {
     readonly pluginServerId: string
     readonly displayName: string
-    readonly iconUrl?: string
     readonly pluginId?: string
     readonly pluginName?: string
     readonly pluginIconUrl?: string

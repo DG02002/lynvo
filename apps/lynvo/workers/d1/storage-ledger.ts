@@ -10,6 +10,7 @@ import {
   PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,
   PLUGIN_SERVER_COLUMNS,
+  PROXY_PROVIDER_COLUMNS,
   USER_COLUMNS,
   profileStorageDocument,
   type LinkRow,
@@ -17,6 +18,7 @@ import {
   type PluginDomainRow,
   type PluginServerRow,
   type ProfileUserRow,
+  type ProxyProviderRow,
 } from "./rows"
 import { SAVED_LINK_COLUMNS } from "./saved-link-storage"
 
@@ -114,40 +116,55 @@ export const calculateAppOwnedStorageUsage = async (
   database: D1Database,
   userId: string
 ): Promise<AppOwnedStorageUsage> => {
-  const [userRow, links, pluginServers, pluginDomains, pluginCredentials] =
-    await Promise.all([
-      database
-        .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
-        .bind(userId)
-        .first<ProfileUserRow>(),
-      readBoundedRows<LinkRow>({
-        database,
-        table: "links",
-        columns: SAVED_LINK_COLUMNS,
-        userId,
-      }),
-      readBoundedRows<PluginServerRow>({
-        database,
-        table: "user_plugin_servers",
-        columns: PLUGIN_SERVER_COLUMNS,
-        userId,
-      }),
-      readBoundedRows<PluginDomainRow>({
-        database,
-        table: "user_plugin_domains",
-        columns: PLUGIN_DOMAIN_COLUMNS,
-        userId,
-      }),
-      readBoundedRows<PluginCredentialRow>({
-        database,
-        table: "user_plugin_credentials",
-        columns: PLUGIN_CREDENTIAL_COLUMNS,
-        userId,
-      }),
-    ])
+  const [
+    userRow,
+    links,
+    pluginServers,
+    pluginDomains,
+    pluginCredentials,
+    proxyProviders,
+  ] = await Promise.all([
+    database
+      .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
+      .bind(userId)
+      .first<ProfileUserRow>(),
+    readBoundedRows<LinkRow>({
+      database,
+      table: "links",
+      columns: SAVED_LINK_COLUMNS,
+      userId,
+    }),
+    readBoundedRows<PluginServerRow>({
+      database,
+      table: "user_plugin_servers",
+      columns: PLUGIN_SERVER_COLUMNS,
+      userId,
+    }),
+    readBoundedRows<PluginDomainRow>({
+      database,
+      table: "user_plugin_domains",
+      columns: PLUGIN_DOMAIN_COLUMNS,
+      userId,
+    }),
+    readBoundedRows<PluginCredentialRow>({
+      database,
+      table: "user_plugin_credentials",
+      columns: PLUGIN_CREDENTIAL_COLUMNS,
+      userId,
+    }),
+    readBoundedRows<ProxyProviderRow>({
+      database,
+      table: "user_proxy_providers",
+      columns: PROXY_PROVIDER_COLUMNS,
+      userId,
+    }),
+  ])
   const profileBytes = userRow ? byteLength(profileStorageDocument(userRow)) : 0
   const linkBytes = sumDocumentBytes(links)
-  const pluginServerBytes = sumDocumentBytes(pluginServers)
+  // Provider proxy keys are plugin-server storage, so they ride the same
+  // ledger domain as the server rows.
+  const pluginServerBytes =
+    sumDocumentBytes(pluginServers) + sumDocumentBytes(proxyProviders)
   const pluginDomainBytes = sumDocumentBytes(pluginDomains)
   const pluginCredentialBytes = sumDocumentBytes(pluginCredentials)
   return {

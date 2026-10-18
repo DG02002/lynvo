@@ -74,22 +74,6 @@ const validateParsedPluginServerManifestContract = (
     )
   }
 
-  if (manifest.iconUrl && !isSupportedIconUrl(manifest.iconUrl)) {
-    issues.push(
-      issue(
-        "iconUrl",
-        "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin Server icons."
-      )
-    )
-  }
-  if (manifest.hasIcon === true && !manifest.iconUrl) {
-    issues.push(issue("iconUrl", "Provide iconUrl when hasIcon is true."))
-  }
-  if (manifest.hasIcon === false && manifest.iconUrl) {
-    issues.push(
-      issue("hasIcon", "Set hasIcon to true when iconUrl is present.")
-    )
-  }
   if (!extension) {
     return { ok: issues.length === 0, issues }
   }
@@ -199,15 +183,6 @@ const validateParsedExtractSuccessContract = (
   result: ExtractSuccessResponse
 ): ContractValidationResult => {
   const issues: ContractIssue[] = []
-
-  if (result.plugin.iconUrl && !isSupportedIconUrl(result.plugin.iconUrl)) {
-    issues.push(
-      issue(
-        "plugin.iconUrl",
-        "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin Server icons."
-      )
-    )
-  }
 
   if (
     result.plugin.pluginIconUrl &&

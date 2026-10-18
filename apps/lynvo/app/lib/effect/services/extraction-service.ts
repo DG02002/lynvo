@@ -71,6 +71,7 @@ export class ExtractionService extends Context.Service<
             pluginId: options.pluginId,
             kind: options.kind ?? "source",
             inlineBasicAuth: options.inlineBasicAuth ?? routeInput.basicAuth,
+            proxyToken: context.proxyToken,
             freezeUsage: options.freezeUsage ?? false,
           }
           const customResult = yield* extractWithCustomPluginServer(

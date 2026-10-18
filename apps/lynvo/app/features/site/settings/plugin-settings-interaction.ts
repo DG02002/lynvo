@@ -6,6 +6,7 @@ import {
 
 import { clearDismissedPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import type { ProxyProviderState } from "~/lib/api-contracts"
 import { client } from "~/lib/api/client"
 import { normalizePluginDomain } from "~/lib/plugin-domain"
 import { isProxyTokenRemoval } from "~/lib/plugin-server-proxy"
@@ -35,10 +36,6 @@ export interface CustomPluginServer {
   manifest: string
   enabled: boolean
   verificationStatus: string
-  hasProxyKey: boolean
-  proxyBalanceRemaining?: number | null
-  proxyBalanceLimit?: number | null
-  proxyBalanceCheckedAt?: number | null
   proxyEnabled: boolean
   lastManifestRefreshAt?: number | null
 }
@@ -82,17 +79,14 @@ export interface PluginSettingsCommands {
   readonly refreshPluginServer: (
     pluginServerId: string
   ) => Promise<PluginSettingsMutationResult>
-  readonly setPluginServerProxyKey: (
-    pluginServerId: string,
+  readonly setProxyProviderKey: (
     token: string
   ) => Promise<PluginSettingsMutationResult>
   readonly togglePluginServerProxy: (
     pluginServerId: string,
     enabled: boolean
   ) => Promise<PluginSettingsMutationResult>
-  readonly refreshPluginServerProxyBalance: (
-    pluginServerId: string
-  ) => Promise<PluginSettingsMutationResult>
+  readonly refreshProxyProviderBalance: () => Promise<PluginSettingsMutationResult>
 }
 
 export interface PluginSettingsOperation {
@@ -109,6 +103,116 @@ export interface UsePluginSettingsInteractionOptions {
 const EMPTY_PLUGIN_SERVERS: readonly CustomPluginServer[] = []
 const EMPTY_DOMAINS: readonly PluginDomain[] = []
 const MANIFEST_FRESHNESS_MS = 15 * 60 * 1000
+const NO_PROXY_PROVIDER_STATE: ProxyProviderState = {
+  provider: "scrape-do",
+  hasKey: false,
+  balanceRemaining: null,
+  balanceLimit: null,
+  balanceCheckedAt: null,
+}
+
+interface ProxyProviderResource {
+  readonly state: ProxyProviderState
+  readonly isLoading: boolean
+  readonly reload: () => Promise<void>
+}
+
+const useProxyProviderResource = (loadData: boolean): ProxyProviderResource => {
+  const {
+    data: state = NO_PROXY_PROVIDER_STATE,
+    isLoading,
+    reload,
+  } = useAsyncResource(
+    () =>
+      loadData
+        ? client.proxy.state()
+        : Promise.resolve(NO_PROXY_PROVIDER_STATE),
+    [loadData]
+  )
+  return { state, isLoading, reload }
+}
+
+interface StaleManifestRefreshInput {
+  readonly loadData: boolean
+  readonly now: () => number
+  readonly pluginServers: readonly CustomPluginServer[]
+  readonly refreshPluginServer: (
+    id: string,
+    feedback?: boolean
+  ) => Promise<void>
+}
+
+const useStaleManifestRefresh = ({
+  loadData,
+  now,
+  pluginServers,
+  refreshPluginServer,
+}: StaleManifestRefreshInput): void => {
+  React.useEffect(() => {
+    if (!loadData) {
+      return
+    }
+    for (const server of pluginServers) {
+      const stale =
+        !server.lastManifestRefreshAt ||
+        now() - server.lastManifestRefreshAt >= MANIFEST_FRESHNESS_MS
+      if (stale || server.verificationStatus !== "verified") {
+        void refreshPluginServer(server.id, false)
+      }
+    }
+  }, [loadData, now, pluginServers, refreshPluginServer])
+}
+
+interface ProxyProviderCommandsInput {
+  readonly commands: PluginSettingsCommands
+  readonly reloadProxyProvider: () => Promise<void>
+  readonly run: ReturnType<typeof usePluginSettingsOperations>["run"]
+}
+
+const useProxyProviderCommands = ({
+  commands,
+  reloadProxyProvider,
+  run,
+}: ProxyProviderCommandsInput) => {
+  const setProxyProviderKey = React.useCallback(
+    async (token: string) => {
+      const isRemoving = isProxyTokenRemoval(token)
+      const didComplete = await run({
+        key: "proxy-key:scrape-do",
+        operation: () => commands.setProxyProviderKey(token),
+        messages: {
+          success: isRemoving ? "Proxy key removed" : "Proxy key saved",
+          failure: isRemoving
+            ? "The proxy key couldn’t be removed. Try again."
+            : "The proxy key couldn’t be saved. Try again.",
+        },
+        target: "server",
+      })
+      if (didComplete) {
+        await reloadProxyProvider()
+      }
+      return didComplete
+    },
+    [commands, reloadProxyProvider, run]
+  )
+
+  const refreshProxyProviderBalance = React.useCallback(async () => {
+    const didComplete = await run({
+      key: "proxy-balance:scrape-do",
+      operation: () => commands.refreshProxyProviderBalance(),
+      messages: {
+        success: "Proxy balance refreshed",
+        failure: "The proxy balance couldn’t be refreshed. Try again.",
+      },
+      target: "server",
+    })
+    if (didComplete) {
+      await reloadProxyProvider()
+    }
+  }, [commands, reloadProxyProvider, run])
+
+  return { setProxyProviderKey, refreshProxyProviderBalance }
+}
 
 const defaultCommands: PluginSettingsCommands = {
   createDomain: async (input) =>
@@ -135,20 +239,14 @@ const defaultCommands: PluginSettingsCommands = {
     }),
   refreshPluginServer: async (pluginServerId) =>
     await client.pluginServers.refresh({ params: { pluginServerId } }),
-  setPluginServerProxyKey: async (pluginServerId, token) =>
-    await client.pluginServers.setProxyKey({
-      params: { pluginServerId },
-      payload: { token },
-    }),
+  setProxyProviderKey: async (token) =>
+    await client.proxy.setKey({ payload: { token } }),
   togglePluginServerProxy: async (pluginServerId, enabled) =>
     await client.pluginServers.toggleProxy({
       params: { pluginServerId },
       payload: { enabled },
     }),
-  refreshPluginServerProxyBalance: async (pluginServerId) =>
-    await client.pluginServers.refreshProxyBalance({
-      params: { pluginServerId },
-    }),
+  refreshProxyProviderBalance: async () => await client.proxy.refreshBalance(),
 }
 
 export const usePluginSettingsInteraction = ({
@@ -175,6 +273,11 @@ export const usePluginSettingsInteraction = ({
       loadData ? client.pluginDomains.list() : Promise.resolve(EMPTY_DOMAINS),
     [loadData]
   )
+  const {
+    state: proxyProvider,
+    isLoading: proxyProviderIsLoading,
+    reload: reloadProxyProvider,
+  } = useProxyProviderResource(loadData)
   const pluginServers = loadData ? fetchedPluginServers : EMPTY_PLUGIN_SERVERS
   const domains = React.useMemo(
     () =>
@@ -330,24 +433,8 @@ export const usePluginSettingsInteraction = ({
     [commands, run]
   )
 
-  const handleSetPluginServerProxyKey = React.useCallback(
-    async (id: string, token: string) => {
-      const isRemoving = isProxyTokenRemoval(token)
-      const didComplete = await run({
-        key: `proxy-key:${id}`,
-        operation: () => commands.setPluginServerProxyKey(id, token),
-        messages: {
-          success: isRemoving ? "Proxy key removed" : "Proxy key saved",
-          failure: isRemoving
-            ? "The proxy key couldn’t be removed. Try again."
-            : "The proxy key couldn’t be saved. Try again.",
-        },
-        target: "server",
-      })
-      return didComplete
-    },
-    [commands, run]
-  )
+  const { setProxyProviderKey, refreshProxyProviderBalance } =
+    useProxyProviderCommands({ commands, reloadProxyProvider, run })
 
   const handleTogglePluginServerProxy = React.useCallback(
     async (id: string, enabled: boolean) => {
@@ -364,37 +451,18 @@ export const usePluginSettingsInteraction = ({
     [commands, run]
   )
 
-  const handleRefreshPluginServerProxyBalance = React.useCallback(
-    async (id: string) => {
-      await run({
-        key: `proxy-balance:${id}`,
-        operation: () => commands.refreshPluginServerProxyBalance(id),
-        messages: {
-          success: "Proxy balance refreshed",
-          failure: "The proxy balance couldn’t be refreshed. Try again.",
-        },
-        target: "server",
-      })
-    },
-    [commands, run]
-  )
-
-  React.useEffect(() => {
-    if (!loadData) {
-      return
-    }
-    for (const server of pluginServers) {
-      const stale =
-        !server.lastManifestRefreshAt ||
-        now() - server.lastManifestRefreshAt >= MANIFEST_FRESHNESS_MS
-      if (stale || server.verificationStatus !== "verified") {
-        void handleRefreshPluginServer(server.id, false)
-      }
-    }
-  }, [handleRefreshPluginServer, loadData, now, pluginServers])
+  useStaleManifestRefresh({
+    loadData,
+    now,
+    pluginServers,
+    refreshPluginServer: handleRefreshPluginServer,
+  })
 
   return {
     pluginServers,
+    proxyProvider,
+    proxyProviderIsLoading,
+    reloadProxyProvider,
     domains,
     domainDrafts,
     domainOperations,
@@ -407,9 +475,9 @@ export const usePluginSettingsInteraction = ({
     handleAddPluginServer,
     handleDeletePluginServer,
     handleRefreshPluginServer,
-    handleSetPluginServerProxyKey,
+    setProxyProviderKey,
     handleTogglePluginServerProxy,
-    handleRefreshPluginServerProxyBalance,
+    refreshProxyProviderBalance,
     handleTogglePluginServer,
   }
 }

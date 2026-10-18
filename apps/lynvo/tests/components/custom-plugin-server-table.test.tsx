@@ -36,10 +36,6 @@ const pluginServer = {
   }),
   enabled: true,
   verificationStatus: "down",
-  hasProxyKey: false,
-  proxyBalanceRemaining: null,
-  proxyBalanceLimit: null,
-  proxyBalanceCheckedAt: null,
   proxyEnabled: true,
 }
 
@@ -69,7 +65,7 @@ describe("CustomPluginServerTable", () => {
     expect(availabilitySwitch).toHaveAttribute("aria-disabled", "true")
     expect(availabilitySwitch).not.toBeChecked()
     expect(
-      document.querySelector('[data-icon-fallback="plugin-server"]')
+      document.querySelector("[data-plugin-server-avatar='plugin-server-one']")
     ).not.toBeNull()
     expect(
       document.querySelector('[data-icon-fallback="source"]')
@@ -111,10 +107,6 @@ describe("CustomPluginServerTable", () => {
     const capableServer = {
       ...pluginServer,
       id: "proxy-capable",
-      hasProxyKey: true,
-      proxyBalanceRemaining: 973,
-      proxyBalanceLimit: 1000,
-      proxyBalanceCheckedAt: 1,
       proxyEnabled: true,
       manifest: JSON.stringify({
         ...baseManifest,

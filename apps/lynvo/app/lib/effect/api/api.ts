@@ -3,11 +3,13 @@ import { HttpApi } from "effect/http-api"
 import { ExtractionGroup } from "./groups/extraction-group"
 import { PluginDomainsGroup } from "./groups/plugin-domains-group"
 import { PluginServersGroup } from "./groups/plugin-servers-group"
+import { ProxyGroup } from "./groups/proxy-group"
 import { RemoteGroup } from "./groups/remote-group"
 import { SettingsGroup } from "./groups/settings-group"
 
 export class Api extends HttpApi.make("lynvo-api")
   .add(PluginServersGroup)
+  .add(ProxyGroup)
   .add(PluginDomainsGroup)
   .add(ExtractionGroup)
   .add(RemoteGroup)
