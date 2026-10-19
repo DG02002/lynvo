@@ -13,7 +13,6 @@ import * as React from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
-import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Alert, AlertDescription } from "~/components/ui/alert"
@@ -24,21 +23,23 @@ import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginInfoTooltip } from "./plugin-info-tooltip"
 import type { LynvoPlugin } from "./plugin-settings-data"
-import {
-  usePluginSettingsInteraction,
-  type CustomPluginServer,
-  type PluginDomain,
+import type {
+  CustomPluginServer,
+  PluginDomain,
 } from "./plugin-settings-interaction"
 import {
   customPluginServerStandardSchema,
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
+import { SettingsFormDialogShell } from "./settings-form-dialog"
 import {
   SettingsPanel,
   SettingsList,
   SettingsRow,
   SectionHeading,
 } from "./settings-layout"
+import { usePluginDomainSettings } from "./use-plugin-domain-settings"
+import { usePluginServerSettings } from "./use-plugin-server-settings"
 
 export type { PluginDomain } from "./plugin-settings-interaction"
 
@@ -63,19 +64,22 @@ export function PluginsSettings({
   )
   const {
     pluginServers,
-    domains,
-    handleDeleteDomain,
-    handleSetDomainCredential,
-    handleDeleteDomainCredential,
     handleAddPluginServer,
     handleDeletePluginServer,
     handleRefreshPluginServer,
     handleTogglePluginServer,
+    reloadPluginSettings,
+  } = usePluginServerSettings()
+  const {
+    domains,
+    handleDeleteDomain,
+    handleSetDomainCredential,
+    handleDeleteDomainCredential,
     domainDrafts,
     domainOperations,
     updateDomainDraft,
     addDomain,
-  } = usePluginSettingsInteraction()
+  } = usePluginDomainSettings({ reloadPluginSettings })
 
   const domainsByPlugin = React.useMemo(() => {
     return domains.reduce<Record<string, PluginDomain[]>>((acc, domain) => {
@@ -263,7 +267,7 @@ const AddPluginDomainDialog = ({
         <HugeiconsIcon icon={Add01Icon} />
         <span className="sr-only">Add domain for {plugin.name}</span>
       </DialogTrigger>
-      <FormDialogContent
+      <SettingsFormDialogShell
         title={`Add domain for ${plugin.name}`}
         description={plugin.domainRequired}
         media={<PluginIcon icon={plugin.icon} className="mx-auto size-16" />}
@@ -278,6 +282,7 @@ const AddPluginDomainDialog = ({
         submitPending={isAdding}
         submitDisabled={isAdding}
         cancelDisabled={isAdding}
+        onCancel={() => setOpen(false)}
       >
         <FieldGroup className="gap-4">
           <Field className="gap-1.5">
@@ -367,7 +372,7 @@ const AddPluginDomainDialog = ({
             </Alert>
           )}
         </FieldGroup>
-      </FormDialogContent>
+      </SettingsFormDialogShell>
     </Dialog>
   )
 }
@@ -490,7 +495,7 @@ export const CustomPluginServersSection = ({
           </DialogTrigger>
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <FormDialogContent
+              <SettingsFormDialogShell
                 title="Add Custom Plugin Server"
                 description="Connect a server using its URL and API key."
                 media={
@@ -507,6 +512,14 @@ export const CustomPluginServersSection = ({
                 submitPending={isSubmitting}
                 submitDisabled={isSubmitting}
                 cancelDisabled={isSubmitting}
+                onCancel={() => onAddPluginServerOpenChange(false)}
+                error={
+                  registrationError ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{registrationError}</AlertDescription>
+                    </Alert>
+                  ) : null
+                }
               >
                 <FieldGroup className="gap-4">
                   <form.Field name="baseUrl">
@@ -557,12 +570,7 @@ export const CustomPluginServersSection = ({
                     }}
                   </form.Field>
                 </FieldGroup>
-                {registrationError ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{registrationError}</AlertDescription>
-                  </Alert>
-                ) : null}
-              </FormDialogContent>
+              </SettingsFormDialogShell>
             )}
           </form.Subscribe>
         </Dialog>
@@ -659,7 +667,7 @@ const PluginCredentialEditor = ({
             >
               <HugeiconsIcon icon={Edit02Icon} />
             </DialogTrigger>
-            <FormDialogContent
+            <SettingsFormDialogShell
               title="Edit Plugin Credentials"
               description={`Update the credentials Lynvo uses to access ${domain.domain}.`}
               media={
@@ -673,6 +681,7 @@ const PluginCredentialEditor = ({
               submitPending={isSaving}
               submitDisabled={isSaving}
               cancelDisabled={isSaving}
+              onCancel={() => setIsEditing(false)}
             >
               <FieldGroup className="gap-4">
                 {credentialKind === "http-basic" && (
@@ -712,7 +721,7 @@ const PluginCredentialEditor = ({
                   Remove credentials
                 </Button>
               )}
-            </FormDialogContent>
+            </SettingsFormDialogShell>
           </Dialog>
           <Button
             variant="quiet"

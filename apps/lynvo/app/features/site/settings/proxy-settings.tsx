@@ -8,7 +8,6 @@ import * as React from "react"
 import { Link } from "react-router"
 
 import { ScrapeDoMark } from "~/components/brand-marks"
-import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
 import { PluginServerAvatar } from "~/components/plugin-icon"
 import { Button } from "~/components/ui/button"
@@ -20,16 +19,15 @@ import { PLUGIN_SERVER_VERIFICATION_STATUS } from "~/lib/effect/services/plugin-
 import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
 
 import { getPluginServerManifestView } from "./plugin-server-manifest"
-import {
-  usePluginSettingsInteraction,
-  type CustomPluginServer,
-} from "./plugin-settings-interaction"
+import type { CustomPluginServer } from "./plugin-settings-interaction"
+import { SettingsFormDialogShell } from "./settings-form-dialog"
 import {
   SectionHeading,
   SettingsList,
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
+import { useProxySettings } from "./use-proxy-settings"
 
 const BALANCE_FORMATTER = new Intl.NumberFormat()
 const CHECKED_AT_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -53,7 +51,7 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
     handleTogglePluginServerProxy,
     refreshProxyProviderBalance,
     serverOperations,
-  } = usePluginSettingsInteraction()
+  } = useProxySettings()
   const proxyServers = React.useMemo(
     () =>
       pluginServers.flatMap((pluginServer) => {
@@ -403,7 +401,7 @@ const ProxyKeyDialog = ({
           </Button>
         }
       />
-      <FormDialogContent
+      <SettingsFormDialogShell
         title="Scrape.do proxy key"
         description="Lynvo encrypts this key and sends it only to servers whose proxy switch is on during Extraction."
         media={<ScrapeDoMark className="mx-auto size-14 shrink-0" />}
@@ -411,6 +409,7 @@ const ProxyKeyDialog = ({
         submitPending={isSaving}
         submitDisabled={isSaving}
         cancelDisabled={isSaving}
+        onCancel={() => setOpen(false)}
         onSubmit={async (event) => {
           event.preventDefault()
           setIsSaving(true)
@@ -435,7 +434,7 @@ const ProxyKeyDialog = ({
           required
           autoFocus
         />
-      </FormDialogContent>
+      </SettingsFormDialogShell>
     </Dialog>
   )
 }

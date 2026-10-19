@@ -18,6 +18,7 @@ interface FormDialogContentProps {
   submitPending?: boolean
   cancelDisabled?: boolean
   cancelLabel?: ReactNode
+  onCancel?: () => void
 }
 
 export const FormDialogContent = ({
@@ -32,6 +33,7 @@ export const FormDialogContent = ({
   submitPending = false,
   cancelDisabled = false,
   cancelLabel = "Cancel",
+  onCancel,
 }: FormDialogContentProps) => (
   <DialogContent size="hero" showCloseButton={false}>
     {media}
@@ -55,6 +57,7 @@ export const FormDialogContent = ({
               type="button"
               variant="secondary"
               disabled={cancelDisabled}
+              onClick={onCancel}
             />
           }
         >
