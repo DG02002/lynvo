@@ -32,6 +32,8 @@ const GLOBAL_USAGE_OWNER_KEY = "global"
 const USAGE_COUNTER_INITIAL_VALUE = 1
 const DAILY_USAGE_PERIOD = "daily"
 const MONTHLY_USAGE_PERIOD = "monthly"
+const USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON =
+  "usage-accounting-does-not-change-snapshot"
 
 interface UsagePeriod {
   key: string
@@ -613,7 +615,8 @@ export const reserveManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
-    notificationSuppressionReason: "usage-accounting-does-not-change-snapshot",
+    notificationSuppressionReason:
+      USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON,
     statements,
   })
   // SAFETY: a conditional increment that hit its limit returns no row; the
@@ -727,7 +730,8 @@ export const settleManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
-    notificationSuppressionReason: "usage-accounting-does-not-change-snapshot",
+    notificationSuppressionReason:
+      USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON,
     statements: [
       ...releaseStatements,
       database
@@ -760,28 +764,33 @@ export const releaseExpiredManagedExtractions = async (
     operations,
     (operation) => operation.userId
   )
-  const writes = [...operationsByUserId].map(([userId, userOperations]) => ({
-    userId,
-    statements: [
-      ...userOperations.map((operation) =>
-        createAtomicCounterRefundStatement(database, operation)
-      ),
-      database
-        .prepare(
-          "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?2 WHERE user_id = ?1 AND state = 'reserved' AND lease_expires_at <= ?2 AND operation_id IN (SELECT value FROM json_each(?3))"
-        )
-        .bind(
-          userId,
-          now,
-          JSON.stringify(
-            userOperations.map((operation) => operation.operationId)
-          )
+  type UsageAccountingWrite = Parameters<
+    typeof executeOwnedWriteBatch
+  >[0]["writes"][number]
+  const writes = [...operationsByUserId].map<UsageAccountingWrite>(
+    ([userId, userOperations]) => ({
+      userId,
+      statements: [
+        ...userOperations.map((operation) =>
+          createAtomicCounterRefundStatement(database, operation)
         ),
-    ],
-    guard: CHANGED_ROWS_GUARD,
-    notificationSuppressionReason:
-      "usage-accounting-does-not-change-snapshot" as const,
-  }))
+        database
+          .prepare(
+            "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?2 WHERE user_id = ?1 AND state = 'reserved' AND lease_expires_at <= ?2 AND operation_id IN (SELECT value FROM json_each(?3))"
+          )
+          .bind(
+            userId,
+            now,
+            JSON.stringify(
+              userOperations.map((operation) => operation.operationId)
+            )
+          ),
+      ],
+      guard: CHANGED_ROWS_GUARD,
+      notificationSuppressionReason:
+        USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON,
+    })
+  )
   const writeResults = await executeOwnedWriteBatch({
     database,
     realtime,
