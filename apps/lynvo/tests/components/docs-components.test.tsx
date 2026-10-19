@@ -93,7 +93,6 @@ const restoreDescriptor = (
 
 beforeEach(() => {
   pendingAnimations.length = 0
-  toast.close()
 })
 
 afterEach(() => {
@@ -186,6 +185,10 @@ describe("DocsFaq", () => {
 })
 
 describe("CodeBlock", () => {
+  afterEach(() => {
+    toast.close()
+  })
+
   // SAFETY: this MDX key is registered with the CodeBlock component below.
   const CodeBlock = docsComponents.CodeBlock as ComponentType<{
     label: string
