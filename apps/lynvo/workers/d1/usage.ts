@@ -9,6 +9,7 @@ import {
 } from "../constants"
 import {
   CHANGED_ROWS_GUARD,
+  type OwnedWriteBatchInput,
   executeOwnedWrite,
   executeOwnedWriteBatch,
   getDataVersion,
@@ -764,10 +765,7 @@ export const releaseExpiredManagedExtractions = async (
     operations,
     (operation) => operation.userId
   )
-  type UsageAccountingWrite = Parameters<
-    typeof executeOwnedWriteBatch
-  >[0]["writes"][number]
-  const writes = [...operationsByUserId].map<UsageAccountingWrite>(
+  const writes = [...operationsByUserId].map<OwnedWriteBatchInput>(
     ([userId, userOperations]) => ({
       userId,
       statements: [

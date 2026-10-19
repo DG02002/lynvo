@@ -26,8 +26,6 @@ import {
   EFFECT_MUTATION_ROUTE_RATE_WINDOW_SECONDS,
   EXTRACTION_ROUTE_RATE_LIMIT,
   EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-  INBOUND_API_BODY_READ_TIMEOUT_MS,
-  MAX_INBOUND_API_BODY_BYTES,
 } from "./constants"
 import { scheduled } from "./cron"
 import { registerD1AuthRoutes } from "./d1/auth-routes"
@@ -40,6 +38,7 @@ import {
   revokeSessionById,
 } from "./d1/sessions"
 import { echoDataVersion } from "./d1/version-echo"
+import { createInboundApiBodyLimitMiddleware } from "./inbound-api-body-limit"
 import { closeRealtimeSession } from "./realtime-session-revocation"
 import { USER_REALTIME_ROOM_INTERNAL_URLS } from "./realtime/realtime-room-client"
 import {
@@ -83,143 +82,6 @@ const app = new Hono<RequestLoggingEnvironment>()
 app.use("*", responseSecurityHeaders())
 
 app.use("/api/*", requestLogging({ exclude: ["/api/version"] }))
-
-const requestDeclaresOversizedApiBody = (request: Request): boolean => {
-  const contentLength = request.headers.get("content-length")
-  if (!contentLength || !/^\d+$/.test(contentLength)) {
-    return false
-  }
-  const declaredLength = Number(contentLength)
-  return (
-    !Number.isSafeInteger(declaredLength) ||
-    declaredLength > MAX_INBOUND_API_BODY_BYTES
-  )
-}
-
-const API_BODY_LIMIT_EXCEEDED = new Error("API body limit exceeded")
-type RequestBodyReadSignalFactory = (timeoutMs: number) => AbortSignal
-
-const createRequestBodyReadSignal: RequestBodyReadSignalFactory = (timeoutMs) =>
-  AbortSignal.timeout(timeoutMs)
-
-class ApiBodyReadTimedOutError extends Error {
-  constructor() {
-    super("API request body read timed out")
-    this.name = "ApiBodyReadTimedOutError"
-  }
-}
-
-const cancelRequestBody = (request: Request): void => {
-  try {
-    const cancellation = request.body?.cancel()
-    void cancellation?.catch((cause: unknown) => {
-      console.warn("api_body_cancel_failed", {
-        error: cause instanceof Error ? cause.message : String(cause),
-      })
-    })
-  } catch (cause) {
-    console.warn("api_body_cancel_failed", {
-      error: cause instanceof Error ? cause.message : String(cause),
-    })
-  }
-}
-
-const requestBodyStreamExceedsApiBodyLimit = async (
-  request: Request,
-  readTimeoutMs: number,
-  createReadSignal: RequestBodyReadSignalFactory
-): Promise<boolean> => {
-  const { body } = request.clone()
-  if (!body) {
-    return false
-  }
-  let bytesRead = 0
-  const signal = createReadSignal(readTimeoutMs)
-  const cancelBodyOnTimeout = () => cancelRequestBody(request)
-  signal.addEventListener("abort", cancelBodyOnTimeout, { once: true })
-  try {
-    await body.pipeTo(
-      new WritableStream<Uint8Array>({
-        write(chunk) {
-          bytesRead += chunk.byteLength
-          if (bytesRead <= MAX_INBOUND_API_BODY_BYTES) {
-            return
-          }
-          // The cloned request tees its stream, so cancel the original branch
-          // while pipeTo cancels this branch after the sink rejects.
-          cancelRequestBody(request)
-          throw API_BODY_LIMIT_EXCEEDED
-        },
-      }),
-      { signal }
-    )
-    return false
-  } catch (cause) {
-    if (cause === API_BODY_LIMIT_EXCEEDED) {
-      return true
-    }
-    if (signal.aborted && cause === signal.reason) {
-      cancelRequestBody(request)
-      throw new ApiBodyReadTimedOutError()
-    }
-    throw cause
-  } finally {
-    signal.removeEventListener("abort", cancelBodyOnTimeout)
-  }
-}
-
-const requestExceedsApiBodyLimit = async (
-  request: Request,
-  readTimeoutMs: number,
-  createReadSignal: RequestBodyReadSignalFactory
-): Promise<boolean> =>
-  requestDeclaresOversizedApiBody(request) ||
-  (request.body !== null &&
-    (await requestBodyStreamExceedsApiBodyLimit(
-      request,
-      readTimeoutMs,
-      createReadSignal
-    )))
-
-export const createInboundApiBodyLimitMiddleware =
-  (
-    readTimeoutMs = INBOUND_API_BODY_READ_TIMEOUT_MS,
-    createReadSignal = createRequestBodyReadSignal
-  ): MiddlewareHandler<RequestLoggingEnvironment> =>
-  async (context, next) => {
-    let exceedsApiBodyLimit: boolean
-    try {
-      exceedsApiBodyLimit = await requestExceedsApiBodyLimit(
-        context.req.raw,
-        readTimeoutMs,
-        createReadSignal
-      )
-    } catch (cause) {
-      if (!(cause instanceof ApiBodyReadTimedOutError)) {
-        throw cause
-      }
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_request",
-          error:
-            "Request body could not be read before the configured deadline.",
-          retryable: true,
-        }),
-        408
-      )
-    }
-    if (!exceedsApiBodyLimit) {
-      return next()
-    }
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: "Request body exceeds the configured limit.",
-        retryable: false,
-      }),
-      413
-    )
-  }
 
 app.use("/api/*", createInboundApiBodyLimitMiddleware())
 

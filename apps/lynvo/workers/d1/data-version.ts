@@ -81,7 +81,7 @@ interface ExecuteOwnedWriteInput {
   readonly notificationSuppressionReason?: OwnedWriteNotificationSuppressionReason
 }
 
-interface OwnedWriteBatchInput {
+export interface OwnedWriteBatchInput {
   readonly userId: string
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard

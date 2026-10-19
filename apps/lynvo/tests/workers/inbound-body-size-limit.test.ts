@@ -2,8 +2,9 @@ import { env } from "cloudflare:workers"
 import { Hono } from "hono"
 import { describe, expect, it } from "vitest"
 
-import app, { createInboundApiBodyLimitMiddleware } from "../../workers/app"
+import app from "../../workers/app"
 import { MAX_INBOUND_API_BODY_BYTES } from "../../workers/constants"
+import { createInboundApiBodyLimitMiddleware } from "../../workers/inbound-api-body-limit"
 import type { RequestLoggingEnvironment } from "../../workers/request-logging"
 
 describe("inbound API body size limit", () => {
