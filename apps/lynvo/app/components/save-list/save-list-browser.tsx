@@ -69,7 +69,6 @@ import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
-  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_OPENED_TINT_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
@@ -420,7 +419,7 @@ const FinderEmptyState = ({
           showRemove
           onRemoved={onExit}
           isRefreshing={extractingItems.has(item.url)}
-          triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+          triggerLook="media-row"
         />
       </div>
     </header>
@@ -613,7 +612,6 @@ const FinderBrowserLinkRow = ({
             onCopyLink={copyLink}
             onOpenInPlayer={openLinkInPlayer}
             isPlayable={!isFolder}
-            className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             removeRequest={
               isFolder
                 ? {
@@ -780,7 +778,7 @@ const FinderBrowser = ({
             showRemove
             onRemoved={onExit}
             isRefreshing={extractingItems.has(item.url)}
-            triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+            triggerLook="media-row"
           />
         </div>
       </header>
@@ -1207,7 +1205,7 @@ export const SaveListBrowser = ({
                       playableLink={directLink}
                       showRemove
                       isRefreshing={isExtracting}
-                      triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+                      triggerLook="media-row"
                     />
                   </div>
                 </div>

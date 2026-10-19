@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import type { CSSVariableStyle } from "~/lib/style"
 
 import { useAnimationActivity } from "./use-animation-activity"
+
+// The measured loop start offset travels through a custom property so the
+// .player-edge-carousel__motion class owns the animation-delay declaration.
+type PlayerCarouselMotionStyle =
+  CSSVariableStyle<"--player-carousel-start-delay">
 
 const PLAYER_PREVIEWS = {
   just: "/images/player-previews/just-player.webp",
@@ -69,6 +75,11 @@ export const PlayerEdgeCarousel = () => {
     }
   }
 
+  const motionStyle: PlayerCarouselMotionStyle | undefined =
+    animationDelay === null
+      ? undefined
+      : { "--player-carousel-start-delay": `${animationDelay}ms` }
+
   return (
     <div
       ref={animationContainerRef}
@@ -82,11 +93,7 @@ export const PlayerEdgeCarousel = () => {
         className="player-edge-carousel__motion"
         data-ready={animationDelay !== null || undefined}
         data-animation-active={isAnimationActive || undefined}
-        style={
-          animationDelay === null
-            ? undefined
-            : { animationDelay: `${animationDelay}ms` }
-        }
+        style={motionStyle}
         onPointerDown={(event) => {
           if (event.button !== 0) {
             return

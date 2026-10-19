@@ -233,7 +233,7 @@ export function DocsFaq({
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
                 aria-hidden="true"
-                className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
+                className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-out-smooth group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
                 strokeWidth={2}
               />
               <span className="min-w-0 flex-1">{question}</span>
@@ -961,25 +961,25 @@ function CodeBlock({
               ? `Copied ${label}`
               : `Copy code from ${label}`
           }
-          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-[background-color,scale] duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
+          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
         >
           <span className="relative size-3.5" aria-hidden="true">
             <HugeiconsIcon
               icon={CopyIcon}
               className={cn(
-                "absolute inset-0 size-3.5 transition-[opacity,scale,filter] duration-200",
+                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
                 copyState === "copied"
-                  ? "scale-25 opacity-0 blur-[4px]"
-                  : "scale-100 opacity-100 blur-0"
+                  ? "scale-25 opacity-0 blur-xs"
+                  : "scale-100 opacity-100"
               )}
             />
             <HugeiconsIcon
               icon={Tick02Icon}
               className={cn(
-                "absolute inset-0 size-3.5 transition-[opacity,scale,filter] duration-200",
+                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
                 copyState === "copied"
-                  ? "scale-100 opacity-100 blur-0"
-                  : "scale-25 opacity-0 blur-[4px]"
+                  ? "scale-100 opacity-100"
+                  : "scale-25 opacity-0 blur-xs"
               )}
             />
           </span>
@@ -1007,7 +1007,7 @@ function DocsNote({ title, children }: { title: string; children: ReactNode }) {
 const AndroidTvRemoteTroubleshooting = () => (
   <aside
     aria-labelledby="virtual-remote-troubleshooting-title"
-    className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+    className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-hairline-ring"
   >
     <div className="flex items-start gap-4">
       <span className="flex h-7 w-10 shrink-0 items-center justify-center">
@@ -1078,7 +1078,7 @@ const DocsHeadingAnchor = ({
     href={`#${headingId}`}
     onClick={onClick}
     aria-label={`Link to ${label}`}
-    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-link opacity-0 transition-[opacity,scale] duration-200 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-link"
+    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-link opacity-0 transition-opacity-scale duration-200 ease-out-smooth group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-link"
   >
     <HugeiconsIcon
       icon={Link02Icon}
@@ -1174,7 +1174,7 @@ export const docsComponents: MDXComponents = {
     <pre
       {...props}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 font-mono text-[0.8125rem] font-medium leading-6",
+        "overflow-x-auto bg-transparent p-4 font-mono text-code font-medium leading-6",
         className
       )}
     />

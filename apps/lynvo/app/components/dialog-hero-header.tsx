@@ -17,7 +17,6 @@ interface DialogHeroHeaderProps {
   readonly description: ReactNode
   readonly icon?: ReactNode
   readonly className?: string
-  readonly descriptionClassName?: string
 }
 
 export const DialogHeroHeader = ({
@@ -25,17 +24,13 @@ export const DialogHeroHeader = ({
   description,
   icon,
   className,
-  descriptionClassName,
 }: DialogHeroHeaderProps) => (
   <DialogHeader variant="hero" className={cn("w-full", className)}>
     {icon}
     <DialogTitle size="hero" className="w-full text-center">
       {title}
     </DialogTitle>
-    <DialogDescription
-      size="hero"
-      className={cn("w-full text-center", descriptionClassName)}
-    >
+    <DialogDescription size="hero" className="w-full text-center break-words">
       {description}
     </DialogDescription>
   </DialogHeader>
@@ -46,7 +41,6 @@ export const AlertDialogHeroHeader = ({
   description,
   icon,
   className,
-  descriptionClassName,
 }: DialogHeroHeaderProps) => (
   <AlertDialogHeader variant="hero" className={cn("w-full min-w-0", className)}>
     {icon}
@@ -55,7 +49,7 @@ export const AlertDialogHeroHeader = ({
     </AlertDialogTitle>
     <AlertDialogDescription
       size="hero"
-      className={cn("w-full min-w-0 text-center", descriptionClassName)}
+      className="w-full min-w-0 text-center break-words"
     >
       {description}
     </AlertDialogDescription>

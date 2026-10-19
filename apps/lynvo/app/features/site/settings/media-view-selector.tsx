@@ -87,7 +87,7 @@ export const MediaViewSelector = ({
         <label
           key={option.value}
           className={cn(
-            "group flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl border p-2 text-left transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
+            "group flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl border p-2 text-left transition-surface duration-150 motion-reduce:transition-none",
             isSelected
               ? "border-link bg-link/15 shadow-sm"
               : "border-border bg-background"

@@ -105,7 +105,7 @@ const ReportIssueDialog = ({
             // Telegram's brand gradient is a hard external fact, not part of
             // the Lynvo palette.
             // oxlint-disable-next-line shadcn/no-restyle -- Telegram brand gradient from telegram.org
-            className="h-13.5 w-full bg-gradient-to-b from-[#2AABEE] to-[#229ED9] text-white hover:from-[#2AABEE] hover:to-[#229ED9]/90"
+            className="h-13.5 w-full bg-gradient-to-b from-telegram-500 to-telegram-600 text-white hover:from-telegram-500 hover:to-telegram-600/90"
             disabled={!telegramUrl}
             onClick={() => {
               if (telegramUrl) {
@@ -120,7 +120,7 @@ const ReportIssueDialog = ({
             // GitHub's brand black is a hard external fact, not part of the
             // Lynvo palette.
             // oxlint-disable-next-line shadcn/no-restyle -- GitHub brand black from github.com
-            className="h-13.5 w-full bg-[#24292f] text-white hover:bg-[#24292f]/90"
+            className="h-13.5 w-full bg-github text-white hover:bg-github/90"
             disabled={!githubUrl}
             onClick={() => {
               if (githubUrl) {

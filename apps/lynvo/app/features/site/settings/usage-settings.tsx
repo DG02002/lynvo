@@ -104,7 +104,7 @@ const UsageItem = ({
 const UsageLoading = () => (
   <SettingsList role="status" aria-label="Loading usage">
     <SettingsRow className="flex-col items-stretch gap-3">
-      <SettingsLoadingBars className="gap-3" titleWidthClassName="w-48" />
+      <SettingsLoadingBars className="gap-3" titleWidth="lg" />
     </SettingsRow>
   </SettingsList>
 )

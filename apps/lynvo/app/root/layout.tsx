@@ -39,16 +39,10 @@ export const DocumentLayout = ({
   ScrollRestorationComponent,
   RouteSeoMetadataComponent,
 }: DocumentLayoutProps) => {
-  const initialBackground = initialTheme === "dark" ? "#000" : "#fff"
-
   return (
     <html
       lang="en"
       className={initialTheme === "dark" ? "h-full dark" : "h-full"}
-      style={{
-        colorScheme: initialTheme ?? undefined,
-        backgroundColor: initialTheme ? initialBackground : undefined,
-      }}
       suppressHydrationWarning
     >
       <head>

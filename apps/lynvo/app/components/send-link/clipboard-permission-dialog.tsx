@@ -59,14 +59,14 @@ export function ClipboardPermissionDialog({
   const preview = (
     <div className="flex w-full flex-col items-center">
       <div
-        className="relative -mx-10 -mt-10 w-[calc(100%+5rem)] overflow-hidden rounded-t-4xl bg-muted/35 px-6 py-10 shadow-[inset_0_-1px_rgba(0,0,0,0.08)] dark:bg-black/30 dark:shadow-[inset_0_-1px_rgba(255,255,255,0.08)]"
+        className="relative -mx-10 -mt-10 w-[calc(100%+5rem)] overflow-hidden rounded-t-4xl bg-muted/35 px-6 py-10 shadow-hairline-bottom dark:bg-black/30"
         aria-hidden="true"
       >
         <div className="flex flex-col gap-4">
           <div
             aria-hidden={step < 2}
             className={cn(
-              "grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none",
+              "grid transition-collapse duration-200 motion-reduce:transition-none",
               step >= 2
                 ? "grid-rows-[1fr] opacity-100"
                 : "grid-rows-[0fr] opacity-0"
@@ -102,7 +102,7 @@ export function ClipboardPermissionDialog({
           // cursor, regardless of theme.
           // oxlint-disable shadcn/no-raw-colors -- OS cursor glyph colors, not a theme color
           viewBox="0 0 28 28"
-          className={`absolute z-10 size-6 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] transition-[left,top,opacity] duration-700 ease-out motion-reduce:hidden ${getClipboardCursorClassName(step)}`}
+          className={`absolute z-10 size-6 drop-shadow-cursor transition-position-opacity duration-700 ease-out motion-reduce:hidden ${getClipboardCursorClassName(step)}`}
         >
           <path
             d="M5 3.5 22.1 17l-8.4 1.2-4.6 7.1L5 3.5Z"

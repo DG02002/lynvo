@@ -28,7 +28,7 @@ export const ExtractionSourceFlow = ({
           {sourceName}
         </span>
         {statusLabel && (
-          <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] tracking-wide">
+          <span className="shrink-0 rounded border px-1.5 py-0.5 text-2xs tracking-wide">
             {statusLabel}
           </span>
         )}
@@ -55,7 +55,7 @@ export const ExtractionSourceFlow = ({
             <PluginIcon className="size-4 shrink-0" />
           )}
           <span className="flex min-w-0 flex-col">
-            <span className="shimmer text-[10px] leading-none text-muted-foreground">
+            <span className="shimmer text-2xs leading-none text-muted-foreground">
               Plugin Server
             </span>
             <span className="shimmer mt-1 min-w-0 text-pretty font-medium leading-tight text-foreground">
@@ -65,7 +65,7 @@ export const ExtractionSourceFlow = ({
         </div>
 
         <span
-          className="shimmer overflow-hidden whitespace-nowrap text-center text-[10px] tracking-widest text-muted-foreground"
+          className="shimmer overflow-hidden whitespace-nowrap text-center text-2xs tracking-widest text-muted-foreground"
           aria-hidden="true"
         >
           •••••
@@ -73,7 +73,7 @@ export const ExtractionSourceFlow = ({
 
         <div className="flex min-w-0 items-center justify-end gap-2 text-right">
           <span className="flex min-w-0 flex-col items-end">
-            <span className="shimmer text-[10px] leading-none text-muted-foreground">
+            <span className="shimmer text-2xs leading-none text-muted-foreground">
               Source
             </span>
             <span className="shimmer mt-1 min-w-0 text-pretty font-medium leading-tight text-foreground">
@@ -109,7 +109,7 @@ export const ExtractionSourceFlow = ({
             </>
           )}
           {statusLabel && (
-            <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] tracking-wide">
+            <span className="shrink-0 rounded border px-1.5 py-0.5 text-2xs tracking-wide">
               {statusLabel}
             </span>
           )}

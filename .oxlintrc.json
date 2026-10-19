@@ -155,6 +155,39 @@
             // inter-child spacing stays allowed on them.
             "pattern": "^(Tabs|TabsList)$",
             "allow": ["layout", "gap-*"]
+          },
+          {
+            // Menu triggers embedded in media rows and gallery artwork
+            // reshape Button past its variants: a square cell-filling hit
+            // target on ghost, or a round overlay dot on overlay. Shape and
+            // resting foreground are the whole restyle; the shared look
+            // lives in components/menu-trigger-button.tsx.
+            "pattern": "^Button$",
+            "allow": [
+              "layout",
+              "text-foreground",
+              "rounded-none",
+              "rounded-full"
+            ]
+          },
+          {
+            // Settings rows render every select as a quiet inline value
+            // control: transparent, borderless, focus-ring-free, muted
+            // hover. These classes are that one shared look, defined in
+            // SettingsSelectTrigger in features/site/settings.
+            "pattern": "^SelectTrigger$",
+            "allow": [
+              "layout",
+              "bg-transparent",
+              "border-transparent",
+              "rounded-xl",
+              "text-foreground",
+              "hover:bg-muted",
+              "px-2.5",
+              "py-1",
+              "gap-1",
+              "focus-visible:ring-0"
+            ]
           }
         ]
       }
@@ -162,6 +195,27 @@
     // Colors must come from the theme tokens in apps/lynvo/app/app.css, so
     // raw palette and hex classes stay out of feature code.
     "shadcn/no-raw-colors": "warn",
+    // Arbitrary values like p-[13px] drift from the theme scale; use the
+    // nearest scale class instead. `layout` still allows positioning and
+    // sizing values that cannot land on the grid (z-index, calc() widths,
+    // absolute offsets).
+    "shadcn/no-arbitrary-values": [
+      "warn",
+      {
+        "allow": ["layout"]
+      }
+    ],
+    // Inline styles escape the class system entirely; dynamic values move
+    // through CSS custom properties and static classes instead.
+    "shadcn/no-inline-styles": "warn",
+    // Class strings built by template literals or concatenation cannot be
+    // checked against the design system; conditional maps and cn() with
+    // static strings keep every class visible to the linter.
+    "shadcn/require-static-classes": "warn",
+    // Every class must resolve to a Tailwind utility, a theme token, or a
+    // rule declared in app.css, so typos and dead classes surface at lint
+    // time instead of as silently missing styles.
+    "shadcn/no-unknown-classes": "warn",
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
     "anti-slop/no-known-value-widening": "error",

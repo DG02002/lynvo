@@ -27,9 +27,16 @@ import { useViewTransition } from "~/lib/client-profile"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
+import type { CSSVariableStyle } from "~/lib/style"
 import { cn } from "~/lib/utils"
 
 import type { Route } from "./+types/_site.pricing"
+
+// The mobile spacer must match the fixed bottom controls exactly, so its
+// height stays bound to MOBILE_PRICING_CONTROLS_HEIGHT_PX through a custom
+// property instead of a hard-coded utility.
+type MobilePricingSpacerStyle =
+  CSSVariableStyle<"--mobile-pricing-controls-height">
 
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",
@@ -213,6 +220,10 @@ export default function Pricing() {
   const isMobileComparisonControlVisible =
     isComparisonTableVisible && !hasComparisonEndBeenReached
 
+  const mobilePricingSpacerStyle: MobilePricingSpacerStyle = {
+    "--mobile-pricing-controls-height": `${MOBILE_PRICING_CONTROLS_HEIGHT_PX}px`,
+  }
+
   return (
     <div className="w-full px-6 py-16 md:px-8 md:py-24 lg:px-10 xl:px-14">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
@@ -357,8 +368,8 @@ export default function Pricing() {
           <div ref={comparisonEndRef} className="h-px sm:hidden" />
           {isMobileComparisonControlVisible && (
             <div
-              className="flow-root sm:hidden"
-              style={{ height: MOBILE_PRICING_CONTROLS_HEIGHT_PX }}
+              className="flow-root h-(--mobile-pricing-controls-height) sm:hidden"
+              style={mobilePricingSpacerStyle}
             >
               <MobilePlanControls className="fixed inset-x-0 bottom-0 z-40 bg-background px-6 pt-4 pb-4" />
             </div>

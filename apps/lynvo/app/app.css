@@ -67,13 +67,57 @@
   --shadow-depth-m: var(--depth-shadow-m);
   --shadow-depth-l: var(--depth-shadow-l);
   --shadow-depth-gloss: var(--depth-shadow-gloss);
+  --shadow-hairline-bottom: var(--hairline-bottom-shadow);
+  --shadow-hairline-ring: var(--hairline-ring-shadow);
+  --shadow-browser-field: var(--browser-field-shadow);
+  --shadow-browser-window: var(--browser-window-shadow);
+  --shadow-player-icon: var(--player-icon-shadow);
+  --shadow-docs-card: var(--docs-card-shadow);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-vercel: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --ease-out-overshoot: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --ease-out-smooth: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme {
+  /* Literal tokens that never flip with the theme: external brand and
+     illustration colors, illustration-only shadows, and the off-scale type
+     and tracking steps the product actually uses. */
+  --color-telegram-500: #2aabee;
+  --color-telegram-600: #229ed9;
+  --color-github: #24292f;
+  --color-github-mark: #1b1f23;
+  --color-mac-red: #ff5f57;
+  --color-mac-yellow: #febc2e;
+  --color-mac-green: #28c840;
+  --drop-shadow-cursor: 0 2px 2px rgb(0 0 0 / 0.25);
+  --shadow-window-dot: inset 0 0 0 0.5px rgb(0 0 0 / 0.18);
+  --shadow-tv-frame: 0 30px 60px -28px rgb(0 0 0 / 0.7);
+  --shadow-phone-frame: 0 24px 40px -14px rgb(0 0 0 / 0.75);
+  /* The docs card's hover shadow is identical in both modes today; only the
+     resting shadow flips. */
+  --shadow-docs-card-hover:
+    inset 0 0 0 1px rgb(0 0 0 / 0.1), 0 18px 40px -20px rgb(0 0 0 / 0.3);
+  --text-2xs: 0.625rem;
+  --text-code: 0.8125rem;
+  --text-docs-title: 2rem;
+  --text-docs-title--line-height: 2.5rem;
+  --text-docs-title-lg: 2.5rem;
+  --text-docs-title-lg--line-height: 3rem;
+  --text-display: 5.5rem;
+  --text-display--line-height: 0.95;
+  /* The sign-in verification code needs air between characters to read as a
+     code; --tracking-heading matches the h1 letter-spacing in the base
+     layer. */
+  --tracking-code: 0.16em;
+  --tracking-heading: -0.04em;
 }
 
 :root {
   color-scheme: light;
+  /* The root background pairs with the color-scheme so the canvas never
+     flashes the wrong theme before the body paints. */
+  background-color: var(--background);
   --duration-enter: 160ms;
   --depth-shadow-s:
     inset 0 1px 2px rgb(255 255 255 / 0.19), 0 1px 2px rgb(0 0 0 / 0.19),
@@ -85,6 +129,17 @@
     inset 0 1px 2px rgb(255 255 255 / 0.44), 0 4px 6px rgb(0 0 0 / 0.19),
     0 6px 10px rgb(0 0 0 / 0.08);
   --depth-shadow-gloss: inset 0 1px 2px rgb(255 255 255 / 0.25);
+  --hairline-bottom-shadow: inset 0 -1px rgb(0 0 0 / 0.08);
+  --hairline-ring-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.07);
+  --browser-field-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  --browser-window-shadow:
+    0 2px 3px rgb(0 0 0 / 0.05), 0 16px 40px -12px rgb(0 0 0 / 0.18),
+    0 36px 80px -24px rgb(0 0 0 / 0.2);
+  --player-icon-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.1), 0 16px 32px -16px rgb(0 0 0 / 0.45);
+  --docs-card-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.07), 0 8px 24px -16px rgb(0 0 0 / 0.2);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -146,6 +201,14 @@
     inset 0 1px 2px rgb(255 255 255 / 0.11), 0 4px 6px rgb(0 0 0 / 0.55),
     0 6px 10px rgb(0 0 0 / 0.3);
   --depth-shadow-gloss: inset 0 1px 2px rgb(255 255 255 / 0.12);
+  --hairline-bottom-shadow: inset 0 -1px rgb(255 255 255 / 0.08);
+  --hairline-ring-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  --browser-field-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  --browser-window-shadow:
+    0 2px 3px rgb(0 0 0 / 0.4), 0 24px 70px -20px rgb(0 0 0 / 0.9);
+  --player-icon-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1), 0 16px 32px -16px rgb(0 0 0 / 0.7);
+  --docs-card-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
   --background: oklch(0% 0 0);
   --foreground: oklch(100% 0 0);
   --card: oklch(0.205 0 0);
@@ -456,6 +519,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   top: 0;
   left: 0;
   opacity: 0;
+  transform: var(--home-demo-cursor-transform, none);
   transition:
     transform 900ms var(--ease-in-out-strong),
     opacity 180ms var(--ease-out-strong);
@@ -846,6 +910,9 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
     0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
     0 2px 6px -3px rgba(0, 0, 0, 0.12),
     0 18px 40px -28px rgba(0, 0, 0, 0.22);
+  transform: var(--card-transform);
+  opacity: var(--card-opacity);
+  z-index: var(--card-z-index);
   transform-style: preserve-3d;
   backface-visibility: hidden;
   will-change: transform, opacity;
@@ -908,6 +975,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   --player-carousel-gap: clamp(2.5rem, 5vw, 7rem);
   width: max-content;
   animation: player-carousel-scroll 36s linear infinite;
+  animation-delay: var(--player-carousel-start-delay, 0ms);
   animation-play-state: paused;
   cursor: grab;
   touch-action: pan-y;
@@ -1142,7 +1210,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   .t-stagger-line {
     opacity: 0;
     transform: translateY(16px);
-    animation: t-stagger-fade-in 800ms var(--ease-vercel) forwards;
+    animation: t-stagger-fade-in 800ms var(--ease-out-overshoot) forwards;
   }
 
   .t-stagger-line--2 {
@@ -1238,4 +1306,83 @@ html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   .docs-section-switcher {
     animation: none;
   }
+}
+
+/* Named transition-property sets for property combinations the Tailwind
+   scale cannot express. Each mirrors the built-in transition-* shape —
+   property list plus the default duration and timing — so duration-*,
+   ease-*, and motion-reduce:* utilities keep composing with them. */
+@utility transition-collapse {
+  transition-property: grid-template-rows, opacity;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-colors-opacity {
+  transition-property: color, background-color, opacity;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-colors-scale {
+  transition-property: color, background-color, scale;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-colors-transform {
+  transition-property: background-color, color, transform;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-opacity-scale {
+  transition-property: opacity, scale;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-opacity-transform {
+  transition-property: opacity, transform;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-position-opacity {
+  transition-property: left, top, opacity;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-icon-swap {
+  transition-property: opacity, scale, filter;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-surface {
+  transition-property: border-color, box-shadow, background-color;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-card-lift {
+  transition-property: background-color, box-shadow, scale;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility transition-bg-scale {
+  transition-property: background-color, scale;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+/* The toast stack animates each property at its own speed, so this one is a
+   full transition shorthand rather than a property set. */
+@utility transition-toast-stack {
+  transition:
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 500ms,
+    height 150ms;
 }

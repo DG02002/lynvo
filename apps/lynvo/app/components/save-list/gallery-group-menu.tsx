@@ -3,7 +3,10 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { Button } from "~/components/ui/button"
+import {
+  MenuTriggerButton,
+  type MenuTriggerLook,
+} from "~/components/menu-trigger-button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,13 +18,11 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { GalleryGroup } from "~/features/links/media-artwork"
 import { formatItemCount } from "~/lib/format-item-count"
 
-import { MEDIA_LIST_ROW_MENU_TRIGGER_CLASS } from "./media-list-row-constants"
-
 interface GalleryGroupMenuProps {
   readonly group: GalleryGroup
   readonly actions: LinkItemActions
   readonly onExit?: () => void
-  readonly triggerClassName?: string
+  readonly triggerLook: MenuTriggerLook
   readonly menuOpen?: boolean
   readonly onMenuOpenChange?: (open: boolean) => void
 }
@@ -30,7 +31,7 @@ export const GalleryGroupMenu = ({
   group,
   actions,
   onExit,
-  triggerClassName,
+  triggerLook,
   menuOpen,
   onMenuOpenChange,
 }: GalleryGroupMenuProps) => {
@@ -49,19 +50,15 @@ export const GalleryGroupMenu = ({
       <DropdownMenu open={menuOpen} onOpenChange={onMenuOpenChange}>
         <DropdownMenuTrigger
           render={
-            <Button
-              variant="ghost"
-              size="icon"
+            <MenuTriggerButton
+              look={triggerLook}
               aria-label={`Open menu for ${group.displayTitle}`}
-              // The media-row default carries !-marked classes that would
-              // survive a cn merge, so a caller's trigger class replaces it.
-              className={triggerClassName ?? MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             >
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">
                 Open menu for {group.displayTitle}
               </span>
-            </Button>
+            </MenuTriggerButton>
           }
         />
         <DropdownMenuContent align="end" className="w-48">

@@ -43,11 +43,7 @@ export function ConfirmationAlertDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent initialFocus={cancelRef} size="hero">
         {media}
-        <AlertDialogHeroHeader
-          title={title}
-          description={description}
-          descriptionClassName="break-words"
-        />
+        <AlertDialogHeroHeader title={title} description={description} />
         <div className="mt-4 flex w-full flex-col gap-3">
           <AlertDialogAction
             size="lg"
