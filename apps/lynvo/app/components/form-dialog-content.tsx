@@ -1,15 +1,10 @@
 import type { ComponentProps, FormEventHandler, ReactNode } from "react"
 
 import { DialogActionButton } from "~/components/dialog-action-button"
+import { DialogHeroHeader } from "~/components/dialog-hero-header"
 import { Spinner } from "~/components/spinner"
 import type { Button } from "~/components/ui/button"
-import {
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog"
+import { DialogClose, DialogContent } from "~/components/ui/dialog"
 
 interface FormDialogContentProps {
   title: ReactNode
@@ -40,14 +35,7 @@ export const FormDialogContent = ({
 }: FormDialogContentProps) => (
   <DialogContent size="hero" showCloseButton={false}>
     {media}
-    <DialogHeader variant="hero" className="w-full">
-      <DialogTitle size="hero" className="w-full text-center">
-        {title}
-      </DialogTitle>
-      <DialogDescription size="hero" className="w-full text-center">
-        {description}
-      </DialogDescription>
-    </DialogHeader>
+    <DialogHeroHeader title={title} description={description} />
     <form onSubmit={onSubmit} className="flex min-w-0 flex-col gap-6">
       {children}
       <div className="flex w-full flex-col gap-3">

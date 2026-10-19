@@ -21,7 +21,7 @@ const badgeVariants = cva(
         success: "bg-success text-success-foreground",
         warning:
           "border-warning/30 bg-warning/10 text-warning-foreground dark:border-warning/30 dark:bg-warning/10",
-        stable: "bg-stable text-stable-foreground",
+        "release-stable": "bg-stable text-stable-foreground",
         tag: "bg-muted px-2.5 py-1 text-[10px] font-semibold tracking-wider text-foreground uppercase",
       },
       size: {

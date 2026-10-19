@@ -7,14 +7,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
 import { GitHubMark, TelegramMark } from "~/components/brand-marks"
+import { AlertDialogHeroHeader } from "~/components/dialog-hero-header"
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 import { Button } from "~/components/ui/button"
 import {
@@ -55,21 +53,16 @@ const ReportIssueDialog = ({
       }}
     >
       <AlertDialogContent size="hero" className="w-full">
-        <AlertDialogHeader variant="hero" className="w-full min-w-0">
-          <HugeiconsIcon
-            icon={Bug01Icon}
-            className="mx-auto size-16 text-muted-foreground"
-          />
-          <AlertDialogTitle size="hero" className="w-full text-center">
-            Report an issue
-          </AlertDialogTitle>
-          <AlertDialogDescription
-            size="hero"
-            className="w-full min-w-0 text-center"
-          >
-            The report is prefilled with this link’s failure details.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+        <AlertDialogHeroHeader
+          icon={
+            <HugeiconsIcon
+              icon={Bug01Icon}
+              className="mx-auto size-16 text-muted-foreground"
+            />
+          }
+          title="Report an issue"
+          description="The report is prefilled with this link’s failure details."
+        />
         {report ? (
           <div className="flex w-full flex-col gap-2">
             <Button

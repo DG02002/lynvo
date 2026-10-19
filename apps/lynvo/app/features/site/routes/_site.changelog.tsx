@@ -237,7 +237,7 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
                   {entry.date}
                 </time>
                 <Badge
-                  variant="stable"
+                  variant="release-stable"
                   size="lg"
                   className="ml-auto md:ml-0"
                   aria-label="Stable"

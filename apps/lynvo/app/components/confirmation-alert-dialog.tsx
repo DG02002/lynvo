@@ -1,14 +1,12 @@
 import { useRef, type ReactNode } from "react"
 
+import { AlertDialogHeroHeader } from "~/components/dialog-hero-header"
 import { Spinner } from "~/components/spinner"
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 import type { Button } from "~/components/ui/button"
 
@@ -45,17 +43,11 @@ export function ConfirmationAlertDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent initialFocus={cancelRef} size="hero">
         {media}
-        <AlertDialogHeader variant="hero" className="w-full min-w-0">
-          <AlertDialogTitle size="hero" className="w-full text-center">
-            {title}
-          </AlertDialogTitle>
-          <AlertDialogDescription
-            size="hero"
-            className="w-full min-w-0 break-words text-center"
-          >
-            {description}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+        <AlertDialogHeroHeader
+          title={title}
+          description={description}
+          descriptionClassName="break-words"
+        />
         <div className="mt-4 flex w-full flex-col gap-3">
           <AlertDialogAction
             size="lg"

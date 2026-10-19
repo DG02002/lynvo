@@ -1,4 +1,5 @@
 import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
+import { Label } from "~/components/ui/label"
 import { Switch } from "~/components/ui/switch"
 
 interface SaveListBackButtonProps {
@@ -23,11 +24,9 @@ export const FolderTitleDisplayToggleButton = ({
   onToggle,
 }: FolderTitleDisplayToggleProps) => {
   return (
-    // A switch row is app chrome rather than a form label, so it renders as a
-    // plain label with its touch-target treatment inline.
-    <label
+    <Label
       htmlFor="episode-names-switch"
-      className="flex h-9 cursor-pointer items-center gap-2 px-2.5 text-base font-medium text-foreground select-none"
+      variant="switch-row"
       data-slot="episode-names-switch"
     >
       <Switch
@@ -37,6 +36,6 @@ export const FolderTitleDisplayToggleButton = ({
         onCheckedChange={() => onToggle()}
       />
       Show episode names
-    </label>
+    </Label>
   )
 }

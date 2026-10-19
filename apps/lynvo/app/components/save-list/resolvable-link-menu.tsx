@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { showLinkCopiedToast } from "~/lib/toast-notifications"
-import { cn } from "~/lib/utils"
 
 interface ResolvableLinkMenuProps {
   itemLabel: string
@@ -42,11 +41,7 @@ export const ResolvableLinkMenu = ({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button
-              variant="quiet"
-              size="icon"
-              className={cn(triggerClassName)}
-            >
+            <Button variant="quiet" size="icon" className={triggerClassName}>
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">Open menu for {itemLabel}</span>
             </Button>

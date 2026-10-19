@@ -248,11 +248,11 @@ const MobileFolderTreeToggle = ({
   isOpen,
   onToggle,
 }: MobileFolderTreeToggleProps) => (
-  // The mobile folder-tree toggle is a finder row rendered as a button, so it
-  // is plain chrome rather than a design-system Button.
-  <button
+  <Button
     type="button"
-    className="flex h-auto min-h-11 w-full items-center justify-start gap-3 rounded-lg px-0 text-left text-sm font-normal transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
+    variant="finder-row"
+    size="finder-row"
+    className="md:hidden"
     aria-expanded={isOpen}
     aria-label={isOpen ? "Collapse folder tree" : "Expand folder tree"}
     onClick={onToggle}
@@ -267,7 +267,7 @@ const MobileFolderTreeToggle = ({
         className={cn("size-4 transition-transform", isOpen && "rotate-180")}
       />
     </span>
-  </button>
+  </Button>
 )
 
 const FolderTree = ({

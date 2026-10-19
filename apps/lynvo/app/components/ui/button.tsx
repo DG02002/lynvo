@@ -30,6 +30,10 @@ const buttonVariants = cva(
           "border-muted-foreground/30 bg-transparent hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent",
         overlay:
           "bg-background/80 text-foreground shadow-none hover:bg-background/80 hover:text-foreground aria-expanded:bg-background/80 dark:hover:bg-background/80",
+        "immersive-back":
+          "rounded-none text-lg text-foreground hover:bg-muted/70 hover:text-foreground",
+        "finder-row":
+          "rounded-lg text-left text-sm font-normal transition-colors hover:bg-muted/50 hover:text-foreground",
       },
       size: {
         default:
@@ -42,6 +46,8 @@ const buttonVariants = cva(
         "icon-sm": "size-8",
         "icon-lg": "size-10",
         adaptive: "size-9 gap-2 p-0 sm:h-9 sm:w-auto sm:px-3",
+        "immersive-back": "h-full w-full gap-1.5 px-2 md:px-4",
+        "finder-row": "h-auto min-h-11 w-full justify-start gap-3 px-0",
       },
     },
     defaultVariants: {
