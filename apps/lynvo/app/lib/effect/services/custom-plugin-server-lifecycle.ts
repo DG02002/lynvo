@@ -80,6 +80,7 @@ export const registerCustomPluginServer = Effect.fn(
       beginPluginServerRegistration(database, input.user.id, {
         baseUrl: normalizedBaseUrl,
         now: Date.now(),
+        realtime: environment.USER_REALTIME_ROOM,
       }),
     catch: (cause) =>
       registrationError({
@@ -114,6 +115,7 @@ export const registerCustomPluginServer = Effect.fn(
           manifest: prepared.manifestValue,
           ...encryptedCredential,
           now: Date.now(),
+          realtime: environment.USER_REALTIME_ROOM,
         }),
       catch: (cause) =>
         registrationError({
@@ -135,6 +137,7 @@ export const registerCustomPluginServer = Effect.fn(
             generation: reservation.generation,
             attemptId: reservation.attemptId,
             now: Date.now(),
+            realtime: environment.USER_REALTIME_ROOM,
           }),
         catch: (cleanupCause) => cleanupCause,
       }).pipe(
@@ -192,6 +195,7 @@ export const refreshCustomPluginServer = Effect.fn(
           recordPluginServerVerificationFailure(database, input.user.id, {
             id: pluginServer.id,
             now: Date.now(),
+            realtime: environment.USER_REALTIME_ROOM,
           }),
         catch: (transitionCause) => transitionCause,
       }).pipe(
@@ -212,6 +216,7 @@ export const refreshCustomPluginServer = Effect.fn(
         id: pluginServer.id,
         manifest: refresh.manifestValue,
         now,
+        realtime: environment.USER_REALTIME_ROOM,
       }),
     catch: (cause) =>
       registrationError({
@@ -266,6 +271,7 @@ export const readCustomPluginServerUsage = Effect.fn(
                       {
                         id: pluginServer.id,
                         now,
+                        realtime: environment.USER_REALTIME_ROOM,
                       }
                     ),
                   catch: (cause) =>
@@ -284,6 +290,7 @@ export const readCustomPluginServerUsage = Effect.fn(
                       {
                         id: pluginServer.id,
                         now: Date.now(),
+                        realtime: environment.USER_REALTIME_ROOM,
                       }
                     ),
                   catch: (transitionCause) => transitionCause,

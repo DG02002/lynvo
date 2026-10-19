@@ -72,6 +72,7 @@ export const enqueueRemoteCommand = async (
     payload: string
     targetReceiverId: string
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<{ id: string; dataVersion: number }> => {
   assertPayloadSize(input.payload)
@@ -85,6 +86,7 @@ export const enqueueRemoteCommand = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       database
         .prepare(
@@ -161,6 +163,7 @@ interface ClaimNextRemoteCommandInput {
   readonly sessionId: string
   readonly receiverId: string
   readonly now: number
+  readonly realtime?: DurableObjectNamespace
 }
 
 export const claimNextRemoteCommand = async ({
@@ -169,6 +172,7 @@ export const claimNextRemoteCommand = async ({
   sessionId,
   receiverId,
   now,
+  realtime,
 }: ClaimNextRemoteCommandInput): Promise<RemoteCommandClaim | null> => {
   const [queuedCommand, reclaimableCommand] = await Promise.all([
     findClaimableCommand({
@@ -204,6 +208,7 @@ export const claimNextRemoteCommand = async ({
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime,
     statements: [
       database
         .prepare(
@@ -241,6 +246,7 @@ interface ReportRemoteCommandResultInput {
   readonly result: "applied" | "failed"
   readonly message?: string | undefined
   readonly now: number
+  readonly realtime?: DurableObjectNamespace
 }
 
 export const reportRemoteCommandResult = async ({
@@ -252,6 +258,7 @@ export const reportRemoteCommandResult = async ({
   claimToken,
   result,
   message,
+  realtime,
 }: ReportRemoteCommandResultInput): Promise<{
   success: boolean
   dataVersion: number
@@ -276,6 +283,7 @@ export const reportRemoteCommandResult = async ({
       dataVersion: await executeOwnedWrite({
         database,
         userId,
+        realtime,
         statements: [],
       }).then((ownedWrite) => ownedWrite.dataVersion),
     }
@@ -286,6 +294,7 @@ export const reportRemoteCommandResult = async ({
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime,
     statements: [
       database
         .prepare(

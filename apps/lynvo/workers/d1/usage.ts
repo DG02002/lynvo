@@ -347,6 +347,7 @@ interface ManagedExtractionReservationInput {
   pluginId: ManagedPluginId
   usageLimitsDisabled?: boolean | undefined
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 interface ManagedExtractionUsageSnapshot {
@@ -622,6 +623,7 @@ export const reserveManagedExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements,
   })
   // SAFETY: a conditional increment that hit its limit returns no row; the
@@ -710,6 +712,7 @@ export const settleManagedExtraction = async (
     operationId: string
     outcome: "consumed" | "released"
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<ManagedExtractionSettlementResult> => {
   const operation = await findManagedOperation(
@@ -733,6 +736,7 @@ export const settleManagedExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...releaseStatements,
       database

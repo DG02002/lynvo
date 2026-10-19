@@ -287,7 +287,11 @@ const collectExpiredPluginServerCleanup = ({
 export const beginPluginServerRegistration = async (
   database: D1Database,
   userId: string,
-  input: { baseUrl: string; now: number }
+  input: {
+    baseUrl: string
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<BeginRegistrationResult> => {
   const normalizedBaseUrl = normalizeBaseUrl(input.baseUrl)
   const pendingExpiresAt = input.now + PLUGIN_SERVER_REGISTRATION_TTL_MS
@@ -345,6 +349,7 @@ export const beginPluginServerRegistration = async (
     const { dataVersion } = await executeOwnedWrite({
       database,
       userId,
+      realtime: input.realtime,
       statements: [
         ...preparation.statements,
         ...cleanupStatements,
@@ -400,6 +405,7 @@ export const beginPluginServerRegistration = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       ...cleanupStatements,
@@ -452,6 +458,7 @@ export interface FinalizeCredentialInput {
   manifest: string
   generation: number
   attemptId: string
+  realtime?: DurableObjectNamespace
 }
 
 export const finalizePluginServerCredential = async (
@@ -514,6 +521,7 @@ export const finalizePluginServerCredential = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [...preparation.statements, ...mutation],
   })
   return { success: true, dataVersion }
@@ -528,6 +536,7 @@ export const markPluginServerRegistrationFailed = async (
     generation: number
     attemptId: string
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await findOwnedPluginServerRow(database, userId, input.id)
@@ -560,6 +569,7 @@ export const markPluginServerRegistrationFailed = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [...preparation.statements, ...mutation],
   })
   return { success: true, dataVersion }
@@ -623,7 +633,7 @@ export const expireStalePluginServerRegistrations = async (
 export const recordPluginServerVerificationFailure = async (
   database: D1Database,
   userId: string,
-  input: { id: string; now: number }
+  input: { id: string; now: number; realtime?: DurableObjectNamespace }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireReadyPluginServerRow(database, userId, input.id)
   if (existing.verification_status === "down") {
@@ -650,6 +660,7 @@ export const recordPluginServerVerificationFailure = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [...preparation.statements, ...mutation],
   })
   return { success: true, dataVersion }
@@ -658,7 +669,7 @@ export const recordPluginServerVerificationFailure = async (
 export const recordPluginServerVerificationSuccess = async (
   database: D1Database,
   userId: string,
-  input: { id: string; now: number }
+  input: { id: string; now: number; realtime?: DurableObjectNamespace }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireReadyPluginServerRow(database, userId, input.id)
   const nextRow: PluginServerRow = {
@@ -680,6 +691,7 @@ export const recordPluginServerVerificationSuccess = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [...preparation.statements, ...mutation],
   })
   return { success: true, dataVersion }
@@ -688,7 +700,12 @@ export const recordPluginServerVerificationSuccess = async (
 export const recordPluginServerRefreshSuccess = async (
   database: D1Database,
   userId: string,
-  input: { id: string; manifest: string; now: number }
+  input: {
+    id: string
+    manifest: string
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireReadyPluginServerRow(database, userId, input.id)
   const nextRow: PluginServerRow = {
@@ -717,6 +734,7 @@ export const recordPluginServerRefreshSuccess = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [...preparation.statements, ...mutation],
   })
   return { success: true, dataVersion }
@@ -729,6 +747,7 @@ interface PluginServerBooleanInput {
   readonly enabled: boolean
   readonly now: number
   readonly column: PluginServerBooleanColumn
+  readonly realtime?: DurableObjectNamespace
 }
 
 const setPluginServerBoolean = async (
@@ -762,6 +781,7 @@ const setPluginServerBoolean = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [...preparation.statements, ...mutation],
   })
   return { success: true, dataVersion }
@@ -770,14 +790,24 @@ const setPluginServerBoolean = async (
 export const setPluginServerEnabled = async (
   database: D1Database,
   userId: string,
-  input: { id: string; enabled: boolean; now: number }
+  input: {
+    id: string
+    enabled: boolean
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<{ success: boolean; dataVersion: number }> =>
   setPluginServerBoolean(database, userId, { ...input, column: "enabled" })
 
 export const setPluginServerProxyEnabled = async (
   database: D1Database,
   userId: string,
-  input: { id: string; enabled: boolean; now: number }
+  input: {
+    id: string
+    enabled: boolean
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<{ success: boolean; dataVersion: number }> =>
   setPluginServerBoolean(database, userId, {
     ...input,
@@ -787,7 +817,7 @@ export const setPluginServerProxyEnabled = async (
 export const deletePluginServerById = async (
   database: D1Database,
   userId: string,
-  input: { id: string; now: number }
+  input: { id: string; now: number; realtime?: DurableObjectNamespace }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
   const [domainResult, credentialResult, initialPreparation] =
@@ -848,6 +878,7 @@ export const deletePluginServerById = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements,
   })
   return { success: true, dataVersion }

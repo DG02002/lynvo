@@ -140,6 +140,7 @@ const refreshPluginServer = async ({
     id: pluginServer.id,
     manifest: JSON.stringify(manifest),
     now,
+    realtime: env.USER_REALTIME_ROOM,
   })
   await notifyAccountDataChanged(env, userId, result.dataVersion).catch(
     () => undefined
@@ -174,6 +175,7 @@ const refreshOnePluginServer = async ({
     await recordPluginServerVerificationFailure(database, row.user_id, {
       id: row.id,
       now,
+      realtime: env.USER_REALTIME_ROOM,
     }).catch(() => undefined)
     return false
   }
@@ -249,6 +251,7 @@ const refreshProxyProviderBalanceIfDue = async ({
       updateProxyProviderBalance(database, userId, {
         balance,
         now,
+        realtime: env.USER_REALTIME_ROOM,
       }),
   })
 }

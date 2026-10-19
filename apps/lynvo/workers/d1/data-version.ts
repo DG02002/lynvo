@@ -53,6 +53,7 @@ interface ExecuteOwnedWriteInput {
   readonly userId: string
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard
+  readonly realtime?: DurableObjectNamespace
 }
 
 export const executeOwnedWrite = async ({

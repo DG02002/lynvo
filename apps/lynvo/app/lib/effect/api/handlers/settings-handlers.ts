@@ -92,6 +92,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
               updateUserPlayerPreferences(database, user.id, {
                 ...payload,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               new BackendError({

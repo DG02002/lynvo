@@ -7,11 +7,15 @@ import {
 export const resetDocsSeedManagedUsage = async (
   database: D1Database,
   userId: string,
-  fixtureOperationId: string
+  input: {
+    fixtureOperationId: string
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<void> => {
   await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       database
         .prepare(
@@ -33,7 +37,11 @@ export const resetDocsSeedManagedUsage = async (
                  AND daily_period_key = usage_counters.period_key
              )`
         )
-        .bind(userId, fixtureOperationId, LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID),
+        .bind(
+          userId,
+          input.fixtureOperationId,
+          LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
+        ),
       database
         .prepare(
           `DELETE FROM usage_counters
@@ -49,7 +57,7 @@ export const resetDocsSeedManagedUsage = async (
           `DELETE FROM managed_extraction_operations
            WHERE user_id = ?1 AND (operation_id <> ?2 OR state = 'released')`
         )
-        .bind(userId, fixtureOperationId),
+        .bind(userId, input.fixtureOperationId),
       database
         .prepare(
           `INSERT INTO usage_counters (owner_key, metric_id, period_key, epoch, used)
@@ -60,7 +68,11 @@ export const resetDocsSeedManagedUsage = async (
            ON CONFLICT(owner_key, metric_id, period_key, epoch)
            DO UPDATE SET used = 1`
         )
-        .bind(userId, fixtureOperationId, LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID),
+        .bind(
+          userId,
+          input.fixtureOperationId,
+          LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
+        ),
       database
         .prepare(
           `INSERT INTO usage_counters (owner_key, metric_id, period_key, epoch, used)
@@ -73,7 +85,7 @@ export const resetDocsSeedManagedUsage = async (
         )
         .bind(
           userId,
-          fixtureOperationId,
+          input.fixtureOperationId,
           LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID
         ),
     ],

@@ -121,6 +121,7 @@ const settlePendingExtraction = async ({
       leaseExpiresAt: claim.leaseExpiresAt,
       retryAfterSeconds: pending.retryAfterSeconds,
       now: Date.now(),
+      realtime: env.USER_REALTIME_ROOM,
       debugLogEntry: {
         at: Date.now(),
         pluginServerId: extraction.meta?.pluginServerId,
@@ -163,6 +164,7 @@ const settleEmptyExtraction = async ({
       detail: "Extraction succeeded but produced no playable links",
     },
     now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
   })
   await notifySafely(env, claim.userId, settled.dataVersion)
 }
@@ -193,6 +195,7 @@ const settleCompletedExtraction = async ({
       durationMs: Date.now() - startedAt,
     },
     now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
   })
   await notifySafely(env, claim.userId, settled.dataVersion)
 }
@@ -232,6 +235,7 @@ const settleFailedExtraction = async ({
       httpStatus: extractionError.status,
     },
     now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
   })
   await notifySafely(env, claim.userId, settled.dataVersion)
 }
@@ -267,6 +271,7 @@ export const processSavedLinkExtraction = async (
   const claim = await claimNextSavedLinkExtraction(database, {
     now: Date.now(),
     linkId,
+    realtime: env.USER_REALTIME_ROOM,
   })
   if (!claim) {
     return false

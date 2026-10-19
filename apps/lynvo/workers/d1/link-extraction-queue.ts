@@ -109,6 +109,7 @@ export const enqueueSavedLinkExtraction = (
     meta: string
     extractionCredential?: SavedLinkExtractionCredentialWrite | null
     now: number
+    realtime?: DurableObjectNamespace
   }
 ) =>
   createOrUpdateSavedLink(database, userId, {
@@ -196,7 +197,11 @@ const getCandidateReadinessCondition = (candidate: LinkRow): string =>
 
 export const claimNextSavedLinkExtraction = async (
   database: D1Database,
-  input: { now: number; linkId?: string }
+  input: {
+    now: number
+    linkId?: string
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<SavedLinkExtractionClaim | undefined> => {
   const candidate = await findNextExtractionCandidate(
     database,
@@ -238,6 +243,7 @@ export const claimNextSavedLinkExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId: candidate.user_id,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database
@@ -371,6 +377,7 @@ export const settleSavedLinkExtraction = async (
     error?: string
     debugLogEntry?: LinkDebugLogEntry
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<SavedLinkMutationResult> => {
   const completedOperation = await findCompletedSavedLinkOperation(
@@ -450,6 +457,7 @@ export const settleSavedLinkExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database
@@ -525,6 +533,7 @@ export const requeuePendingSavedLinkExtraction = async (
     retryAfterSeconds: number
     debugLogEntry?: LinkDebugLogEntry
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await findSavedLinkById(database, input.id)
@@ -592,6 +601,7 @@ export const requeuePendingSavedLinkExtraction = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database

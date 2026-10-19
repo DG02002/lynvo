@@ -96,6 +96,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 id: params.pluginServerId,
                 enabled: payload.enabled,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               new BackendError({
@@ -127,6 +128,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 id: params.pluginServerId,
                 enabled: payload.enabled,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               new BackendError({
@@ -174,6 +176,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               deletePluginServerById(database, user.id, {
                 id: params.pluginServerId,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               new BackendError({

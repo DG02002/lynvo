@@ -71,6 +71,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               command: payload.command,
               payload: commandPayload,
               now: Date.now(),
+              realtime: environment.USER_REALTIME_ROOM,
             }),
           catch: (cause) =>
             new BackendError({
@@ -109,6 +110,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               sessionId: user.sid,
               receiverId: query.receiverId,
               now: Date.now(),
+              realtime: environment.USER_REALTIME_ROOM,
             }),
           catch: (cause) =>
             new BackendError({
@@ -157,6 +159,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               result: payload.result,
               message: payload.message,
               now: Date.now(),
+              realtime: environment.USER_REALTIME_ROOM,
             }),
           catch: (cause) =>
             new BackendError({
