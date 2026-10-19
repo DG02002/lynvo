@@ -13,20 +13,19 @@ import { createSession } from "../../workers/d1/sessions"
 import { getStorageLedger } from "../../workers/d1/storage-ledger"
 import {
   getUserPlayerPreferences,
-  insertGoogleUser,
   updateUserPlayerPreferences,
 } from "../../workers/d1/users"
 import { UserRealtimeRoom } from "../../workers/realtime/user-realtime-room"
+import { createUserFactory } from "../support/worker-fixtures"
 import { buildAuthenticatedWorkerRequest } from "../support/worker-route"
 
 const NOW = 1_750_000_000_000
 
-const createUser = async () =>
-  insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: "player-prefs@example.com",
-    now: NOW,
-  })
+const createUser = createUserFactory(
+  env.DB,
+  NOW,
+  () => "player-prefs@example.com"
+)
 
 describe("d1 player preferences", () => {
   it("returns empty preferences for a fresh account", async () => {

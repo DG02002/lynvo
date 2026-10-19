@@ -1,16 +1,14 @@
+import { validPluginServerManifestFixture } from "@dg02002/lynvo-plugin-server-protocol"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { csrfCookie } from "../../app/lib/csrf"
 import { createFakeD1Database } from "../support/fake-d1"
 
 const pluginServerManifest = JSON.stringify({
-  protocolVersion: "1.0",
+  ...validPluginServerManifestFixture,
   pluginServerId: "dev.example.plugin-server",
   displayName: "Proxy Capable",
-  auth: { type: "bearer" },
-  usage: { endpoint: "/usage" },
   matchers: [{ hosts: ["source.example"] }],
-  features: {},
   extensions: {
     lynvo: {
       proxyProvider: "scrape-do",

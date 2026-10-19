@@ -15,21 +15,20 @@ import {
 import {
   DEVELOPMENT_AUTH_EMAIL,
   DEVELOPMENT_AUTH_USER_ID,
-  createSession,
 } from "../../workers/d1/sessions"
-import { insertGoogleUser } from "../../workers/d1/users"
+import {
+  createSessionForFactory,
+  createUserFactory,
+} from "../support/worker-fixtures"
 
 const NOW = 1_750_000_000_000
 
-const createUser = async () =>
-  insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: `data-routes-${crypto.randomUUID()}@example.com`,
-    now: NOW,
-  })
-
-const createSessionFor = async (userId: string) =>
-  createSession(env.DB, { userId, now: Date.now() })
+const createUser = createUserFactory(
+  env.DB,
+  NOW,
+  () => `data-routes-${crypto.randomUUID()}@example.com`
+)
+const createSessionFor = createSessionForFactory(env.DB)
 
 const dataApiRequest = (
   path: string,

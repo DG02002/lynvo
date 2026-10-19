@@ -11,18 +11,17 @@ import {
   type ManagedPluginId,
   MANAGED_PLUGIN_IDS,
 } from "../../workers/d1/usage"
-import { insertGoogleUser } from "../../workers/d1/users"
 import { createDataChangedRecorder } from "../support/realtime-notifications"
+import { createUserFactory } from "../support/worker-fixtures"
 
 const BASE_NOW = Date.UTC(2026, 7, 18, 0, 0, 0)
 const DAY_MS = 24 * 60 * 60 * 1000
 
-const createUser = async () =>
-  insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: "usage-test@example.com",
-    now: BASE_NOW,
-  })
+const createUser = createUserFactory(
+  env.DB,
+  BASE_NOW,
+  () => "usage-test@example.com"
+)
 
 const readUserCounters = async (userId: string) =>
   (

@@ -9,18 +9,15 @@ import {
   revokeSessionById,
   touchSessionLastSeen,
 } from "../../workers/d1/sessions"
-import { insertGoogleUser } from "../../workers/d1/users"
+import { createUserFactory } from "../support/worker-fixtures"
 
 const NOW = 1_750_000_000_000
 
-const createUser = async () => {
-  const user = await insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: "session-test@example.com",
-    now: NOW,
-  })
-  return user
-}
+const createUser = createUserFactory(
+  env.DB,
+  NOW,
+  () => "session-test@example.com"
+)
 
 describe("d1 sessions", () => {
   it("creates a session and finds it while active", async () => {

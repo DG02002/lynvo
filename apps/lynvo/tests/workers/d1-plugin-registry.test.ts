@@ -38,18 +38,17 @@ import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "../../workers/d1/storage-ledger"
-import { insertGoogleUser } from "../../workers/d1/users"
 import { createDataChangedRecorder } from "../support/realtime-notifications"
+import { createUserFactory } from "../support/worker-fixtures"
 import { createD1OwnershipReadPause } from "./d1-ownership-race"
 
 const NOW = 1_750_000_000_000
 
-const createUser = async () =>
-  insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: "plugin-test@example.com",
-    now: NOW,
-  })
+const createUser = createUserFactory(
+  env.DB,
+  NOW,
+  () => "plugin-test@example.com"
+)
 
 const credential = () => ({
   ciphertext: "ciphertext",
