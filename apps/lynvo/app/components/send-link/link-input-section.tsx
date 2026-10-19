@@ -103,7 +103,7 @@ export function LinkInputSection({
       <div
         inert={!clipboardUrl}
         className={cn(
-          "grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none",
+          "grid transition-collapse duration-200 motion-reduce:transition-none",
           clipboardUrl
             ? "grid-rows-[1fr] opacity-100"
             : "grid-rows-[0fr] opacity-0"
@@ -124,14 +124,10 @@ export function LinkInputSection({
       </div>
 
       {error && (
-        <div className="mb-4 translate-y-0 opacity-100 transition-[opacity,transform] duration-200 starting:-translate-y-2 starting:opacity-0">
+        <div className="mb-4 translate-y-0 opacity-100 transition-opacity-transform duration-200 starting:-translate-y-2 starting:opacity-0">
           <Alert
             id={linkInputErrorId}
-            variant={error.kind === "duplicate" ? "default" : "destructive"}
-            className={cn(
-              error.kind === "duplicate" &&
-                "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-            )}
+            variant={error.kind === "duplicate" ? "warning" : "destructive"}
           >
             <HugeiconsIcon icon={AlertCircleIcon} />
             <AlertTitle>{getErrorTitle(error)}</AlertTitle>
@@ -145,11 +141,11 @@ export function LinkInputSection({
       <label htmlFor="link-input" className="sr-only">
         Link
       </label>
-      <InputGroup className="w-full h-13.5 rounded-full bg-muted/30 sm:flex-1 border-2 border-default-medium has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:border-blue-500 has-[[data-slot=input-group-control]:focus-visible]:ring-0">
+      <InputGroup variant="url" className="w-full sm:flex-1">
         <InputGroupInput
           id="link-input"
           placeholder="https://example.com/video"
-          className="pl-5 text-base text-heading md:text-base"
+          variant="url"
           value={url}
           onChange={(e) => {
             setUrl(e.target.value)
@@ -176,10 +172,11 @@ export function LinkInputSection({
             <InputGroupButton
               type="button"
               onClick={() => setIsClipboardDialogOpen(true)}
-              size="icon-xs"
+              size="icon-lg"
+              variant="quiet"
               title="Enable clipboard suggestions"
               aria-label="Enable clipboard suggestions"
-              className="size-11 rounded-full bg-transparent hover:bg-transparent hover:text-inherit dark:hover:bg-transparent active:scale-[0.96]"
+              className="active:scale-[0.96]"
             >
               <ClipboardAccessIcon className="size-6" />
             </InputGroupButton>
@@ -188,11 +185,10 @@ export function LinkInputSection({
             type="button"
             onClick={() => onSave()}
             disabled={isSaving || !url.trim()}
-            size="icon-xs"
+            size="icon-lg"
             title="Save link"
             aria-label="Save link"
             variant="default"
-            className="size-11 rounded-full"
           >
             {isSaving ? (
               <Spinner className="size-6" aria-label="Saving link…" />
@@ -225,7 +221,7 @@ export function LinkInputSection({
             }
           />
           {statusMessage && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {statusMessage}
             </span>
           )}

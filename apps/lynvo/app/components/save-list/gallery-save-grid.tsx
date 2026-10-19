@@ -53,9 +53,6 @@ import {
   SaveListLoadingState,
 } from "./save-list-state"
 
-const GALLERY_MENU_TRIGGER_CLASS =
-  "size-10 rounded-full bg-background/80 shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
-
 interface GallerySaveItemProps {
   readonly group: GalleryGroup
   readonly actions: LinkItemActions
@@ -334,7 +331,7 @@ const GallerySaveItem = ({
       className={cn(
         "group relative w-full",
         TVBRO_FILTER_FREE_ENTER_CLASS,
-        "animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none"
+        "animate-in animation-duration-500 fill-mode-both fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none"
       )}
     >
       {isExtractionVisual && !isExtractionFailed ? null : (
@@ -382,9 +379,10 @@ const GallerySaveItem = ({
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
           <Button
             type="button"
-            variant="ghost"
+            variant="overlay"
+            size="xs"
             aria-label={`Choose links for ${group.displayTitle}`}
-            className="absolute bottom-4 left-1/2 z-10 h-10 -translate-x-1/2 rounded-full bg-background/80 px-3 text-xs shadow-none hover:bg-background/80 aria-expanded:bg-background/80 sm:left-4 sm:translate-x-0 dark:hover:bg-background/80"
+            className="absolute bottom-4 left-1/2 z-10 h-10 -translate-x-1/2 sm:left-4 sm:translate-x-0"
             onClick={(event) => {
               event.stopPropagation()
               actions.chooseLinks?.(item)
@@ -402,7 +400,7 @@ const GallerySaveItem = ({
                 playableLink={directLink}
                 showRemove
                 isRefreshing={isExtracting}
-                triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
+                triggerLook="gallery-overlay"
                 menuOpen={isMenuOpen}
                 onMenuOpenChange={setIsMenuOpen}
               />
@@ -410,7 +408,7 @@ const GallerySaveItem = ({
               <GalleryGroupMenu
                 group={group}
                 actions={actions}
-                triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
+                triggerLook="gallery-overlay"
                 menuOpen={isMenuOpen}
                 onMenuOpenChange={setIsMenuOpen}
               />

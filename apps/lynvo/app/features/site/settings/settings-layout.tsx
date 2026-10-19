@@ -1,6 +1,8 @@
 import * as React from "react"
 import { Link, type LinkProps } from "react-router"
 
+import { SelectTrigger as LynvoSelectTrigger } from "~/components/select-trigger"
+import { SelectContent } from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
 import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
@@ -56,18 +58,44 @@ export function SettingsRow({
 
 export function SettingsLoadingBars({
   className,
-  titleWidthClassName,
+  titleWidth,
 }: {
   className?: string
-  titleWidthClassName: string
+  titleWidth: "sm" | "lg"
 }) {
   return (
     <div aria-hidden="true" className={cn("flex flex-col gap-2", className)}>
-      <Skeleton
-        className={cn("loading-skeleton-pulse h-4", titleWidthClassName)}
-      />
-      <Skeleton className="loading-skeleton-pulse h-2 w-full rounded-full" />
+      <Skeleton className={titleWidth === "lg" ? "h-4 w-48" : "h-4 w-40"} />
+      <Skeleton radius="full" className="h-2 w-full" />
     </div>
+  )
+}
+
+// Every settings select renders as a quiet inline value control: no chrome,
+// no focus ring, muted hover. The restyle classes are the SelectTrigger
+// contract in .oxlintrc.json; what the trigger already provides (text-sm,
+// h-8 at size sm, transition, outline) is not repeated here.
+const settingsSelectTriggerRestyleClass =
+  "bg-transparent border-transparent px-2.5 py-1 gap-1 rounded-xl text-foreground hover:bg-muted focus-visible:ring-0 select-none w-auto justify-end"
+
+export function SettingsSelectTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof LynvoSelectTrigger>) {
+  return (
+    <LynvoSelectTrigger
+      {...props}
+      className={cn(settingsSelectTriggerRestyleClass, className)}
+    />
+  )
+}
+
+export function SettingsSelectContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectContent>) {
+  return (
+    <SelectContent {...props} className={cn("w-max min-w-max", className)} />
   )
 }
 

@@ -7,14 +7,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
 import { GitHubMark, TelegramMark } from "~/components/brand-marks"
+import { AlertDialogHeroHeader } from "~/components/dialog-hero-header"
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 import { Button } from "~/components/ui/button"
 import {
@@ -54,33 +52,34 @@ const ReportIssueDialog = ({
         }
       }}
     >
-      <AlertDialogContent className="w-full data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-md">
-        <AlertDialogHeader className="w-full min-w-0 place-items-center gap-4 text-center sm:place-items-center sm:text-center">
-          <HugeiconsIcon
-            icon={Bug01Icon}
-            className="mx-auto size-16 text-muted-foreground"
-          />
-          <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:text-3xl">
-            Report an issue
-          </AlertDialogTitle>
-          <AlertDialogDescription className="w-full min-w-0 text-pretty text-center text-base text-muted-foreground">
-            The report is prefilled with this link’s failure details.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+      <AlertDialogContent size="hero" className="w-full">
+        <AlertDialogHeroHeader
+          icon={
+            <HugeiconsIcon
+              icon={Bug01Icon}
+              className="mx-auto size-16 text-muted-foreground"
+            />
+          }
+          title="Report an issue"
+          description="The report is prefilled with this link’s failure details."
+        />
         {report ? (
           <div className="flex w-full flex-col gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="self-start text-muted-foreground"
+              className="self-start"
               aria-expanded={areDetailsVisible}
               onClick={() => setAreDetailsVisible((isVisible) => !isVisible)}
             >
               <HugeiconsIcon
                 icon={areDetailsVisible ? ArrowUp01Icon : ArrowDown01Icon}
+                className="text-muted-foreground"
               />
-              {areDetailsVisible ? "Hide details" : "Show details"}
+              <span className="text-muted-foreground">
+                {areDetailsVisible ? "Hide details" : "Show details"}
+              </span>
             </Button>
             {areDetailsVisible && (
               <dl className="flex max-h-56 w-full flex-col gap-2 overflow-auto rounded-lg border border-border/70 p-3">
@@ -103,7 +102,10 @@ const ReportIssueDialog = ({
         ) : null}
         <div className="flex w-full flex-col gap-3">
           <AlertDialogAction
-            className="h-13.5 w-full bg-gradient-to-b from-[#2AABEE] to-[#229ED9] text-white hover:from-[#2AABEE] hover:to-[#229ED9]/90"
+            // Telegram's brand gradient is a hard external fact, not part of
+            // the Lynvo palette.
+            // oxlint-disable-next-line shadcn/no-restyle -- Telegram brand gradient from telegram.org
+            className="h-13.5 w-full bg-gradient-to-b from-telegram-500 to-telegram-600 text-white hover:from-telegram-500 hover:to-telegram-600/90"
             disabled={!telegramUrl}
             onClick={() => {
               if (telegramUrl) {
@@ -115,7 +117,10 @@ const ReportIssueDialog = ({
             Report on Telegram
           </AlertDialogAction>
           <AlertDialogAction
-            className="h-13.5 w-full bg-[#24292f] text-white hover:bg-[#24292f]/90"
+            // GitHub's brand black is a hard external fact, not part of the
+            // Lynvo palette.
+            // oxlint-disable-next-line shadcn/no-restyle -- GitHub brand black from github.com
+            className="h-13.5 w-full bg-github text-white hover:bg-github/90"
             disabled={!githubUrl}
             onClick={() => {
               if (githubUrl) {
@@ -126,10 +131,7 @@ const ReportIssueDialog = ({
             <GitHubMark className="size-5" />
             Report on GitHub
           </AlertDialogAction>
-          <AlertDialogCancel
-            variant="outline"
-            className="h-13.5 w-full border-muted-foreground/20"
-          >
+          <AlertDialogCancel className="h-13.5 w-full">
             Cancel
           </AlertDialogCancel>
         </div>

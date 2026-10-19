@@ -1,13 +1,7 @@
 import { Result, Schema } from "effect"
 import { useCallback, useId } from "react"
 
-import { SelectTrigger } from "~/components/select-trigger"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "~/components/ui/select"
+import { Select, SelectItem, SelectValue } from "~/components/ui/select"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import {
   clearAsyncResourceCache,
@@ -26,11 +20,9 @@ import {
   SettingsList,
   SettingsRow,
   SettingsRowInfo,
+  SettingsSelectContent,
+  SettingsSelectTrigger,
 } from "./settings-layout"
-import {
-  settingsSelectContentClass,
-  settingsSelectTriggerClass,
-} from "./settings-layout-classes"
 import { useRangePlayerPreferences } from "./use-range-player-preferences"
 
 export const PlayerSettings = ({
@@ -112,10 +104,7 @@ export const PlayerSettings = ({
             value={rangeSupportedPlayerId}
             onValueChange={updateRangeSupportedPlayer}
           >
-            <SelectTrigger
-              aria-labelledby={rangeSupportedLabelId}
-              className={settingsSelectTriggerClass}
-            >
+            <SettingsSelectTrigger aria-labelledby={rangeSupportedLabelId}>
               <SelectValue>
                 {selectedRangeSupported && (
                   <div className="flex items-center gap-2">
@@ -128,8 +117,8 @@ export const PlayerSettings = ({
                   </div>
                 )}
               </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="end" className={settingsSelectContentClass}>
+            </SettingsSelectTrigger>
+            <SettingsSelectContent align="end">
               {PLAYER_DEFINITIONS.map((player) => (
                 <SelectItem key={player.id} value={player.id}>
                   <div className="flex items-center gap-2">
@@ -142,7 +131,7 @@ export const PlayerSettings = ({
                   </div>
                 </SelectItem>
               ))}
-            </SelectContent>
+            </SettingsSelectContent>
           </Select>
         </SettingsRow>
 
@@ -156,10 +145,7 @@ export const PlayerSettings = ({
             value={rangeUnsupportedPlayerId}
             onValueChange={updateRangeUnsupportedPlayer}
           >
-            <SelectTrigger
-              aria-labelledby={rangeUnsupportedLabelId}
-              className={settingsSelectTriggerClass}
-            >
+            <SettingsSelectTrigger aria-labelledby={rangeUnsupportedLabelId}>
               <SelectValue>
                 {selectedRangeUnsupported && (
                   <div className="flex items-center gap-2">
@@ -172,8 +158,8 @@ export const PlayerSettings = ({
                   </div>
                 )}
               </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="end" className={settingsSelectContentClass}>
+            </SettingsSelectTrigger>
+            <SettingsSelectContent align="end">
               {PLAYER_DEFINITIONS.map((player) => (
                 <SelectItem key={player.id} value={player.id}>
                   <div className="flex items-center gap-2">
@@ -186,7 +172,7 @@ export const PlayerSettings = ({
                   </div>
                 </SelectItem>
               ))}
-            </SelectContent>
+            </SettingsSelectContent>
           </Select>
         </SettingsRow>
       </SettingsList>

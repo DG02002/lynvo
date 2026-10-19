@@ -3,7 +3,13 @@
 import * as React from "react"
 import { cn } from "cn"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"table"> & {
+  variant?: "default" | "plain"
+}) {
   return (
     <div
       data-slot="table-container"
@@ -11,7 +17,12 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        data-variant={variant}
+        className={cn(
+          "group/table w-full caption-bottom text-sm",
+          variant === "plain" && "[&_tr]:hover:bg-transparent",
+          className
+        )}
         {...props}
       />
     </div>
@@ -51,12 +62,19 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableRow({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"tr"> & {
+  variant?: "default" | "borderless"
+}) {
   return (
     <tr
       data-slot="table-row"
       className={cn(
         "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        variant === "borderless" && "border-b-0 hover:bg-transparent",
         className
       )}
       {...props}
@@ -69,7 +87,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-12 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "h-12 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground group-data-[variant=plain]/table:px-0 [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
@@ -82,7 +100,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-3 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "p-3 align-middle whitespace-nowrap group-data-[variant=plain]/table:p-0 group-data-[variant=plain]/table:whitespace-normal [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

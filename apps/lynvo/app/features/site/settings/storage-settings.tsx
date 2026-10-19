@@ -3,12 +3,10 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useId, useState } from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { SelectTrigger } from "~/components/select-trigger"
 import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
 import {
   Select,
-  SelectContent,
   SelectGroup,
   SelectItem,
   SelectValue,
@@ -35,11 +33,9 @@ import {
   SettingsList,
   SettingsRow,
   SettingsRowInfo,
+  SettingsSelectContent,
+  SettingsSelectTrigger,
 } from "./settings-layout"
-import {
-  settingsSelectContentClass,
-  settingsSelectTriggerClass,
-} from "./settings-layout-classes"
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) {
@@ -85,7 +81,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
           className="flex flex-col gap-2"
           role="status"
         >
-          <SettingsLoadingBars titleWidthClassName="w-40" />
+          <SettingsLoadingBars titleWidth="sm" />
         </div>
       </SettingsPanel>
     )
@@ -199,13 +195,10 @@ export function StorageSettings({ userId }: { userId?: string }) {
               onValueChange={handleRetentionChange}
               disabled={isUpdatingRetention}
             >
-              <SelectTrigger
-                aria-labelledby={retentionLabelId}
-                className={settingsSelectTriggerClass}
-              >
+              <SettingsSelectTrigger aria-labelledby={retentionLabelId}>
                 <SelectValue>{retentionValue}</SelectValue>
-              </SelectTrigger>
-              <SelectContent align="end" className={settingsSelectContentClass}>
+              </SettingsSelectTrigger>
+              <SettingsSelectContent align="end">
                 <SelectGroup>
                   {usage.retentionDayOptions.map((days) => (
                     <SelectItem key={days} value={String(days)}>
@@ -213,15 +206,14 @@ export function StorageSettings({ userId }: { userId?: string }) {
                     </SelectItem>
                   ))}
                 </SelectGroup>
-              </SelectContent>
+              </SettingsSelectContent>
             </Select>
           </SettingsRow>
           <SettingsRow>
             <SettingsRowInfo label="Delete all links" />
             <Button
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none transition-colors shrink-0 px-4 text-sm font-normal"
+              variant="destructive-outline"
+              className="shrink-0"
               disabled={isClearingLinks || usage.savedLinkCount === 0}
               onClick={() => setIsClearLinksDialogOpen(true)}
             >

@@ -2,14 +2,13 @@ import { InformationCircleIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 
+import { Button } from "~/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip"
 import { cn } from "~/lib/utils"
-
-import { settingsWarningTextClass } from "./settings-layout-classes"
 
 interface PluginInfoTooltipProps {
   pluginName: string
@@ -50,24 +49,26 @@ export function PluginInfoTooltip({
     <Tooltip>
       <TooltipTrigger
         render={
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             aria-label={`${pluginName} info`}
-            className={cn(
-              "inline-flex shrink-0 items-center justify-center transition-colors focus-visible:outline-none",
-              hasUsageHint
-                ? cn(
-                    settingsWarningTextClass,
-                    "hover:text-yellow-900 dark:hover:text-yellow-100"
-                  )
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            className="shrink-0"
           />
         }
       >
-        <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
+        <HugeiconsIcon
+          icon={InformationCircleIcon}
+          className={cn(
+            "size-4",
+            hasUsageHint
+              ? "text-warning-foreground"
+              : "text-muted-foreground group-hover/button:text-foreground"
+          )}
+        />
       </TooltipTrigger>
-      <TooltipContent className="flex-col items-start gap-1 py-2 text-left">
+      <TooltipContent variant="rich">
         {description && <p>{description}</p>}
         {version && <p>Version {version}</p>}
         {usageHint}

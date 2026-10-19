@@ -63,20 +63,15 @@ const DocsSidebarContents = ({
         <Accordion
           key={group.group}
           multiple
-          className="rounded-none border-0"
+          variant="plain"
           defaultValue={
             !currentSlug || currentGroup === group ? [group.group] : []
           }
         >
-          <AccordionItem
-            value={group.group}
-            className="border-b-0 data-open:bg-transparent"
-          >
-            <AccordionTrigger className="rounded-lg px-0 py-2.5 text-sm font-medium hover:no-underline">
-              {group.group}
-            </AccordionTrigger>
-            <AccordionContent className="-mx-4 pb-2 [&_a]:no-underline">
-              <ul className="flex flex-col gap-0.5">
+          <AccordionItem value={group.group} variant="borderless">
+            <AccordionTrigger variant="nav">{group.group}</AccordionTrigger>
+            <AccordionContent variant="nav" className="-mx-4">
+              <ul className="flex flex-col gap-0.5 [&_a]:no-underline">
                 {group.pages.map((page) => {
                   const isCurrentPage = page.slug === currentSlug
 
@@ -140,7 +135,7 @@ export const DocsShell = ({
             icon={ArrowDown01Icon}
             aria-hidden="true"
             strokeWidth={2}
-            className="size-4 shrink-0 transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-open:rotate-180 motion-reduce:transition-none"
+            className="size-4 shrink-0 transition-transform duration-300 ease-out-smooth group-open:rotate-180 motion-reduce:transition-none"
           />
         </summary>
         <div className="mt-4 flex max-h-[65svh] flex-col gap-5 overflow-y-auto pb-1">
@@ -248,7 +243,7 @@ export const DocsDocumentLayout = ({
               </nav>
             )}
             <div className="flex items-start justify-between gap-x-4">
-              <h1 className="min-w-0 text-[2rem] leading-[2.5rem] font-semibold text-balance md:text-[2.5rem] md:leading-[3rem]">
+              <h1 className="min-w-0 text-docs-title font-semibold text-balance md:text-docs-title-lg">
                 {context.page.title}
               </h1>
               <div className="mt-2.5 shrink-0">

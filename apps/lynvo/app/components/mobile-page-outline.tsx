@@ -99,7 +99,7 @@ export function MobilePageOutline({
         tabIndex={visible ? undefined : -1}
         onClick={() => visible && setOpen((current) => !current)}
         className={cn(
-          "flex min-h-10 w-full items-center justify-between gap-4 border-b bg-background/95 px-6 text-left text-xs font-normal backdrop-blur-xl transition-[color,background-color,opacity] duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] hover:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring active:bg-muted/60 md:min-h-12 md:px-8",
+          "flex min-h-10 w-full items-center justify-between gap-4 border-b bg-background/95 px-6 text-left text-xs font-normal backdrop-blur-xl transition-colors-opacity duration-300 ease-out-smooth hover:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring active:bg-muted/60 md:min-h-12 md:px-8",
           visible ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       >
@@ -108,7 +108,7 @@ export function MobilePageOutline({
           icon={ArrowDown01Icon}
           aria-hidden="true"
           className={cn(
-            "size-4 shrink-0 transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none",
+            "size-4 shrink-0 transition-transform duration-300 ease-out-smooth motion-reduce:transition-none",
             open && "rotate-180"
           )}
           strokeWidth={2}
@@ -119,7 +119,7 @@ export function MobilePageOutline({
         id={panelId}
         aria-hidden={!open}
         className={cn(
-          "absolute inset-x-0 top-full border-b bg-background/98 shadow-xl backdrop-blur-xl transition-opacity duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)]",
+          "absolute inset-x-0 top-full border-b bg-background/98 shadow-xl backdrop-blur-xl transition-opacity duration-300 ease-out-smooth",
           open ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       >
@@ -136,7 +136,7 @@ export function MobilePageOutline({
                     tabIndex={open ? undefined : -1}
                     onClick={(event) => handleHeadingClick(event, heading.id)}
                     className={cn(
-                      "flex min-h-10 items-center rounded-lg py-1.5 text-xs transition-[color,background-color,scale] duration-150 active:scale-[0.98] md:min-h-11 md:py-2",
+                      "flex min-h-10 items-center rounded-lg py-1.5 text-xs transition-colors-scale duration-150 active:scale-[0.98] md:min-h-11 md:py-2",
                       heading.level === 3 ? "pl-5" : "px-3",
                       active
                         ? "text-foreground"

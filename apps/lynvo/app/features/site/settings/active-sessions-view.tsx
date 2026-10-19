@@ -132,12 +132,7 @@ export const ActiveSessionsView = ({
                       {getSessionDeviceName(session.deviceName)}
                     </span>
                     {session.isCurrent && (
-                      <Badge
-                        variant="secondary"
-                        className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-foreground"
-                      >
-                        Current session
-                      </Badge>
+                      <Badge variant="tag">Current session</Badge>
                     )}
                   </div>
                   <span className="text-sm text-muted-foreground">
@@ -150,9 +145,8 @@ export const ActiveSessionsView = ({
               </div>
               {!session.isCurrent && (
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 shrink-0 rounded-full border-muted-foreground/30 bg-transparent px-4 text-sm font-medium hover:bg-transparent"
+                  variant="outline-quiet"
+                  className="shrink-0"
                   onClick={() => {
                     setSessionToRevoke({
                       sessionId: session.id,
@@ -180,8 +174,8 @@ export const ActiveSessionsView = ({
           </p>
         </div>
         <Button
-          variant="outline"
-          className="rounded-full border-destructive bg-transparent text-destructive hover:bg-transparent hover:text-destructive px-5 shrink-0 self-start sm:self-center"
+          variant="destructive-outline"
+          className="shrink-0 self-start sm:self-center"
           onClick={onRevokeAllSessions}
           disabled={busy === "revokeAll"}
         >

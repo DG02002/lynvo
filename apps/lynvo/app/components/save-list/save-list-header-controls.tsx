@@ -26,7 +26,7 @@ export const FolderTitleDisplayToggleButton = ({
   return (
     <Label
       htmlFor="episode-names-switch"
-      className="h-9 cursor-pointer gap-2 px-2.5 text-base text-foreground"
+      variant="switch-row"
       data-slot="episode-names-switch"
     >
       <Switch

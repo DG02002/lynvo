@@ -5,7 +5,6 @@ import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 
 import type { MediaView } from "./media-view-preference"
-import { settingsWarningTextClass } from "./settings-layout-classes"
 
 interface MediaViewOption {
   value: MediaView
@@ -88,9 +87,9 @@ export const MediaViewSelector = ({
         <label
           key={option.value}
           className={cn(
-            "group flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl border p-2 text-left transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
+            "group flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl border p-2 text-left transition-surface duration-150 motion-reduce:transition-none",
             isSelected
-              ? "border-sky-500 bg-sky-500/15 shadow-sm"
+              ? "border-link bg-link/15 shadow-sm"
               : "border-border bg-background"
           )}
         >
@@ -114,17 +113,7 @@ export const MediaViewSelector = ({
                 aria-hidden="true"
               />
               <span className="min-w-0 flex-1">{option.label}</span>
-              {option.isBeta && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "border-yellow-500/30 bg-yellow-500/10 dark:border-yellow-400/30 dark:bg-yellow-400/10",
-                    settingsWarningTextClass
-                  )}
-                >
-                  Beta
-                </Badge>
-              )}
+              {option.isBeta && <Badge variant="warning">Beta</Badge>}
             </span>
             <span
               className={cn(

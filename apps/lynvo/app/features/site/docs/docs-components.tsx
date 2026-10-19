@@ -56,6 +56,7 @@ const copyWithTextArea = (code: string) => {
 }
 
 const TypeScriptIcon = () => (
+  // oxlint-disable shadcn/no-raw-colors -- Official TypeScript logo colors, per https://www.typescriptlang.org/branding
   <svg aria-hidden="true" className="size-4" viewBox="0 0 256 256">
     <path
       d="M20 0h216c11.046 0 20 8.954 20 20v216c0 11.046-8.954 20-20 20H20c-11.046 0-20-8.954-20-20V20C0 8.954 8.954 0 20 0Z"
@@ -66,6 +67,7 @@ const TypeScriptIcon = () => (
       fill="#FFF"
     />
   </svg>
+  // oxlint-enable shadcn/no-raw-colors
 )
 
 const JsonIcon = () => {
@@ -73,6 +75,7 @@ const JsonIcon = () => {
   const reverseGradientId = useId()
 
   return (
+    // oxlint-disable shadcn/no-raw-colors -- Official JSON icon gradient, per https://json.org
     <svg aria-hidden="true" className="size-4" viewBox="0 0 160 160">
       <defs>
         <linearGradient id={gradientId}>
@@ -111,10 +114,12 @@ const JsonIcon = () => {
         />
       </g>
     </svg>
+    // oxlint-enable shadcn/no-raw-colors
   )
 }
 
 const EnvIcon = () => (
+  // oxlint-disable shadcn/no-raw-colors -- Official Vercel env-file icon colors, per https://vercel.com/design
   <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24">
     <rect width="24" height="24" fill="#09090B" />
     <path
@@ -122,6 +127,7 @@ const EnvIcon = () => (
       d="M24 0v24H0V0h24ZM10.933 15.89H6.84v5.52h4.198v-.93H7.955v-1.503h2.77v-.93h-2.77v-1.224h2.978v-.934Zm2.146 0h-1.084v5.52h1.035v-3.6l2.226 3.6h1.118v-5.52h-1.036v3.686l-2.259-3.687Zm5.117 0h-1.208l1.973 5.52h1.19l1.976-5.52h-1.182l-1.352 4.085-1.397-4.086ZM5.4 19.68H3.72v1.68H5.4v-1.68Z"
     />
   </svg>
+  // oxlint-enable shadcn/no-raw-colors
 )
 
 const CodeLabelIcon = ({ label }: { label: string }) => {
@@ -213,39 +219,37 @@ export function DocsFaq({
   const open = userIntent ?? locationHash === `#${itemId}`
 
   return (
-    <Accordion
-      className="docs-faq not-typeset rounded-none border-0"
-      value={open ? [itemId] : []}
-      onValueChange={(value) => setUserIntent(value.includes(itemId))}
-    >
-      {/* The shared accordion item highlights open items with a background;
-          docs FAQ rows stay plain, separated only by the list divider. */}
-      <AccordionItem
-        id={itemId}
-        value={itemId}
-        className="data-open:bg-transparent"
+    <div className="docs-faq not-typeset">
+      <Accordion
+        variant="plain"
+        value={open ? [itemId] : []}
+        onValueChange={(value) => setUserIntent(value.includes(itemId))}
       >
-        <AccordionPrimitive.Header className="group/heading flex items-center">
-          <AccordionPrimitive.Trigger className="group/accordion-trigger flex flex-1 items-center gap-3 rounded-sm py-4 pr-2 text-left text-sm font-normal outline-none hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-            <HugeiconsIcon
-              icon={ArrowDown01Icon}
-              aria-hidden="true"
-              className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
-              strokeWidth={2}
+        {/* The shared accordion item highlights open items with a background;
+            docs FAQ rows stay plain, separated only by the list divider. */}
+        <AccordionItem id={itemId} value={itemId}>
+          <AccordionPrimitive.Header className="group/heading flex items-center">
+            <AccordionPrimitive.Trigger className="group/accordion-trigger flex flex-1 items-center gap-3 rounded-sm py-4 pr-2 text-left text-sm font-normal outline-none hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                aria-hidden="true"
+                className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-out-smooth group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
+                strokeWidth={2}
+              />
+              <span className="min-w-0 flex-1">{question}</span>
+            </AccordionPrimitive.Trigger>
+            <DocsHeadingAnchor
+              headingId={itemId}
+              label={question}
+              onClick={() => setUserIntent(true)}
             />
-            <span className="min-w-0 flex-1">{question}</span>
-          </AccordionPrimitive.Trigger>
-          <DocsHeadingAnchor
-            headingId={itemId}
-            label={question}
-            onClick={() => setUserIntent(true)}
-          />
-        </AccordionPrimitive.Header>
-        <AccordionContent className="pl-3 pb-4 leading-6 text-muted-foreground">
-          {children}
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+          </AccordionPrimitive.Header>
+          <AccordionContent variant="muted">
+            <div className="pl-3">{children}</div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </div>
   )
 }
 
@@ -957,25 +961,25 @@ function CodeBlock({
               ? `Copied ${label}`
               : `Copy code from ${label}`
           }
-          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-[background-color,scale] duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
+          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
         >
           <span className="relative size-3.5" aria-hidden="true">
             <HugeiconsIcon
               icon={CopyIcon}
               className={cn(
-                "absolute inset-0 size-3.5 transition-[opacity,scale,filter] duration-200",
+                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
                 copyState === "copied"
-                  ? "scale-25 opacity-0 blur-[4px]"
-                  : "scale-100 opacity-100 blur-0"
+                  ? "scale-25 opacity-0 blur-xs"
+                  : "scale-100 opacity-100"
               )}
             />
             <HugeiconsIcon
               icon={Tick02Icon}
               className={cn(
-                "absolute inset-0 size-3.5 transition-[opacity,scale,filter] duration-200",
+                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
                 copyState === "copied"
-                  ? "scale-100 opacity-100 blur-0"
-                  : "scale-25 opacity-0 blur-[4px]"
+                  ? "scale-100 opacity-100"
+                  : "scale-25 opacity-0 blur-xs"
               )}
             />
           </span>
@@ -991,17 +995,19 @@ function CodeBlock({
 
 function DocsNote({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Alert className="not-typeset mt-[var(--typeset-flow)]">
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription>{children}</AlertDescription>
-    </Alert>
+    <div className="not-typeset">
+      <Alert className="mt-(--typeset-flow)">
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription>{children}</AlertDescription>
+      </Alert>
+    </div>
   )
 }
 
 const AndroidTvRemoteTroubleshooting = () => (
   <aside
     aria-labelledby="virtual-remote-troubleshooting-title"
-    className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+    className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-hairline-ring"
   >
     <div className="flex items-start gap-4">
       <span className="flex h-7 w-10 shrink-0 items-center justify-center">
@@ -1072,7 +1078,7 @@ const DocsHeadingAnchor = ({
     href={`#${headingId}`}
     onClick={onClick}
     aria-label={`Link to ${label}`}
-    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-blue-500 opacity-0 transition-[opacity,scale] duration-200 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-400"
+    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-link opacity-0 transition-opacity-scale duration-200 ease-out-smooth group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-link"
   >
     <HugeiconsIcon
       icon={Link02Icon}
@@ -1168,7 +1174,7 @@ export const docsComponents: MDXComponents = {
     <pre
       {...props}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 font-mono text-[0.8125rem] font-medium leading-6",
+        "overflow-x-auto bg-transparent p-4 font-mono text-code font-medium leading-6",
         className
       )}
     />

@@ -32,7 +32,7 @@ describe("HomeSaveDemo", () => {
         .closest("[data-demo-browser]")
     ).toBeNull()
     expect(screen.queryByText("Source link")).not.toBeInTheDocument()
-    expect(container.querySelector(".home-demo-clipboard-slot")).toHaveClass(
+    expect(container.querySelector("[data-demo-clipboard-slot]")).toHaveClass(
       "min-h-10"
     )
 
@@ -43,10 +43,10 @@ describe("HomeSaveDemo", () => {
       container.querySelector('[data-slot="input-group"]')
     ).toBeInTheDocument()
     expect(container.querySelector(".shimmer")).not.toBeInTheDocument()
-    expect(container.querySelector(".home-demo-copy-source")).toHaveClass(
+    expect(container.querySelector("[data-demo-copy-source]")).toHaveClass(
       "transition-transform"
     )
-    expect(container.querySelector(".home-demo-copy-source")).not.toHaveClass(
+    expect(container.querySelector("[data-demo-copy-source]")).not.toHaveClass(
       "transition-[opacity,transform]"
     )
     expect(screen.getByText("Direct Media (built in)")).toHaveClass(

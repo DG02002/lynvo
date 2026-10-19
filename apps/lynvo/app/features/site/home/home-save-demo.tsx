@@ -28,6 +28,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import type { CSSVariableStyle } from "~/lib/style"
 
 import {
   HOME_DEMO_BROWSER_URL,
@@ -62,6 +63,10 @@ interface DemoLibraryItemProps {
   menuTriggerRef?: RefObject<HTMLButtonElement | null>
   isMenuTriggerPressed?: boolean
 }
+
+// The scripted cursor position travels through a custom property so the
+// .home-demo-cursor class owns the transform declaration it transitions.
+type HomeDemoCursorStyle = CSSVariableStyle<"--home-demo-cursor-transform">
 
 interface DemoMenuItemProps {
   icon: ComponentProps<typeof HugeiconsIcon>["icon"]
@@ -348,6 +353,10 @@ export const HomeSaveDemo = () => {
     confirmButton: confirmButtonRef,
   })
 
+  const cursorStyle: HomeDemoCursorStyle = {
+    "--home-demo-cursor-transform": `translate3d(${cursorPosition?.left ?? 0}px, ${cursorPosition?.top ?? 0}px, 0)`,
+  }
+
   const {
     isClipboardOpen,
     isLinkPasted,
@@ -385,7 +394,8 @@ export const HomeSaveDemo = () => {
     >
       <div
         aria-hidden={!isCopySourceVisible}
-        className={`home-demo-copy-source absolute top-0 left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 px-1 py-1 text-center transition-transform duration-200 ${isCopySourceVisible ? "visible translate-y-0" : "invisible -translate-y-1"}`}
+        data-demo-copy-source
+        className={`absolute top-0 left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 px-1 py-1 text-center transition-transform duration-200 ${isCopySourceVisible ? "visible translate-y-0" : "invisible -translate-y-1"}`}
       >
         <span className="block max-w-52 truncate text-xs text-foreground">
           {HOME_DEMO_CLIPBOARD_URL}
@@ -393,7 +403,7 @@ export const HomeSaveDemo = () => {
         <button
           ref={copySourceRef}
           aria-label="Copy Source link"
-          className={`pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 ${isCopySourcePressed ? "scale-[0.96] bg-blue-500 text-white" : "bg-muted/80"}`}
+          className={`pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors-transform duration-150 ${isCopySourcePressed ? "scale-[0.96] bg-link text-white" : "bg-muted/80"}`}
           onClick={handleCopySourceClick}
           tabIndex={isCopySourceVisible ? 0 : -1}
           type="button"
@@ -404,19 +414,19 @@ export const HomeSaveDemo = () => {
 
       <div
         data-demo-browser="true"
-        className="relative overflow-hidden rounded-[18px] bg-background/95 shadow-[0_2px_3px_rgba(0,0,0,0.05),0_16px_40px_-12px_rgba(0,0,0,0.18),0_36px_80px_-24px_rgba(0,0,0,0.2)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-background/90 dark:shadow-[0_2px_3px_rgba(0,0,0,0.4),0_24px_70px_-20px_rgba(0,0,0,0.9)] dark:ring-white/10"
+        className="relative overflow-hidden rounded-2xl bg-background/95 shadow-browser-window ring-1 ring-black/10 backdrop-blur-xl dark:bg-background/90 dark:ring-white/10"
       >
         <div
           data-demo-browser-toolbar="true"
-          className="flex h-12 items-center gap-3 bg-muted/65 px-4 shadow-[inset_0_-1px_rgba(0,0,0,0.08)] dark:bg-muted/35 dark:shadow-[inset_0_-1px_rgba(255,255,255,0.08)]"
+          className="flex h-12 items-center gap-3 bg-muted/65 px-4 shadow-hairline-bottom dark:bg-muted/35"
         >
           <div className="flex shrink-0 items-center gap-2" aria-hidden="true">
-            <span className="size-3 rounded-full bg-[#ff5f57] shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.18)]" />
-            <span className="size-3 rounded-full bg-[#febc2e] shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.18)]" />
-            <span className="size-3 rounded-full bg-[#28c840] shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.18)]" />
+            <span className="size-3 rounded-full bg-mac-red shadow-window-dot" />
+            <span className="size-3 rounded-full bg-mac-yellow shadow-window-dot" />
+            <span className="size-3 rounded-full bg-mac-green shadow-window-dot" />
           </div>
 
-          <div className="mx-auto flex h-8 w-full max-w-md items-center justify-center gap-2 rounded-[9px] bg-background/80 px-3 text-xs text-muted-foreground shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] dark:bg-black/35 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+          <div className="mx-auto flex h-8 w-full max-w-md items-center justify-center gap-2 rounded-md bg-background/80 px-3 text-xs text-muted-foreground shadow-browser-field dark:bg-black/35">
             <HugeiconsIcon icon={Shield01Icon} className="size-3.5" />
             <span className="truncate">{HOME_DEMO_BROWSER_URL}</span>
           </div>
@@ -429,10 +439,10 @@ export const HomeSaveDemo = () => {
           className="relative px-4 py-7 sm:px-8 sm:py-10"
         >
           <div className="mx-auto mb-8 flex w-full flex-col gap-4">
-            <div className="home-demo-clipboard-slot min-h-10">
+            <div data-demo-clipboard-slot className="min-h-10">
               <div
                 aria-hidden={!isClipboardOpen}
-                className={`home-demo-clipboard-reveal grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${isClipboardOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+                className={`home-demo-clipboard-reveal grid transition-collapse duration-200 motion-reduce:transition-none ${isClipboardOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
               >
                 <div className="min-h-0 overflow-hidden">
                   <button
@@ -454,10 +464,10 @@ export const HomeSaveDemo = () => {
               </div>
             </div>
 
-            <InputGroup className="h-13.5 w-full rounded-full border-2 border-default-medium bg-muted/30 sm:flex-1">
+            <InputGroup variant="url" className="w-full sm:flex-1">
               <InputGroupInput
                 aria-label="Link"
-                className="pl-5 text-base text-heading md:text-base"
+                variant="url"
                 placeholder="https://example.com/video"
                 readOnly
                 tabIndex={-1}
@@ -466,9 +476,8 @@ export const HomeSaveDemo = () => {
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
                   aria-label="Save link"
-                  className="size-11 rounded-full"
                   disabled={!isLinkPasted}
-                  size="icon-xs"
+                  size="icon-lg"
                   title="Save link"
                   type="button"
                   variant="default"
@@ -517,12 +526,13 @@ export const HomeSaveDemo = () => {
       </div>
 
       <svg
-        className="home-demo-cursor pointer-events-none absolute z-[60] h-7 w-7 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]"
+        // A pointer glyph renders white fill on a black outline, like an OS
+        // cursor, regardless of theme.
+        // oxlint-disable shadcn/no-raw-colors -- OS cursor glyph colors, not a theme color
+        className="home-demo-cursor pointer-events-none absolute z-[60] h-7 w-7 drop-shadow-cursor"
         data-visible={isCursorVisible}
         data-pressed={isCursorPressed}
-        style={{
-          transform: `translate3d(${cursorPosition?.left ?? 0}px, ${cursorPosition?.top ?? 0}px, 0)`,
-        }}
+        style={cursorStyle}
         viewBox="0 0 28 28"
         aria-hidden="true"
       >
@@ -535,6 +545,7 @@ export const HomeSaveDemo = () => {
           strokeLinejoin="round"
         />
       </svg>
+      {/* oxlint-enable shadcn/no-raw-colors */}
     </div>
   )
 }
@@ -546,7 +557,7 @@ const DemoLibraryItem = ({
 }: DemoLibraryItemProps) => (
   <div className="home-demo-library-item border-b last:border-b-0">
     <div
-      className={`flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3 ${item.isOpened ? "bg-sky-500/15" : ""}`}
+      className={`flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3 ${item.isOpened ? "bg-link/15" : ""}`}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 text-left md:gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center text-foreground md:size-14">
@@ -572,10 +583,10 @@ const DemoLibraryItem = ({
       <Button
         ref={menuTriggerRef}
         aria-label={`Open menu for ${item.title}`}
-        className={`size-8 shrink-0 text-foreground hover:bg-transparent hover:text-foreground ${isMenuTriggerPressed ? "scale-[0.96]" : ""}`}
+        className={`size-8 shrink-0 ${isMenuTriggerPressed ? "scale-[0.96]" : ""}`}
         size="icon"
         type="button"
-        variant="ghost"
+        variant="quiet"
       >
         <HugeiconsIcon icon={EllipsisIcon} />
       </Button>
@@ -666,10 +677,10 @@ const DemoRemoveDialog = ({
           Remove
         </Button>
         <Button
-          className="h-13.5 w-full border-muted-foreground/20"
+          className="h-13.5 w-full"
           size="lg"
           type="button"
-          variant="outline"
+          variant="outline-soft"
         >
           Cancel
         </Button>

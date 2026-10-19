@@ -8,8 +8,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
 import { RemoveLinkAlertDialog } from "~/components/links/remove-link-alert-dialog"
+import { MenuTriggerButton } from "~/components/menu-trigger-button"
 import { PlayerOption } from "~/components/player-option"
-import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +22,6 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
 import { showLinkCopiedToast } from "~/lib/toast-notifications"
-import { cn } from "~/lib/utils"
 
 interface LinkActionsRemoveRequest {
   readonly url: string
@@ -35,7 +34,6 @@ interface LinkActionsDotMenuProps {
   onCopyLink: () => void
   onOpenInPlayer: (player: PlayerDefinition) => void
   isPlayable?: boolean
-  className?: string
   removeRequest?: LinkActionsRemoveRequest
   removeLabel?: string
 }
@@ -45,7 +43,6 @@ export function LinkActionsDotMenu({
   onCopyLink,
   onOpenInPlayer,
   isPlayable = true,
-  className,
   removeRequest,
   removeLabel = "Remove saved link",
 }: LinkActionsDotMenuProps) {
@@ -59,19 +56,14 @@ export function LinkActionsDotMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
+          <MenuTriggerButton
             type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
-              className
-            )}
+            look="media-row"
             onClick={(event) => event.stopPropagation()}
           >
             <HugeiconsIcon icon={EllipsisIcon} />
             <span className="sr-only">Open menu for {itemLabel}</span>
-          </Button>
+          </MenuTriggerButton>
         }
       />
       <DropdownMenuContent align="end" className="w-56">

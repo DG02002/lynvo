@@ -12,9 +12,9 @@ export const ImmersiveBackButton = ({
 }: ImmersiveBackButtonProps) => (
   <Button
     type="button"
-    variant="ghost"
+    variant="immersive-back"
+    size="immersive-back"
     aria-label="Back"
-    className="h-full w-full justify-center rounded-none px-2 text-lg text-foreground hover:bg-muted/70 hover:text-foreground md:px-4"
     onClick={onNavigateBack}
   >
     <HugeiconsIcon

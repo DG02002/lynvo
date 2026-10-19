@@ -27,9 +27,16 @@ import { useViewTransition } from "~/lib/client-profile"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
+import type { CSSVariableStyle } from "~/lib/style"
 import { cn } from "~/lib/utils"
 
 import type { Route } from "./+types/_site.pricing"
+
+// The mobile spacer must match the fixed bottom controls exactly, so its
+// height stays bound to MOBILE_PRICING_CONTROLS_HEIGHT_PX through a custom
+// property instead of a hard-coded utility.
+type MobilePricingSpacerStyle =
+  CSSVariableStyle<"--mobile-pricing-controls-height">
 
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",
@@ -41,10 +48,7 @@ const freePlanFeatures = [
   "Open links in Android players and use Remote Play",
 ]
 
-const planCardClassName = "self-start rounded-lg"
-const planCardHeaderClassName = "gap-3"
-const planCardTitleClassName = "text-4xl font-normal"
-const planCardDescriptionClassName = "text-sm text-foreground"
+const planCardClassName = "self-start"
 
 interface PlanDetail {
   feature: string
@@ -216,6 +220,10 @@ export default function Pricing() {
   const isMobileComparisonControlVisible =
     isComparisonTableVisible && !hasComparisonEndBeenReached
 
+  const mobilePricingSpacerStyle: MobilePricingSpacerStyle = {
+    "--mobile-pricing-controls-height": `${MOBILE_PRICING_CONTROLS_HEIGHT_PX}px`,
+  }
+
   return (
     <div className="w-full px-6 py-16 md:px-8 md:py-24 lg:px-10 xl:px-14">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
@@ -232,61 +240,56 @@ export default function Pricing() {
         aria-label="Available plans"
         className="mx-auto mt-14 grid max-w-5xl items-start gap-5 lg:grid-cols-2"
       >
-        <Card className={cn(planCardClassName, "border-foreground/20")}>
-          <CardHeader className={planCardHeaderClassName}>
-            <CardTitle className={planCardTitleClassName}>Free</CardTitle>
-            <CardDescription className={planCardDescriptionClassName}>
+        <Card className={planCardClassName}>
+          <CardHeader>
+            <CardTitle size="display">Free</CardTitle>
+            <CardDescription variant="solid">
               For saving links and opening them in Android players on Android
               TV, Android phones, and Android tablets.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-8">
-            <div className="flex items-baseline gap-2">
-              <span className="text-6xl font-normal">₹0</span>
-              <span className="text-lg text-muted-foreground">/ month</span>
+          <CardContent className="flex flex-1 flex-col">
+            <div className="flex flex-1 flex-col gap-8">
+              <div className="flex items-baseline gap-2">
+                <span className="text-6xl font-normal">₹0</span>
+                <span className="text-lg text-muted-foreground">/ month</span>
+              </div>
+              <Link
+                prefetch="intent"
+                to={authPaths.signIn}
+                viewTransition={viewTransition}
+                className={cn(buttonVariants({ size: "lg" }), "w-full")}
+              >
+                Create a free account
+                <HugeiconsIcon
+                  icon={ArrowUpRight01Icon}
+                  strokeWidth={2}
+                  data-icon="inline-end"
+                />
+              </Link>
+              <ul className="flex flex-col gap-5">
+                {freePlanFeatures.map((feature) => (
+                  <li key={feature} className="flex items-start gap-4">
+                    <HugeiconsIcon
+                      icon={Tick02Icon}
+                      strokeWidth={2}
+                      className="mt-0.5 size-5 shrink-0"
+                    />
+                    <span className="text-sm leading-6">{feature}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <Link
-              prefetch="intent"
-              to={authPaths.signIn}
-              viewTransition={viewTransition}
-              className={cn(buttonVariants({ size: "lg" }), "w-full")}
-            >
-              Create a free account
-              <HugeiconsIcon
-                icon={ArrowUpRight01Icon}
-                strokeWidth={2}
-                data-icon="inline-end"
-              />
-            </Link>
-            <ul className="flex flex-col gap-5">
-              {freePlanFeatures.map((feature) => (
-                <li key={feature} className="flex items-start gap-4">
-                  <HugeiconsIcon
-                    icon={Tick02Icon}
-                    strokeWidth={2}
-                    className="mt-0.5 size-5 shrink-0"
-                  />
-                  <span className="text-sm leading-6">{feature}</span>
-                </li>
-              ))}
-            </ul>
           </CardContent>
           <CardFooter className="sr-only">
             The Free plan is available now.
           </CardFooter>
         </Card>
 
-        <Card
-          className={cn(
-            planCardClassName,
-            "rounded-none bg-transparent ring-0"
-          )}
-        >
-          <CardHeader className={planCardHeaderClassName}>
-            <CardTitle className={planCardTitleClassName}>More plans</CardTitle>
-            <CardDescription className={planCardDescriptionClassName}>
-              Coming soon.
-            </CardDescription>
+        <Card variant="ghost" className={planCardClassName}>
+          <CardHeader>
+            <CardTitle size="display">More plans</CardTitle>
+            <CardDescription variant="solid">Coming soon.</CardDescription>
           </CardHeader>
           <CardFooter className="sr-only">
             Additional plans are coming soon.
@@ -321,39 +324,40 @@ export default function Pricing() {
               </Link>
             </div>
           </div>
-          <Table className="table-fixed">
+          <Table variant="plain" className="table-fixed">
             <colgroup>
               <col className="w-[58%] sm:w-3/5" />
               <col className="w-[42%] sm:w-2/5" />
             </colgroup>
             <TableHeader className="sr-only">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-3/5 px-0 text-base">Feature</TableHead>
-                <TableHead className="px-0 text-base">Free</TableHead>
+              <TableRow>
+                <TableHead className="w-3/5">Feature</TableHead>
+                <TableHead>Free</TableHead>
               </TableRow>
             </TableHeader>
             {planDetailSections.map((section) => (
               <TableBody key={section.title}>
-                <TableRow className="border-b-0 hover:bg-transparent">
-                  <TableCell
-                    colSpan={2}
-                    className="px-0 pt-12 pb-4 text-2xl font-normal"
-                  >
-                    {section.title}
+                <TableRow variant="borderless">
+                  <TableCell colSpan={2}>
+                    <h3 className="pt-12 pb-4 text-2xl font-normal">
+                      {section.title}
+                    </h3>
                   </TableCell>
                 </TableRow>
                 {section.details.map(({ feature, allowance, icon }) => (
-                  <TableRow key={feature} className="hover:bg-transparent">
-                    <TableCell className="py-5 pr-4 pl-0 font-medium whitespace-normal sm:pr-6">
-                      <span className="flex min-w-0 items-center gap-2.5">
+                  <TableRow key={feature}>
+                    <TableCell>
+                      <span className="flex min-w-0 items-center gap-2.5 my-5 mr-4 font-medium sm:mr-6">
                         {icon && (
                           <PluginIcon icon={icon} className="size-6 shrink-0" />
                         )}
                         <span className="min-w-0 text-pretty">{feature}</span>
                       </span>
                     </TableCell>
-                    <TableCell className="py-5 pr-0 pl-4 whitespace-normal text-muted-foreground sm:pl-6">
-                      {allowance}
+                    <TableCell>
+                      <span className="block my-5 ml-4 text-muted-foreground sm:ml-6">
+                        {allowance}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -364,8 +368,8 @@ export default function Pricing() {
           <div ref={comparisonEndRef} className="h-px sm:hidden" />
           {isMobileComparisonControlVisible && (
             <div
-              className="flow-root sm:hidden"
-              style={{ height: MOBILE_PRICING_CONTROLS_HEIGHT_PX }}
+              className="flow-root h-(--mobile-pricing-controls-height) sm:hidden"
+              style={mobilePricingSpacerStyle}
             >
               <MobilePlanControls className="fixed inset-x-0 bottom-0 z-40 bg-background px-6 pt-4 pb-4" />
             </div>

@@ -69,7 +69,7 @@ const SignIn = () => {
           <AuthDivider />
           <Button
             variant="secondary"
-            className="h-13.5 w-full max-w-xs self-center font-normal"
+            className="h-13.5 w-full max-w-xs self-center"
             nativeButton={false}
             render={
               <Link

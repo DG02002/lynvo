@@ -10,9 +10,12 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
+import {
+  MenuTriggerButton,
+  type MenuTriggerLook,
+} from "~/components/menu-trigger-button"
 import { PlayerOption } from "~/components/player-option"
 import { Spinner } from "~/components/spinner"
-import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +42,6 @@ import {
   PLAYER_DEFINITIONS,
 } from "~/lib/player-utils"
 import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
-import { cn } from "~/lib/utils"
 
 import { ChangeArtworkDialog } from "./change-artwork-dialog"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
@@ -64,7 +66,7 @@ interface LinkItemMenuProps {
   onRemoved?: () => void
   playableLink?: ExtractedLink
   isRefreshing?: boolean
-  triggerClassName?: string
+  triggerLook: MenuTriggerLook
   menuOpen?: boolean
   onMenuOpenChange?: (open: boolean) => void
 }
@@ -76,7 +78,7 @@ export const LinkItemMenu = ({
   onRemoved,
   playableLink,
   isRefreshing = false,
-  triggerClassName,
+  triggerLook,
   menuOpen,
   onMenuOpenChange,
 }: LinkItemMenuProps) => {
@@ -125,17 +127,13 @@ export const LinkItemMenu = ({
       <DropdownMenu open={menuOpen} onOpenChange={onMenuOpenChange}>
         <DropdownMenuTrigger
           render={
-            <Button
-              variant="ghost"
-              size="icon"
+            <MenuTriggerButton
+              look={triggerLook}
               disabled={isRefreshing}
               aria-label={
                 isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`
               }
-              className={cn(
-                "size-8 shrink-0 text-foreground! hover:bg-transparent hover:text-foreground! aria-expanded:bg-transparent aria-expanded:text-foreground!",
-                triggerClassName
-              )}
+              className="shrink-0"
             >
               {isRefreshing ? (
                 <Spinner aria-hidden="true" />
@@ -145,7 +143,7 @@ export const LinkItemMenu = ({
               <span className="sr-only">
                 {isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`}
               </span>
-            </Button>
+            </MenuTriggerButton>
           }
         />
         <DropdownMenuContent align="end" className="w-48">

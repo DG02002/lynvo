@@ -13,7 +13,7 @@ import { authPaths } from "~/lib/paths"
 import { showErrorToast } from "~/lib/toast-notifications"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
-import { AuthPolicyLinks } from "./auth-form-parts"
+import { AuthPolicyLinks, DeviceVerificationCode } from "./auth-form-parts"
 import { authorizeDeviceCode, readDeviceCodeApproval } from "./device-auth-http"
 import { deviceAuthCopy } from "./device-copy"
 import { useExpiryClock } from "./use-expiry-clock"
@@ -90,14 +90,8 @@ const DeviceApprovalStatusMessage = ({
         role="status"
       >
         <span className="sr-only">Checking code…</span>
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse h-4 w-40"
-        />
-        <Skeleton
-          aria-hidden="true"
-          className="loading-skeleton-pulse h-7 w-36"
-        />
+        <Skeleton aria-hidden="true" className="h-4 w-40" />
+        <Skeleton aria-hidden="true" className="h-7 w-36" />
       </div>
     )
   }
@@ -109,14 +103,7 @@ const DeviceApprovalStatusMessage = ({
           ? "Confirm this code is shown on your device."
           : "Generate a new code on the device you want to sign in."}
       </p>
-      {canApprove && (
-        <p
-          aria-label="Sign-in verification code"
-          className="my-8 text-3xl font-normal tracking-[0.16em] text-foreground tabular-nums sm:text-4xl"
-        >
-          {code}
-        </p>
-      )}
+      {canApprove && <DeviceVerificationCode code={code} />}
     </>
   )
 }

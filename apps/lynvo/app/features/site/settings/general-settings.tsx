@@ -1,10 +1,8 @@
 import { useTheme } from "next-themes"
 import { useId } from "react"
 
-import { SelectTrigger } from "~/components/select-trigger"
 import {
   Select,
-  SelectContent,
   SelectGroup,
   SelectItem,
   SelectValue,
@@ -19,14 +17,12 @@ import { setMediaView, useMediaView } from "./media-view-preference"
 import { MediaViewSelector } from "./media-view-selector"
 import {
   SettingsPanel,
+  SettingsSelectContent,
+  SettingsSelectTrigger,
   SettingsList,
   SettingsRow,
   SettingsRowInfo,
 } from "./settings-layout"
-import {
-  settingsSelectContentClass,
-  settingsSelectTriggerClass,
-} from "./settings-layout-classes"
 
 const appearanceOptions = [
   { value: "system", label: "System" },
@@ -58,13 +54,10 @@ export const GeneralSettings = () => {
         <SettingsRow>
           <SettingsRowInfo label="Appearance" labelId={appearanceLabelId} />
           <Select value={theme} onValueChange={handleAppearanceChange}>
-            <SelectTrigger
-              aria-labelledby={appearanceLabelId}
-              className={settingsSelectTriggerClass}
-            >
+            <SettingsSelectTrigger aria-labelledby={appearanceLabelId}>
               <SelectValue>{appearanceValue}</SelectValue>
-            </SelectTrigger>
-            <SelectContent align="end" className={settingsSelectContentClass}>
+            </SettingsSelectTrigger>
+            <SettingsSelectContent align="end">
               <SelectGroup>
                 {appearanceOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
@@ -72,7 +65,7 @@ export const GeneralSettings = () => {
                   </SelectItem>
                 ))}
               </SelectGroup>
-            </SelectContent>
+            </SettingsSelectContent>
           </Select>
         </SettingsRow>
         <SettingsRow>
