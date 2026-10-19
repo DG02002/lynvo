@@ -1,6 +1,6 @@
 import { Context, Effect } from "effect"
 import { initLogger } from "evlog"
-import { Hono } from "hono"
+import { Hono, type MiddlewareHandler } from "hono"
 import { createRequestHandler, RouterContextProvider } from "react-router"
 
 import { handler as apiHandler } from "../app/lib/effect/api/server"
@@ -22,6 +22,8 @@ import {
 import {
   DEVICE_CODE_CREATION_RATE_LIMIT,
   DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  EFFECT_MUTATION_ROUTE_RATE_LIMIT,
+  EFFECT_MUTATION_ROUTE_RATE_WINDOW_SECONDS,
   EXTRACTION_ROUTE_RATE_LIMIT,
   EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
 } from "./constants"
@@ -85,6 +87,59 @@ type AuthEnv = Env & {
 }
 
 const rateLimit = checkRateLimit
+
+const effectMutationRouteGroups = [
+  { name: "settings", path: "/api/settings" },
+  { name: "plugin-servers", path: "/api/plugin-servers" },
+  { name: "plugin-domains", path: "/api/plugin-domains" },
+  { name: "proxy", path: "/api/proxy" },
+  { name: "remote", path: "/api/remote" },
+] as const
+
+const effectMutationRateLimit =
+  (group: string): MiddlewareHandler<RequestLoggingEnvironment> =>
+  async (context, next) => {
+    if (["GET", "HEAD", "OPTIONS"].includes(context.req.method)) {
+      return next()
+    }
+
+    const result = await rateLimit({
+      environment: context.env,
+      key: `effect-mutation:${group}:${getClientIp(context.req.raw)}`,
+      limit: EFFECT_MUTATION_ROUTE_RATE_LIMIT,
+      windowSeconds: EFFECT_MUTATION_ROUTE_RATE_WINDOW_SECONDS,
+    })
+    const retryAfterSeconds =
+      result.status === "limited" && result.expiresAt !== undefined
+        ? Math.max(1, Math.ceil((result.expiresAt - Date.now()) / 1_000))
+        : undefined
+    recordRateLimitResult(context, result, retryAfterSeconds)
+
+    if (result.status === "limited") {
+      if (retryAfterSeconds !== undefined) {
+        context.header("Retry-After", String(retryAfterSeconds))
+      }
+      return context.json(
+        requestApiError(context, {
+          code: "rate_limited",
+          error: "Too many requests. Try again later.",
+          retryable: true,
+        }),
+        429
+      )
+    }
+    if (result.status === "unavailable") {
+      return context.json(
+        requestApiError(context, {
+          code: "service_unavailable",
+          error: "This service is temporarily unavailable.",
+          retryable: true,
+        }),
+        503
+      )
+    }
+    return next()
+  }
 
 const resolveRequestSession = async (
   request: Request,
@@ -424,6 +479,12 @@ app.use("/api/meta", async (context, next) => {
   }
   return next()
 })
+
+for (const group of effectMutationRouteGroups) {
+  const middleware = effectMutationRateLimit(group.name)
+  app.use(group.path, middleware)
+  app.use(`${group.path}/*`, middleware)
+}
 
 registerD1AuthRoutes(app)
 

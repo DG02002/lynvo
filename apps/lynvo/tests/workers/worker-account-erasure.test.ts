@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { createTestRateLimiter } from "../support/rate-limiter"
 import {
   buildAuthenticatedWorkerRequest,
   createAuthenticatedWorkerDatabase,
@@ -12,20 +13,26 @@ describe("Account erasure HTTP behavior", () => {
     let didCloseRealtimeAccount = false
     const database = createAuthenticatedWorkerDatabase()
     const { default: worker } = await import("../../workers/app")
-    const environment = createWorkerEnvironment({
-      database,
-      environment: "production",
-      userRealtimeRoom: {
-        getByName: () => ({
-          fetch: async (_url: string, init?: RequestInit) => {
-            if (init?.method === "POST") {
-              didCloseRealtimeAccount = true
-            }
-            return Response.json({ success: true })
-          },
-        }),
-      },
-    })
+    const limiter = createTestRateLimiter(
+      () => new Response(null, { status: 200 })
+    )
+    const environment = {
+      ...createWorkerEnvironment({
+        database,
+        environment: "production",
+        userRealtimeRoom: {
+          getByName: () => ({
+            fetch: async (_url: string, init?: RequestInit) => {
+              if (init?.method === "POST") {
+                didCloseRealtimeAccount = true
+              }
+              return Response.json({ success: true })
+            },
+          }),
+        },
+      }),
+      AUTH_RATE_LIMITER: limiter.namespace,
+    }
     const response = await worker.fetch(
       await buildAuthenticatedWorkerRequest("/api/settings/security/account", {
         method: "DELETE",
