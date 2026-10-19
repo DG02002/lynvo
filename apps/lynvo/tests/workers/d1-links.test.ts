@@ -598,6 +598,35 @@ describe("d1 links", () => {
     expect(first.replayed).toBe(false)
   })
 
+  it("releases an operation reservation when a Saved link mutation throws", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "reservation:release-target",
+      url: "https://example.com/reservation-release",
+      now: NOW,
+    })
+    const operationId = "reservation:release-after-error"
+    const linkId = created.id ?? ""
+
+    await expect(
+      updateSavedLinkMeta(env.DB, user.id, {
+        operationId,
+        id: linkId,
+        meta: "{invalid-json",
+        now: NOW + 1_000,
+      })
+    ).rejects.toThrow()
+
+    const retry = await updateSavedLinkMeta(env.DB, user.id, {
+      operationId,
+      id: linkId,
+      meta: metadataJson(),
+      now: NOW + 2_000,
+    })
+    expect(retry).toMatchObject({ success: true, replayed: false })
+  })
+
   it("keeps extraction state on the Saved link while the queue settles", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
