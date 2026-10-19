@@ -16,7 +16,6 @@ import {
   useRef,
   useState,
   type ComponentProps,
-  type CSSProperties,
   type RefObject,
 } from "react"
 
@@ -29,6 +28,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import type { CSSVariableStyle } from "~/lib/style"
 
 import {
   HOME_DEMO_BROWSER_URL,
@@ -66,8 +66,7 @@ interface DemoLibraryItemProps {
 
 // The scripted cursor position travels through a custom property so the
 // .home-demo-cursor class owns the transform declaration it transitions.
-type HomeDemoCursorStyle = CSSProperties &
-  Record<"--home-demo-cursor-transform", string>
+type HomeDemoCursorStyle = CSSVariableStyle<"--home-demo-cursor-transform">
 
 interface DemoMenuItemProps {
   icon: ComponentProps<typeof HugeiconsIcon>["icon"]

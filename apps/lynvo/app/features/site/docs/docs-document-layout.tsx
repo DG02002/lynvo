@@ -135,7 +135,7 @@ export const DocsShell = ({
             icon={ArrowDown01Icon}
             aria-hidden="true"
             strokeWidth={2}
-            className="size-4 shrink-0 transition-transform duration-300 ease-vercel-out group-open:rotate-180 motion-reduce:transition-none"
+            className="size-4 shrink-0 transition-transform duration-300 ease-out-smooth group-open:rotate-180 motion-reduce:transition-none"
           />
         </summary>
         <div className="mt-4 flex max-h-[65svh] flex-col gap-5 overflow-y-auto pb-1">

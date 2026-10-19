@@ -1,6 +1,7 @@
-import { useEffect, useRef, type CSSProperties } from "react"
+import { useEffect, useRef } from "react"
 
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import type { CSSVariableStyle } from "~/lib/style"
 
 import { useAnimationActivity } from "./use-animation-activity"
 
@@ -13,8 +14,9 @@ const PLAYER_PREVIEWS = {
 
 // The initial slot placement travels through custom properties so the
 // .player-card-swap__card class owns the real declarations.
-type PlayerCardSlotStyle = CSSProperties &
-  Record<"--card-transform" | "--card-opacity" | "--card-z-index", string>
+type PlayerCardSlotStyle = CSSVariableStyle<
+  "--card-transform" | "--card-opacity" | "--card-z-index"
+>
 
 const INITIAL_PLAYER_ORDER = PLAYER_DEFINITIONS.map((_, index) => index)
 

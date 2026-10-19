@@ -63,3 +63,12 @@ export const AuthPolicyLinks = () => {
     </div>
   )
 }
+
+export const DeviceVerificationCode = ({ code }: { code: string }) => (
+  <p
+    aria-label="Sign-in verification code"
+    className="my-8 text-3xl font-normal tracking-code text-foreground tabular-nums sm:text-4xl"
+  >
+    {code}
+  </p>
+)

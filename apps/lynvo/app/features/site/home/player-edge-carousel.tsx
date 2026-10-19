@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import type { CSSVariableStyle } from "~/lib/style"
 
 import { useAnimationActivity } from "./use-animation-activity"
 
 // The measured loop start offset travels through a custom property so the
 // .player-edge-carousel__motion class owns the animation-delay declaration.
-type PlayerCarouselMotionStyle = CSSProperties &
-  Record<"--player-carousel-start-delay", string>
+type PlayerCarouselMotionStyle =
+  CSSVariableStyle<"--player-carousel-start-delay">
 
 const PLAYER_PREVIEWS = {
   just: "/images/player-previews/just-player.webp",

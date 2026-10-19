@@ -1,13 +1,7 @@
 import interLatinExtendedFontUrl from "@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url"
 import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type CSSProperties,
-} from "react"
+import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { Link } from "react-router"
 
 import { PluginIcon } from "~/components/plugin-icon"
@@ -33,6 +27,7 @@ import { useViewTransition } from "~/lib/client-profile"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
+import type { CSSVariableStyle } from "~/lib/style"
 import { cn } from "~/lib/utils"
 
 import type { Route } from "./+types/_site.pricing"
@@ -40,8 +35,8 @@ import type { Route } from "./+types/_site.pricing"
 // The mobile spacer must match the fixed bottom controls exactly, so its
 // height stays bound to MOBILE_PRICING_CONTROLS_HEIGHT_PX through a custom
 // property instead of a hard-coded utility.
-type MobilePricingSpacerStyle = CSSProperties &
-  Record<"--mobile-pricing-controls-height", string>
+type MobilePricingSpacerStyle =
+  CSSVariableStyle<"--mobile-pricing-controls-height">
 
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",

@@ -233,7 +233,7 @@ export function DocsFaq({
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
                 aria-hidden="true"
-                className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-vercel-out group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
+                className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-out-smooth group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
                 strokeWidth={2}
               />
               <span className="min-w-0 flex-1">{question}</span>
@@ -1078,7 +1078,7 @@ const DocsHeadingAnchor = ({
     href={`#${headingId}`}
     onClick={onClick}
     aria-label={`Link to ${label}`}
-    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-link opacity-0 transition-opacity-scale duration-200 ease-vercel-out group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-link"
+    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-link opacity-0 transition-opacity-scale duration-200 ease-out-smooth group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-link"
   >
     <HugeiconsIcon
       icon={Link02Icon}

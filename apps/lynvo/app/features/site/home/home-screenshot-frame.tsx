@@ -1,10 +1,11 @@
-import { useSyncExternalStore, type CSSProperties } from "react"
+import { useSyncExternalStore } from "react"
+
+import type { CSSVariableStyle } from "~/lib/style"
 
 import screenshotFrameSpec from "./screenshot-frame-spec.json"
 import screenshotPalettes from "./screenshot-palettes.json"
 
-type HomeScreenshotFrameStyle = CSSProperties &
-  Record<`--home-screenshot-${string}`, string>
+type HomeScreenshotFrameStyle = CSSVariableStyle<`--home-screenshot-${string}`>
 
 const getScreenshotPalette = (theme: string) => {
   const entry = Object.entries(screenshotPalettes).find(

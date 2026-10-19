@@ -8,6 +8,7 @@ import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
 import { getBrowserDeviceName } from "~/lib/device-name"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
+import { DeviceVerificationCode } from "./auth-form-parts"
 import {
   claimDeviceExchange,
   finalizeDeviceExchangeOverHttp,
@@ -373,12 +374,7 @@ export const DeviceLoginQr = () => {
         <p className="text-sm text-muted-foreground">
           Confirm that the same activation code appears on the other device.
         </p>
-        <p
-          aria-label="Sign-in verification code"
-          className="my-8 text-3xl font-normal tracking-code text-foreground tabular-nums sm:text-4xl"
-        >
-          {code}
-        </p>
+        <DeviceVerificationCode code={code} />
       </div>
     </div>
   )

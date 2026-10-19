@@ -16,6 +16,20 @@ const mediaRowTriggerClass =
   "size-full rounded-none text-foreground [&_svg]:size-7!"
 const galleryOverlayTriggerClass = "rounded-full"
 
+const MENU_TRIGGER_LOOKS = {
+  "media-row": {
+    variant: "ghost",
+    size: "icon",
+  },
+  "gallery-overlay": {
+    variant: "overlay",
+    size: "icon-lg",
+  },
+} satisfies Record<
+  MenuTriggerLook,
+  Pick<ComponentProps<typeof Button>, "variant" | "size">
+>
+
 type MenuTriggerButtonProps = Omit<
   ComponentProps<typeof Button>,
   "variant" | "size"
@@ -27,16 +41,20 @@ export const MenuTriggerButton = ({
   look,
   className,
   ...props
-}: MenuTriggerButtonProps) => (
-  <Button
-    {...props}
-    variant={look === "gallery-overlay" ? "overlay" : "ghost"}
-    size={look === "gallery-overlay" ? "icon-lg" : "icon"}
-    className={cn(
-      look === "gallery-overlay"
-        ? galleryOverlayTriggerClass
-        : mediaRowTriggerClass,
-      className
-    )}
-  />
-)
+}: MenuTriggerButtonProps) => {
+  const triggerLook = MENU_TRIGGER_LOOKS[look]
+
+  return (
+    <Button
+      {...props}
+      variant={triggerLook.variant}
+      size={triggerLook.size}
+      className={cn(
+        look === "gallery-overlay"
+          ? galleryOverlayTriggerClass
+          : mediaRowTriggerClass,
+        className
+      )}
+    />
+  )
+}
