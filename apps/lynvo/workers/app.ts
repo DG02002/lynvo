@@ -26,6 +26,7 @@ import {
   EFFECT_MUTATION_ROUTE_RATE_WINDOW_SECONDS,
   EXTRACTION_ROUTE_RATE_LIMIT,
   EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  MAX_INBOUND_API_BODY_BYTES,
 } from "./constants"
 import { scheduled } from "./cron"
 import { registerD1AuthRoutes } from "./d1/auth-routes"
@@ -81,6 +82,25 @@ const app = new Hono<RequestLoggingEnvironment>()
 app.use("*", responseSecurityHeaders())
 
 app.use("/api/*", requestLogging({ exclude: ["/api/version"] }))
+
+app.use("/api/*", async (context, next) => {
+  const contentLength = context.req.header("content-length")
+  if (
+    !contentLength ||
+    !/^\d+$/.test(contentLength) ||
+    Number(contentLength) <= MAX_INBOUND_API_BODY_BYTES
+  ) {
+    return next()
+  }
+  return context.json(
+    requestApiError(context, {
+      code: "invalid_request",
+      error: "Request body exceeds the 1 MB limit.",
+      retryable: false,
+    }),
+    413
+  )
+})
 
 type AuthEnv = Env & {
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
