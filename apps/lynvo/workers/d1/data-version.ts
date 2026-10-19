@@ -23,7 +23,7 @@ export const createChangedWriteGuard = (
   conditionBindings: guard.conditionBindings,
 })
 
-export const createDataVersionBumpStatement = (
+const createDataVersionBumpStatement = (
   database: D1Database,
   userId: string,
   guard?: OwnedWriteGuard
