@@ -2,12 +2,13 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { ComponentProps, ComponentType, ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AppToaster } from "~/components/app-toaster"
+import { toast } from "~/components/ui/toast"
 import {
   docsComponents,
   DocsFaq,
   DocsScreenshot,
 } from "~/features/site/docs/docs-components"
-import * as toastNotifications from "~/lib/toast-notifications"
 
 type PendingAnimation = {
   cancel: ReturnType<typeof vi.fn>
@@ -92,6 +93,7 @@ const restoreDescriptor = (
 
 beforeEach(() => {
   pendingAnimations.length = 0
+  toast.close()
 })
 
 afterEach(() => {
@@ -348,13 +350,15 @@ describe("CodeBlock", () => {
       Promise.reject(new Error("Clipboard permission denied"))
     )
     const execCommand = stubLegacyClipboard(false)
-    const showErrorToast = vi.spyOn(toastNotifications, "showErrorToast")
     render(
-      <CodeBlock label="terminal">
-        <Pre>
-          <code>{"pnpm dev\n"}</code>
-        </Pre>
-      </CodeBlock>
+      <>
+        <AppToaster />
+        <CodeBlock label="terminal">
+          <Pre>
+            <code>{"pnpm dev\n"}</code>
+          </Pre>
+        </CodeBlock>
+      </>
     )
 
     const copyButton = screen.getByRole("button", {
@@ -363,16 +367,17 @@ describe("CodeBlock", () => {
     fireEvent.click(copyButton)
 
     await waitFor(() =>
-      expect(copyButton).toHaveAttribute("data-copy-state", "error")
+      expect(copyButton.querySelector("svg.text-destructive")).toHaveClass(
+        "scale-100",
+        "opacity-100"
+      )
     )
     expect(copyButton.querySelector("svg.text-destructive")).toBeInTheDocument()
-    expect(copyButton).toHaveAttribute(
-      "title",
-      "terminal couldn’t be copied. Try again."
+    const errorToast = await screen.findByText(
+      "terminal couldn’t be copied. Try again.",
+      { selector: '[data-slot="toast-title"]' }
     )
-    expect(showErrorToast).toHaveBeenCalledWith({
-      title: "terminal couldn’t be copied. Try again.",
-    })
+    expect(errorToast.closest('[aria-live="polite"]')).toBeInTheDocument()
     expect(writeText).toHaveBeenCalledWith("pnpm dev\n")
     expect(execCommand).toHaveBeenCalledWith("copy")
   })

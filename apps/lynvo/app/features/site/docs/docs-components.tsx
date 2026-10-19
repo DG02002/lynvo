@@ -903,6 +903,12 @@ const getCodeCopyStatusMessage = (copyState: CodeCopyState, label: string) => {
   return ""
 }
 
+const getCodeCopyIconClassName = (isVisible: boolean) =>
+  cn(
+    "absolute inset-0 size-3.5 transition-icon-swap duration-200",
+    isVisible ? "scale-100 opacity-100" : "scale-25 opacity-0 blur-xs"
+  )
+
 // The generated copy button swallows clipboard failures and has no fallback,
 // so docs own this control to report failures and preserve copy behavior.
 function DocsCodeBlockCopyButton({
@@ -957,14 +963,8 @@ function DocsCodeBlockCopyButton({
   return (
     <button
       type="button"
-      data-copy-state={copyState}
       aria-label={
         copyState === "copied" ? `Copied ${label}` : `Copy code from ${label}`
-      }
-      title={
-        copyState === "error"
-          ? getCodeCopyStatusMessage("error", label)
-          : undefined
       }
       className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
       onClick={() => void copyCode()}
@@ -972,29 +972,17 @@ function DocsCodeBlockCopyButton({
       <span className="relative size-3.5" aria-hidden="true">
         <HugeiconsIcon
           icon={CopyIcon}
-          className={cn(
-            "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-            copyState === "idle"
-              ? "scale-100 opacity-100"
-              : "scale-25 opacity-0 blur-xs"
-          )}
+          className={getCodeCopyIconClassName(copyState === "idle")}
         />
         <HugeiconsIcon
           icon={Tick02Icon}
-          className={cn(
-            "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-            copyState === "copied"
-              ? "scale-100 opacity-100"
-              : "scale-25 opacity-0 blur-xs"
-          )}
+          className={getCodeCopyIconClassName(copyState === "copied")}
         />
         <HugeiconsIcon
           icon={Cancel01Icon}
           className={cn(
-            "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-            copyState === "error"
-              ? "scale-100 opacity-100 text-destructive"
-              : "scale-25 opacity-0 blur-xs"
+            getCodeCopyIconClassName(copyState === "error"),
+            copyState === "error" && "text-destructive"
           )}
         />
       </span>
@@ -1036,6 +1024,7 @@ function CodeBlock({
             />
           </header>
         </CodeBlockHeader>
+        {/* The toast announces failures; this region announces success only. */}
         <span aria-live="polite" className="sr-only">
           {copyState === "copied"
             ? getCodeCopyStatusMessage(copyState, label)
