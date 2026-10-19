@@ -246,6 +246,100 @@ describe("useLinks", () => {
     })
   })
 
+  it("shares a scheduled refresh with an offline poll already in flight", async () => {
+    let notify: ((message: RealtimeMessage) => void) | undefined
+    let offlinePoll: (() => void) | undefined
+    let scheduledRefresh: (() => void) | undefined
+    let resolveListResponse: ((response: Response) => void) | undefined
+    const listResponse = new Promise<Response>((resolve) => {
+      resolveListResponse = resolve
+    })
+    fetchResponses.mockImplementation(async (input: RequestInfo | URL) => {
+      const path = requestUrl(input)
+      if (path === "/api/data/links") {
+        return await listResponse
+      }
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const setIntervalSpy = vi
+      .spyOn(window, "setInterval")
+      .mockImplementation((handler: TimerHandler) => {
+        // SAFETY: this hook registers a function callback, never a string timer.
+        offlinePoll = handler as () => void
+        return 1
+      })
+    const setTimeoutSpy = vi
+      .spyOn(window, "setTimeout")
+      .mockImplementation((handler: TimerHandler) => {
+        // SAFETY: this hook registers a function callback, never a string timer.
+        scheduledRefresh = handler as () => void
+        return 2
+      })
+    const realtimeWhileConnecting: RealtimeContextValue = {
+      ...realtime,
+      status: "connecting",
+      subscribe: vi.fn((listener) => {
+        notify = listener
+        return () => {
+          if (notify === listener) {
+            notify = undefined
+          }
+        }
+      }),
+    }
+
+    const { result, unmount } = renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [],
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+        },
+        {
+          user: { sub: "single-flight-user" },
+          realtime: realtimeWhileConnecting,
+        }
+      )
+    )
+
+    try {
+      expect(notify).toBeTypeOf("function")
+      expect(offlinePoll).toBeTypeOf("function")
+      act(() => notify?.({ type: "data-changed", payload: { version: 6 } }))
+      expect(scheduledRefresh).toBeTypeOf("function")
+
+      await act(async () => {
+        scheduledRefresh?.()
+        await Promise.resolve()
+      })
+      expect(countListRequests()).toBe(1)
+
+      act(() => {
+        offlinePoll?.()
+      })
+      expect(countListRequests()).toBe(1)
+
+      await act(async () => {
+        resolveListResponse?.(
+          respondJson(
+            { links: [serverRecord("single-flight-result")] },
+            { "X-Lynvo-Data-Version": "6" }
+          )
+        )
+        await listResponse
+      })
+      setIntervalSpy.mockRestore()
+      setTimeoutSpy.mockRestore()
+      await waitFor(() =>
+        expect(result.current.links[0]?.id).toBe("single-flight-result")
+      )
+      expect(countListRequests()).toBe(1)
+    } finally {
+      unmount()
+      setIntervalSpy.mockRestore()
+      setTimeoutSpy.mockRestore()
+    }
+  })
+
   it("revalidates a cached snapshot when realtime is not connected", async () => {
     const initialItem: LinkViewItem = {
       id: "cached-link",
