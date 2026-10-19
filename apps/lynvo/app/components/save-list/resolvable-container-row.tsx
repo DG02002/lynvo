@@ -26,15 +26,13 @@ import {
   getMediaNodeKey,
   getMediaNodeTarget,
 } from "~/features/links/media-node-interaction"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { openInSpecificPlayerForHandoff } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 
+import { getShouldCenterMobileNewBadge } from "./new-badge"
 import { getResolvableSourceName } from "./save-list-browser-model"
-import {
-  openPlayableAndMarkOpened,
-  shouldCenterMobileNewBadge as getShouldCenterMobileNewBadge,
-} from "./save-list-view-model"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 
 interface ResolvedMirrorRowsProps {

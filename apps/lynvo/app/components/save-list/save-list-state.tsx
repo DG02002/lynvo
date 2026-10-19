@@ -14,7 +14,7 @@ import {
 import {
   ImmersiveBrowserHeader,
   SeasonArtworkAside,
-} from "./save-list-view-model"
+} from "./save-list-shared-layout"
 
 interface SaveListStateProps {
   readonly title: string

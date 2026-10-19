@@ -8,9 +8,10 @@ import { DialogClose, DialogContent } from "~/components/ui/dialog"
 
 interface FormDialogContentProps {
   title: ReactNode
-  description: ReactNode
+  description?: ReactNode
   media?: ReactNode
   children: ReactNode
+  error?: ReactNode
   submitLabel: ReactNode
   onSubmit: FormEventHandler<HTMLFormElement>
   submitVariant?: ComponentProps<typeof Button>["variant"]
@@ -23,9 +24,10 @@ interface FormDialogContentProps {
 
 export const FormDialogContent = ({
   title,
-  description,
+  description = "",
   media,
   children,
+  error,
   submitLabel,
   onSubmit,
   submitVariant = "default",
@@ -40,6 +42,7 @@ export const FormDialogContent = ({
     <DialogHeroHeader title={title} description={description} />
     <form onSubmit={onSubmit} className="flex min-w-0 flex-col gap-6">
       {children}
+      {error}
       <div className="flex w-full flex-col gap-3">
         <DialogActionButton
           type="submit"

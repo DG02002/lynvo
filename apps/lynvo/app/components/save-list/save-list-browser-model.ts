@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { toLinkViewModel } from "~/features/links/link-view-models"
+import { parseMediaFilename } from "~/features/links/media-artwork"
 import {
   getMediaNodeInteractionState,
   getMediaNodeKey,
@@ -19,6 +20,21 @@ export interface FolderLevel {
   id: string
   label: string
 }
+
+interface EpisodeSortEntry {
+  readonly label: string
+  readonly originalIndex: number
+}
+
+export const compareByEpisodeNumber = (
+  firstEntry: EpisodeSortEntry,
+  secondEntry: EpisodeSortEntry,
+  parentFolderName?: string
+) =>
+  (parseMediaFilename(firstEntry.label, parentFolderName).episodeNumber ??
+    firstEntry.originalIndex) -
+  (parseMediaFilename(secondEntry.label, parentFolderName).episodeNumber ??
+    secondEntry.originalIndex)
 
 const isLazyFolder = (link: ExtractedLink) =>
   getMediaNodeInteractionState(link).needsResolution

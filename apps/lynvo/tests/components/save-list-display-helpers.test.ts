@@ -6,14 +6,14 @@ import {
 import { describe, expect, it } from "vitest"
 
 import {
-  compareByEpisodeNumber,
   getGallerySaveItemAriaLabel,
   getSaveListItemAriaLabel,
-  getSaveListItemFallbackIcon,
-  shouldCenterMobileNewBadge,
-} from "~/components/save-list/save-list-view-model"
+} from "~/components/save-list/item-aria-label"
+import { getSaveListItemFallbackIcon } from "~/components/save-list/media-list-row"
+import { getShouldCenterMobileNewBadge } from "~/components/save-list/new-badge"
+import { compareByEpisodeNumber } from "~/components/save-list/save-list-browser-model"
 
-describe("SaveList view model", () => {
+describe("Save list display helpers", () => {
   it("compares episode numbers and falls back to original order", () => {
     expect(
       compareByEpisodeNumber(
@@ -105,8 +105,8 @@ describe("SaveList view model", () => {
   })
 
   it("centers the mobile badge only for stacked episode titles", () => {
-    expect(shouldCenterMobileNewBadge(true, "episode")).toBe(true)
-    expect(shouldCenterMobileNewBadge(true, "filename")).toBe(false)
-    expect(shouldCenterMobileNewBadge(false, "episode")).toBe(false)
+    expect(getShouldCenterMobileNewBadge(true, "episode")).toBe(true)
+    expect(getShouldCenterMobileNewBadge(true, "filename")).toBe(false)
+    expect(getShouldCenterMobileNewBadge(false, "episode")).toBe(false)
   })
 })

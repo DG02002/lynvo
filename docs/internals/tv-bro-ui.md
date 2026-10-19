@@ -6,23 +6,6 @@ native `window.TVBro` bridge. Development builds also recognize the `TV Bro/`
 user-agent and the per-browser **Use TV Bro-specific UI** setting. See
 [the development preview instructions](development.md#test-tv-bro-specific-ui).
 
-## Current differences
-
-- `apps/lynvo/app/tv-bro.css` disables expensive visual effects, uses filter-free enter
-  animations, caps the enter stagger, and adjusts device sign-in layout in
-  landscape. Every rule is scoped by
-  `html[data-lynvo-client-profile="tvbro-android-tv"]`.
-- `apps/lynvo/app/lib/client-profile.ts` exposes the profile and view-transition hooks.
-  Navigation links use `useViewTransition()` to disable view transitions.
-- `TVBRO_FILTER_FREE_ENTER_CLASS` in
-  `apps/lynvo/app/components/save-list/save-list-motion-constants.ts` opts
-  animated Library elements into the filter-free animation rules.
-- The Library hides its save input through a `useIsTvBroAndroidTv()`
-  conditional. Keep React-side profile branches rare.
-- The Gallery view is the default Library presentation under the profile in
-  `apps/lynvo/app/features/site/settings/media-view-preference.ts`, and the
-  device label is TV Bro-specific in `apps/lynvo/app/lib/device-name.ts`.
-
 The Google sign-in page keeps its centered stacked layout in landscape. Its
 current max-width stack contains the brand link, heading, sign-in actions, and
 policy links; it does not need the obsolete generic auth-form grid. Revisit

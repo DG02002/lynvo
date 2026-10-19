@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { getLinkErrorMessage } from "~/features/links/link-error-message"
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
 import {
@@ -28,10 +29,7 @@ import {
   type PluginDomainSuggestion,
 } from "~/lib/plugin-domain"
 import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
-import {
-  getSaveIntentErrorMessage,
-  getUserFacingErrorMessage,
-} from "~/lib/user-facing-error"
+import { getSaveIntentErrorMessage } from "~/lib/user-facing-error"
 
 import type { OpenSelectionDialogOptions } from "./action-types"
 import type { SelectionDialogState } from "./interaction-state"
@@ -155,6 +153,20 @@ export const useSaveActions = ({
     []
   )
 
+  const publishSaveIntentError = (
+    errorKind: Parameters<typeof getSaveIntentErrorMessage>[0]
+  ) => {
+    const message = getSaveIntentErrorMessage(errorKind)
+    if (!message) {
+      return
+    }
+
+    reporter.publish({
+      kind: "error",
+      error: { kind: "generic", message },
+    })
+  }
+
   useEffect(() => {
     for (const completedQueuedItem of links) {
       const extractionState = completedQueuedItem.extractionStatus?.state
@@ -218,15 +230,7 @@ export const useSaveActions = ({
 
     switch (result.kind) {
       case "error":
-        {
-          const message = getSaveIntentErrorMessage(result.errorKind)
-          if (message) {
-            reporter.publish({
-              kind: "error",
-              error: { kind: "generic", message },
-            })
-          }
-        }
+        publishSaveIntentError(result.errorKind)
         reporter.publish({ kind: "clear-preview" })
         return undefined
       case "duplicate":
@@ -263,15 +267,7 @@ export const useSaveActions = ({
   ): PluginDomainSuggestion | undefined => {
     switch (result.kind) {
       case "error":
-        {
-          const message = getSaveIntentErrorMessage(result.errorKind)
-          if (message) {
-            reporter.publish({
-              kind: "error",
-              error: { kind: "generic", message },
-            })
-          }
-        }
+        publishSaveIntentError(result.errorKind)
         return undefined
       case "updated":
         reporter.publish({
@@ -321,7 +317,7 @@ export const useSaveActions = ({
       reporter.publish({ kind: "clear-preview" })
       showErrorToast({
         title: "Couldn’t save the link",
-        description: getUserFacingErrorMessage(
+        description: getLinkErrorMessage(
           error,
           "Unable to save link. Try again."
         ),
@@ -354,7 +350,7 @@ export const useSaveActions = ({
       console.error(error)
       showErrorToast({
         title: "Couldn’t save the selected links",
-        description: getUserFacingErrorMessage(
+        description: getLinkErrorMessage(
           error,
           "Unable to save the selected links. Try again."
         ),
@@ -394,7 +390,7 @@ export const useSaveActions = ({
       setPluginDomainSuggestion(null)
       showErrorToast({
         title: "Couldn’t add the plugin domain",
-        description: getUserFacingErrorMessage(
+        description: getLinkErrorMessage(
           error,
           "Unable to add the plugin domain. Try again."
         ),

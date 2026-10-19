@@ -22,6 +22,7 @@ import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { savePaths } from "~/lib/paths"
 
@@ -31,7 +32,6 @@ import {
   resolveFolderPath,
   type FolderLevel,
 } from "./save-list-browser-model"
-import { openPlayableAndMarkOpened } from "./save-list-view-model"
 import {
   areFolderIdsEqual,
   useFinderFolderHistory,

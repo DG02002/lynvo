@@ -28,6 +28,7 @@ import {
   getMediaNodeTargetOrUndefined,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import {
   openInSpecificPlayerForHandoff,
@@ -46,8 +47,10 @@ import {
   MediaListRow,
   SaveListRowIcon,
 } from "./media-list-row"
+import { getShouldCenterMobileNewBadge } from "./new-badge"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
+  compareByEpisodeNumber,
   getFolderIcon,
   getFolderVisualState,
   getItemTitle,
@@ -63,12 +66,9 @@ import {
 import { SaveListRowPoster } from "./save-list-row-poster"
 import { useSaveListSession } from "./save-list-session"
 import {
-  compareByEpisodeNumber,
   ImmersiveBrowserHeader,
-  openPlayableAndMarkOpened,
   SeasonArtworkAside,
-  shouldCenterMobileNewBadge as getShouldCenterMobileNewBadge,
-} from "./save-list-view-model"
+} from "./save-list-shared-layout"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useFolderTitleDisplay } from "./use-folder-title-display"

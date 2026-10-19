@@ -1,7 +1,4 @@
-/*
- * TV-Bro visual adjustments: profile-scoped overlays, animation downgrades,
- * reduced-motion behavior, stagger clamping, and landscape auth layout.
- * Keep selectors rooted at html[data-lynvo-client-profile="tvbro-android-tv"]
+/* Keep selectors rooted at html[data-lynvo-client-profile="tvbro-android-tv"]
  * and prefix global keyframe names with tvbro-.
  */
 

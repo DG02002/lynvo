@@ -13,6 +13,7 @@ import * as React from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
+import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Alert, AlertDescription } from "~/components/ui/alert"
@@ -31,7 +32,6 @@ import {
   customPluginServerStandardSchema,
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
-import { SettingsFormDialogShell } from "./settings-form-dialog"
 import {
   SettingsPanel,
   SettingsList,
@@ -267,7 +267,7 @@ const AddPluginDomainDialog = ({
         <HugeiconsIcon icon={Add01Icon} />
         <span className="sr-only">Add domain for {plugin.name}</span>
       </DialogTrigger>
-      <SettingsFormDialogShell
+      <FormDialogContent
         title={`Add domain for ${plugin.name}`}
         description={plugin.domainRequired}
         media={<PluginIcon icon={plugin.icon} className="mx-auto size-16" />}
@@ -372,7 +372,7 @@ const AddPluginDomainDialog = ({
             </Alert>
           )}
         </FieldGroup>
-      </SettingsFormDialogShell>
+      </FormDialogContent>
     </Dialog>
   )
 }
@@ -495,7 +495,7 @@ export const CustomPluginServersSection = ({
           </DialogTrigger>
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <SettingsFormDialogShell
+              <FormDialogContent
                 title="Add Custom Plugin Server"
                 description="Connect a server using its URL and API key."
                 media={
@@ -570,7 +570,7 @@ export const CustomPluginServersSection = ({
                     }}
                   </form.Field>
                 </FieldGroup>
-              </SettingsFormDialogShell>
+              </FormDialogContent>
             )}
           </form.Subscribe>
         </Dialog>
@@ -667,7 +667,7 @@ const PluginCredentialEditor = ({
             >
               <HugeiconsIcon icon={Edit02Icon} />
             </DialogTrigger>
-            <SettingsFormDialogShell
+            <FormDialogContent
               title="Edit Plugin Credentials"
               description={`Update the credentials Lynvo uses to access ${domain.domain}.`}
               media={
@@ -721,7 +721,7 @@ const PluginCredentialEditor = ({
                   Remove credentials
                 </Button>
               )}
-            </SettingsFormDialogShell>
+            </FormDialogContent>
           </Dialog>
           <Button
             variant="quiet"

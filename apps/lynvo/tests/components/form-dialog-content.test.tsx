@@ -1,16 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+import { FormDialogContent } from "~/components/form-dialog-content"
 import { Alert, AlertDescription } from "~/components/ui/alert"
 import { Dialog } from "~/components/ui/dialog"
-import { SettingsFormDialogShell } from "~/features/site/settings/settings-form-dialog"
 
-describe("SettingsFormDialogShell", () => {
+describe("FormDialogContent", () => {
   it("shows its error slot and disables submit and cancel while pending", () => {
     const onCancel = vi.fn()
     render(
       <Dialog open>
-        <SettingsFormDialogShell
+        <FormDialogContent
           title="Save settings"
           description="Update the settings."
           submitLabel="Save"
@@ -29,7 +29,7 @@ describe("SettingsFormDialogShell", () => {
             Setting
             <input />
           </label>
-        </SettingsFormDialogShell>
+        </FormDialogContent>
       </Dialog>
     )
 

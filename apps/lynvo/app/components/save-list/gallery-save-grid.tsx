@@ -38,6 +38,7 @@ import {
   type ExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import { GalleryGroupMenu } from "./gallery-group-menu"
+import { getGallerySaveItemAriaLabel } from "./item-aria-label"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { SaveDateGroupSection } from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
@@ -53,7 +54,6 @@ import {
   SaveListEmptyState,
   SaveListLoadingState,
 } from "./save-list-state"
-import { getGallerySaveItemAriaLabel } from "./save-list-view-model"
 
 interface GallerySaveItemProps {
   readonly group: GalleryGroup

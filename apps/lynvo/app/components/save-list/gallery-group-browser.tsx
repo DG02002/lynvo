@@ -12,6 +12,7 @@ import {
   hasEpisodeMarker,
   type GalleryGroup,
 } from "~/features/links/media-artwork"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { useCurrentTimeMs } from "~/lib/use-coarse-time-bucket"
@@ -29,9 +30,13 @@ import { GalleryGroupMenu } from "./gallery-group-menu"
 import {
   MediaListRow,
   MediaListRowMeta,
+  getSaveListItemFallbackIcon,
+  SaveListItemFallbackIcon,
   SaveListRowIcon,
 } from "./media-list-row"
+import { getShouldCenterMobileNewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
+import { compareByEpisodeNumber } from "./save-list-browser-model"
 import { FolderTitleDisplayToggleButton } from "./save-list-header-controls"
 import {
   GALLERY_GROUP_CONTENT_CLASS,
@@ -39,14 +44,9 @@ import {
 } from "./save-list-layout-constants"
 import { useSaveListSession } from "./save-list-session"
 import {
-  compareByEpisodeNumber,
-  getSaveListItemFallbackIcon,
-  openPlayableAndMarkOpened,
-  SaveListItemFallbackIcon,
-  shouldCenterMobileNewBadge as getShouldCenterMobileNewBadge,
   ImmersiveBrowserHeader,
   SeasonArtworkAside,
-} from "./save-list-view-model"
+} from "./save-list-shared-layout"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 

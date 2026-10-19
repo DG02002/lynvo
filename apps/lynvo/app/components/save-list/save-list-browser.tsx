@@ -4,6 +4,7 @@ import { NewBadge } from "~/components/save-list/new-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
@@ -19,7 +20,13 @@ import {
   isPendingExtractionState,
 } from "./extraction-status-utils"
 import { FinderBrowser } from "./finder-browser"
-import { MediaListRowMeta, SaveListRowIcon } from "./media-list-row"
+import { getSaveListItemAriaLabel } from "./item-aria-label"
+import {
+  getSaveListItemFallbackIcon,
+  MediaListRowMeta,
+  SaveListItemFallbackIcon,
+  SaveListRowIcon,
+} from "./media-list-row"
 import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
@@ -38,12 +45,6 @@ import { groupSaveListItems } from "./save-list-groups"
 import { SaveListRowPoster } from "./save-list-row-poster"
 import { useSaveListSession } from "./save-list-session"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
-import {
-  getSaveListItemAriaLabel,
-  getSaveListItemFallbackIcon,
-  openPlayableAndMarkOpened,
-  SaveListItemFallbackIcon,
-} from "./save-list-view-model"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
