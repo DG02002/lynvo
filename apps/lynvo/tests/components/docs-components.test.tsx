@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
-import type { ComponentType } from "react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import type { ComponentProps, ComponentType, ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -163,6 +163,83 @@ describe("DocsFaq", () => {
     expect(
       screen.getByRole("button", { name: "Why does my device not appear?" })
     ).toHaveAttribute("aria-expanded", "true")
+  })
+})
+
+describe("CodeBlock", () => {
+  // SAFETY: this MDX key is registered with the CodeBlock component below.
+  const CodeBlock = docsComponents.CodeBlock as ComponentType<{
+    label: string
+    children: ReactNode
+  }>
+  // SAFETY: MDX renders fenced blocks through the pre override, so the test
+  // composes the same mapping instead of a bare pre element.
+  const Pre = docsComponents.pre as ComponentType<ComponentProps<"pre">>
+
+  const stubClipboard = () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+    return writeText
+  }
+
+  const restoreClipboard = () => {
+    Reflect.deleteProperty(navigator, "clipboard")
+  }
+
+  it("renders the label, the code, and a copy button", () => {
+    render(
+      <CodeBlock label="src/index.ts">
+        <Pre>
+          <code>{"const answer = 42\n"}</code>
+        </Pre>
+      </CodeBlock>
+    )
+
+    expect(screen.getByText("src/index.ts")).toBeInTheDocument()
+    expect(screen.getByText("const answer = 42")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument()
+  })
+
+  it("copies the code text and announces the copy", async () => {
+    const writeText = stubClipboard()
+
+    try {
+      render(
+        <CodeBlock label="terminal">
+          <Pre>
+            <code>{"pnpm dev\n"}</code>
+          </Pre>
+        </CodeBlock>
+      )
+
+      fireEvent.click(screen.getByRole("button", { name: "Copy" }))
+
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Copied" })
+        ).toBeInTheDocument()
+      )
+      expect(writeText).toHaveBeenCalledWith("pnpm dev\n")
+    } finally {
+      restoreClipboard()
+    }
+  })
+
+  it("keeps the highlighted code keyboard-scrollable as the content slot", () => {
+    const { container } = render(
+      <CodeBlock label="terminal">
+        <Pre className="shiki">
+          <code>{"pnpm dev\n"}</code>
+        </Pre>
+      </CodeBlock>
+    )
+
+    const content = container.querySelector("pre")
+    expect(content).toHaveAttribute("tabindex", "0")
+    expect(content).toHaveAttribute("data-slot", "code-block-content")
   })
 })
 

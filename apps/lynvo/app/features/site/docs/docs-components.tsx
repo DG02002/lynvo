@@ -3,12 +3,10 @@ import {
   ApiIcon,
   ArrowDown01Icon,
   ArrowUpRight01Icon,
-  CopyIcon,
   FileEmpty01Icon,
   Link02Icon,
   StarsIcon,
   TerminalIcon,
-  Tick02Icon,
   WifiError01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -36,24 +34,16 @@ import {
   AccordionItem,
 } from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
+import {
+  CodeBlock as CodeBlockRoot,
+  CodeBlockActions,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from "~/components/ui/code-block"
 import { cn } from "~/lib/utils"
 
 import { getDocumentationImageAsset } from "./docs-image-assets"
-
-const copyWithTextArea = (code: string) => {
-  const textArea = document.createElement("textarea")
-  textArea.value = code
-  textArea.style.cssText = "position:fixed;left:-9999px;top:0"
-  document.body.appendChild(textArea)
-  textArea.focus()
-  textArea.select()
-  const didCopy = document.execCommand("copy")
-  textArea.remove()
-
-  if (!didCopy) {
-    throw new Error("Clipboard copy failed")
-  }
-}
 
 const TypeScriptIcon = () => (
   // oxlint-disable shadcn/no-raw-colors -- Official TypeScript logo colors, per https://www.typescriptlang.org/branding
@@ -134,7 +124,13 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   const normalizedLabel = label.toLowerCase()
 
   if (normalizedLabel === "terminal") {
-    return <HugeiconsIcon icon={TerminalIcon} className="size-4" />
+    return (
+      <HugeiconsIcon
+        aria-hidden="true"
+        icon={TerminalIcon}
+        className="size-4"
+      />
+    )
   }
 
   if (normalizedLabel.endsWith(".ts") || normalizedLabel.endsWith(".tsx")) {
@@ -151,7 +147,9 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   }
 
   if (/^(get|post|put|patch|delete) /.test(normalizedLabel)) {
-    return <HugeiconsIcon icon={ApiIcon} className="size-4" />
+    return (
+      <HugeiconsIcon aria-hidden="true" icon={ApiIcon} className="size-4" />
+    )
   }
 
   if (normalizedLabel.includes("env")) {
@@ -159,25 +157,18 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   }
 
   if (normalizedLabel.includes("prompt")) {
-    return <HugeiconsIcon icon={StarsIcon} className="size-4" />
+    return (
+      <HugeiconsIcon aria-hidden="true" icon={StarsIcon} className="size-4" />
+    )
   }
 
-  return <HugeiconsIcon icon={FileEmpty01Icon} className="size-4" />
-}
-
-const getCodeCopyStatusMessage = (
-  copyState: "idle" | "copied" | "error",
-  label: string
-) => {
-  if (copyState === "copied") {
-    return `${label} copied`
-  }
-
-  if (copyState === "error") {
-    return `${label} couldn’t be copied. Try again.`
-  }
-
-  return ""
+  return (
+    <HugeiconsIcon
+      aria-hidden="true"
+      icon={FileEmpty01Icon}
+      className="size-4"
+    />
+  )
 }
 
 function DocSection({ id, children }: { id: string; children: ReactNode }) {
@@ -902,94 +893,21 @@ function CodeBlock({
   label: string
   children: ReactNode
 }) {
-  const figureRef = useRef<HTMLElement>(null)
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
-    "idle"
-  )
-
-  useEffect(
-    () => () => {
-      clearTimeout(resetTimerRef.current)
-    },
-    []
-  )
-
-  const copyCode = async () => {
-    const code = figureRef.current?.querySelector("pre code")?.textContent
-    if (!code) {
-      return
-    }
-
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(code)
-        } catch {
-          copyWithTextArea(code)
-        }
-      } else {
-        copyWithTextArea(code)
-      }
-
-      setCopyState("copied")
-    } catch {
-      setCopyState("error")
-    }
-
-    clearTimeout(resetTimerRef.current)
-    resetTimerRef.current = setTimeout(() => setCopyState("idle"), 2000)
-  }
-
   return (
-    <figure
-      ref={figureRef}
-      className="not-typeset my-5 overflow-hidden rounded-lg border border-foreground/15"
-    >
-      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/15 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
-        <span className="flex min-w-0 items-center gap-2">
-          <span aria-hidden="true" className="size-4 shrink-0">
-            <CodeLabelIcon label={label} />
-          </span>
-          <span className="truncate">{label}</span>
-        </span>
-        <button
-          type="button"
-          onClick={() => void copyCode()}
-          aria-label={
-            copyState === "copied"
-              ? `Copied ${label}`
-              : `Copy code from ${label}`
-          }
-          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
-        >
-          <span className="relative size-3.5" aria-hidden="true">
-            <HugeiconsIcon
-              icon={CopyIcon}
-              className={cn(
-                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-                copyState === "copied"
-                  ? "scale-25 opacity-0 blur-xs"
-                  : "scale-100 opacity-100"
-              )}
-            />
-            <HugeiconsIcon
-              icon={Tick02Icon}
-              className={cn(
-                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-                copyState === "copied"
-                  ? "scale-100 opacity-100"
-                  : "scale-25 opacity-0 blur-xs"
-              )}
-            />
-          </span>
-          <span aria-live="polite" className="sr-only">
-            {getCodeCopyStatusMessage(copyState, label)}
-          </span>
-        </button>
-      </figcaption>
+    // data-not-typeset is the typeset system's attribute opt-out; the class
+    // form trips the shadcn no-restyle rule on design-system components.
+    <CodeBlockRoot data-not-typeset className="my-5">
+      <CodeBlockHeader>
+        <CodeBlockTitle>
+          <CodeLabelIcon label={label} />
+          {label}
+        </CodeBlockTitle>
+        <CodeBlockActions>
+          <CodeBlockCopyButton value={getNodeText(children)} />
+        </CodeBlockActions>
+      </CodeBlockHeader>
       {children}
-    </figure>
+    </CodeBlockRoot>
   )
 }
 
@@ -1170,11 +1088,18 @@ export const docsComponents: MDXComponents = {
     )
   },
   a: DocsLink,
+  // Every MDX pre renders inside CodeBlock. rehype-shiki highlights at build
+  // time, so the raw pre plays the registry's CodeBlockContent role (the
+  // content slot attribute drives the container focus ring; tabIndex keeps
+  // the code region keyboard-scrollable).
   pre: ({ className, ...props }) => (
     <pre
       {...props}
+      data-slot="code-block-content"
+      dir="ltr"
+      tabIndex={0}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 font-mono text-code font-medium leading-6",
+        "min-w-0 overflow-x-auto px-4 pt-2 pb-4 font-mono text-code font-medium leading-6 outline-none",
         className
       )}
     />
