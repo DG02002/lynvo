@@ -12,14 +12,14 @@ import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { RealtimeProvider } from "~/context/realtime-context"
 import { RemoteControlProvider } from "~/context/remote-control-context"
 import { clearLinksSnapshotStores } from "~/features/links/use-links"
-import { isSettingsDataCacheKeyForUser } from "~/features/site/settings/settings-data-cache"
-import { clearAsyncResourceCacheWhere } from "~/hooks/use-async-resource"
+import { clearSettingsDataCacheForUser } from "~/features/site/settings/settings-data-cache"
 
 import { AccountSettingsSynchronization } from "./account-settings-synchronization"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { IdentitySynchronizer } from "./identity-synchronizer"
 import { toProviderUser } from "./provider-user"
 import { clearRevokedSessionState } from "./session-revocation"
+import { SettingsDataCacheSynchronization } from "./settings-data-cache-synchronization"
 import { ThemeCookieSync } from "./theme-cookie-sync"
 
 interface AppProvidersProps {
@@ -44,9 +44,7 @@ export const AppProviders = ({
     const previousId = previousUserId.current
     if (previousId && previousId !== userId) {
       clearLinksSnapshotStores(previousId)
-      clearAsyncResourceCacheWhere((cacheKey) =>
-        isSettingsDataCacheKeyForUser(cacheKey, previousId)
-      )
+      clearSettingsDataCacheForUser(previousId)
     }
     previousUserId.current = userId
   }, [userId])
@@ -70,6 +68,7 @@ export const AppProviders = ({
               onConnectionOpen={() => void ensureIdentityIsSafe()}
               onSessionRevoked={handleSessionRevoked}
             >
+              <SettingsDataCacheSynchronization userId={userId} />
               <PlayerPreferenceProvider
                 key={userId ?? "signed-out"}
                 userId={userId}
