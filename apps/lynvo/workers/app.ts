@@ -1,60 +1,48 @@
-import { DurableObject } from "cloudflare:workers"
-import { Context, Effect, Result, Schema } from "effect"
+import { Context, Effect } from "effect"
 import { initLogger } from "evlog"
-import { Hono, type Context as HonoContext } from "hono"
+import { Hono } from "hono"
 import { createRequestHandler, RouterContextProvider } from "react-router"
 
-import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
-import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
 import { handler as apiHandler } from "../app/lib/effect/api/server"
 import { getRuntime } from "../app/lib/effect/runtime"
 import { CloudflareEnv } from "../app/lib/effect/services/cloudflare-env"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
 import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credential-vault"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
-import { createRemoteTargetId } from "../app/lib/remote-target"
 import { cloudflareContext } from "../app/lib/router-context"
+import {
+  createDeviceCodeRateLimitResponse,
+  readDeviceCodeRequestName,
+} from "./auth/device-code"
 import {
   checkAuthenticationRateLimit,
   checkDeviceApprovalRateLimit,
   checkRateLimit,
-  type RateLimitResult,
 } from "./authentication-rate-limit"
 import {
-  CRON_SCHEDULE_DAILY_RETENTION,
-  CRON_SCHEDULE_HOURLY_MAINTENANCE,
   DEVICE_CODE_CREATION_RATE_LIMIT,
   DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
   EXTRACTION_ROUTE_RATE_LIMIT,
   EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
 } from "./constants"
-import { drainAccountErasures } from "./d1/account-erasure"
+import { scheduled } from "./cron"
 import { registerD1AuthRoutes } from "./d1/auth-routes"
 import { registerD1DataRoutes } from "./d1/data-routes"
-import { getDataVersion } from "./d1/data-version"
 import { getD1Database } from "./d1/db"
-import { cleanupExpiredDeviceCodes, createDeviceCode } from "./d1/device-auth"
+import { createDeviceCode } from "./d1/device-auth"
 import {
-  cleanupSavedLinkCommandOperations,
-  sweepExpiredLinks,
-} from "./d1/links"
-import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
-import { cleanupExpiredRemoteCommands } from "./d1/remote-commands"
-import {
-  deleteStaleSessions,
   expireD1SessionCookie,
-  findActiveSessionForEnvironment,
   resolveSessionContext,
   revokeSessionById,
 } from "./d1/sessions"
-import { releaseExpiredManagedExtractions } from "./d1/usage"
 import { echoDataVersion } from "./d1/version-echo"
-import { processQueuedLinkExtractions } from "./link-extraction-runner"
-import { refreshCustomPluginServerManifests } from "./plugin-server-manifest-refresh"
 import { closeRealtimeSession } from "./realtime-session-revocation"
+import { USER_REALTIME_ROOM_INTERNAL_URLS } from "./realtime/realtime-room-client"
+import {
+  buildRealtimeForwardHeaders,
+  createRealtimeHandshakeRejection,
+} from "./realtime/user-realtime-room"
 import { buildReleaseIdentity } from "./release-identity"
-import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { requestApiError } from "./request-api-error"
 import { getClientIp } from "./request-client-ip"
 import {
@@ -68,6 +56,8 @@ import {
   responseSecurityHeaders,
 } from "./response-security-headers"
 import { isSameOriginRequest } from "./same-origin"
+export { scheduled }
+export { UserRealtimeRoom } from "./realtime/user-realtime-room"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 
@@ -94,71 +84,7 @@ type AuthEnv = Env & {
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
 
-const toFailureMessage = (cause: unknown): string =>
-  cause instanceof Error ? cause.message : String(cause)
-
 const rateLimit = checkRateLimit
-
-const readDeviceCodeRequestName = async (
-  context: HonoContext<RequestLoggingEnvironment>
-): Promise<string | Response> => {
-  try {
-    const result = Schema.decodeUnknownResult(deviceCodeRequestSchema)(
-      await context.req.json()
-    )
-    if (Result.isFailure(result)) {
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_request",
-          error: "Send a valid request.",
-          retryable: false,
-        }),
-        400
-      )
-    }
-    return result.success.deviceName
-  } catch {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: "Send a valid request.",
-        retryable: false,
-      }),
-      400
-    )
-  }
-}
-
-const createDeviceCodeRateLimitResponse = (
-  context: HonoContext<RequestLoggingEnvironment>,
-  rateLimitResult: RateLimitResult
-): Response | undefined => {
-  if (rateLimitResult.status === "allowed") {
-    return undefined
-  }
-  if (rateLimitResult.status === "limited") {
-    recordRateLimitResult(context, rateLimitResult)
-    return context.json(
-      requestApiError(context, {
-        code: "rate_limited",
-        error: "Too many attempts. Try again later.",
-        retryable: true,
-      }),
-      429
-    )
-  }
-  addRequestContext(context, {
-    configuration_error: "auth_rate_limiter_unavailable",
-  })
-  return context.json(
-    requestApiError(context, {
-      code: "service_unavailable",
-      error: "Device sign-in is unavailable. Try again later.",
-      retryable: true,
-    }),
-    503
-  )
-}
 
 const resolveRequestSession = async (
   request: Request,
@@ -343,68 +269,6 @@ app.get("/api/auth/session/status", async (context) => {
   })
 })
 
-interface RealtimeForwardHeadersInput {
-  request: Request
-  session: {
-    readonly userId: string
-    readonly sessionId: string
-  }
-  receiverId: string | undefined
-  deviceName: string | undefined
-}
-
-const buildRealtimeForwardHeaders = ({
-  request,
-  session,
-  receiverId,
-  deviceName,
-}: RealtimeForwardHeadersInput): Headers => {
-  const headers = new Headers(request.headers)
-  headers.set("X-Lynvo-Session-Id", session.sessionId)
-  headers.set("X-Lynvo-User-Id", session.userId)
-  if (receiverId) {
-    headers.set("X-Lynvo-Receiver-Id", receiverId)
-    headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
-  }
-  return headers
-}
-
-const createRealtimeHandshakeRejection = async (
-  context: HonoContext<RequestLoggingEnvironment>
-): Promise<Response | undefined> => {
-  const request = context.req.raw
-  if (request.headers.get("Upgrade") !== "websocket") {
-    return context.text("Expected WebSocket", 426)
-  }
-  if (!isSameOriginRequest(request)) {
-    return context.text("Forbidden", 403)
-  }
-  const handshakeRateLimit = await rateLimit({
-    environment: context.env,
-    key: `realtime:${getClientIp(request)}`,
-    limit: EXTRACTION_ROUTE_RATE_LIMIT,
-    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-  })
-  if (handshakeRateLimit.status === "limited") {
-    const retryAfterSeconds =
-      handshakeRateLimit.expiresAt === undefined
-        ? undefined
-        : Math.max(
-            0,
-            Math.ceil((handshakeRateLimit.expiresAt - Date.now()) / 1_000)
-          )
-    recordRateLimitResult(context, handshakeRateLimit, retryAfterSeconds)
-    if (retryAfterSeconds !== undefined) {
-      context.header("Retry-After", String(retryAfterSeconds))
-    }
-    return context.text("Too many connection attempts", 429)
-  }
-  if (handshakeRateLimit.status === "unavailable") {
-    recordRateLimitResult(context, handshakeRateLimit)
-  }
-  return undefined
-}
-
 app.get("/api/realtime", async (context) => {
   addRequestContext(context, {
     operation: "realtime_connect",
@@ -460,7 +324,7 @@ app.get("/api/remote/receivers", async (context) => {
   }
   const response = await context.env.USER_REALTIME_ROOM.getByName(
     session.userId
-  ).fetch("https://realtime.internal/receivers")
+  ).fetch(USER_REALTIME_ROOM_INTERNAL_URLS.receivers)
   return new Response(response.body, response)
 })
 
@@ -583,6 +447,8 @@ app.all("/api/*", async (context) => {
     })
   )
   const response = await apiHandler(context.req.raw, effectContext)
+  // The account-delete Effect handler still needs this Hono edge to expire its session cookie.
+  // Keep the route-string coupling beside the Effect mount until that handler owns the cookie.
   if (
     context.req.method !== "DELETE" ||
     context.req.path !== "/api/settings/security/account" ||
@@ -614,567 +480,7 @@ app.all("*", async (context) => {
   return securedResponse
 })
 
-const sweepD1AuthData = async (
-  database: D1Database
-): Promise<{ kind: "swept" } | { kind: "unavailable" }> => {
-  try {
-    const now = Date.now()
-    const [deletedSessions, deletedDeviceCodes] = await Promise.all([
-      deleteStaleSessions(database, now),
-      cleanupExpiredDeviceCodes(database, now),
-    ])
-    console.info("d1_auth_sweep", {
-      operation: "d1_auth_sweep",
-      deleted_sessions: deletedSessions,
-      deleted_device_codes: deletedDeviceCodes.deleted,
-    })
-    return { kind: "swept" }
-  } catch (error) {
-    console.error("d1_auth_sweep_failed", {
-      operation: "d1_auth_sweep",
-      error: error instanceof Error ? error.message : String(error),
-    })
-    return { kind: "unavailable" }
-  }
-}
-
-type MaintenanceOutcome = { kind: "swept" } | { kind: "unavailable" }
-
-interface D1MaintenanceSummary {
-  readonly job: string
-  readonly deletedCount: number
-}
-
-const sweepLinkCommandOperationsJob = async (
-  database: D1Database,
-  now: number
-): Promise<D1MaintenanceSummary> => ({
-  job: "link_command_operations_ttl",
-  deletedCount: (await cleanupSavedLinkCommandOperations(database, now))
-    .deleted,
-})
-
-const expirePluginServerRegistrationsJob = async (
-  database: D1Database,
-  now: number
-): Promise<D1MaintenanceSummary> => ({
-  job: "plugin_server_registration_expiry",
-  deletedCount: (await expireStalePluginServerRegistrations(database, now))
-    .expired,
-})
-
-const sweepRetainedLinksJob = async (
-  database: D1Database,
-  now: number
-): Promise<D1MaintenanceSummary> => ({
-  job: "links_retention",
-  deletedCount: (await sweepExpiredLinks(database, now)).deletedLinks,
-})
-
-const releaseExpiredExtractionsJob = async (
-  database: D1Database,
-  now: number
-): Promise<D1MaintenanceSummary> => ({
-  job: "managed_extraction_lease_expiry",
-  deletedCount: (await releaseExpiredManagedExtractions(database, now))
-    .released,
-})
-
-const cleanupRemoteCommandsJob = async (
-  database: D1Database,
-  now: number
-): Promise<D1MaintenanceSummary> => ({
-  job: "remote_commands_ttl",
-  deletedCount: (await cleanupExpiredRemoteCommands(database, now))
-    .deletedCount,
-})
-
-const drainPendingAccountErasuresJob = async (
-  database: D1Database
-): Promise<MaintenanceOutcome> => {
-  try {
-    const outcome = await drainAccountErasures(database)
-    console.info("account_erasure_drain", {
-      operation: "account_erasure_drain",
-      processed_users: outcome.processedUsers,
-      steps_exhausted: outcome.stepsExhausted,
-    })
-    return { kind: "swept" }
-  } catch (error) {
-    console.error("account_erasure_drain_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    })
-    return { kind: "unavailable" }
-  }
-}
-
-const runD1Maintenance = async (
-  maintenance: (now: number) => Promise<D1MaintenanceSummary>
-): Promise<MaintenanceOutcome> => {
-  try {
-    const summary = await maintenance(Date.now())
-    console.info("d1_maintenance", {
-      operation: summary.job,
-      deleted_count: summary.deletedCount,
-    })
-    return { kind: "swept" }
-  } catch (error) {
-    console.error("d1_maintenance_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    })
-    return { kind: "unavailable" }
-  }
-}
-
-const runHourlyD1Maintenance = async (
-  database: D1Database
-): Promise<MaintenanceOutcome[]> =>
-  Promise.all([
-    runD1Maintenance((now) =>
-      expirePluginServerRegistrationsJob(database, now)
-    ),
-    drainPendingAccountErasuresJob(database),
-  ])
-
-const runDailyD1Maintenance = async (
-  database: D1Database
-): Promise<MaintenanceOutcome> =>
-  runD1Maintenance((now) => sweepRetainedLinksJob(database, now))
-
-const runHighFrequencyD1Maintenance = async (
-  database: D1Database
-): Promise<MaintenanceOutcome[]> =>
-  Promise.all([
-    runD1Maintenance((now) => releaseExpiredExtractionsJob(database, now)),
-    runD1Maintenance((now) => cleanupRemoteCommandsJob(database, now)),
-    runD1Maintenance((now) => sweepLinkCommandOperationsJob(database, now)),
-  ])
-const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })
-const sessionRevocationSchema = Schema.Struct({ sessionId: Schema.String })
-const dataChangedSchema = Schema.Struct({
-  version: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
-})
-const receiverAttachmentSchema = Schema.Struct({
-  receiverId: Schema.String,
-  sessionId: Schema.String,
-  deviceName: Schema.String,
-  connectedAt: Schema.Number,
-})
-
-interface RealtimeWebSocketSession {
-  sessionId: string
-  userId: string
-  receiverId: string
-  deviceName: string
-}
-
-interface RealtimeSessionHelloPayload {
-  type: "session_hello"
-  userId: string
-  sessionId: string
-  dataVersion?: number
-}
-
-const handleRealtimeDataChanged = async (
-  context: DurableObjectState,
-  request: Request
-): Promise<Response> => {
-  const input = Schema.decodeUnknownResult(dataChangedSchema)(
-    await request.json()
-  )
-  if (Result.isFailure(input)) {
-    return new Response("Invalid data version", { status: 400 })
-  }
-  const serialized = JSON.stringify({
-    type: "data-changed",
-    payload: { version: input.success.version },
-  })
-  const sockets = context.getWebSockets()
-  for (const socket of sockets) {
-    socket.send(serialized)
-  }
-  return Response.json({ deliveredSocketCount: sockets.length })
-}
-
-const handleRealtimeInboxNotification = async (
-  context: DurableObjectState,
-  request: Request
-): Promise<Response> => {
-  const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
-    await request.json()
-  )
-  if (Result.isFailure(input)) {
-    return new Response("Invalid receiver", { status: 400 })
-  }
-  const serialized = JSON.stringify({
-    type: "remote-inbox.changed",
-    payload: {},
-  })
-  const sockets = context.getWebSockets(input.success.receiverId)
-  for (const socket of sockets) {
-    socket.send(serialized)
-  }
-  return Response.json({ deliveredSocketCount: sockets.length })
-}
-
-const handleRealtimeSessionRevocation = async (
-  context: DurableObjectState,
-  request: Request
-): Promise<Response> => {
-  const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
-    await request.json()
-  )
-  if (Result.isFailure(input)) {
-    return new Response("Invalid session", { status: 400 })
-  }
-  for (const socket of context.getWebSockets(input.success.sessionId)) {
-    socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
-  }
-  return Response.json({ success: true })
-}
-
-const handleRealtimeAccountRevocation = (
-  context: DurableObjectState
-): Response => {
-  for (const socket of context.getWebSockets()) {
-    socket.close(
-      REALTIME_SESSION_REVOKED_CLOSE_CODE,
-      "Account sessions revoked"
-    )
-  }
-  return Response.json({ success: true })
-}
-
-const handleRealtimeReceivers = (context: DurableObjectState): Response => {
-  const receivers = context.getWebSockets().flatMap((socket) => {
-    const attachment = Schema.decodeUnknownResult(receiverAttachmentSchema)(
-      socket.deserializeAttachment()
-    )
-    if (Result.isFailure(attachment)) {
-      return []
-    }
-    return [
-      {
-        id: createRemoteTargetId(
-          attachment.success.sessionId,
-          attachment.success.receiverId
-        ),
-        receiverId: attachment.success.receiverId,
-        deviceName: attachment.success.deviceName,
-        lastActiveAt: attachment.success.connectedAt,
-      },
-    ]
-  })
-  return Response.json({ receivers })
-}
-
-const readRealtimeWebSocketSession = (
-  request: Request
-): RealtimeWebSocketSession | undefined => {
-  const sessionId = request.headers.get("X-Lynvo-Session-Id")
-  const userId = request.headers.get("X-Lynvo-User-Id")
-  const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
-  const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
-  if (!sessionId || !userId || !receiverId || !deviceName) {
-    return undefined
-  }
-  return { sessionId, userId, receiverId, deviceName }
-}
-
-const configureRealtimeWebSocket = (
-  context: DurableObjectState,
-  server: WebSocket,
-  session: RealtimeWebSocketSession
-): void => {
-  for (const existingSocket of context.getWebSockets(session.receiverId)) {
-    existingSocket.close(1000, "Receiver replaced")
-  }
-  server.serializeAttachment({
-    sessionId: session.sessionId,
-    receiverId: session.receiverId,
-    deviceName: session.deviceName,
-    connectedAt: Date.now(),
-  })
-  context.acceptWebSocket(server, [session.sessionId, session.receiverId])
-}
-
-const readRealtimeDataVersion = async (
-  env: Env,
-  userId: string
-): Promise<number | undefined> => {
-  const database = getD1Database(env)
-  if (!database) {
-    return undefined
-  }
-  try {
-    const dataVersion = await getDataVersion(database, userId)
-    return dataVersion > 0 ? dataVersion : undefined
-  } catch {
-    return undefined
-  }
-}
-
-const sendRealtimeSessionHello = (
-  server: WebSocket,
-  session: RealtimeWebSocketSession,
-  dataVersion: number | undefined
-): void => {
-  const helloPayload: RealtimeSessionHelloPayload = {
-    type: "session_hello",
-    userId: session.userId,
-    sessionId: session.sessionId,
-  }
-  if (dataVersion !== undefined) {
-    helloPayload.dataVersion = dataVersion
-  }
-  server.send(JSON.stringify(helloPayload))
-}
-
-const scheduleRealtimeSessionAlarm = async (
-  storage: DurableObjectStorage
-): Promise<void> => {
-  const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
-  const existingAlarmAt = await storage.getAlarm()
-  if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
-    await storage.setAlarm(nextAlarmAt)
-  }
-}
-
-const acceptRealtimeWebSocket = async (
-  context: DurableObjectState,
-  env: Env,
-  request: Request
-): Promise<Response> => {
-  const pair = new WebSocketPair()
-  const [client, server] = Object.values(pair)
-  const session = readRealtimeWebSocketSession(request)
-  if (!session) {
-    return new Response("Missing session", { status: 401 })
-  }
-  configureRealtimeWebSocket(context, server, session)
-  const dataVersion = await readRealtimeDataVersion(env, session.userId)
-  sendRealtimeSessionHello(server, session, dataVersion)
-  await scheduleRealtimeSessionAlarm(context.storage)
-  return new Response(null, { status: 101, webSocket: client })
-}
-
-export class UserRealtimeRoom extends DurableObject<Env> {
-  constructor(context: DurableObjectState, env: Env) {
-    super(context, env)
-    this.ctx.setWebSocketAutoResponse(
-      new WebSocketRequestResponsePair("ping", "pong")
-    )
-  }
-
-  override async fetch(request: Request): Promise<Response> {
-    const { pathname } = new URL(request.url)
-    if (pathname.endsWith("/notify-data-changed")) {
-      return handleRealtimeDataChanged(this.ctx, request)
-    }
-    if (pathname.endsWith("/notify-inbox")) {
-      return handleRealtimeInboxNotification(this.ctx, request)
-    }
-    if (pathname.endsWith("/revoke-session")) {
-      return handleRealtimeSessionRevocation(this.ctx, request)
-    }
-    if (pathname.endsWith("/revoke-account")) {
-      return handleRealtimeAccountRevocation(this.ctx)
-    }
-    if (pathname.endsWith("/receivers")) {
-      return handleRealtimeReceivers(this.ctx)
-    }
-    if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("Expected WebSocket", { status: 426 })
-    }
-    return acceptRealtimeWebSocket(this.ctx, this.env, request)
-  }
-
-  override async alarm(): Promise<void> {
-    const database = getD1Database(this.env)
-    try {
-      if (database) {
-        await Promise.all(
-          this.ctx.getWebSockets().map(async (socket) => {
-            try {
-              const attachment = Schema.decodeUnknownResult(
-                receiverAttachmentSchema
-              )(socket.deserializeAttachment())
-              if (Result.isFailure(attachment)) {
-                socket.close(
-                  REALTIME_SESSION_REVOKED_CLOSE_CODE,
-                  "Session invalid"
-                )
-                return
-              }
-              const activeSession = await findActiveSessionForEnvironment({
-                database,
-                sessionId: attachment.success.sessionId,
-                now: Date.now(),
-                environment: this.env,
-              })
-              if (!activeSession) {
-                socket.close(
-                  REALTIME_SESSION_REVOKED_CLOSE_CODE,
-                  "Session expired"
-                )
-              }
-            } catch {
-              return
-            }
-          })
-        )
-      }
-    } finally {
-      if (this.ctx.getWebSockets().length > 0) {
-        await this.ctx.storage.setAlarm(
-          Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
-        )
-      }
-    }
-  }
-
-  override async webSocketMessage(
-    socket: WebSocket,
-    message: string | ArrayBuffer
-  ): Promise<void> {
-    const textMessage = Schema.decodeUnknownResult(Schema.String)(message)
-    if (Result.isFailure(textMessage)) {
-      return
-    }
-    socket.close(1003, "Unsupported message")
-  }
-
-  override webSocketClose(): void {}
-
-  override webSocketError(socket: WebSocket): void {
-    socket.close(1011, "WebSocket error")
-  }
-}
-
-interface ScheduledMaintenanceCronInput {
-  env: Env
-  database: ReturnType<typeof getD1Database>
-  startedAt: number
-}
-
-const runHourlyMaintenanceCron = async ({
-  env,
-  database,
-  startedAt,
-}: ScheduledMaintenanceCronInput): Promise<void> => {
-  const manifestRefresh = database
-    ? await refreshCustomPluginServerManifests(env, database).catch((error) => {
-        console.warn("plugin_server_manifest_refresh_unavailable", {
-          operation: "plugin_server_manifest_refresh_unavailable",
-          error: error instanceof Error ? error.message : String(error),
-        })
-        return { refreshed: 0, failed: 0 }
-      })
-    : { refreshed: 0, failed: 0 }
-  console.info("plugin_server_manifest_refresh", {
-    operation: "plugin_server_manifest_refresh",
-    refreshed_count: manifestRefresh.refreshed,
-    failed_count: manifestRefresh.failed,
-  })
-  const outcomes = database ? await runHourlyD1Maintenance(database) : []
-  const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
-  console.info("scheduled_hourly_maintenance", {
-    operation: "scheduled_hourly_maintenance",
-    outcome: failed ? "failure" : "success",
-    duration_ms: Math.max(0, performance.now() - startedAt),
-  })
-  if (failed) {
-    throw new Error("D1 hourly maintenance is unavailable")
-  }
-}
-
-interface ScheduledRetentionCronInput {
-  database: ReturnType<typeof getD1Database>
-  startedAt: number
-}
-
-const runDailyRetentionCron = async ({
-  database,
-  startedAt,
-}: ScheduledRetentionCronInput): Promise<void> => {
-  const outcome = database
-    ? await runDailyD1Maintenance(database)
-    : { kind: "skipped" as const }
-  const failed = outcome.kind === "unavailable"
-  console.info("scheduled_daily_retention", {
-    operation: "scheduled_daily_retention",
-    outcome: failed ? "failure" : "success",
-    duration_ms: Math.max(0, performance.now() - startedAt),
-  })
-  if (failed) {
-    throw new Error("D1 daily retention maintenance is unavailable")
-  }
-}
-
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
-  scheduled: async (controller, env) => {
-    const startedAt = performance.now()
-    const database = getD1Database(env)
-    if (controller.cron === CRON_SCHEDULE_HOURLY_MAINTENANCE) {
-      await runHourlyMaintenanceCron({ env, database, startedAt })
-      return
-    }
-    if (controller.cron === CRON_SCHEDULE_DAILY_RETENTION) {
-      await runDailyRetentionCron({ database, startedAt })
-      return
-    }
-    // A rejection in any branch must not skip the outcome logging of the
-    // others, so each branch carries its own catch.
-    const [notificationResult, d1SweepOutcome, d1MaintenanceOutcomes] =
-      await Promise.all([
-        createRemoteCommandNotificationDelivery(env, database)
-          .drain()
-          .catch((cause: unknown) => {
-            console.error("remote_command_drain_failed", {
-              operation: "remote_command_drain_failed",
-              error: toFailureMessage(cause),
-            })
-            return { kind: "unavailable" as const }
-          }),
-        database
-          ? sweepD1AuthData(database)
-          : Promise.resolve({ kind: "skipped" as const }),
-        database
-          ? runHighFrequencyD1Maintenance(database)
-          : Promise.resolve<MaintenanceOutcome[]>([]),
-        database
-          ? processQueuedLinkExtractions(env, database).catch(
-              (cause: unknown) => {
-                console.error("queued_extraction_drain_failed", {
-                  operation: "queued_extraction_drain_failed",
-                  error: toFailureMessage(cause),
-                })
-              }
-            )
-          : Promise.resolve(),
-      ])
-    const unavailable = d1MaintenanceOutcomes.filter(
-      (outcome) => outcome.kind === "unavailable"
-    ).length
-    console.info("scheduled_delivery_drain", {
-      operation: "scheduled_delivery_drain",
-      outcome:
-        notificationResult.kind === "unavailable" ||
-        d1SweepOutcome.kind === "unavailable" ||
-        unavailable > 0
-          ? "failure"
-          : "success",
-      unavailable,
-      d1_sweep: d1SweepOutcome.kind,
-      duration_ms: Math.max(0, performance.now() - startedAt),
-    })
-    if (
-      notificationResult.kind === "unavailable" ||
-      d1SweepOutcome.kind === "unavailable" ||
-      unavailable > 0
-    ) {
-      throw new Error("Scheduled maintenance drain failed")
-    }
-  },
+  scheduled,
 } satisfies ExportedHandler<Env>

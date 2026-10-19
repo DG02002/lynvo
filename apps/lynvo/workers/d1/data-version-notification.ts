@@ -1,3 +1,5 @@
+import { USER_REALTIME_ROOM_INTERNAL_URLS } from "../realtime/realtime-room-client"
+
 /**
  * Awaiting the room fetch is deliberate. Connected clients only poll for a
  * missed version while their realtime socket is disconnected, so a client
@@ -14,7 +16,7 @@ export const notifyAccountDataChanged = async (
   version: number
 ): Promise<void> => {
   await env.USER_REALTIME_ROOM?.getByName(userId).fetch(
-    new Request("https://realtime.internal/notify-data-changed", {
+    new Request(USER_REALTIME_ROOM_INTERNAL_URLS.notifyDataChanged, {
       method: "POST",
       body: JSON.stringify({ version }),
     })

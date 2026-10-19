@@ -7,6 +7,7 @@ import {
   enqueueRemoteCommand,
   reportRemoteCommandResult,
 } from "../../../../../workers/d1/remote-commands"
+import { USER_REALTIME_ROOM_INTERNAL_URLS } from "../../../../../workers/realtime/realtime-room-client"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 import { parseRemoteTargetId } from "../../../remote-target"
 import { BackendError, ValidationError } from "../../errors"
@@ -43,7 +44,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
           try: async () => {
             const response = await environment.USER_REALTIME_ROOM.getByName(
               user.id
-            ).fetch("https://realtime.internal/receivers")
+            ).fetch(USER_REALTIME_ROOM_INTERNAL_URLS.receivers)
             return await response.json()
           },
           catch: (cause) =>
