@@ -63,6 +63,11 @@ interface UseLinksRefreshResult {
   scheduleRefetch: (expectedVersion?: number) => void
 }
 
+interface InFlightSnapshotRequest {
+  readonly userId: string
+  readonly promise: Promise<void>
+}
+
 interface UseInitialLinksLoadOptions {
   initialSnapshotMeta: InitialSnapshotMeta
   userId: string | undefined
@@ -222,7 +227,7 @@ const useRealtimeLinksRefresh = ({
     }
     return realtime.subscribe((message) => {
       if (message.type === "data-changed") {
-        if (message.payload.version > store.getVersion()) {
+        if (store.shouldFetchVersion(message.payload.version)) {
           scheduleRefetch(message.payload.version)
         }
         return
@@ -230,7 +235,7 @@ const useRealtimeLinksRefresh = ({
       if (
         message.type === "session_hello" &&
         message.dataVersion !== undefined &&
-        message.dataVersion > store.getVersion()
+        store.shouldFetchVersion(message.dataVersion)
       ) {
         scheduleRefetch(message.dataVersion)
       }
@@ -272,10 +277,9 @@ const useLinksRefetchTimer = ({
   const expectedVersionRef = useRef(0)
   const scheduleRefetch = useCallback(
     function scheduleRefetch(expectedVersion?: number) {
-      const currentVersion = store.getVersion()
       if (
         expectedVersion !== undefined &&
-        expectedVersion <= currentVersion &&
+        !store.shouldFetchVersion(expectedVersion) &&
         !pendingRefetchRef.current
       ) {
         return
@@ -302,7 +306,7 @@ const useLinksRefetchTimer = ({
         if (
           !forceRefetchRef.current &&
           requestedVersion > 0 &&
-          requestedVersion <= store.getVersion()
+          !store.shouldFetchVersion(requestedVersion)
         ) {
           pendingRefetchRef.current = false
           return
@@ -340,21 +344,42 @@ const useLinksRefresh = ({
   store,
 }: UseLinksRefreshOptions): UseLinksRefreshResult => {
   const fetchSequenceRef = useRef(0)
-  const applyFetchedSnapshot = useCallback(async () => {
+  const inFlightSnapshotRef = useRef<InFlightSnapshotRequest | undefined>(
+    undefined
+  )
+  const applyFetchedSnapshot = useCallback(() => {
     if (!userId) {
-      return
+      return Promise.resolve()
     }
+    const inFlightSnapshot = inFlightSnapshotRef.current
+    if (inFlightSnapshot?.userId === userId) {
+      return inFlightSnapshot.promise
+    }
+
     const sequence = fetchSequenceRef.current + 1
     fetchSequenceRef.current = sequence
-    const response = await linksDataApi.listSavedLinks()
-    if (sequence !== fetchSequenceRef.current) {
-      return
+    const request = (async () => {
+      const response = await linksDataApi.listSavedLinks()
+      if (sequence !== fetchSequenceRef.current) {
+        return
+      }
+      const items = response.links.flatMap((record: SavedLinkApiRecord) => {
+        const viewItem = savedLinkApiRecordToViewItem(record)
+        return viewItem ? [viewItem] : []
+      })
+      store.applyServerSnapshot(items, response.dataVersion)
+    })()
+    const requestState = { userId, promise: request }
+    inFlightSnapshotRef.current = requestState
+    const clearInFlight = () => {
+      if (inFlightSnapshotRef.current === requestState) {
+        inFlightSnapshotRef.current = undefined
+      }
     }
-    const items = response.links.flatMap((record: SavedLinkApiRecord) => {
-      const viewItem = savedLinkApiRecordToViewItem(record)
-      return viewItem ? [viewItem] : []
-    })
-    store.applyServerSnapshot(items, response.dataVersion)
+    // Initial revalidation and offline polls stay immediate, while sharing
+    // the same in-flight request as debounced realtime and mutation refreshes.
+    void request.then(clearInFlight, clearInFlight)
+    return request
   }, [store, userId])
   const scheduleRefetch = useLinksRefetchTimer({
     applyFetchedSnapshot,

@@ -14,13 +14,14 @@ import {
 } from "~/components/save-list/use-save-list-fullscreen"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
-import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { GalleryGroup } from "~/features/links/media-artwork"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 import { useLinkActions } from "~/features/links/use-link-actions"
 import { useLinks, type InitialSnapshotMeta } from "~/features/links/use-links"
 import { useIsTvBroAndroidTv } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
+
+import { SaveListSessionProvider } from "./save-list/save-list-session"
 
 declare global {
   interface SaveListProps {
@@ -35,10 +36,6 @@ interface SaveListContentOptions {
   readonly isGalleryMediaView: boolean
   readonly isFolderRoute: boolean
   readonly galleryGroups: readonly GalleryGroup[] | undefined
-  readonly linkItemActions: LinkItemActions
-  readonly extractingItems: Set<string>
-  readonly isHydrating: boolean
-  readonly highlightedId: string | null
   readonly links: SavedLinkListItem[]
   readonly selectedItemUrl: string | null
   readonly openSavedFolder: (itemUrl: string) => void
@@ -53,10 +50,6 @@ const renderSaveListContent = ({
   isGalleryMediaView,
   isFolderRoute,
   galleryGroups,
-  linkItemActions,
-  extractingItems,
-  isHydrating,
-  highlightedId,
   links,
   selectedItemUrl,
   openSavedFolder,
@@ -68,8 +61,6 @@ const renderSaveListContent = ({
     return (
       <GalleryGroupBrowser
         group={openGalleryGroup}
-        actions={linkItemActions}
-        extractingItems={extractingItems}
         onExit={onExitGroup}
         onOpenItem={openSavedFolder}
       />
@@ -80,10 +71,6 @@ const renderSaveListContent = ({
     return (
       <GallerySaveGrid
         groups={galleryGroups}
-        actions={linkItemActions}
-        extractingItems={extractingItems}
-        isHydrating={isHydrating}
-        highlightedId={highlightedId}
         onOpenItem={openSavedFolder}
         onOpenGroup={onOpenGroup}
       />
@@ -97,18 +84,13 @@ const renderSaveListContent = ({
       onSelectedItemUrlChange={(itemUrl) =>
         itemUrl ? openSavedFolder(itemUrl) : closeSavedFolder()
       }
-      actions={linkItemActions}
-      extractingItems={extractingItems}
-      highlightedId={highlightedId}
-      isHydrating={isHydrating}
-      shouldShowRowPosters={isGalleryMediaView}
     />
   )
 }
 
 const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
   const location = useLocation()
-  const isSaveInputHidden = useIsTvBroAndroidTv()
+  const isTvBroSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const hasInitialItems = initialItems !== undefined
   const resolvedInitialSnapshotMeta = useMemo<InitialSnapshotMeta>(
@@ -188,7 +170,7 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
           : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
     >
-      {!isImmersiveRoute && !isSaveInputHidden && (
+      {!isImmersiveRoute && !isTvBroSaveInputHidden && (
         <div className="w-full">
           <LinkInputSection
             url={input.url}
@@ -203,25 +185,29 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
         </div>
       )}
 
-      <div className="w-full">
-        {renderSaveListContent({
-          isGroupRoute,
-          openGalleryGroup,
-          isGalleryMediaView,
-          isFolderRoute,
-          galleryGroups,
-          linkItemActions,
-          extractingItems,
-          isHydrating,
-          highlightedId,
-          links,
-          selectedItemUrl,
-          openSavedFolder: openSavedFolderFromLibrary,
-          closeSavedFolder,
-          onExitGroup: exitGroup,
-          onOpenGroup: openGroupFromLibrary,
-        })}
-      </div>
+      <SaveListSessionProvider
+        actions={linkItemActions}
+        extractingItems={extractingItems}
+        highlightedId={highlightedId}
+        isHydrating={isHydrating}
+        shouldShowRowPosters={isGalleryMediaView}
+      >
+        <div className="w-full">
+          {renderSaveListContent({
+            isGroupRoute,
+            openGalleryGroup,
+            isGalleryMediaView,
+            isFolderRoute,
+            galleryGroups,
+            links,
+            selectedItemUrl,
+            openSavedFolder: openSavedFolderFromLibrary,
+            closeSavedFolder,
+            onExitGroup: exitGroup,
+            onOpenGroup: openGroupFromLibrary,
+          })}
+        </div>
+      </SaveListSessionProvider>
 
       <LinkSelectionDialog
         open={selectionDialog.state.open}

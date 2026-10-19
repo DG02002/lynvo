@@ -12,9 +12,10 @@ const createHarness = ({
   let now = 1_000_000
   let pollResponse: RemotePollResponse = {}
   let intervalCallback = () => undefined
+  let nextTimeoutId = 1
+  const timeoutCallbacks = new Map<number, () => void>()
+  const timeoutDelays: number[] = []
   const transport = {
-    connect: vi.fn(async () => undefined),
-    disconnect: vi.fn(async () => undefined),
     send: vi.fn(async () => undefined),
     poll: vi.fn(async () => pollResponse),
     reportResult: vi.fn(async () => undefined),
@@ -38,6 +39,13 @@ const createHarness = ({
     persistence,
     clock: {
       now: () => now,
+      setTimeout: (callback, delayMs) => {
+        const timeoutId = nextTimeoutId++
+        timeoutCallbacks.set(timeoutId, callback)
+        timeoutDelays.push(delayMs)
+        return timeoutId
+      },
+      clearTimeout: (timeoutId) => timeoutCallbacks.delete(timeoutId),
       setInterval: (callback) => {
         intervalCallback = callback
         return 1
@@ -56,6 +64,16 @@ const createHarness = ({
       pollResponse = nextResponse
     },
     runInterval: () => intervalCallback(),
+    runTimeout: () => {
+      const timeout = timeoutCallbacks.entries().next().value
+      if (!timeout) {
+        throw new Error("expected a scheduled poll retry")
+      }
+      timeoutCallbacks.delete(timeout[0])
+      timeout[1]()
+    },
+    hasScheduledRetry: () => timeoutCallbacks.size > 0,
+    timeoutDelays,
   }
 }
 
@@ -73,7 +91,7 @@ describe("remote-control machine", () => {
       expect(harness.transport.poll).toHaveBeenCalledTimes(1)
     )
   })
-  it("hydrates a stored session and confirms connect before persistence", async () => {
+  it("hydrates a stored session and persists a locally selected receiver", async () => {
     const harness = createHarness({
       storedSessionId: "stored-session",
       storedDeviceName: "Stored TV",
@@ -83,7 +101,6 @@ describe("remote-control machine", () => {
 
     const freshHarness = createHarness()
     await freshHarness.machine.connect("tv-1", "Living Room")
-    expect(freshHarness.transport.connect).toHaveBeenCalledWith("tv-1")
     expect(freshHarness.persistence.save).toHaveBeenCalledWith(
       "tv-1",
       "Living Room"
@@ -91,26 +108,14 @@ describe("remote-control machine", () => {
     expect(freshHarness.machine.getSnapshot().activeSessionId).toBe("tv-1")
   })
 
-  it("does not persist failed connects or clear failed disconnects", async () => {
-    const harness = createHarness()
-    harness.transport.connect.mockRejectedValueOnce(new Error("offline"))
-    await expect(
-      harness.machine.connect("tv-1", "Living Room")
-    ).rejects.toThrow("offline")
-    expect(harness.persistence.save).not.toHaveBeenCalled()
-
-    const connectedHarness = createHarness({
+  it("clears a locally selected receiver without a transport call", async () => {
+    const harness = createHarness({
       storedSessionId: "tv-1",
       storedDeviceName: "Living Room",
     })
-    connectedHarness.transport.disconnect.mockRejectedValueOnce(
-      new Error("offline")
-    )
-    await expect(connectedHarness.machine.disconnect()).rejects.toThrow(
-      "offline"
-    )
-    expect(connectedHarness.persistence.clear).not.toHaveBeenCalled()
-    expect(connectedHarness.machine.getSnapshot().activeSessionId).toBe("tv-1")
+    await harness.machine.disconnect()
+    expect(harness.persistence.clear).toHaveBeenCalledOnce()
+    expect(harness.machine.getSnapshot().activeSessionId).toBeNull()
   })
 
   it("polls a receiver inbox without pre-existing Remote Play state", async () => {
@@ -139,24 +144,61 @@ describe("remote-control machine", () => {
       expect(harness.transport.poll).toHaveBeenCalledTimes(2)
     )
 
-    harness.machine.setRealtimeStatus("connected")
     harness.runInterval()
     await vi.waitFor(() =>
       expect(harness.transport.poll).toHaveBeenCalledTimes(3)
     )
   })
 
-  it("classifies polling failures as delivery outcomes", async () => {
+  it("backs off poll failures and reports one sustained outage", async () => {
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5)
     const harness = createHarness({ storedSessionId: "tv-1" })
     const outcomes: RemoteControlOutcome[] = []
     harness.machine.subscribeOutcomes((outcome) => outcomes.push(outcome))
-    harness.transport.poll.mockRejectedValueOnce(new Error("unauthorized"))
+    harness.transport.poll.mockRejectedValue(new Error("unavailable"))
     harness.machine.start()
-    harness.machine.setRealtimeStatus("disconnected")
 
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(1)
+    )
+    expect(outcomes).toEqual([])
+    await vi.waitFor(() => expect(harness.hasScheduledRetry()).toBe(true))
+    expect(harness.timeoutDelays).toEqual([1_000])
+
+    harness.runTimeout()
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(2)
+    )
+    expect(outcomes).toEqual([])
+    await vi.waitFor(() => expect(harness.hasScheduledRetry()).toBe(true))
+    expect(harness.timeoutDelays).toEqual([1_000, 2_000])
+
+    harness.runTimeout()
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(3)
+    )
+    expect(outcomes).toEqual([])
+    await vi.waitFor(() => expect(harness.hasScheduledRetry()).toBe(true))
+    expect(harness.timeoutDelays).toEqual([1_000, 2_000, 4_000])
+
+    harness.setNow(1_060_001)
+    harness.runTimeout()
     await vi.waitFor(() =>
       expect(outcomes).toContainEqual({ type: "delivery-unavailable" })
     )
+    await vi.waitFor(() => expect(harness.hasScheduledRetry()).toBe(true))
+    expect(
+      outcomes.filter(({ type }) => type === "delivery-unavailable")
+    ).toHaveLength(1)
+
+    harness.runTimeout()
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(5)
+    )
+    expect(
+      outcomes.filter(({ type }) => type === "delivery-unavailable")
+    ).toHaveLength(1)
+    random.mockRestore()
   })
 
   it("preserves actionable messages for failed Remote Play sends", async () => {

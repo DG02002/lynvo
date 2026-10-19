@@ -3,6 +3,7 @@ import type { MediaArtworkIdentity } from "~shared/api-contracts"
 import type {
   ExtractedLink,
   LinkDebugLogEntry,
+  LinkWriteResult,
   MetaData,
 } from "~/features/links/types"
 
@@ -17,8 +18,8 @@ export interface LinksActions {
     url: string,
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
-  ) => Promise<string | undefined>
-  enqueue: (url: string) => Promise<string | undefined>
+  ) => Promise<LinkWriteResult>
+  enqueue: (url: string) => Promise<LinkWriteResult>
   remove: (url: string, id?: string, silent?: boolean) => Promise<void>
   updateLinks: (
     url: string,

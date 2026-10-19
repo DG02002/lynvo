@@ -24,10 +24,9 @@ import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginInfoTooltip } from "./plugin-info-tooltip"
 import type { LynvoPlugin } from "./plugin-settings-data"
-import {
-  usePluginSettingsInteraction,
-  type CustomPluginServer,
-  type PluginDomain,
+import type {
+  CustomPluginServer,
+  PluginDomain,
 } from "./plugin-settings-interaction"
 import {
   customPluginServerStandardSchema,
@@ -39,6 +38,8 @@ import {
   SettingsRow,
   SectionHeading,
 } from "./settings-layout"
+import { usePluginDomainSettings } from "./use-plugin-domain-settings"
+import { usePluginServerSettings } from "./use-plugin-server-settings"
 
 export type { PluginDomain } from "./plugin-settings-interaction"
 
@@ -63,19 +64,22 @@ export function PluginsSettings({
   )
   const {
     pluginServers,
-    domains,
-    handleDeleteDomain,
-    handleSetDomainCredential,
-    handleDeleteDomainCredential,
     handleAddPluginServer,
     handleDeletePluginServer,
     handleRefreshPluginServer,
     handleTogglePluginServer,
+    reloadPluginSettings,
+  } = usePluginServerSettings()
+  const {
+    domains,
+    handleDeleteDomain,
+    handleSetDomainCredential,
+    handleDeleteDomainCredential,
     domainDrafts,
     domainOperations,
     updateDomainDraft,
     addDomain,
-  } = usePluginSettingsInteraction()
+  } = usePluginDomainSettings({ reloadPluginSettings })
 
   const domainsByPlugin = React.useMemo(() => {
     return domains.reduce<Record<string, PluginDomain[]>>((acc, domain) => {
@@ -278,6 +282,7 @@ const AddPluginDomainDialog = ({
         submitPending={isAdding}
         submitDisabled={isAdding}
         cancelDisabled={isAdding}
+        onCancel={() => setOpen(false)}
       >
         <FieldGroup className="gap-4">
           <Field className="gap-1.5">
@@ -507,6 +512,14 @@ export const CustomPluginServersSection = ({
                 submitPending={isSubmitting}
                 submitDisabled={isSubmitting}
                 cancelDisabled={isSubmitting}
+                onCancel={() => onAddPluginServerOpenChange(false)}
+                error={
+                  registrationError ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{registrationError}</AlertDescription>
+                    </Alert>
+                  ) : null
+                }
               >
                 <FieldGroup className="gap-4">
                   <form.Field name="baseUrl">
@@ -557,11 +570,6 @@ export const CustomPluginServersSection = ({
                     }}
                   </form.Field>
                 </FieldGroup>
-                {registrationError ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{registrationError}</AlertDescription>
-                  </Alert>
-                ) : null}
               </FormDialogContent>
             )}
           </form.Subscribe>
@@ -673,6 +681,7 @@ const PluginCredentialEditor = ({
               submitPending={isSaving}
               submitDisabled={isSaving}
               cancelDisabled={isSaving}
+              onCancel={() => setIsEditing(false)}
             >
               <FieldGroup className="gap-4">
                 {credentialKind === "http-basic" && (

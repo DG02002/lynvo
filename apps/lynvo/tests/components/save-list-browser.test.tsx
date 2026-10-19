@@ -3,13 +3,55 @@ import { useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SaveListBrowser } from "~/components/save-list/save-list-browser"
+import { SaveListBrowser as SaveListBrowserView } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkListItem,
+  LinkViewItem,
+} from "~/features/links/types"
 
+import { createLinkItemActions } from "../support/link-item-actions"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
+
+interface SaveListBrowserHarnessProps {
+  readonly items: LinkListItem[]
+  readonly selectedItemUrl: string | null
+  readonly onSelectedItemUrlChange: (url: string | null) => void
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly highlightedId: string | null
+  readonly isHydrating: boolean
+  readonly shouldShowRowPosters?: boolean
+}
+
+const SaveListBrowser = ({
+  items,
+  selectedItemUrl,
+  onSelectedItemUrlChange,
+  actions,
+  extractingItems,
+  highlightedId,
+  isHydrating,
+  shouldShowRowPosters,
+}: SaveListBrowserHarnessProps) => (
+  <SaveListSessionTestProvider
+    actions={actions}
+    extractingItems={extractingItems}
+    highlightedId={highlightedId}
+    isHydrating={isHydrating}
+    shouldShowRowPosters={shouldShowRowPosters}
+  >
+    <SaveListBrowserView
+      items={items}
+      selectedItemUrl={selectedItemUrl}
+      onSelectedItemUrlChange={onSelectedItemUrlChange}
+    />
+  </SaveListSessionTestProvider>
+)
 
 const LocationProbe = () => {
   const location = useLocation()
@@ -38,20 +80,6 @@ const BrowserForward = () => {
     </button>
   )
 }
-
-const createActions = (
-  overrides: Partial<LinkItemActions> = {}
-): LinkItemActions => ({
-  play: vi.fn().mockResolvedValue({ accepted: true }),
-  remove: vi.fn(),
-  showLinks: vi.fn(),
-  markOpened: vi.fn(),
-  expandFolder: vi.fn(),
-  softRefresh: vi.fn(),
-  hardRefresh: vi.fn(),
-  expandMirror: vi.fn().mockResolvedValue(null),
-  ...overrides,
-})
 
 interface ResolvableItemOptions {
   readonly url: string
@@ -194,7 +222,7 @@ describe("SaveListBrowser", () => {
             items={[{ ...item, kind: "saved" }]}
             selectedItemUrl={item.url}
             onSelectedItemUrlChange={onSelectedItemUrlChange}
-            actions={createActions()}
+            actions={createLinkItemActions()}
             extractingItems={new Set()}
             highlightedId={null}
             isHydrating={false}
@@ -358,7 +386,7 @@ describe("SaveListBrowser", () => {
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
           onSelectedItemUrlChange={vi.fn()}
-          actions={createActions()}
+          actions={createLinkItemActions()}
           extractingItems={new Set()}
           highlightedId={null}
           isHydrating={false}
@@ -497,7 +525,7 @@ describe("SaveListBrowser", () => {
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
           onSelectedItemUrlChange={vi.fn()}
-          actions={createActions()}
+          actions={createLinkItemActions()}
           extractingItems={new Set()}
           highlightedId={null}
           isHydrating={false}
@@ -566,7 +594,7 @@ describe("SaveListBrowser", () => {
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
           onSelectedItemUrlChange={vi.fn()}
-          actions={createActions()}
+          actions={createLinkItemActions()}
           extractingItems={new Set()}
           highlightedId={null}
           isHydrating={false}
@@ -646,7 +674,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({ markOpened })}
+        actions={createLinkItemActions({ markOpened })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -700,7 +728,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -745,7 +773,7 @@ describe("SaveListBrowser", () => {
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
           onSelectedItemUrlChange={vi.fn()}
-          actions={createActions()}
+          actions={createLinkItemActions()}
           extractingItems={new Set()}
           highlightedId={null}
           isHydrating={false}
@@ -814,7 +842,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({ expandFolder })}
+        actions={createLinkItemActions({ expandFolder })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -895,7 +923,7 @@ describe("SaveListBrowser", () => {
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
           onSelectedItemUrlChange={vi.fn()}
-          actions={createActions({ expandFolder })}
+          actions={createLinkItemActions({ expandFolder })}
           extractingItems={new Set()}
           highlightedId={null}
           isHydrating={false}
@@ -963,7 +991,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={onSelectedItemUrlChange}
-        actions={createActions({ expandMirror, markOpened })}
+        actions={createLinkItemActions({ expandMirror, markOpened })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1066,7 +1094,7 @@ describe("SaveListBrowser", () => {
           },
         ]
       })
-      const actions = createActions({
+      const actions = createLinkItemActions({
         markOpened: (itemUrl, linkUrl) => {
           markOpened(itemUrl, linkUrl)
           setCurrentItem((previousItem) => ({
@@ -1271,7 +1299,7 @@ describe("SaveListBrowser", () => {
             items={[{ ...item, kind: "saved" }]}
             selectedItemUrl={item.url}
             onSelectedItemUrlChange={vi.fn()}
-            actions={createActions({ expandMirror })}
+            actions={createLinkItemActions({ expandMirror })}
             extractingItems={extractingItems}
             highlightedId={null}
             isHydrating={false}
@@ -1326,7 +1354,7 @@ describe("SaveListBrowser", () => {
       <SavedLinkMetadataHarness
         initialItem={initialItem}
         updatedItem={updatedItem}
-        actions={createActions()}
+        actions={createLinkItemActions()}
       />
     )
     fireEvent.click(
@@ -1360,7 +1388,7 @@ describe("SaveListBrowser", () => {
       <SavedLinkMetadataHarness
         initialItem={initialItem}
         updatedItem={updatedItem}
-        actions={createActions({
+        actions={createLinkItemActions({
           expandMirror: vi.fn().mockResolvedValue(null),
         })}
       />
@@ -1415,7 +1443,7 @@ describe("SaveListBrowser", () => {
       <SavedLinkMetadataHarness
         initialItem={initialItem}
         updatedItem={updatedItem}
-        actions={createActions({ expandMirror })}
+        actions={createLinkItemActions({ expandMirror })}
       />
     )
     const itemButton = screen.getByRole("button", {
@@ -1469,7 +1497,7 @@ describe("SaveListBrowser", () => {
         <SavedLinkMetadataHarness
           initialItem={initialItem}
           updatedItem={updatedItem}
-          actions={createActions({ expandMirror })}
+          actions={createLinkItemActions({ expandMirror })}
         />
       )
       const itemButton = screen.getByRole("button", {
@@ -1532,7 +1560,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({
+        actions={createLinkItemActions({
           markOpened,
           expandMirror: vi.fn().mockResolvedValue(null),
         })}
@@ -1587,7 +1615,7 @@ describe("SaveListBrowser", () => {
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
           onSelectedItemUrlChange={vi.fn()}
-          actions={createActions({
+          actions={createLinkItemActions({
             expandMirror: vi
               .fn()
               .mockRejectedValue(new Error("network failed")),
@@ -1644,7 +1672,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1684,7 +1712,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1728,7 +1756,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1768,7 +1796,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({ play })}
+        actions={createLinkItemActions({ play })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1818,7 +1846,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1869,7 +1897,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({ markOpened })}
+        actions={createLinkItemActions({ markOpened })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1900,7 +1928,7 @@ describe("SaveListBrowser", () => {
     const commonProps = {
       selectedItemUrl: null,
       onSelectedItemUrlChange: vi.fn(),
-      actions: createActions(),
+      actions: createLinkItemActions(),
       extractingItems: new Set<string>(),
       highlightedId: null,
     }
@@ -1947,7 +1975,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -1995,7 +2023,7 @@ describe("SaveListBrowser", () => {
         error: "The Source could not be reached.",
       },
     }
-    const actions = createActions()
+    const actions = createLinkItemActions()
 
     render(
       <SaveListBrowser

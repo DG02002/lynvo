@@ -6,13 +6,13 @@ import {
   dismissPluginDomainSuggestion,
   shouldOfferPluginDomainSuggestion,
 } from "~/features/links/saved-link-interaction"
-import {
-  usePluginSettingsInteraction,
-  type PluginSettingsCommands,
-} from "~/features/site/settings/plugin-settings-interaction"
+import type { PluginSettingsCommands } from "~/features/site/settings/plugin-settings-interaction"
+import { usePluginDomainSettings } from "~/features/site/settings/use-plugin-domain-settings"
+import { usePluginServerSettings } from "~/features/site/settings/use-plugin-server-settings"
+import { useProxySettings } from "~/features/site/settings/use-proxy-settings"
 import { client } from "~/lib/api/client"
 
-describe("Plugin settings interaction", () => {
+describe("Plugin settings interactions", () => {
   afterEach(() => {
     sessionStorage.clear()
     vi.restoreAllMocks()
@@ -27,7 +27,7 @@ describe("Plugin settings interaction", () => {
       },
     }
     const { result } = renderHook(() =>
-      usePluginSettingsInteraction({ commands, loadData: false })
+      usePluginDomainSettings({ commands, loadData: false })
     )
 
     act(() => {
@@ -73,7 +73,7 @@ describe("Plugin settings interaction", () => {
     }
     dismissPluginDomainSuggestion(suggestion)
     const { result } = renderHook(() =>
-      usePluginSettingsInteraction({
+      usePluginDomainSettings({
         commands: { createDomain: async () => ({ success: true }) },
         loadData: false,
       })
@@ -102,14 +102,11 @@ describe("Plugin settings interaction", () => {
       hasCredential: false,
     }
     vi.spyOn(client.pluginDomains, "list").mockResolvedValue([domain])
-    vi.spyOn(client.pluginServers, "list").mockResolvedValue([])
     const deleteDomain = vi
       .fn<PluginSettingsCommands["deleteDomain"]>()
       .mockResolvedValue({ success: true })
     const { result } = renderHook(() =>
-      usePluginSettingsInteraction({
-        commands: { deleteDomain },
-      })
+      usePluginDomainSettings({ commands: { deleteDomain } })
     )
 
     await waitFor(() => expect(result.current.domains).toEqual([domain]))
@@ -129,7 +126,7 @@ describe("Plugin settings interaction", () => {
       createDomain: async () => ({ success: ++attempts > 1 }),
     }
     const { result } = renderHook(() =>
-      usePluginSettingsInteraction({ commands, loadData: false })
+      usePluginDomainSettings({ commands, loadData: false })
     )
 
     void act(() =>
@@ -158,7 +155,7 @@ describe("Plugin settings interaction", () => {
       },
     }
     const { result } = renderHook(() =>
-      usePluginSettingsInteraction({ commands, loadData: false })
+      usePluginDomainSettings({ commands, loadData: false })
     )
 
     let first: Promise<void>
@@ -176,7 +173,7 @@ describe("Plugin settings interaction", () => {
     })
   })
 
-  it("routes credential and Custom Plugin Server workflows through one interface", async () => {
+  it("routes domain, server, and proxy workflows through focused hooks", async () => {
     const calls: string[] = []
     const success = async (name: string) => {
       calls.push(name)
@@ -194,23 +191,25 @@ describe("Plugin settings interaction", () => {
       refreshProxyProviderBalance: async () =>
         await success("refresh-proxy-balance"),
     }
-    const { result } = renderHook(() =>
-      usePluginSettingsInteraction({ commands, loadData: false })
-    )
+    const { result } = renderHook(() => ({
+      domain: usePluginDomainSettings({ commands, loadData: false }),
+      server: usePluginServerSettings({ commands, loadData: false }),
+      proxy: useProxySettings({ commands, loadData: false }),
+    }))
 
     await act(async () => {
-      await result.current.handleSetDomainCredential("domain", "secret")
-      await result.current.handleDeleteDomainCredential("domain")
-      await result.current.handleAddPluginServer({
+      await result.current.domain.handleSetDomainCredential("domain", "secret")
+      await result.current.domain.handleDeleteDomainCredential("domain")
+      await result.current.server.handleAddPluginServer({
         baseUrl: "https://plugins.example",
         apiKey: "secret",
       })
-      await result.current.handleTogglePluginServer("server", false)
-      await result.current.handleRefreshPluginServer("server")
-      await result.current.handleDeletePluginServer("server")
-      await result.current.setProxyProviderKey("secret")
-      await result.current.handleTogglePluginServerProxy("server", true)
-      await result.current.refreshProxyProviderBalance()
+      await result.current.server.handleTogglePluginServer("server", false)
+      await result.current.server.handleRefreshPluginServer("server")
+      await result.current.server.handleDeletePluginServer("server")
+      await result.current.proxy.setProxyProviderKey("secret")
+      await result.current.proxy.handleTogglePluginServerProxy("server", true)
+      await result.current.proxy.refreshProxyProviderBalance()
     })
 
     expect(calls).toEqual([
@@ -224,8 +223,8 @@ describe("Plugin settings interaction", () => {
       "toggle-proxy",
       "refresh-proxy-balance",
     ])
-    expect(result.current.serverOperations["proxy-toggle:server"]).toEqual({
-      status: "success",
-    })
+    expect(
+      result.current.proxy.serverOperations["proxy-toggle:server"]
+    ).toEqual({ status: "success" })
   })
 })

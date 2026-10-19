@@ -1,4 +1,5 @@
 import { render, waitFor } from "@testing-library/react"
+import { MemoryRouter } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getPlayerPreferences } from "~/lib/player-utils"
@@ -18,10 +19,12 @@ describe("account settings synchronization", () => {
     })
 
     render(
-      <AccountSettingsSynchronization
-        userId="user-one"
-        loadPlayerPreferences={cloudPlayerPreferences}
-      />
+      <MemoryRouter initialEntries={["/"]}>
+        <AccountSettingsSynchronization
+          userId="user-one"
+          loadPlayerPreferences={cloudPlayerPreferences}
+        />
+      </MemoryRouter>
     )
 
     await waitFor(() =>
@@ -37,9 +40,11 @@ describe("account settings synchronization", () => {
     const cloudPlayerPreferences = vi.fn()
 
     render(
-      <AccountSettingsSynchronization
-        loadPlayerPreferences={cloudPlayerPreferences}
-      />
+      <MemoryRouter initialEntries={["/"]}>
+        <AccountSettingsSynchronization
+          loadPlayerPreferences={cloudPlayerPreferences}
+        />
+      </MemoryRouter>
     )
 
     expect(cloudPlayerPreferences).not.toHaveBeenCalled()
@@ -47,5 +52,21 @@ describe("account settings synchronization", () => {
       rangeSupportedPlayerId: "just",
       rangeUnsupportedPlayerId: "vlc",
     })
+  })
+
+  it("leaves player preference loading to the player settings route", () => {
+    vi.stubGlobal("localStorage", createMemoryStorage())
+    const cloudPlayerPreferences = vi.fn()
+
+    render(
+      <MemoryRouter initialEntries={["/settings/player"]}>
+        <AccountSettingsSynchronization
+          userId="user-one"
+          loadPlayerPreferences={cloudPlayerPreferences}
+        />
+      </MemoryRouter>
+    )
+
+    expect(cloudPlayerPreferences).not.toHaveBeenCalled()
   })
 })

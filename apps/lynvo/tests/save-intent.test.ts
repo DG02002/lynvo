@@ -34,7 +34,7 @@ describe("save intent", () => {
         addLink,
         enqueueLink,
       })
-    ).resolves.toEqual({ kind: "error", message: "Enter a URL." })
+    ).resolves.toEqual({ kind: "error", errorKind: "missing-url" })
 
     await expect(
       resolveSaveIntent({
@@ -43,7 +43,7 @@ describe("save intent", () => {
         addLink,
         enqueueLink,
       })
-    ).resolves.toEqual({ kind: "error", message: "Enter a valid URL." })
+    ).resolves.toEqual({ kind: "error", errorKind: "invalid-url" })
     expect(addLink).not.toHaveBeenCalled()
     expect(enqueueLink).not.toHaveBeenCalled()
   })
@@ -71,7 +71,9 @@ describe("save intent", () => {
       "https://source-user:source%40secret@index.example.com/0:/Movies/"
     const sanitizedUrl = "https://index.example.com/0:/Movies/"
     const addLink = vi.fn()
-    const enqueueLink = vi.fn().mockResolvedValue("queued-id")
+    const enqueueLink = vi
+      .fn()
+      .mockResolvedValue({ kind: "saved", id: "queued-id" })
 
     const result = await resolveSaveIntent({
       currentUrl: credentialedUrl,
@@ -87,7 +89,9 @@ describe("save intent", () => {
 
   it("persists every save mode through the extraction queue so a refresh cannot discard work", async () => {
     const addLink = vi.fn()
-    const enqueueLink = vi.fn().mockResolvedValue("queued-id")
+    const enqueueLink = vi
+      .fn()
+      .mockResolvedValue({ kind: "saved", id: "queued-id" })
 
     await expect(
       resolveSaveIntent({
@@ -101,9 +105,11 @@ describe("save intent", () => {
     expect(addLink).not.toHaveBeenCalled()
   })
 
-  it("reports a user-facing failure when the queue cannot persist the intent", async () => {
+  it("returns the write-failure kind when the queue cannot persist the intent", async () => {
     const addLink = vi.fn()
-    const enqueueLink = vi.fn().mockResolvedValue(undefined)
+    const enqueueLink = vi
+      .fn()
+      .mockResolvedValue({ kind: "failed", cause: new Error("offline") })
 
     await expect(
       resolveSaveIntent({
@@ -114,7 +120,7 @@ describe("save intent", () => {
       })
     ).resolves.toEqual({
       kind: "error",
-      message: "Unable to save link. Try again.",
+      errorKind: "write-failed",
     })
   })
 

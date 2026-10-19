@@ -22,7 +22,6 @@ const createMachine = (): RemoteControlMachine => ({
   subscribeOutcomes: () => () => undefined,
   start: () => () => undefined,
   poll: vi.fn(async () => undefined),
-  setRealtimeStatus: vi.fn(),
   connect: vi.fn(async () => undefined),
   disconnect: vi.fn(async () => undefined),
   disconnectReceiver: vi.fn(async () => undefined),

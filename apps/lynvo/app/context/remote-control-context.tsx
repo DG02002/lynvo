@@ -46,6 +46,8 @@ const RemoteControlContext = createContext<
 
 const browserClock: RemoteControlClock = {
   now: Date.now,
+  setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs),
+  clearTimeout: (timeoutId) => window.clearTimeout(timeoutId),
   setInterval: (callback, intervalMs) =>
     window.setInterval(callback, intervalMs),
   clearInterval: (intervalId) => window.clearInterval(intervalId),
@@ -133,9 +135,6 @@ export const RemoteControlProviderContent = ({
       void machine.poll().catch(console.error)
     }
   }, [machine, realtime.connectionGeneration, user?.sessionId])
-  useEffect(() => {
-    machine.setRealtimeStatus(realtime.status)
-  }, [machine, realtime.status])
   useEffect(
     () =>
       machine.subscribeOutcomes((outcome) => {
@@ -143,21 +142,11 @@ export const RemoteControlProviderContent = ({
           notifications.showSuccessToast({
             title: `Connected to ${outcome.deviceName}`,
           })
-        } else if (outcome.type === "connect-failed") {
-          notifications.showErrorToast({
-            title: "Remote Play couldn’t connect",
-            description: "Keep Lynvo open on both devices, then try again.",
-          })
         } else if (
           outcome.type === "disconnected" ||
           outcome.type === "receiver-disconnected"
         ) {
           notifications.showInfoToast({ title: "Remote Play disconnected" })
-        } else if (outcome.type === "disconnect-failed") {
-          notifications.showErrorToast({
-            title: "Remote Play couldn’t disconnect",
-            description: REMOTE_CONNECTION_FAILURE_MESSAGE,
-          })
         } else if (outcome.type === "send-failed") {
           notifications.showErrorToast({
             title: "Couldn’t send the Remote Play command",

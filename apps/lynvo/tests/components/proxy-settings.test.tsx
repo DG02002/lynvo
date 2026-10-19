@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ProxySettings } from "~/features/site/settings/proxy-settings"
+import { client } from "~/lib/api/client"
 
 const makeServer = (
   id: string,
@@ -49,6 +50,7 @@ const createProxyStateFetch = (readState: () => ProxyState) => async () =>
 describe("ProxySettings", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it("shows the provider key with one usage block and a switch per server", async () => {
@@ -164,6 +166,48 @@ describe("ProxySettings", () => {
       "/settings/plugins"
     )
     expect(await screen.findByText("No key saved")).toBeVisible()
+  })
+
+  it("does not refresh stale Plugin Server manifests on the proxy page", async () => {
+    const refreshPluginServer = vi
+      .spyOn(client.pluginServers, "refresh")
+      .mockResolvedValue({ success: true, dataVersion: 1 })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://lynvo.test"
+        )
+        if (url.pathname === "/api/plugin-servers") {
+          return Response.json([
+            {
+              ...makeServer("stale", "Stale Server", true, "unverified"),
+              lastManifestRefreshAt: null,
+            },
+          ])
+        }
+        if (url.pathname === "/api/proxy") {
+          return Response.json({
+            provider: "scrape-do",
+            hasKey: false,
+            balanceRemaining: null,
+            balanceLimit: null,
+            balanceCheckedAt: null,
+          })
+        }
+        return new Response(null, { status: 404 })
+      })
+    )
+
+    render(
+      <MemoryRouter>
+        <ProxySettings requestOrigin="https://lynvo.test" />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText("Stale Server")).toBeVisible()
+    expect(refreshPluginServer).not.toHaveBeenCalled()
   })
 
   it("shows the refreshed balance and checked time after a refresh", async () => {

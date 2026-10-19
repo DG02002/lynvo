@@ -2,7 +2,15 @@ import {
   createRemoteCommandDelivery,
   parseRemoteCommandWirePayload,
 } from "./command-delivery"
-import { REMOTE_POLL_INTERVAL_MS } from "./constants"
+import {
+  REMOTE_POLL_FAILURE_NOTICE_AFTER_MS,
+  REMOTE_POLL_INTERVAL_MS,
+} from "./constants"
+
+const REMOTE_POLL_BASE_BACKOFF_MS = 1_000
+const REMOTE_POLL_MAX_BACKOFF_MS = 30_000
+const ALWAYS_POLL = () => true
+const NEVER_POLL = () => false
 
 declare global {
   interface RemoteDevice {
@@ -17,9 +25,6 @@ declare global {
     controllingDeviceName: string | null
     controllingDevices: readonly RemoteDevice[]
     lastCommand: RemoteCommand | null
-    realtimeStatus: string
-    isConnecting: boolean
-    isDisconnecting: boolean
   }
 
   interface RemotePollResponse {
@@ -49,8 +54,6 @@ declare global {
   }
 
   interface RemoteControlTransport {
-    connect: (targetSessionId: string) => Promise<void>
-    disconnect: (targetSessionId: string) => Promise<void>
     send: (
       targetSessionId: string,
       intent: RemotePlaybackIntent
@@ -72,15 +75,15 @@ declare global {
 
   interface RemoteControlClock {
     now: () => number
+    setTimeout: (callback: () => void, delayMs: number) => number
+    clearTimeout: (timeoutId: number) => void
     setInterval: (callback: () => void, intervalMs: number) => number
     clearInterval: (intervalId: number) => void
   }
 
   type RemoteControlOutcome =
     | { type: "connected"; deviceName: string }
-    | { type: "connect-failed"; deviceName: string }
     | { type: "disconnected" }
-    | { type: "disconnect-failed" }
     | { type: "receiver-disconnected" }
     | { type: "send-failed"; error: unknown }
     | { type: "receiver-connected"; deviceName: string }
@@ -101,7 +104,6 @@ declare global {
     disconnectReceiver: () => Promise<void>
     sendRemotePlayback: (intent: RemotePlaybackIntent) => Promise<void>
     receiveCommand: (command: RemoteCommandDeliveryInput) => boolean
-    setRealtimeStatus: (status: string) => void
     receiveRealtime: (
       event: RemoteRealtimeEvent,
       userSessionId?: string
@@ -121,9 +123,6 @@ const EMPTY_STATE: RemoteControlMachineState = {
   controllingDeviceName: null,
   controllingDevices: [],
   lastCommand: null,
-  realtimeStatus: "disconnected",
-  isConnecting: false,
-  isDisconnecting: false,
 }
 
 const haveSameDevices = (
@@ -139,6 +138,111 @@ const haveSameDevices = (
   return nextDevices.every(
     (device) => currentById.get(device.id) === device.name
   )
+}
+
+const createRemotePollController = ({
+  clock,
+  pollOnce,
+  onSustainedFailure,
+}: {
+  clock: RemoteControlClock
+  pollOnce: () => Promise<void>
+  onSustainedFailure: () => void
+}) => {
+  let request: Promise<void> | undefined
+  let retryTimer: number | undefined
+  let failureCount = 0
+  let failureStartedAt: number | undefined
+  let didReportFailure = false
+  let generation = 0
+  let isActive = false
+  let shouldPoll = ALWAYS_POLL
+
+  const clearRetry = () => {
+    if (retryTimer !== undefined) {
+      clock.clearTimeout(retryTimer)
+      retryTimer = undefined
+    }
+  }
+
+  const scheduleRetry = () => {
+    if (!isActive || retryTimer !== undefined) {
+      return
+    }
+    const retryGeneration = generation
+    const baseDelay = Math.min(
+      REMOTE_POLL_MAX_BACKOFF_MS,
+      REMOTE_POLL_BASE_BACKOFF_MS * 2 ** Math.min(failureCount - 1, 5)
+    )
+    const delay = Math.round(baseDelay * (0.75 + Math.random() * 0.5))
+    retryTimer = clock.setTimeout(() => {
+      retryTimer = undefined
+      if (retryGeneration === generation && isActive && shouldPoll()) {
+        void poll()
+      }
+    }, delay)
+  }
+
+  const recordFailure = () => {
+    failureCount += 1
+    failureStartedAt ??= clock.now()
+    if (
+      !didReportFailure &&
+      clock.now() - failureStartedAt >= REMOTE_POLL_FAILURE_NOTICE_AFTER_MS
+    ) {
+      didReportFailure = true
+      onSustainedFailure()
+    }
+    scheduleRetry()
+  }
+
+  const poll = async (): Promise<void> => {
+    if (request || retryTimer !== undefined) {
+      return request
+    }
+    const currentRequest = (async () => {
+      try {
+        await pollOnce()
+        failureCount = 0
+        failureStartedAt = undefined
+        didReportFailure = false
+      } catch (error) {
+        console.error("Remote Play poll failed; retrying with backoff", error)
+        recordFailure()
+      }
+    })()
+    request = currentRequest
+    try {
+      await currentRequest
+    } finally {
+      if (request === currentRequest) {
+        request = undefined
+      }
+    }
+  }
+
+  const start = (shouldPollWhenActive: () => boolean = ALWAYS_POLL) => {
+    const currentGeneration = ++generation
+    isActive = true
+    shouldPoll = shouldPollWhenActive
+    const attemptPoll = () => {
+      if (shouldPoll()) {
+        void poll()
+      }
+    }
+    attemptPoll()
+    const intervalId = clock.setInterval(attemptPoll, REMOTE_POLL_INTERVAL_MS)
+    return () => {
+      clock.clearInterval(intervalId)
+      if (currentGeneration === generation) {
+        isActive = false
+        shouldPoll = NEVER_POLL
+        clearRetry()
+      }
+    }
+  }
+
+  return { poll, start }
 }
 
 export const createRemoteControlMachine = ({
@@ -234,6 +338,39 @@ export const createRemoteControlMachine = ({
     }
   }
 
+  const handlePollResponse = (data: RemotePollResponse) => {
+    if (data.controllingDevices !== undefined) {
+      syncDevices(data.controllingDevices)
+    } else if (data.controlledBy) {
+      syncDevices([
+        {
+          id: data.controlledBy,
+          name: data.controllerName || "Unnamed device",
+        },
+      ])
+    } else if (data.controlledBy === null) {
+      syncDevices([])
+    }
+    disconnectMissingTarget(data.activeTargets)
+    for (const command of data.commands ?? []) {
+      const parsedCommand = parseRemoteCommandWirePayload(command)
+      if (parsedCommand && receiveCommand(parsedCommand)) {
+        break
+      } else if (!parsedCommand) {
+        publishOutcome({ type: "invalid-command" })
+      }
+    }
+  }
+
+  const pollController = createRemotePollController({
+    clock,
+    pollOnce: async () => {
+      await delivery.retryPendingAcknowledgements()
+      handlePollResponse(await transport.poll())
+    },
+    onSustainedFailure: () => publishOutcome({ type: "delivery-unavailable" }),
+  })
+
   const machine: RemoteControlMachine = {
     getSnapshot: () => state,
     getServerSnapshot: () => EMPTY_STATE,
@@ -246,50 +383,30 @@ export const createRemoteControlMachine = ({
       return () => outcomeListeners.delete(listener)
     },
     connect: async (sessionId, deviceName) => {
-      if (state.isConnecting || state.activeSessionId === sessionId) {
+      if (state.activeSessionId === sessionId) {
         return
       }
-      publish({ ...state, isConnecting: true })
-      try {
-        await transport.connect(sessionId)
-        persistence.save(sessionId, deviceName)
-        publish({
-          ...state,
-          activeSessionId: sessionId,
-          connectedDeviceName: deviceName,
-          isConnecting: false,
-        })
-        publishOutcome({ type: "connected", deviceName })
-      } catch (error) {
-        publish({ ...state, isConnecting: false })
-        publishOutcome({ type: "connect-failed", deviceName })
-        throw error
-      }
+      persistence.save(sessionId, deviceName)
+      publish({
+        ...state,
+        activeSessionId: sessionId,
+        connectedDeviceName: deviceName,
+      })
+      publishOutcome({ type: "connected", deviceName })
     },
     disconnect: async () => {
-      if (state.isDisconnecting || !state.activeSessionId) {
+      if (!state.activeSessionId) {
         return
       }
-      const targetSessionId = state.activeSessionId
-      publish({ ...state, isDisconnecting: true })
-      try {
-        await transport.disconnect(targetSessionId)
-        persistence.clear()
-        publish({
-          ...state,
-          activeSessionId: null,
-          connectedDeviceName: null,
-          isDisconnecting: false,
-        })
-        publishOutcome({ type: "disconnected" })
-      } catch (error) {
-        publish({ ...state, isDisconnecting: false })
-        publishOutcome({ type: "disconnect-failed" })
-        throw error
-      }
+      persistence.clear()
+      publish({
+        ...state,
+        activeSessionId: null,
+        connectedDeviceName: null,
+      })
+      publishOutcome({ type: "disconnected" })
     },
     disconnectReceiver: async () => {
-      await transport.disconnect("current")
       syncDevices([])
       publishOutcome({ type: "receiver-disconnected" })
     },
@@ -309,11 +426,6 @@ export const createRemoteControlMachine = ({
       }
     },
     receiveCommand: (command) => receiveCommand(command),
-    setRealtimeStatus: (realtimeStatus) => {
-      if (state.realtimeStatus !== realtimeStatus) {
-        publish({ ...state, realtimeStatus })
-      }
-    },
     receiveRealtime: (event, userSessionId) => {
       if (event.kind === "command" && event.targetSessionId === userSessionId) {
         const command = parseRemoteCommandWirePayload(event)
@@ -328,31 +440,7 @@ export const createRemoteControlMachine = ({
         disconnectMissingTarget(event.activeTargets)
       }
     },
-    poll: async () => {
-      await delivery.retryPendingAcknowledgements()
-      const data = await transport.poll()
-      if (data.controllingDevices !== undefined) {
-        syncDevices(data.controllingDevices)
-      } else if (data.controlledBy) {
-        syncDevices([
-          {
-            id: data.controlledBy,
-            name: data.controllerName || "Unnamed device",
-          },
-        ])
-      } else if (data.controlledBy === null) {
-        syncDevices([])
-      }
-      disconnectMissingTarget(data.activeTargets)
-      for (const command of data.commands ?? []) {
-        const parsedCommand = parseRemoteCommandWirePayload(command)
-        if (parsedCommand && receiveCommand(parsedCommand)) {
-          break
-        } else if (!parsedCommand) {
-          publishOutcome({ type: "invalid-command" })
-        }
-      }
-    },
+    poll: pollController.poll,
     acknowledgeCommand: async (commandId) => {
       const acknowledgement = delivery.acknowledge(commandId)
       syncDeliveryState()
@@ -376,21 +464,7 @@ export const createRemoteControlMachine = ({
       delivery.markFailed(commandId)
       syncDeliveryState()
     },
-    start: (shouldPoll: () => boolean = () => true) => {
-      const poll = () => {
-        if (!shouldPoll()) {
-          return undefined
-        }
-        return machine
-          .poll()
-          .catch(() => publishOutcome({ type: "delivery-unavailable" }))
-      }
-      void poll()
-      const intervalId = clock.setInterval(() => {
-        void poll()
-      }, REMOTE_POLL_INTERVAL_MS)
-      return () => clock.clearInterval(intervalId)
-    },
+    start: pollController.start,
   }
   return machine
 }

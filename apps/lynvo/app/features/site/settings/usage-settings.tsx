@@ -1,5 +1,6 @@
 import { LoadErrorRetry } from "~/components/load-error-retry"
 import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
+import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
@@ -136,18 +137,19 @@ export const UsageSettings = ({
   lynvoPlugins,
   userId,
 }: {
-  lynvoPlugins: LynvoPlugin[]
+  lynvoPlugins: LynvoPlugin[] | null
   userId?: string
 }) => {
   const timeBucket = useDailyTimeBucket()
-  const pluginCacheKey = lynvoPlugins.map((plugin) => plugin.id).join(",")
+  const availablePlugins = lynvoPlugins ?? []
+  const pluginCacheKey = availablePlugins.map((plugin) => plugin.id).join(",")
   const {
     data: snapshot,
     error,
     isLoading,
     retry,
   } = useAsyncResource(
-    () => readUsageSnapshot({ lynvoPlugins }),
+    () => readUsageSnapshot({ lynvoPlugins: availablePlugins }),
     [timeBucket, pluginCacheKey],
     {
       cacheKey: userId
@@ -179,6 +181,25 @@ export const UsageSettings = ({
           title="Lynvo Plugin Server usage"
           description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
         />
+        {lynvoPlugins === null && (
+          <SettingsList>
+            <SettingsRow>
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Lynvo Plugin Server details couldn’t be loaded. Plugin names
+                  and icons may be unavailable.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                >
+                  Reload settings
+                </Button>
+              </div>
+            </SettingsRow>
+          </SettingsList>
+        )}
         <UsageSummary
           label="Lynvo Plugin Server"
           remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}

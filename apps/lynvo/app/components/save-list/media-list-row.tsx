@@ -1,3 +1,9 @@
+import {
+  AlertCircleIcon,
+  Folder01Icon,
+  PlayIcon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type { ReactNode } from "react"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
@@ -6,7 +12,10 @@ import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
 
 import { ExtractionStatusTitle } from "./extraction-status"
-import type { ExtractionStatusTitleSpec } from "./extraction-status-utils"
+import type {
+  ExtractionStatusInput,
+  ExtractionStatusTitleSpec,
+} from "./extraction-status-utils"
 import { buildItemAriaLabel } from "./item-aria-label"
 import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
@@ -65,6 +74,57 @@ export const SaveListRowIcon = ({
     {children}
   </span>
 )
+
+export interface SaveListItemFallbackIconDescriptor {
+  readonly icon: IconSvgElement
+  readonly isLoading: boolean
+  readonly isExtractionVisual: boolean
+}
+
+export const getSaveListItemFallbackIcon = (
+  extractionStatus: ExtractionStatusInput,
+  hasDirectLink: boolean
+): SaveListItemFallbackIconDescriptor => {
+  if (extractionStatus === "failed") {
+    return {
+      icon: AlertCircleIcon,
+      isLoading: false,
+      isExtractionVisual: true,
+    }
+  }
+
+  if (extractionStatus !== "idle") {
+    return { icon: Folder01Icon, isLoading: true, isExtractionVisual: true }
+  }
+
+  return {
+    icon: hasDirectLink ? PlayIcon : Folder01Icon,
+    isLoading: false,
+    isExtractionVisual: false,
+  }
+}
+
+interface SaveListItemFallbackIconProps {
+  readonly descriptor: SaveListItemFallbackIconDescriptor
+}
+
+export const SaveListItemFallbackIcon = ({
+  descriptor,
+}: SaveListItemFallbackIconProps) => {
+  const { icon, isLoading } = descriptor
+  const renderedIcon = <HugeiconsIcon icon={icon} className="size-6" />
+
+  return isLoading ? (
+    <span
+      aria-hidden="true"
+      className="loading-skeleton-pulse inline-flex text-muted-foreground"
+    >
+      {renderedIcon}
+    </span>
+  ) : (
+    renderedIcon
+  )
+}
 
 interface MediaListRowTitleText {
   readonly value: string

@@ -1,13 +1,19 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SaveListBrowser } from "~/components/save-list/save-list-browser"
+import { FinderBrowser } from "~/components/save-list/finder-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkViewItem,
+  SavedLinkListItem,
+} from "~/features/links/types"
 
 import type { MediaArtworkRequest } from "../../shared/api-contracts"
+import { createLinkItemActions } from "../support/link-item-actions"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 import { readJsonInitBody } from "../support/request-inspection"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -23,6 +29,45 @@ const localStorageStub = {
   clear: () => localStorageValues.clear(),
 }
 
+interface FinderBrowserHarnessProps {
+  readonly items: readonly LinkViewItem[]
+  readonly selectedItemUrl: string | null
+  readonly onSelectedItemUrlChange: (url: string | null) => void
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly highlightedId: string | null
+  readonly isHydrating: boolean
+  readonly shouldShowRowPosters?: boolean
+}
+
+const FinderBrowserHarness = ({
+  items,
+  selectedItemUrl,
+  onSelectedItemUrlChange,
+  actions,
+  extractingItems,
+  shouldShowRowPosters,
+}: FinderBrowserHarnessProps) => {
+  const item = items.find((candidate) => candidate.url === selectedItemUrl)
+  if (!item) {
+    return null
+  }
+
+  const savedItem: SavedLinkListItem = { ...item, kind: "saved" }
+  return (
+    <SaveListSessionTestProvider
+      actions={actions}
+      extractingItems={extractingItems}
+      shouldShowRowPosters={shouldShowRowPosters}
+    >
+      <FinderBrowser
+        item={savedItem}
+        onExit={() => onSelectedItemUrlChange(null)}
+      />
+    </SaveListSessionTestProvider>
+  )
+}
+
 const createMediaArtworkFetch = () =>
   vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     // SAFETY: the test fetch receives the JSON body produced by the artwork client
@@ -36,17 +81,6 @@ const createMediaArtworkFetch = () =>
       headers: { "Content-Type": "application/json" },
     })
   })
-
-const createActions = (): LinkItemActions => ({
-  play: vi.fn().mockResolvedValue({ accepted: true }),
-  remove: vi.fn(),
-  showLinks: vi.fn(),
-  markOpened: vi.fn(),
-  expandFolder: vi.fn(),
-  softRefresh: vi.fn(),
-  hardRefresh: vi.fn(),
-  expandMirror: vi.fn().mockResolvedValue(null),
-})
 
 const item: LinkViewItem = {
   kind: "saved",
@@ -223,11 +257,11 @@ afterEach(() => {
 describe("FinderBrowser episode rows", () => {
   it("hides the episode-name control for movie folders", () => {
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[movieItem]}
         selectedItemUrl={movieItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -256,11 +290,11 @@ describe("FinderBrowser episode rows", () => {
     const longMovieTitle =
       "Feature (2026) — An Extremely Long Folder Title That Must Truncate In The Browser Header"
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[{ ...movieItem, title: longMovieTitle }]}
         selectedItemUrl={movieItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -284,11 +318,11 @@ describe("FinderBrowser episode rows", () => {
 
   it("uses numbered episode names and inline source metadata for folder files", async () => {
     const view = render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[item]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -332,11 +366,11 @@ describe("FinderBrowser episode rows", () => {
 
   it("renders a one-season folder with the season poster panel", async () => {
     const view = render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[item]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -360,11 +394,11 @@ describe("FinderBrowser episode rows", () => {
     }
 
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[savedTitleItem]}
         selectedItemUrl={savedTitleItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -381,11 +415,11 @@ describe("FinderBrowser episode rows", () => {
 
   it("keeps the mobile New badge below filenames when episode names are off", async () => {
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[item]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -403,11 +437,11 @@ describe("FinderBrowser episode rows", () => {
 
   it("descends through a single season-folder wrapper into the season view", async () => {
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[wrappedSeasonItem]}
         selectedItemUrl={wrappedSeasonItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -460,11 +494,11 @@ describe("FinderBrowser episode rows", () => {
     }
 
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[seasonWithSidecarsItem]}
         selectedItemUrl={seasonWithSidecarsItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -485,11 +519,11 @@ describe("FinderBrowser episode rows", () => {
     vi.stubGlobal("fetch", artworkFetch)
 
     const view = render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[sampleShowSeasonItem]}
         selectedItemUrl={sampleShowSeasonItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -555,11 +589,11 @@ describe("FinderBrowser episode rows", () => {
     const resolvedItem = wrappedSeasonItem
 
     const view = render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[unresolvedItem]}
         selectedItemUrl={unresolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -571,11 +605,11 @@ describe("FinderBrowser episode rows", () => {
     ).not.toBeInTheDocument()
 
     view.rerender(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[resolvedItem]}
         selectedItemUrl={resolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -614,11 +648,11 @@ describe("FinderBrowser episode rows", () => {
     }
 
     render(
-      <SaveListBrowser
+      <FinderBrowserHarness
         items={[mixedSeasonsItem]}
         selectedItemUrl={mixedSeasonsItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}

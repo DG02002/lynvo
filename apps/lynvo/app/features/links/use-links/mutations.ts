@@ -9,6 +9,7 @@ import type {
   ExtractedLink,
   LinkDebugLogEntry,
   LinkMetadata,
+  LinkWriteResult,
   LinkViewItem,
   MetaData,
 } from "~/features/links/types"
@@ -99,6 +100,11 @@ export interface LinksMutationTargets {
   readonly onSettled: (dataVersion?: number) => void
 }
 
+const failWrite = (cause: unknown): LinkWriteResult => {
+  showSaveError(cause)
+  return { kind: "failed", cause }
+}
+
 export const createLinksMutations = ({
   store,
   runExclusive,
@@ -148,7 +154,7 @@ export const createLinksMutations = ({
     targetUrl: string,
     item: LinkViewItem,
     sourceUrl = targetUrl
-  ): Promise<string | undefined> => {
+  ): Promise<LinkWriteResult> => {
     try {
       return await runExclusive(async () => {
         const temporaryItem = store.beginAdd(item)
@@ -163,11 +169,16 @@ export const createLinksMutations = ({
                 ? "queued"
                 : undefined,
           })
-          if (result.id) {
-            store.settleAdd(temporaryItem.id, result.id, result.dataVersion)
+          if (!result.id) {
+            store.discardPendingAdd(temporaryItem.id)
+            settleAndRefetch(result.dataVersion)
+            return failWrite(
+              new Error("The save response did not include an ID.")
+            )
           }
+          store.settleAdd(temporaryItem.id, result.id, result.dataVersion)
           settleAndRefetch(result.dataVersion)
-          return result.id ?? undefined
+          return { kind: "saved", id: result.id }
         } catch (error) {
           store.discardPendingAdd(temporaryItem.id)
           settleAndRefetch()
@@ -175,8 +186,7 @@ export const createLinksMutations = ({
         }
       })
     } catch (error) {
-      showSaveError(error)
-      return undefined
+      return failWrite(error)
     }
   }
 
@@ -184,21 +194,29 @@ export const createLinksMutations = ({
     targetUrl: string,
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
-  ): Promise<string | undefined> => {
-    const { item } = await buildLinkViewItem({
-      targetUrl,
-      meta,
-      extractedLinks,
-    })
-    return await persistLink(targetUrl, item)
+  ): Promise<LinkWriteResult> => {
+    try {
+      const { item } = await buildLinkViewItem({
+        targetUrl,
+        meta,
+        extractedLinks,
+      })
+      return await persistLink(targetUrl, item)
+    } catch (error) {
+      return failWrite(error)
+    }
   }
 
   const enqueueLink = async (
     targetUrl: string,
     sourceUrl = targetUrl
-  ): Promise<string | undefined> => {
-    const { item } = await buildQueuedLinkViewItem(targetUrl)
-    return await persistLink(targetUrl, item, sourceUrl)
+  ): Promise<LinkWriteResult> => {
+    try {
+      const { item } = await buildQueuedLinkViewItem(targetUrl)
+      return await persistLink(targetUrl, item, sourceUrl)
+    } catch (error) {
+      return failWrite(error)
+    }
   }
 
   const runMetadataUpdate = async (
