@@ -3,10 +3,12 @@ import {
   ApiIcon,
   ArrowDown01Icon,
   ArrowUpRight01Icon,
+  CopyIcon,
   FileEmpty01Icon,
   Link02Icon,
   StarsIcon,
   TerminalIcon,
+  Tick02Icon,
   WifiError01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -36,8 +38,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import {
   CodeBlock as CodeBlockRoot,
-  CodeBlockActions,
-  CodeBlockCopyButton,
   CodeBlockHeader,
   CodeBlockTitle,
 } from "~/components/ui/code-block"
@@ -124,13 +124,7 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   const normalizedLabel = label.toLowerCase()
 
   if (normalizedLabel === "terminal") {
-    return (
-      <HugeiconsIcon
-        aria-hidden="true"
-        icon={TerminalIcon}
-        className="size-4"
-      />
-    )
+    return <HugeiconsIcon icon={TerminalIcon} className="size-4" />
   }
 
   if (normalizedLabel.endsWith(".ts") || normalizedLabel.endsWith(".tsx")) {
@@ -147,9 +141,7 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   }
 
   if (/^(get|post|put|patch|delete) /.test(normalizedLabel)) {
-    return (
-      <HugeiconsIcon aria-hidden="true" icon={ApiIcon} className="size-4" />
-    )
+    return <HugeiconsIcon icon={ApiIcon} className="size-4" />
   }
 
   if (normalizedLabel.includes("env")) {
@@ -157,18 +149,10 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   }
 
   if (normalizedLabel.includes("prompt")) {
-    return (
-      <HugeiconsIcon aria-hidden="true" icon={StarsIcon} className="size-4" />
-    )
+    return <HugeiconsIcon icon={StarsIcon} className="size-4" />
   }
 
-  return (
-    <HugeiconsIcon
-      aria-hidden="true"
-      icon={FileEmpty01Icon}
-      className="size-4"
-    />
-  )
+  return <HugeiconsIcon icon={FileEmpty01Icon} className="size-4" />
 }
 
 function DocSection({ id, children }: { id: string; children: ReactNode }) {
@@ -886,6 +870,114 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   return <DocsZoomableFigure alt={alt} source={image.source} />
 }
 
+const copyWithTextArea = (value: string) => {
+  const textArea = document.createElement("textarea")
+  textArea.value = value
+  textArea.setAttribute("readonly", "")
+  textArea.style.cssText = "position:fixed;left:-9999px;top:0"
+  document.body.appendChild(textArea)
+  try {
+    textArea.focus()
+    textArea.select()
+    if (!document.execCommand("copy")) {
+      throw new Error("Clipboard copy failed")
+    }
+  } finally {
+    textArea.remove()
+  }
+}
+
+type CodeCopyState = "idle" | "copied" | "error"
+
+const getCodeCopyStatusMessage = (copyState: CodeCopyState, label: string) => {
+  if (copyState === "copied") {
+    return `${label} copied`
+  }
+
+  if (copyState === "error") {
+    return `${label} couldn’t be copied. Try again.`
+  }
+
+  return ""
+}
+
+function DocsCodeBlockCopyButton({
+  label,
+  value,
+  copyState,
+  onCopyStateChange,
+}: {
+  label: string
+  value: string
+  copyState: CodeCopyState
+  onCopyStateChange: (copyState: CodeCopyState) => void
+}) {
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(
+    () => () => {
+      clearTimeout(resetTimerRef.current)
+    },
+    []
+  )
+
+  const copyCode = async () => {
+    clearTimeout(resetTimerRef.current)
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(value)
+        } catch {
+          copyWithTextArea(value)
+        }
+      } else {
+        copyWithTextArea(value)
+      }
+
+      onCopyStateChange("copied")
+    } catch {
+      onCopyStateChange("error")
+    }
+
+    resetTimerRef.current = setTimeout(() => {
+      onCopyStateChange("idle")
+    }, 2000)
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={
+        copyState === "copied" ? `Copied ${label}` : `Copy code from ${label}`
+      }
+      className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
+      onClick={() => void copyCode()}
+    >
+      <span className="relative size-3.5" aria-hidden="true">
+        <HugeiconsIcon
+          icon={CopyIcon}
+          className={cn(
+            "absolute inset-0 size-3.5 transition-icon-swap duration-200",
+            copyState === "copied"
+              ? "scale-25 opacity-0 blur-xs"
+              : "scale-100 opacity-100"
+          )}
+        />
+        <HugeiconsIcon
+          icon={Tick02Icon}
+          className={cn(
+            "absolute inset-0 size-3.5 transition-icon-swap duration-200",
+            copyState === "copied"
+              ? "scale-100 opacity-100"
+              : "scale-25 opacity-0 blur-xs"
+          )}
+        />
+      </span>
+    </button>
+  )
+}
+
 function CodeBlock({
   label,
   children,
@@ -893,19 +985,45 @@ function CodeBlock({
   label: string
   children: ReactNode
 }) {
+  const [copyState, setCopyState] = useState<CodeCopyState>("idle")
+
   return (
-    // data-not-typeset is the typeset system's attribute opt-out; the class
-    // form trips the shadcn no-restyle rule on design-system components.
-    <CodeBlockRoot data-not-typeset className="my-5">
-      <CodeBlockHeader>
-        <CodeBlockTitle>
-          <CodeLabelIcon label={label} />
-          {label}
+    // data-not-typeset is the typeset system's attribute opt-out. Keep the
+    // former docs figure surface while using the shared CodeBlock structure.
+    <CodeBlockRoot
+      data-not-typeset
+      // oxlint-disable-next-line shadcn/no-restyle -- Preserve the established docs code-block border and surface.
+      className="my-5 rounded-lg border-foreground/15 bg-background dark:bg-background"
+    >
+      <CodeBlockHeader
+        // oxlint-disable-next-line shadcn/no-restyle -- Preserve the established docs header bar.
+        className="min-h-10 justify-between gap-3 border-b border-foreground/15 bg-muted/30 pr-1 pt-0"
+      >
+        <CodeBlockTitle
+          // oxlint-disable-next-line shadcn/no-restyle -- Keep docs labels muted and regular-weight.
+          className="flex items-center gap-2 font-normal text-muted-foreground"
+        >
+          <span className="size-4 shrink-0" aria-hidden="true">
+            <CodeLabelIcon label={label} />
+          </span>
+          <span className="min-w-0 truncate">{label}</span>
         </CodeBlockTitle>
-        <CodeBlockActions>
-          <CodeBlockCopyButton value={getNodeText(children)} />
-        </CodeBlockActions>
+        <DocsCodeBlockCopyButton
+          label={label}
+          value={getNodeText(children)}
+          copyState={copyState}
+          onCopyStateChange={setCopyState}
+        />
       </CodeBlockHeader>
+      <span
+        aria-live="polite"
+        className={cn(
+          "px-4 text-xs",
+          copyState === "error" ? "pb-2 text-destructive" : "sr-only"
+        )}
+      >
+        {getCodeCopyStatusMessage(copyState, label)}
+      </span>
       {children}
     </CodeBlockRoot>
   )
@@ -1088,10 +1206,10 @@ export const docsComponents: MDXComponents = {
     )
   },
   a: DocsLink,
-  // Every MDX pre renders inside CodeBlock. rehype-shiki highlights at build
-  // time, so the raw pre plays the registry's CodeBlockContent role (the
-  // content slot attribute drives the container focus ring; tabIndex keeps
-  // the code region keyboard-scrollable).
+  // Every MDX pre renders inside CodeBlock. rehype-shiki supplies the nested
+  // code element and token markup, so CodeBlockContent would nest another
+  // code element and discard that markup. Mirror its content slot and
+  // keyboard-scroll behavior on the existing pre instead.
   pre: ({ className, ...props }) => (
     <pre
       {...props}
@@ -1099,7 +1217,7 @@ export const docsComponents: MDXComponents = {
       dir="ltr"
       tabIndex={0}
       className={cn(
-        "min-w-0 overflow-x-auto px-4 pt-2 pb-4 font-mono text-code font-medium leading-6 outline-none",
+        "min-w-0 overflow-x-auto p-4 font-mono text-code font-medium leading-6 outline-none",
         className
       )}
     />
