@@ -85,7 +85,6 @@ export function SettingsSelectTrigger({
   return (
     <LynvoSelectTrigger
       {...props}
-      size="sm"
       className={cn(settingsSelectTriggerRestyleClass, className)}
     />
   )
