@@ -1,5 +1,6 @@
 import { Effect, Result, Schema } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
+import { receiversResponseSchema } from "~shared/realtime-messages"
 
 import { getDataVersion } from "../../../../../workers/d1/data-version"
 import {
@@ -16,10 +17,6 @@ import { CloudflareEnv } from "../../services/cloudflare-env"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
 import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
-
-const remotePresenceSchema = Schema.Struct({
-  receivers: Schema.Array(Schema.Struct({ id: Schema.String })),
-})
 
 export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
@@ -53,8 +50,9 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
-        const parsedPresence =
-          Schema.decodeUnknownResult(remotePresenceSchema)(presence)
+        const parsedPresence = Schema.decodeUnknownResult(
+          receiversResponseSchema
+        )(presence)
         const receiverIsLive =
           Result.isSuccess(parsedPresence) &&
           parsedPresence.success.receivers.some(

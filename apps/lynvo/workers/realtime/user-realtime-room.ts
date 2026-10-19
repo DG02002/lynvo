@@ -1,6 +1,16 @@
 import { DurableObject } from "cloudflare:workers"
 import { Result, Schema } from "effect"
 import type { Context as HonoContext } from "hono"
+import {
+  dataChangedRequestSchema,
+  receiverAttachmentSchema,
+  receiverNotificationRequestSchema,
+  receiversResponseSchema,
+  sessionRevocationRequestSchema,
+  type DataChangedRealtimeMessage,
+  type RemoteInboxChangedRealtimeMessage,
+  type SessionHelloRealtimeMessage,
+} from "~shared/realtime-messages"
 
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../../app/lib/constants"
 import { createRemoteTargetId } from "../../app/lib/remote-target"
@@ -84,18 +94,6 @@ export const createRealtimeHandshakeRejection = async (
   return undefined
 }
 
-const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })
-const sessionRevocationSchema = Schema.Struct({ sessionId: Schema.String })
-const dataChangedSchema = Schema.Struct({
-  version: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
-})
-const receiverAttachmentSchema = Schema.Struct({
-  receiverId: Schema.String,
-  sessionId: Schema.String,
-  deviceName: Schema.String,
-  connectedAt: Schema.Number,
-})
-
 interface RealtimeWebSocketSession {
   sessionId: string
   userId: string
@@ -103,27 +101,21 @@ interface RealtimeWebSocketSession {
   deviceName: string
 }
 
-interface RealtimeSessionHelloPayload {
-  type: "session_hello"
-  userId: string
-  sessionId: string
-  dataVersion?: number
-}
-
 const handleRealtimeDataChanged = async (
   context: DurableObjectState,
   request: Request
 ): Promise<Response> => {
-  const input = Schema.decodeUnknownResult(dataChangedSchema)(
+  const input = Schema.decodeUnknownResult(dataChangedRequestSchema)(
     await request.json()
   )
   if (Result.isFailure(input)) {
     return new Response("Invalid data version", { status: 400 })
   }
-  const serialized = JSON.stringify({
+  const message: DataChangedRealtimeMessage = {
     type: "data-changed",
     payload: { version: input.success.version },
-  })
+  }
+  const serialized = JSON.stringify(message)
   const sockets = context.getWebSockets()
   for (const socket of sockets) {
     socket.send(serialized)
@@ -135,16 +127,17 @@ const handleRealtimeInboxNotification = async (
   context: DurableObjectState,
   request: Request
 ): Promise<Response> => {
-  const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
+  const input = Schema.decodeUnknownResult(receiverNotificationRequestSchema)(
     await request.json()
   )
   if (Result.isFailure(input)) {
     return new Response("Invalid receiver", { status: 400 })
   }
-  const serialized = JSON.stringify({
+  const message: RemoteInboxChangedRealtimeMessage = {
     type: "remote-inbox.changed",
     payload: {},
-  })
+  }
+  const serialized = JSON.stringify(message)
   const sockets = context.getWebSockets(input.success.receiverId)
   for (const socket of sockets) {
     socket.send(serialized)
@@ -156,7 +149,7 @@ const handleRealtimeSessionRevocation = async (
   context: DurableObjectState,
   request: Request
 ): Promise<Response> => {
-  const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
+  const input = Schema.decodeUnknownResult(sessionRevocationRequestSchema)(
     await request.json()
   )
   if (Result.isFailure(input)) {
@@ -200,7 +193,13 @@ const handleRealtimeReceivers = (context: DurableObjectState): Response => {
       },
     ]
   })
-  return Response.json({ receivers })
+  const result = Schema.decodeUnknownResult(receiversResponseSchema)({
+    receivers,
+  })
+  if (Result.isFailure(result)) {
+    return new Response("Invalid receiver presence", { status: 500 })
+  }
+  return Response.json(result.success)
 }
 
 const readRealtimeWebSocketSession = (
@@ -254,14 +253,19 @@ const sendRealtimeSessionHello = (
   session: RealtimeWebSocketSession,
   dataVersion: number | undefined
 ): void => {
-  const helloPayload: RealtimeSessionHelloPayload = {
-    type: "session_hello",
-    userId: session.userId,
-    sessionId: session.sessionId,
-  }
-  if (dataVersion !== undefined) {
-    helloPayload.dataVersion = dataVersion
-  }
+  const helloPayload: SessionHelloRealtimeMessage =
+    dataVersion === undefined
+      ? {
+          type: "session_hello",
+          userId: session.userId,
+          sessionId: session.sessionId,
+        }
+      : {
+          type: "session_hello",
+          userId: session.userId,
+          sessionId: session.sessionId,
+          dataVersion,
+        }
   server.send(JSON.stringify(helloPayload))
 }
 

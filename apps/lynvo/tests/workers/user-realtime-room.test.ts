@@ -1,5 +1,7 @@
+import { Result, Schema } from "effect"
 import { describe, expect, it, vi } from "vitest"
 
+import { dataChangedRealtimeMessageSchema } from "../../shared/realtime-messages"
 import {
   DEVELOPMENT_AUTH_SESSION_ID,
   type DevelopmentAuthEnvironment,
@@ -213,6 +215,14 @@ describe("UserRealtimeRoom data-changed broadcast", () => {
         index + 1,
         JSON.stringify({ type: "data-changed", payload: { version: 42 } })
       )
+      const serialized = String(send.mock.calls[index]?.[0])
+      expect(
+        Result.isSuccess(
+          Schema.decodeUnknownResult(dataChangedRealtimeMessageSchema)(
+            JSON.parse(serialized)
+          )
+        )
+      ).toBe(true)
     }
   })
 
