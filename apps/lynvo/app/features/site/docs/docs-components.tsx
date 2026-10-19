@@ -1,5 +1,6 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 import {
+  Cancel01Icon,
   ApiIcon,
   ArrowDown01Icon,
   ArrowUpRight01Icon,
@@ -36,24 +37,15 @@ import {
   AccordionItem,
 } from "~/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
+import {
+  CodeBlock as CodeBlockRoot,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from "~/components/ui/code-block"
+import { showErrorToast } from "~/lib/toast-notifications"
 import { cn } from "~/lib/utils"
 
 import { getDocumentationImageAsset } from "./docs-image-assets"
-
-const copyWithTextArea = (code: string) => {
-  const textArea = document.createElement("textarea")
-  textArea.value = code
-  textArea.style.cssText = "position:fixed;left:-9999px;top:0"
-  document.body.appendChild(textArea)
-  textArea.focus()
-  textArea.select()
-  const didCopy = document.execCommand("copy")
-  textArea.remove()
-
-  if (!didCopy) {
-    throw new Error("Clipboard copy failed")
-  }
-}
 
 const TypeScriptIcon = () => (
   // oxlint-disable shadcn/no-raw-colors -- Official TypeScript logo colors, per https://www.typescriptlang.org/branding
@@ -163,21 +155,6 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   }
 
   return <HugeiconsIcon icon={FileEmpty01Icon} className="size-4" />
-}
-
-const getCodeCopyStatusMessage = (
-  copyState: "idle" | "copied" | "error",
-  label: string
-) => {
-  if (copyState === "copied") {
-    return `${label} copied`
-  }
-
-  if (copyState === "error") {
-    return `${label} couldn’t be copied. Try again.`
-  }
-
-  return ""
 }
 
 function DocSection({ id, children }: { id: string; children: ReactNode }) {
@@ -895,18 +872,57 @@ export function DocsScreenshot({ name, alt }: { name: string; alt: string }) {
   return <DocsZoomableFigure alt={alt} source={image.source} />
 }
 
-function CodeBlock({
+const copyWithTextArea = (value: string) => {
+  const textArea = document.createElement("textarea")
+  textArea.value = value
+  textArea.setAttribute("readonly", "")
+  textArea.style.cssText = "position:fixed;left:-9999px;top:0"
+  document.body.appendChild(textArea)
+  try {
+    textArea.focus()
+    textArea.select()
+    if (!document.execCommand("copy")) {
+      throw new Error("Clipboard copy failed")
+    }
+  } finally {
+    textArea.remove()
+  }
+}
+
+type CodeCopyState = "idle" | "copied" | "error"
+
+const getCodeCopyStatusMessage = (copyState: CodeCopyState, label: string) => {
+  if (copyState === "copied") {
+    return `${label} copied`
+  }
+
+  if (copyState === "error") {
+    return `${label} couldn’t be copied. Try again.`
+  }
+
+  return ""
+}
+
+const getCodeCopyIconClassName = (isVisible: boolean) =>
+  cn(
+    "absolute inset-0 size-3.5 transition-icon-swap duration-200",
+    isVisible ? "scale-100 opacity-100" : "scale-25 opacity-0 blur-xs"
+  )
+
+// The generated copy button swallows clipboard failures and has no fallback,
+// so docs own this control to report failures and preserve copy behavior.
+function DocsCodeBlockCopyButton({
   label,
-  children,
+  value,
+  copyState,
+  onCopyStateChange,
 }: {
   label: string
-  children: ReactNode
+  value: string
+  copyState: CodeCopyState
+  onCopyStateChange: (copyState: CodeCopyState) => void
 }) {
-  const figureRef = useRef<HTMLElement>(null)
   const resetTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
-    "idle"
-  )
 
   useEffect(
     () => () => {
@@ -916,79 +932,106 @@ function CodeBlock({
   )
 
   const copyCode = async () => {
-    const code = figureRef.current?.querySelector("pre code")?.textContent
-    if (!code) {
+    if (value.length === 0) {
       return
     }
+
+    clearTimeout(resetTimerRef.current)
 
     try {
       if (navigator.clipboard && window.isSecureContext) {
         try {
-          await navigator.clipboard.writeText(code)
+          await navigator.clipboard.writeText(value)
         } catch {
-          copyWithTextArea(code)
+          copyWithTextArea(value)
         }
       } else {
-        copyWithTextArea(code)
+        copyWithTextArea(value)
       }
 
-      setCopyState("copied")
+      onCopyStateChange("copied")
     } catch {
-      setCopyState("error")
+      onCopyStateChange("error")
+      showErrorToast({ title: getCodeCopyStatusMessage("error", label) })
     }
 
-    clearTimeout(resetTimerRef.current)
-    resetTimerRef.current = setTimeout(() => setCopyState("idle"), 2000)
+    resetTimerRef.current = setTimeout(() => {
+      onCopyStateChange("idle")
+    }, 2000)
   }
 
   return (
-    <figure
-      ref={figureRef}
-      className="not-typeset my-5 overflow-hidden rounded-lg border border-foreground/15"
+    <button
+      type="button"
+      aria-label={
+        copyState === "copied" ? `Copied ${label}` : `Copy code from ${label}`
+      }
+      className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
+      onClick={() => void copyCode()}
     >
-      <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/15 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
-        <span className="flex min-w-0 items-center gap-2">
-          <span aria-hidden="true" className="size-4 shrink-0">
-            <CodeLabelIcon label={label} />
-          </span>
-          <span className="truncate">{label}</span>
+      <span className="relative size-3.5" aria-hidden="true">
+        <HugeiconsIcon
+          icon={CopyIcon}
+          className={getCodeCopyIconClassName(copyState === "idle")}
+        />
+        <HugeiconsIcon
+          icon={Tick02Icon}
+          className={getCodeCopyIconClassName(copyState === "copied")}
+        />
+        <HugeiconsIcon
+          icon={Cancel01Icon}
+          className={cn(
+            getCodeCopyIconClassName(copyState === "error"),
+            copyState === "error" && "text-destructive"
+          )}
+        />
+      </span>
+    </button>
+  )
+}
+
+function CodeBlock({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  const [copyState, setCopyState] = useState<CodeCopyState>("idle")
+
+  return (
+    <figure
+      data-not-typeset
+      className="my-5 overflow-hidden rounded-lg border border-foreground/15"
+    >
+      {/* Flatten the shared parts so the docs frame owns the visual styling. */}
+      <CodeBlockRoot className="contents">
+        <CodeBlockHeader className="contents">
+          <header className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/15 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
+            <CodeBlockTitle className="contents">
+              <span className="flex min-w-0 items-center gap-2 font-normal text-muted-foreground">
+                <span className="size-4 shrink-0" aria-hidden="true">
+                  <CodeLabelIcon label={label} />
+                </span>
+                <span className="min-w-0 truncate">{label}</span>
+              </span>
+            </CodeBlockTitle>
+            <DocsCodeBlockCopyButton
+              label={label}
+              value={getNodeText(children)}
+              copyState={copyState}
+              onCopyStateChange={setCopyState}
+            />
+          </header>
+        </CodeBlockHeader>
+        {/* The toast announces failures; this region announces success only. */}
+        <span aria-live="polite" className="sr-only">
+          {copyState === "copied"
+            ? getCodeCopyStatusMessage(copyState, label)
+            : ""}
         </span>
-        <button
-          type="button"
-          onClick={() => void copyCode()}
-          aria-label={
-            copyState === "copied"
-              ? `Copied ${label}`
-              : `Copy code from ${label}`
-          }
-          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
-        >
-          <span className="relative size-3.5" aria-hidden="true">
-            <HugeiconsIcon
-              icon={CopyIcon}
-              className={cn(
-                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-                copyState === "copied"
-                  ? "scale-25 opacity-0 blur-xs"
-                  : "scale-100 opacity-100"
-              )}
-            />
-            <HugeiconsIcon
-              icon={Tick02Icon}
-              className={cn(
-                "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-                copyState === "copied"
-                  ? "scale-100 opacity-100"
-                  : "scale-25 opacity-0 blur-xs"
-              )}
-            />
-          </span>
-          <span aria-live="polite" className="sr-only">
-            {getCodeCopyStatusMessage(copyState, label)}
-          </span>
-        </button>
-      </figcaption>
-      {children}
+        {children}
+      </CodeBlockRoot>
     </figure>
   )
 }
@@ -1170,11 +1213,16 @@ export const docsComponents: MDXComponents = {
     )
   },
   a: DocsLink,
+  // rehype-shiki supplies the nested code element and token markup, so
+  // CodeBlockContent would add another code element around that markup. Keep
+  // the Shiki pre focusable and give it its own inset focus ring.
   pre: ({ className, ...props }) => (
     <pre
       {...props}
+      dir="ltr"
+      tabIndex={0}
       className={cn(
-        "overflow-x-auto bg-transparent p-4 font-mono text-code font-medium leading-6",
+        "min-w-0 overflow-x-auto p-4 font-mono text-code font-medium leading-6 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
         className
       )}
     />
