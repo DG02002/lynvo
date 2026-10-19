@@ -5,7 +5,6 @@ import {
   dataChangedRequestSchema,
   receiverAttachmentSchema,
   receiverNotificationRequestSchema,
-  receiversResponseSchema,
   sessionRevocationRequestSchema,
   type DataChangedRealtimeMessage,
   type RemoteInboxChangedRealtimeMessage,
@@ -193,13 +192,7 @@ const handleRealtimeReceivers = (context: DurableObjectState): Response => {
       },
     ]
   })
-  const result = Schema.decodeUnknownResult(receiversResponseSchema)({
-    receivers,
-  })
-  if (Result.isFailure(result)) {
-    return new Response("Invalid receiver presence", { status: 500 })
-  }
-  return Response.json(result.success)
+  return Response.json({ receivers })
 }
 
 const readRealtimeWebSocketSession = (

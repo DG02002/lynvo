@@ -21,6 +21,7 @@ import {
   type RequestLoggingEnvironment,
 } from "../request-logging"
 import { isSameOriginRequest } from "../same-origin"
+import { notifyAccountDataChangedSafely } from "./data-version-notification"
 import { getD1Database } from "./db"
 import { resetDocsSeedManagedUsage } from "./docs-seed-usage"
 import {
@@ -717,10 +718,7 @@ dataApp.post("/usage/docs-seed", async (context) => {
   await resetDocsSeedManagedUsage(
     preparation.database,
     preparation.session.userId,
-    {
-      fixtureOperationId: requestBody.body.operationId,
-      realtime: context.env.USER_REALTIME_ROOM,
-    }
+    requestBody.body.operationId
   )
   await reserveManagedExtraction(
     preparation.database,
@@ -741,6 +739,11 @@ dataApp.post("/usage/docs-seed", async (context) => {
       now: Date.now(),
       realtime: context.env.USER_REALTIME_ROOM,
     }
+  )
+  await notifyAccountDataChangedSafely(
+    context.env.USER_REALTIME_ROOM,
+    preparation.session.userId,
+    settlement.dataVersion
   )
   const response = context.json({
     success: true,

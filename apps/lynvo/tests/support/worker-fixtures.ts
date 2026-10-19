@@ -9,7 +9,7 @@ export const createUserFactory =
       now,
     })
 
-export const createSessionFor = (
+const createSessionFor = (
   database: D1Database,
   userId: string,
   now = Date.now()

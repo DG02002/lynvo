@@ -15,10 +15,31 @@ export const notifyAccountDataChanged = async (
   userId: string,
   version: number
 ): Promise<void> => {
-  await realtime.getByName(userId).fetch(
+  const response = await realtime.getByName(userId).fetch(
     new Request(USER_REALTIME_ROOM_INTERNAL_URLS.notifyDataChanged, {
       method: "POST",
       body: JSON.stringify({ version }),
     })
   )
+  if (!response.ok) {
+    throw new Error(
+      `Realtime data-change notification failed with HTTP ${response.status}`
+    )
+  }
+}
+
+export const notifyAccountDataChangedSafely = async (
+  realtime: DurableObjectNamespace,
+  userId: string,
+  version: number
+): Promise<void> => {
+  try {
+    await notifyAccountDataChanged(realtime, userId, version)
+  } catch (cause) {
+    console.warn("data_changed_push_failed", {
+      user_id: userId,
+      version,
+      error: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
 }

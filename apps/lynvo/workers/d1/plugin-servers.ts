@@ -9,6 +9,7 @@ import {
   executeOwnedWrite,
   executeOwnedWriteBatch,
   getDataVersion,
+  groupByUserId,
 } from "./data-version"
 import { createOpaqueId } from "./ids"
 import { buildPluginDomainDeletion } from "./plugin-domains"
@@ -590,15 +591,7 @@ export const expireStalePluginServerRegistrations = async (
   if (results.length === 0) {
     return { expired: 0 }
   }
-  const rowsByUserId = new Map<string, PluginServerRow[]>()
-  for (const row of results) {
-    const userRows = rowsByUserId.get(row.user_id)
-    if (userRows) {
-      userRows.push(row)
-    } else {
-      rowsByUserId.set(row.user_id, [row])
-    }
-  }
+  const rowsByUserId = groupByUserId(results, (row) => row.user_id)
   const writes = await Promise.all(
     [...rowsByUserId].map(async ([userId, userRows]) => {
       const preparation = await ensureStorageLedger(database, userId, now)
@@ -638,8 +631,7 @@ export const expireStalePluginServerRegistrations = async (
     writes,
   })
   const expired = writeResults.reduce((total, result) => {
-    const deletionResult = result.statementResults.at(-2)
-    return total + (deletionResult?.meta.changes ?? 0)
+    return total + result.lastStatementChanges
   }, 0)
   return { expired }
 }

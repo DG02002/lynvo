@@ -7,15 +7,15 @@ import {
 export const resetDocsSeedManagedUsage = async (
   database: D1Database,
   userId: string,
-  input: {
-    fixtureOperationId: string
-    realtime?: DurableObjectNamespace
-  }
+  fixtureOperationId: string
 ): Promise<void> => {
   await executeOwnedWrite({
     database,
     userId,
-    realtime: input.realtime,
+    notification: {
+      kind: "suppressed",
+      reason: "usage-accounting-does-not-change-snapshot",
+    },
     statements: [
       database
         .prepare(
@@ -37,11 +37,7 @@ export const resetDocsSeedManagedUsage = async (
                  AND daily_period_key = usage_counters.period_key
              )`
         )
-        .bind(
-          userId,
-          input.fixtureOperationId,
-          LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
-        ),
+        .bind(userId, fixtureOperationId, LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID),
       database
         .prepare(
           `DELETE FROM usage_counters
@@ -57,7 +53,7 @@ export const resetDocsSeedManagedUsage = async (
           `DELETE FROM managed_extraction_operations
            WHERE user_id = ?1 AND (operation_id <> ?2 OR state = 'released')`
         )
-        .bind(userId, input.fixtureOperationId),
+        .bind(userId, fixtureOperationId),
       database
         .prepare(
           `INSERT INTO usage_counters (owner_key, metric_id, period_key, epoch, used)
@@ -68,11 +64,7 @@ export const resetDocsSeedManagedUsage = async (
            ON CONFLICT(owner_key, metric_id, period_key, epoch)
            DO UPDATE SET used = 1`
         )
-        .bind(
-          userId,
-          input.fixtureOperationId,
-          LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
-        ),
+        .bind(userId, fixtureOperationId, LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID),
       database
         .prepare(
           `INSERT INTO usage_counters (owner_key, metric_id, period_key, epoch, used)
@@ -85,7 +77,7 @@ export const resetDocsSeedManagedUsage = async (
         )
         .bind(
           userId,
-          input.fixtureOperationId,
+          fixtureOperationId,
           LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID
         ),
     ],

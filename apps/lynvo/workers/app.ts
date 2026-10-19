@@ -83,19 +83,70 @@ app.use("*", responseSecurityHeaders())
 
 app.use("/api/*", requestLogging({ exclude: ["/api/version"] }))
 
+const requestDeclaresOversizedApiBody = (request: Request): boolean => {
+  const contentLength = request.headers.get("content-length")
+  if (!contentLength || !/^\d+$/.test(contentLength)) {
+    return false
+  }
+  const declaredLength = Number(contentLength)
+  return (
+    !Number.isSafeInteger(declaredLength) ||
+    declaredLength > MAX_INBOUND_API_BODY_BYTES
+  )
+}
+
+const API_BODY_LIMIT_EXCEEDED = Symbol("API body limit exceeded")
+
+const requestBodyStreamExceedsApiBodyLimit = async (
+  request: Request
+): Promise<boolean> => {
+  const { body } = request.clone()
+  if (!body) {
+    return false
+  }
+  let bytesRead = 0
+  try {
+    await body.pipeTo(
+      new WritableStream<Uint8Array>({
+        write(chunk) {
+          bytesRead += chunk.byteLength
+          if (bytesRead <= MAX_INBOUND_API_BODY_BYTES) {
+            return
+          }
+          // The cloned request tees its stream, so cancel the original branch
+          // while pipeTo cancels this branch after the sink rejects.
+          const cancellation = request.body?.cancel()
+          void cancellation?.catch((cause: unknown) => {
+            console.warn("api_body_limit_cancel_failed", {
+              error: cause instanceof Error ? cause.message : String(cause),
+            })
+          })
+          throw API_BODY_LIMIT_EXCEEDED
+        },
+      })
+    )
+    return false
+  } catch (cause) {
+    if (cause === API_BODY_LIMIT_EXCEEDED) {
+      return true
+    }
+    throw cause
+  }
+}
+
+const requestExceedsApiBodyLimit = async (request: Request): Promise<boolean> =>
+  requestDeclaresOversizedApiBody(request) ||
+  (request.body !== null &&
+    (await requestBodyStreamExceedsApiBodyLimit(request)))
+
 app.use("/api/*", async (context, next) => {
-  const contentLength = context.req.header("content-length")
-  if (
-    !contentLength ||
-    !/^\d+$/.test(contentLength) ||
-    Number(contentLength) <= MAX_INBOUND_API_BODY_BYTES
-  ) {
+  if (!(await requestExceedsApiBodyLimit(context.req.raw))) {
     return next()
   }
   return context.json(
     requestApiError(context, {
       code: "invalid_request",
-      error: "Request body exceeds the 1 MB limit.",
+      error: "Request body exceeds the configured limit.",
       retryable: false,
     }),
     413

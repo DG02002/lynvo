@@ -1,4 +1,4 @@
-import { notifyAccountDataChanged } from "./data-version-notification"
+import { notifyAccountDataChangedSafely } from "./data-version-notification"
 
 export interface OwnedWriteGuard {
   /**
@@ -47,7 +47,34 @@ interface DataVersionBumpRow {
 export interface OwnedWriteResult {
   dataVersion: number
   statementResults: readonly D1Result[]
+  lastStatementChanges: number
   changed: boolean
+}
+
+export const groupByUserId = <T>(
+  items: readonly T[],
+  userIdFor: (item: T) => string
+): Map<string, T[]> => {
+  const grouped = new Map<string, T[]>()
+  for (const item of items) {
+    const userId = userIdFor(item)
+    const userItems = grouped.get(userId)
+    if (userItems) {
+      userItems.push(item)
+    } else {
+      grouped.set(userId, [item])
+    }
+  }
+  return grouped
+}
+
+type OwnedWriteNotificationSuppressionReason =
+  | "remote-play-has-separate-notifications"
+  | "usage-accounting-does-not-change-snapshot"
+
+interface SuppressedOwnedWriteNotification {
+  readonly kind: "suppressed"
+  readonly reason: OwnedWriteNotificationSuppressionReason
 }
 
 interface ExecuteOwnedWriteInput {
@@ -56,14 +83,14 @@ interface ExecuteOwnedWriteInput {
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard
   readonly realtime?: DurableObjectNamespace
-  readonly notify?: boolean
+  readonly notification?: SuppressedOwnedWriteNotification
 }
 
 interface OwnedWriteBatchInput {
   readonly userId: string
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard
-  readonly notify?: boolean
+  readonly notification?: SuppressedOwnedWriteNotification
 }
 
 interface ExecuteOwnedWriteBatchInput {
@@ -75,6 +102,7 @@ interface ExecuteOwnedWriteBatchInput {
 interface OwnedWriteBatchRange {
   readonly start: number
   readonly end: number
+  readonly lastStatementIndex: number
 }
 
 export const executeOwnedWriteBatch = async ({
@@ -90,11 +118,12 @@ export const executeOwnedWriteBatch = async ({
       continue
     }
     const start = statements.length
+    const lastStatementIndex = start + write.statements.length - 1
     statements.push(
       ...write.statements,
       createDataVersionBumpStatement(database, write.userId, write.guard)
     )
-    ranges.push({ start, end: statements.length })
+    ranges.push({ start, end: statements.length, lastStatementIndex })
   }
   const batchResults =
     statements.length === 0 ? [] : await database.batch(statements)
@@ -105,10 +134,13 @@ export const executeOwnedWriteBatch = async ({
         return {
           dataVersion: await getDataVersion(database, write.userId),
           statementResults: [],
+          lastStatementChanges: 0,
           changed: false,
         }
       }
       const statementResults = batchResults.slice(range.start, range.end)
+      const lastStatementChanges =
+        batchResults[range.lastStatementIndex]?.meta.changes ?? 0
       const bumpResult = statementResults[statementResults.length - 1]
       // SAFETY: every non-empty write appends exactly one version bump.
       const bumpRow = bumpResult?.results?.[0] as DataVersionBumpRow | undefined
@@ -117,6 +149,7 @@ export const executeOwnedWriteBatch = async ({
           return {
             dataVersion: await getDataVersion(database, write.userId),
             statementResults,
+            lastStatementChanges,
             changed: false,
           }
         }
@@ -125,6 +158,7 @@ export const executeOwnedWriteBatch = async ({
       return {
         dataVersion: bumpRow.data_version,
         statementResults,
+        lastStatementChanges,
         changed: true,
       }
     })
@@ -133,19 +167,14 @@ export const executeOwnedWriteBatch = async ({
     await Promise.all(
       writeResults.map(async (result, index) => {
         const write = writes[index]
-        if (!result.changed || write?.notify === false) {
+        if (!result.changed || write?.notification?.kind === "suppressed") {
           return
         }
-        await notifyAccountDataChanged(
+        await notifyAccountDataChangedSafely(
           realtime,
           write.userId,
           result.dataVersion
-        ).catch(() => {
-          console.warn("data_changed_push_failed", {
-            user_id: write.userId,
-            version: result.dataVersion,
-          })
-        })
+        )
       })
     )
   }
@@ -158,12 +187,12 @@ export const executeOwnedWrite = async ({
   statements,
   guard,
   realtime,
-  notify,
+  notification,
 }: ExecuteOwnedWriteInput): Promise<OwnedWriteResult> => {
   const [result] = await executeOwnedWriteBatch({
     database,
     realtime,
-    writes: [{ userId, statements, guard, notify }],
+    writes: [{ userId, statements, guard, notification }],
   })
   if (!result) {
     throw new Error("Owned write result is missing")

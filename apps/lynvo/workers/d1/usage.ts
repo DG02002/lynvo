@@ -12,6 +12,7 @@ import {
   executeOwnedWrite,
   executeOwnedWriteBatch,
   getDataVersion,
+  groupByUserId,
 } from "./data-version"
 
 export const MANAGED_PLUGIN_IDS = [
@@ -612,7 +613,10 @@ export const reserveManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
-    notify: false,
+    notification: {
+      kind: "suppressed",
+      reason: "usage-accounting-does-not-change-snapshot",
+    },
     statements,
   })
   // SAFETY: a conditional increment that hit its limit returns no row; the
@@ -726,7 +730,10 @@ export const settleManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
-    notify: false,
+    notification: {
+      kind: "suppressed",
+      reason: "usage-accounting-does-not-change-snapshot",
+    },
     statements: [
       ...releaseStatements,
       database
@@ -755,15 +762,10 @@ export const releaseExpiredManagedExtractions = async (
   if (operations.length === 0) {
     return { released: 0 }
   }
-  const operationsByUserId = new Map<string, ManagedOperationRecord[]>()
-  for (const operation of operations) {
-    const userOperations = operationsByUserId.get(operation.userId)
-    if (userOperations) {
-      userOperations.push(operation)
-    } else {
-      operationsByUserId.set(operation.userId, [operation])
-    }
-  }
+  const operationsByUserId = groupByUserId(
+    operations,
+    (operation) => operation.userId
+  )
   const writes = [...operationsByUserId].map(([userId, userOperations]) => ({
     userId,
     statements: [
@@ -783,7 +785,10 @@ export const releaseExpiredManagedExtractions = async (
         ),
     ],
     guard: CHANGED_ROWS_GUARD,
-    notify: false,
+    notification: {
+      kind: "suppressed" as const,
+      reason: "usage-accounting-does-not-change-snapshot" as const,
+    },
   }))
   const writeResults = await executeOwnedWriteBatch({
     database,
@@ -791,8 +796,7 @@ export const releaseExpiredManagedExtractions = async (
     writes,
   })
   const released = writeResults.reduce((total, result) => {
-    const settleResult = result.statementResults.at(-2)
-    return total + (settleResult?.meta.changes ?? 0)
+    return total + result.lastStatementChanges
   }, 0)
   return { released }
 }
