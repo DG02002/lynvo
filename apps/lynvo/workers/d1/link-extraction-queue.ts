@@ -123,6 +123,8 @@ const findNextExtractionCandidate = async (
   linkId?: string
 ): Promise<LinkRow | null> => {
   const linkFilter = linkId ? "AND id = ?2" : ""
+  // Do not filter exhausted attempts here: a crashed settlement must remain
+  // claimable so the runner can mark the link failed instead of stranding it.
   const statement = database.prepare(
     `SELECT ${SAVED_LINK_COLUMNS} FROM links
      WHERE (

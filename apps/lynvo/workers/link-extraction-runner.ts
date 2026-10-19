@@ -14,6 +14,7 @@ import { decideSavePresentation } from "../app/lib/extraction/presentation"
 import {
   LINK_EXTRACTION_BATCH_SIZE,
   LINK_EXTRACTION_MAX_ATTEMPTS,
+  LINK_EXTRACTION_TRANSIENT_RETRY_SECONDS,
 } from "./constants"
 import {
   claimNextSavedLinkExtraction,
@@ -219,6 +220,43 @@ const settleFailedExtraction = async ({
   })
 }
 
+const isRetryableExtractionError = (error: ExtractionError): boolean =>
+  error.message === "TEMPORARY_FAILURE" ||
+  error.status === 408 ||
+  (error.status !== undefined && error.status >= 500 && error.status <= 599)
+
+const requeueRetryableExtraction = async ({
+  env,
+  database,
+  claim,
+  identity,
+  requestId,
+  startedAt,
+  extractionError,
+}: FailedExtractionInput): Promise<void> => {
+  const now = Date.now()
+  await requeuePendingSavedLinkExtraction(database, claim.userId, {
+    operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
+    id: claim.id,
+    leaseExpiresAt: claim.leaseExpiresAt,
+    retryAfterSeconds: LINK_EXTRACTION_TRANSIENT_RETRY_SECONDS,
+    debugLogEntry: {
+      at: now,
+      pluginServerId: identity.pluginServerId,
+      pluginId: identity.pluginId,
+      outcome: "requeued",
+      requestId,
+      errorCode: extractionError.message,
+      attempt: claim.extractionAttempts,
+      durationMs: now - startedAt,
+      detail: `Temporary extraction failure; retrying in ${LINK_EXTRACTION_TRANSIENT_RETRY_SECONDS}s`,
+      httpStatus: extractionError.status,
+    },
+    now,
+    realtime: env.USER_REALTIME_ROOM,
+  })
+}
+
 const processClaimedSavedLinkExtraction = async (
   context: SavedLinkExtractionExecutionContext
 ): Promise<void> => {
@@ -294,7 +332,14 @@ export const processSavedLinkExtraction = async (
               error instanceof Error ? error.message : "Unable to load links.",
             url: claim.url,
           })
-    await settleFailedExtraction({ ...context, extractionError })
+    if (
+      isRetryableExtractionError(extractionError) &&
+      claim.extractionAttempts < LINK_EXTRACTION_MAX_ATTEMPTS
+    ) {
+      await requeueRetryableExtraction({ ...context, extractionError })
+    } else {
+      await settleFailedExtraction({ ...context, extractionError })
+    }
   }
   return true
 }
