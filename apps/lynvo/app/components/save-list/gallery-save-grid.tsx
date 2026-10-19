@@ -53,6 +53,7 @@ import {
   SaveListEmptyState,
   SaveListLoadingState,
 } from "./save-list-state"
+import { getGallerySaveItemAriaLabel } from "./save-list-view-model"
 
 interface GallerySaveItemProps {
   readonly group: GalleryGroup
@@ -317,12 +318,14 @@ const GallerySaveItem = ({
     actions.markOpened(item.url, item.url)
     onOpenItem(item.url)
   }
-  let activationLabel = `Open ${group.displayTitle}`
-  if (isExtractionVisual && isExtractionFailed) {
-    activationLabel = `Open actions for ${group.displayTitle}`
-  } else if (isSingleItem && item && !directLink) {
-    activationLabel = `View ${getItemTitle(item)}`
-  }
+  const activationLabel = getGallerySaveItemAriaLabel({
+    groupTitle: group.displayTitle,
+    isExtractionVisual,
+    didExtractionFail: isExtractionFailed,
+    isSingleItem,
+    itemTitle: item ? getItemTitle(item) : undefined,
+    hasDirectLink: directLink !== undefined,
+  })
 
   return (
     <article

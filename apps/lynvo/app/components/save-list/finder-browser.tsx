@@ -21,13 +21,13 @@ import {
   getSharedSeasonIdentity,
   hasEpisodeMarker,
   isEpisodeOnlyListing,
-  parseMediaFilename,
 } from "~/features/links/media-artwork"
 import {
+  getMediaNodeKey,
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
+  isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
-import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import {
   openInSpecificPlayerForHandoff,
@@ -46,29 +46,29 @@ import {
   MediaListRow,
   SaveListRowIcon,
 } from "./media-list-row"
-import { MEDIA_LIST_HEADER_MENU_CELL_CLASS } from "./media-list-row-constants"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
   getFolderIcon,
   getFolderVisualState,
   getItemTitle,
-  getLinkKey,
   getResolvableSourceName,
-  isMirrorResolvable,
   type FolderLevel,
 } from "./save-list-browser-model"
-import {
-  SaveListBackButton,
-  FolderTitleDisplayToggleButton,
-} from "./save-list-header-controls"
+import { FolderTitleDisplayToggleButton } from "./save-list-header-controls"
 import {
   FINDER_FOLDER_CONTENT_GRID_CLASS,
   GALLERY_GROUP_CONTENT_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
-  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
 import { SaveListRowPoster } from "./save-list-row-poster"
 import { useSaveListSession } from "./save-list-session"
+import {
+  compareByEpisodeNumber,
+  ImmersiveBrowserHeader,
+  openPlayableAndMarkOpened,
+  SeasonArtworkAside,
+  shouldCenterMobileNewBadge as getShouldCenterMobileNewBadge,
+} from "./save-list-view-model"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
@@ -164,7 +164,8 @@ const SaveListBrowserItemIcon = ({
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
-  getMediaNodeInteractionState(link).isFolder && !isMirrorResolvable(link)
+  getMediaNodeInteractionState(link).isFolder &&
+  !isMirrorResolvableMediaNode(link)
 
 const MobileFolderTreeToggle = ({
   currentFolderLabel,
@@ -206,11 +207,11 @@ const FolderTree = ({
   ) => {
     const visibleFolderLinks = folderLinks.filter(isVisibleTreeFolder)
     const activeFolderIndex = visibleFolderLinks.findIndex((link) =>
-      folderPath.some((folder) => folder.id === getLinkKey(link))
+      folderPath.some((folder) => folder.id === getMediaNodeKey(link))
     )
 
     return visibleFolderLinks.map((link, index) => {
-      const linkKey = getLinkKey(link)
+      const linkKey = getMediaNodeKey(link)
       const path = [...parentPath, { id: linkKey, label: link.label }]
       const isCurrent = folderPath.at(-1)?.id === linkKey
       const isInPath = folderPath.some((folder) => folder.id === linkKey)
@@ -322,21 +323,23 @@ const FinderEmptyState = ({
       "flex h-svh flex-col overflow-hidden bg-background"
     )}
   >
-    <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-      <SaveListBackButton onNavigateBack={onExit} />
-      <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-        <h1
-          aria-label={getItemTitle(item)}
-          className="hidden text-base font-normal md:block"
-        >
-          <ExpandableFilename
-            value={getItemTitle(item)}
-            clampClassName="line-clamp-1"
-            className="w-full"
-          />
-        </h1>
-      </div>
-      <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
+    <ImmersiveBrowserHeader
+      onNavigateBack={onExit}
+      title={
+        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
+          <h1
+            aria-label={getItemTitle(item)}
+            className="hidden text-base font-normal md:block"
+          >
+            <ExpandableFilename
+              value={getItemTitle(item)}
+              clampClassName="line-clamp-1"
+              className="w-full"
+            />
+          </h1>
+        </div>
+      }
+      menu={
         <LinkItemMenu
           item={item}
           actions={actions}
@@ -345,8 +348,8 @@ const FinderEmptyState = ({
           isRefreshing={extractingItems.has(item.url)}
           triggerLook="media-row"
         />
-      </div>
-    </header>
+      }
+    />
     <div
       ref={contentRef}
       className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-x-hidden px-6 py-10 text-center"
@@ -412,8 +415,10 @@ const FinderBrowserLinkRow = ({
       : displayTitle
   const shouldStackIconOnMobile =
     shouldStackEpisodeStill && shouldShowEpisodeStillForLink
-  const shouldCenterMobileNewBadge =
-    shouldStackIconOnMobile && titleDisplay === "episode"
+  const shouldCenterMobileNewBadge = getShouldCenterMobileNewBadge(
+    shouldStackIconOnMobile,
+    titleDisplay
+  )
   const rowFallbackIcon = (
     <HugeiconsIcon
       icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
@@ -493,13 +498,12 @@ const FinderBrowserLinkRow = ({
     if (linkTarget === undefined) {
       return
     }
-    openInPlayerAndLogError(
-      () => openInSpecificPlayerForHandoff(linkTarget, player),
-      {
-        itemLabel: link.label,
-        markOpened: () => actions.markOpened(item.url, linkTarget),
-      }
-    )
+    void openPlayableAndMarkOpened({
+      actions,
+      itemUrl: item.url,
+      playableLink: link,
+      open: () => openInSpecificPlayerForHandoff(linkTarget, player),
+    })
   }
 
   return (
@@ -630,12 +634,15 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
       linkIndex,
     }))
     return linkEntries
-      .toSorted(
-        (firstEntry, secondEntry) =>
-          (parseMediaFilename(firstEntry.link.label, parentFolderName)
-            .episodeNumber ?? firstEntry.linkIndex) -
-          (parseMediaFilename(secondEntry.link.label, parentFolderName)
-            .episodeNumber ?? secondEntry.linkIndex)
+      .toSorted((firstEntry, secondEntry) =>
+        compareByEpisodeNumber(
+          { label: firstEntry.link.label, originalIndex: firstEntry.linkIndex },
+          {
+            label: secondEntry.link.label,
+            originalIndex: secondEntry.linkIndex,
+          },
+          parentFolderName
+        )
       )
       .map((entry) => entry.link)
   }, [currentLinks, parentFolderName, sharedSeasonIdentity])
@@ -669,29 +676,33 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
         "flex h-svh flex-col overflow-hidden bg-background"
       )}
     >
-      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-        <SaveListBackButton onNavigateBack={navigateToParentFolder} />
-        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-          <h1
-            aria-label={headerTitle}
-            className="hidden w-full min-w-0 text-base font-normal md:block"
-          >
-            <ExpandableFilename
-              value={headerTitle}
-              clampClassName="line-clamp-1"
-              className="w-full"
-            />
-          </h1>
-        </div>
-        {shouldShowEpisodeStills ? (
-          <div className="flex items-center justify-center px-1 md:px-0">
-            <FolderTitleDisplayToggleButton
-              titleDisplay={titleDisplay}
-              onToggle={toggleTitleDisplay}
-            />
+      <ImmersiveBrowserHeader
+        onNavigateBack={navigateToParentFolder}
+        title={
+          <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
+            <h1
+              aria-label={headerTitle}
+              className="hidden w-full min-w-0 text-base font-normal md:block"
+            >
+              <ExpandableFilename
+                value={headerTitle}
+                clampClassName="line-clamp-1"
+                className="w-full"
+              />
+            </h1>
           </div>
-        ) : null}
-        <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
+        }
+        center={
+          shouldShowEpisodeStills ? (
+            <div className="flex items-center justify-center px-1 md:px-0">
+              <FolderTitleDisplayToggleButton
+                titleDisplay={titleDisplay}
+                onToggle={toggleTitleDisplay}
+              />
+            </div>
+          ) : null
+        }
+        menu={
           <LinkItemMenu
             item={item}
             actions={actions}
@@ -700,8 +711,8 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
             isRefreshing={extractingItems.has(item.url)}
             triggerLook="media-row"
           />
-        </div>
-      </header>
+        }
+      />
 
       <div
         className={
@@ -711,12 +722,12 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
         }
       >
         {sharedSeasonIdentity ? (
-          <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
+          <SeasonArtworkAside>
             <SeasonArtworkPanel
               displayTitle={sharedSeasonIdentity.displayTitle}
               artworkRequest={seasonArtworkRequest}
             />
-          </aside>
+          </SeasonArtworkAside>
         ) : (
           <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
             <MobileFolderTreeToggle
@@ -763,9 +774,9 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
           )}
         >
           {sortedCurrentLinks.map((link) => {
-            const linkKey = getLinkKey(link)
+            const linkKey = getMediaNodeKey(link)
             const linkTarget = getMediaNodeTargetOrUndefined(link)
-            if (linkTarget !== undefined && isMirrorResolvable(link)) {
+            if (linkTarget !== undefined && isMirrorResolvableMediaNode(link)) {
               return (
                 <ResolvableContainerRow
                   key={linkKey}

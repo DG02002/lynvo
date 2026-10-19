@@ -1,19 +1,11 @@
-import {
-  AlertCircleIcon,
-  Folder01Icon,
-  PlayIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
-import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
-import type { ExtractedLink, LinkListItem } from "~/features/links/types"
+import type { LinkListItem } from "~/features/links/types"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 
@@ -27,7 +19,6 @@ import {
   isPendingExtractionState,
 } from "./extraction-status-utils"
 import { FinderBrowser } from "./finder-browser"
-import { buildItemAriaLabel } from "./item-aria-label"
 import { MediaListRowMeta, SaveListRowIcon } from "./media-list-row"
 import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
@@ -47,41 +38,17 @@ import { groupSaveListItems } from "./save-list-groups"
 import { SaveListRowPoster } from "./save-list-row-poster"
 import { useSaveListSession } from "./save-list-session"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+import {
+  getSaveListItemAriaLabel,
+  getSaveListItemFallbackIcon,
+  openPlayableAndMarkOpened,
+  SaveListItemFallbackIcon,
+} from "./save-list-view-model"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
   selectedItemUrl: string | null
   onSelectedItemUrlChange: (url: string | null) => void
-}
-
-interface SaveListItemAriaLabelOptions {
-  readonly itemTitle: string
-  readonly directLink: ExtractedLink | undefined
-  readonly isExtractionIncomplete: boolean
-  readonly extractionStatusLabel: string
-  readonly isOpened: boolean
-  readonly isNew: boolean
-}
-
-const getSaveListItemAriaLabel = ({
-  itemTitle,
-  directLink,
-  isExtractionIncomplete,
-  extractionStatusLabel,
-  isOpened,
-  isNew,
-}: SaveListItemAriaLabelOptions) => {
-  let label: string
-
-  if (isExtractionIncomplete) {
-    label = `${extractionStatusLabel} for ${itemTitle}`
-  } else if (directLink) {
-    label = `Open ${directLink.label || itemTitle}`
-  } else {
-    label = `View ${itemTitle}`
-  }
-
-  return buildItemAriaLabel({ label, isOpened, isNew })
 }
 
 interface SaveListRootRowIconProps {
@@ -93,39 +60,6 @@ interface SaveListRootRowIconProps {
   readonly isDirectLinkExpired: boolean
 }
 
-interface SaveListRootRowFallbackIconProps {
-  readonly isExtractionVisual: boolean
-  readonly didExtractionFail: boolean
-  readonly directLinkLabel: string | undefined
-}
-
-const SaveListRootRowFallbackIcon = ({
-  isExtractionVisual,
-  didExtractionFail,
-  directLinkLabel,
-}: SaveListRootRowFallbackIconProps) => {
-  if (isExtractionVisual && didExtractionFail) {
-    return <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
-  }
-
-  if (isExtractionVisual) {
-    return (
-      <span
-        aria-hidden="true"
-        className="loading-skeleton-pulse inline-flex text-muted-foreground"
-      >
-        <HugeiconsIcon icon={Folder01Icon} className="size-6" />
-      </span>
-    )
-  }
-
-  if (directLinkLabel) {
-    return <HugeiconsIcon icon={PlayIcon} className="size-6" />
-  }
-
-  return <HugeiconsIcon icon={Folder01Icon} className="size-6" />
-}
-
 const SaveListRootRowIcon = ({
   item,
   isExtracting,
@@ -135,14 +69,12 @@ const SaveListRootRowIcon = ({
   isDirectLinkExpired,
 }: SaveListRootRowIconProps) => {
   const extractionInput = getExtractionStatusInput(item, isExtracting)
-  const didExtractionFail = extractionInput === "failed"
-  const isExtractionVisual = extractionInput !== "idle"
+  const fallbackIconDescriptor = getSaveListItemFallbackIcon(
+    extractionInput,
+    Boolean(directLinkLabel)
+  )
   const fallbackIcon = (
-    <SaveListRootRowFallbackIcon
-      isExtractionVisual={isExtractionVisual}
-      didExtractionFail={didExtractionFail}
-      directLinkLabel={directLinkLabel}
-    />
+    <SaveListItemFallbackIcon descriptor={fallbackIconDescriptor} />
   )
 
   if (shouldShowRowPosters) {
@@ -290,17 +222,12 @@ export const SaveListBrowser = ({
                           return
                         }
                         if (directLink) {
-                          openInPlayerAndLogError(
-                            () => actions.play(directLink),
-                            {
-                              itemLabel: directLink.label,
-                              markOpened: () => {
-                                if (directLinkTarget !== undefined) {
-                                  actions.markOpened(item.url, directLinkTarget)
-                                }
-                              },
-                            }
-                          )
+                          void openPlayableAndMarkOpened({
+                            actions,
+                            itemUrl: item.url,
+                            playableLink: directLink,
+                            open: () => actions.play(directLink),
+                          })
                           return
                         }
                         actions.markOpened(item.url, item.url)

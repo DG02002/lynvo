@@ -10,6 +10,9 @@ export const GALLERY_IMAGE_SIZES =
 export const SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS =
   "grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_auto_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem] md:gap-0 lg:grid-cols-[22rem_minmax(0,1fr)_auto_4rem]"
 
+export const SEASON_ARTWORK_ASIDE_CLASS =
+  "border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent"
+
 export const GALLERY_GROUP_CONTENT_CLASS =
   "flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain md:grid md:grid-cols-[18rem_minmax(0,1fr)] md:grid-rows-1 md:overflow-visible lg:grid-cols-[22rem_minmax(0,1fr)]"
 

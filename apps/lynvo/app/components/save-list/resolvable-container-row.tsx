@@ -22,13 +22,19 @@ import {
 import { SAVE_LIST_ROW_ENTER_ANIMATION_CLASS } from "~/components/save-list/media-list-row-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
-import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+import {
+  getMediaNodeKey,
+  getMediaNodeTarget,
+} from "~/features/links/media-node-interaction"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { openInSpecificPlayerForHandoff } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 
-import { getLinkKey, getResolvableSourceName } from "./save-list-browser-model"
+import { getResolvableSourceName } from "./save-list-browser-model"
+import {
+  openPlayableAndMarkOpened,
+  shouldCenterMobileNewBadge as getShouldCenterMobileNewBadge,
+} from "./save-list-view-model"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 
 interface ResolvedMirrorRowsProps {
@@ -60,9 +66,6 @@ const ResolvedMirrorRows = ({
   itemUrl,
   actions,
 }: ResolvedMirrorRowsProps) => {
-  const markOpened = () =>
-    actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
-
   return (
     <div
       className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
@@ -76,13 +79,16 @@ const ResolvedMirrorRows = ({
       {mirrors.map((mirror) => {
         const mirrorTarget = getMediaNodeTarget(mirror)
         const playMirror = () =>
-          openInPlayerAndLogError(() => actions.play(mirror), {
-            itemLabel: mirror.label,
-            markOpened,
+          void openPlayableAndMarkOpened({
+            actions,
+            itemUrl,
+            playableLink: mirror,
+            markOpenedLink: sourceLink,
+            open: () => actions.play(mirror),
           })
         const mirrorIcon = <HugeiconsIcon icon={PlayIcon} className="size-6" />
         return (
-          <div key={getLinkKey(mirror)} className="relative">
+          <div key={getMediaNodeKey(mirror)} className="relative">
             <span
               aria-hidden="true"
               className="pointer-events-none absolute -start-3 top-1/2 z-10 h-0.5 w-3 -translate-y-1/2 bg-link"
@@ -102,11 +108,14 @@ const ResolvedMirrorRows = ({
                     void navigator.clipboard.writeText(mirrorTarget)
                   }
                   onOpenInPlayer={(player) =>
-                    openInPlayerAndLogError(
-                      () =>
+                    void openPlayableAndMarkOpened({
+                      actions,
+                      itemUrl,
+                      playableLink: mirror,
+                      markOpenedLink: sourceLink,
+                      open: () =>
                         openInSpecificPlayerForHandoff(mirrorTarget, player),
-                      { itemLabel: mirror.label, markOpened }
-                    )
+                    })
                   }
                 />
               }
@@ -153,8 +162,10 @@ export const ResolvableContainerRow = ({
       ? episodePresentation.episodeDisplayTitle
       : (displayTitle ?? link.label)
   const shouldStackIconOnMobile = episodeStill?.stackOnMobile === true
-  const shouldCenterMobileNewBadge =
-    shouldStackIconOnMobile && episodeStill?.titleDisplay === "episode"
+  const shouldCenterMobileNewBadge = getShouldCenterMobileNewBadge(
+    shouldStackIconOnMobile,
+    episodeStill?.titleDisplay
+  )
   const linkTarget = getMediaNodeTarget(link)
   const {
     mirrors,

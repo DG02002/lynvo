@@ -8,7 +8,6 @@ import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getMediaNodeInteractionState,
   getMediaNodeKey,
-  isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
 import type {
   ExtractedLink,
@@ -21,12 +20,8 @@ export interface FolderLevel {
   label: string
 }
 
-export const getLinkKey = getMediaNodeKey
-
 const isLazyFolder = (link: ExtractedLink) =>
   getMediaNodeInteractionState(link).needsResolution
-
-export const isMirrorResolvable = isMirrorResolvableMediaNode
 
 export const getFolderVisualState = (link: ExtractedLink, isOpen: boolean) => {
   if (isOpen) {
@@ -63,7 +58,7 @@ export const getLinksAtFolderPath = (
 ) =>
   folderPath.reduce<ExtractedLink[]>((currentLinks, folder) => {
     const currentFolder = currentLinks.find(
-      (link) => getLinkKey(link) === folder.id
+      (link) => getMediaNodeKey(link) === folder.id
     )
     return currentFolder?.children ?? []
   }, rootLinks)
@@ -75,7 +70,7 @@ export const resolveFolderPath = (
   const resolvedPath: FolderLevel[] = []
   let links = rootLinks
   for (const folderId of folderIds) {
-    const folder = links.find((link) => getLinkKey(link) === folderId)
+    const folder = links.find((link) => getMediaNodeKey(link) === folderId)
     if (!folder || !getMediaNodeInteractionState(folder).isFolder) {
       break
     }
