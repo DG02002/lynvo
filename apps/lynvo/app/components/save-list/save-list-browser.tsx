@@ -9,7 +9,6 @@ import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
-import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
@@ -46,17 +45,13 @@ import { getItemTitle } from "./save-list-browser-model"
 import { SAVE_LIST_FEEDBACK_RING_CLASSES } from "./save-list-feedback-ring-classes"
 import { groupSaveListItems } from "./save-list-groups"
 import { SaveListRowPoster } from "./save-list-row-poster"
+import { useSaveListSession } from "./save-list-session"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
   selectedItemUrl: string | null
   onSelectedItemUrlChange: (url: string | null) => void
-  actions: LinkItemActions
-  extractingItems: Set<string>
-  highlightedId: string | null
-  isHydrating: boolean
-  shouldShowRowPosters?: boolean
 }
 
 interface SaveListItemAriaLabelOptions {
@@ -176,12 +171,14 @@ export const SaveListBrowser = ({
   items,
   selectedItemUrl,
   onSelectedItemUrlChange,
-  actions,
-  extractingItems,
-  highlightedId,
-  isHydrating,
-  shouldShowRowPosters = false,
 }: SaveListBrowserProps) => {
+  const {
+    actions,
+    extractingItems,
+    highlightedId,
+    isHydrating,
+    shouldShowRowPosters,
+  } = useSaveListSession()
   const minuteTimeBucket = useMinuteTimeBucket()
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
@@ -190,10 +187,7 @@ export const SaveListBrowser = ({
       <FinderBrowser
         key={selectedItem.url}
         item={selectedItem}
-        actions={actions}
-        extractingItems={extractingItems}
         onExit={() => onSelectedItemUrlChange(null)}
-        shouldShowRowPosters={shouldShowRowPosters}
       />
     )
   }

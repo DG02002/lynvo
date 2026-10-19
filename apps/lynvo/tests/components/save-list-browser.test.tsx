@@ -3,14 +3,55 @@ import { useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SaveListBrowser } from "~/components/save-list/save-list-browser"
+import { SaveListBrowser as SaveListBrowserView } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkListItem,
+  LinkViewItem,
+} from "~/features/links/types"
 
 import { createLinkItemActions } from "../support/link-item-actions"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
+
+interface SaveListBrowserHarnessProps {
+  readonly items: LinkListItem[]
+  readonly selectedItemUrl: string | null
+  readonly onSelectedItemUrlChange: (url: string | null) => void
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly highlightedId: string | null
+  readonly isHydrating: boolean
+  readonly shouldShowRowPosters?: boolean
+}
+
+const SaveListBrowser = ({
+  items,
+  selectedItemUrl,
+  onSelectedItemUrlChange,
+  actions,
+  extractingItems,
+  highlightedId,
+  isHydrating,
+  shouldShowRowPosters,
+}: SaveListBrowserHarnessProps) => (
+  <SaveListSessionTestProvider
+    actions={actions}
+    extractingItems={extractingItems}
+    highlightedId={highlightedId}
+    isHydrating={isHydrating}
+    shouldShowRowPosters={shouldShowRowPosters}
+  >
+    <SaveListBrowserView
+      items={items}
+      selectedItemUrl={selectedItemUrl}
+      onSelectedItemUrlChange={onSelectedItemUrlChange}
+    />
+  </SaveListSessionTestProvider>
+)
 
 const LocationProbe = () => {
   const location = useLocation()

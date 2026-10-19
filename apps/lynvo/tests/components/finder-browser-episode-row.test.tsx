@@ -13,6 +13,7 @@ import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { createLinkItemActions } from "../support/link-item-actions"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 import { readJsonInitBody } from "../support/request-inspection"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -54,13 +55,16 @@ const FinderBrowserHarness = ({
 
   const savedItem: SavedLinkListItem = { ...item, kind: "saved" }
   return (
-    <FinderBrowser
-      item={savedItem}
+    <SaveListSessionTestProvider
       actions={actions}
       extractingItems={extractingItems}
-      onExit={() => onSelectedItemUrlChange(null)}
       shouldShowRowPosters={shouldShowRowPosters}
-    />
+    >
+      <FinderBrowser
+        item={savedItem}
+        onExit={() => onSelectedItemUrlChange(null)}
+      />
+    </SaveListSessionTestProvider>
   )
 }
 

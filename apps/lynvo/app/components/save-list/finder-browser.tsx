@@ -68,16 +68,14 @@ import {
   SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
 import { SaveListRowPoster } from "./save-list-row-poster"
+import { useSaveListSession } from "./save-list-session"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 
 interface FinderBrowserProps {
   item: LinkViewItem
-  actions: LinkItemActions
-  extractingItems: Set<string>
   onExit: () => void
-  shouldShowRowPosters?: boolean
 }
 
 interface FinderEmptyStateProps {
@@ -564,13 +562,9 @@ const FinderBrowserLinkRow = ({
   )
 }
 
-export const FinderBrowser = ({
-  item,
-  actions,
-  extractingItems,
-  onExit,
-  shouldShowRowPosters = false,
-}: FinderBrowserProps) => {
+export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
+  const { actions, extractingItems, shouldShowRowPosters } =
+    useSaveListSession()
   const [isMobileFolderTreeOpen, setIsMobileFolderTreeOpen] = useState(false)
   const {
     rootLinks,

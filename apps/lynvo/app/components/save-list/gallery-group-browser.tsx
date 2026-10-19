@@ -51,6 +51,7 @@ import {
   GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS,
   SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
+import { useSaveListSession } from "./save-list-session"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 
@@ -242,8 +243,6 @@ const getItemArtworkSource = (
 
 interface GalleryGroupBrowserProps {
   readonly group: GalleryGroup
-  readonly actions: LinkItemActions
-  readonly extractingItems: Set<string>
   readonly currentTimeMs?: number
   readonly onExit: () => void
   readonly onOpenItem: (itemUrl: string) => void
@@ -251,12 +250,11 @@ interface GalleryGroupBrowserProps {
 
 export const GalleryGroupBrowser = ({
   group,
-  actions,
-  extractingItems,
   currentTimeMs: currentTimeMsInput,
   onExit,
   onOpenItem,
 }: GalleryGroupBrowserProps) => {
+  const { actions, extractingItems } = useSaveListSession()
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("episode")
   const itemLabels = useMemo(

@@ -6,8 +6,10 @@ import { getGalleryGroups } from "~/features/links/media-artwork/gallery-groupin
 import type { LinkListItem } from "~/features/links/types"
 
 import type { MediaArtworkRequest } from "../../shared/api-contracts"
+import { createLinkItemActions } from "../support/link-item-actions"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 import { readJsonInitBody } from "../support/request-inspection"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
 
 const item: LinkListItem = {
   kind: "saved",
@@ -92,25 +94,19 @@ describe("Gallery episode containers", () => {
       value: vi.fn(),
     })
     render(
-      <SaveListBrowser
-        items={[item]}
-        selectedItemUrl={item.url}
-        onSelectedItemUrlChange={vi.fn()}
-        actions={{
-          play: vi.fn(),
-          remove: vi.fn(),
-          showLinks: vi.fn(),
-          markOpened: vi.fn(),
-          expandFolder: vi.fn(),
-          softRefresh: vi.fn(),
-          hardRefresh: vi.fn(),
-          expandMirror: vi.fn(),
-        }}
+      <SaveListSessionTestProvider
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
         shouldShowRowPosters
-      />
+      >
+        <SaveListBrowser
+          items={[item]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+        />
+      </SaveListSessionTestProvider>
     )
     expect(screen.getByText("1. One Year Later")).toBeInTheDocument()
     const image = await waitFor(() => {

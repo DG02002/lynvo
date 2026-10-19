@@ -47,6 +47,7 @@ import {
   GALLERY_IMAGE_SIZES,
 } from "./save-list-layout-constants"
 import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
+import { useSaveListSession } from "./save-list-session"
 import {
   SaveListCardSkeleton,
   SaveListEmptyState,
@@ -448,10 +449,6 @@ const GallerySaveItem = ({
 
 interface GallerySaveGridProps {
   readonly groups: readonly GalleryGroup[]
-  readonly actions: LinkItemActions
-  readonly extractingItems: Set<string>
-  readonly isHydrating: boolean
-  readonly highlightedId: string | null
   readonly currentTimeMs?: number
   readonly onOpenItem: (itemUrl: string) => void
   readonly onOpenGroup: (groupKey: string) => void
@@ -459,14 +456,12 @@ interface GallerySaveGridProps {
 
 export const GallerySaveGrid = ({
   groups,
-  actions,
-  extractingItems,
-  isHydrating,
-  highlightedId,
   currentTimeMs: currentTimeMsInput,
   onOpenItem,
   onOpenGroup,
 }: GallerySaveGridProps) => {
+  const { actions, extractingItems, isHydrating, highlightedId } =
+    useSaveListSession()
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   if (isHydrating) {
     return (

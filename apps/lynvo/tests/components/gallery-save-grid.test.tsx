@@ -1,14 +1,52 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
+import { GallerySaveGrid as GallerySaveGridView } from "~/components/save-list/gallery-save-grid"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { GalleryGroup } from "~/features/links/media-artwork"
 import type { LinkListItem } from "~/features/links/types"
 import { AUTO_SAVE_LINKS_STORAGE_KEY } from "~/features/site/settings/auto-save-links-preference"
 import { CARD_MENU_LONG_PRESS_DURATION_MS } from "~/lib/constants"
 
 import { createMemoryStorage } from "../memory-storage"
 import { createLinkItemActions } from "../support/link-item-actions"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
+
+interface GallerySaveGridHarnessProps {
+  readonly groups: readonly GalleryGroup[]
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly isHydrating: boolean
+  readonly highlightedId: string | null
+  readonly currentTimeMs?: number
+  readonly onOpenItem: (itemUrl: string) => void
+  readonly onOpenGroup: (groupKey: string) => void
+}
+
+const GallerySaveGrid = ({
+  groups,
+  actions,
+  extractingItems,
+  isHydrating,
+  highlightedId,
+  currentTimeMs,
+  onOpenItem,
+  onOpenGroup,
+}: GallerySaveGridHarnessProps) => (
+  <SaveListSessionTestProvider
+    actions={actions}
+    extractingItems={extractingItems}
+    isHydrating={isHydrating}
+    highlightedId={highlightedId}
+  >
+    <GallerySaveGridView
+      groups={groups}
+      currentTimeMs={currentTimeMs}
+      onOpenItem={onOpenItem}
+      onOpenGroup={onOpenGroup}
+    />
+  </SaveListSessionTestProvider>
+)
 
 const createQueuedItem = (
   extractionStatus?: LinkListItem["extractionStatus"]
