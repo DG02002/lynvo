@@ -3,16 +3,19 @@ import { Result, Schema } from "effect"
 import {
   REALTIME_HEARTBEAT_INTERVAL_MS,
   REALTIME_HEARTBEAT_TIMEOUT_MS,
+  REALTIME_RECONNECT_FAILURE_WINDOW_MS,
   REALTIME_SESSION_REVOKED_CLOSE_CODE,
 } from "~/lib/constants"
 import { getBrowserDeviceName } from "~/lib/device-name"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
-import { bindSessionIdentityToUrl } from "~/lib/session-identity"
+import {
+  bindSessionIdentityToUrl,
+  readIdentityMeta,
+} from "~/lib/session-identity"
 
 import {
   isRealtimeHeartbeatResponse,
   parseRealtimeMessage,
-  sessionHelloRealtimeMessageSchema,
 } from "./message-schema"
 import type { RealtimeAction } from "./reducer"
 
@@ -21,8 +24,6 @@ export const REALTIME_RECONNECT_FAILURE_STORAGE_KEY =
 
 // The browser WebSocket API does not expose handshake response headers, so
 // sessionStorage carries the server-side 429 recovery history across reloads.
-const REALTIME_RECONNECT_FAILURE_WINDOW_MS = 60 * 1_000
-
 const reconnectFailureHistorySchema = Schema.Array(
   Schema.Number.pipe(Schema.check(Schema.isFinite()))
 )
@@ -157,29 +158,19 @@ export const openRealtimeSocket = ({
 
   const handleMessage = (event: MessageEvent) => {
     lastServerContactAt = Date.now()
-    try {
-      const message = Schema.decodeUnknownResult(
-        sessionHelloRealtimeMessageSchema
-      )(JSON.parse(String(event.data)))
-      if (Result.isSuccess(message)) {
-        const expectedUserId = document.querySelector<HTMLMetaElement>(
-          'meta[name="lynvo-user-id"]'
-        )?.content
-        const expectedSessionId = document.querySelector<HTMLMetaElement>(
-          'meta[name="lynvo-session-id"]'
-        )?.content
-        if (
-          message.success.userId !== expectedUserId ||
-          message.success.sessionId !== expectedSessionId
-        ) {
-          closed = true
-          socket?.close()
-          onSessionRevoked()
-          return
-        }
+    deliverRealtimeMessage(String(event.data), (message) => {
+      if (
+        message.type === "session_hello" &&
+        (message.userId !== readIdentityMeta("lynvo-user-id") ||
+          message.sessionId !== readIdentityMeta("lynvo-session-id"))
+      ) {
+        closed = true
+        socket?.close()
+        onSessionRevoked()
+        return
       }
-    } catch {}
-    deliverRealtimeMessage(String(event.data), receiveMessage)
+      receiveMessage(message)
+    })
   }
 
   const removeSocketListeners = () => {

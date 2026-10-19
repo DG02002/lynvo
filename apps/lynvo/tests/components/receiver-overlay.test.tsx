@@ -13,9 +13,6 @@ describe("ReceiverOverlay", () => {
       controllingDeviceName: null,
       controllingDevices: [],
       lastCommand: null,
-      realtimeStatus: "connected",
-      isConnecting: false,
-      isDisconnecting: false,
     }
     let notify: (() => void) | undefined
     const disconnectReceiver = vi.fn(async () => {
@@ -36,7 +33,6 @@ describe("ReceiverOverlay", () => {
       subscribeOutcomes: () => () => undefined,
       start: () => () => undefined,
       poll: async () => undefined,
-      setRealtimeStatus: vi.fn(),
       connect: vi.fn(async () => undefined),
       disconnect: vi.fn(async () => undefined),
       disconnectReceiver,

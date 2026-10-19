@@ -33,7 +33,6 @@ const createMachine = (): RemoteControlMachine => ({
   },
   start: () => () => undefined,
   poll: mocks.poll,
-  setRealtimeStatus: vi.fn(),
   connect: vi.fn(async () => undefined),
   disconnect: vi.fn(async () => undefined),
   disconnectReceiver: vi.fn(async () => undefined),
@@ -109,9 +108,10 @@ describe("Remote Play reconnect convergence", () => {
       title: "Couldn’t send the Remote Play command",
       description: "Remote receiver target is invalid",
     })
+    expect(mocks.notifications.showErrorToast).toHaveBeenCalledOnce()
   })
 
-  it("explains when Remote Play delivery is unavailable", async () => {
+  it("shows one notice for a sustained Remote Play polling failure", async () => {
     render(
       <RemoteControlProviderContent
         user={{ id: "user-one", sessionId: "session-one" }}
@@ -135,6 +135,7 @@ describe("Remote Play reconnect convergence", () => {
       description:
         "Lynvo couldn’t update Remote Play. Check this device’s internet connection, then try again.",
     })
+    expect(mocks.notifications.showErrorToast).toHaveBeenCalledOnce()
   })
 
   it("explains when a received link cannot be opened", async () => {

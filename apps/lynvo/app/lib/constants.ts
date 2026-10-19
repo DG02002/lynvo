@@ -1,6 +1,7 @@
 import { DAY_MS } from "~shared/constants"
 
 export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
+export const REALTIME_RECONNECT_FAILURE_WINDOW_MS = 60 * 1_000
 export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000
 export const REALTIME_HEARTBEAT_TIMEOUT_MS = REALTIME_HEARTBEAT_INTERVAL_MS * 2
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"

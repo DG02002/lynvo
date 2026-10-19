@@ -32,7 +32,7 @@ const remoteInboxChangedRealtimeMessageSchema = Schema.Struct({
   payload: Schema.Struct({}),
 })
 
-export const sessionHelloRealtimeMessageSchema = Schema.Struct({
+const sessionHelloRealtimeMessageSchema = Schema.Struct({
   type: Schema.Literal("session_hello"),
   userId: Schema.String,
   sessionId: Schema.String,

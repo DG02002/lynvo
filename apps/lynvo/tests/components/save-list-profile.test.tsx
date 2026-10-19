@@ -32,9 +32,6 @@ const remoteControlState: RemoteControlMachineState = {
   controllingDeviceName: null,
   controllingDevices: [],
   lastCommand: null,
-  realtimeStatus: "disconnected",
-  isConnecting: false,
-  isDisconnecting: false,
 }
 
 const createRemoteControlMachine = (): RemoteControlMachine => ({
@@ -47,7 +44,6 @@ const createRemoteControlMachine = (): RemoteControlMachine => ({
   disconnectReceiver: async () => undefined,
   sendRemotePlayback: async () => undefined,
   receiveCommand: () => false,
-  setRealtimeStatus: () => undefined,
   receiveRealtime: () => undefined,
   poll: async () => undefined,
   acknowledgeCommand: async () => undefined,
