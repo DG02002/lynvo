@@ -605,6 +605,18 @@ describe("d1 data routes", () => {
   it("delivers the data-changed broadcast before the mutation response", async () => {
     const user = await createUser()
     const session = await createSessionFor(user.id)
+    const createResponse = await app.fetch(
+      dataApiRequest("/api/data/links/create-or-update", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          url: "https://example.com/notification-test",
+          meta: emptyMetadataJson(),
+        }),
+      }),
+      env
+    )
+    expect(createResponse.status).toBe(200)
 
     let openRoomFetch: () => void = () => undefined
     const heldRoomResponse = new Promise<Response>((resolve) => {

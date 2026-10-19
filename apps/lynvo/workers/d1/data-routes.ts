@@ -21,7 +21,6 @@ import {
   type RequestLoggingEnvironment,
 } from "../request-logging"
 import { isSameOriginRequest } from "../same-origin"
-import { notifyAccountDataChanged } from "./data-version-notification"
 import { getD1Database } from "./db"
 import { resetDocsSeedManagedUsage } from "./docs-seed-usage"
 import {
@@ -347,11 +346,6 @@ const createOrUpdateLink = async ({
           preparation.session.userId,
           normalizedInput
         )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
   if (result.id && body.extractionState === "queued") {
     safeWaitUntil(
       context,
@@ -510,11 +504,6 @@ dataApp.post("/links/update-meta", async (context) => {
       realtime: context.env.USER_REALTIME_ROOM,
     }
   )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
   return context.json(result)
 })
 
@@ -543,11 +532,6 @@ dataApp.post("/links/apply-metadata-operation", async (context) => {
       realtime: context.env.USER_REALTIME_ROOM,
     }
   )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
   return context.json(result)
 })
 
@@ -572,11 +556,6 @@ dataApp.post("/links/delete", async (context) => {
       realtime: context.env.USER_REALTIME_ROOM,
     }
   )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
   return context.json(result)
 })
 
@@ -598,11 +577,6 @@ dataApp.post("/links/clear", async (context) => {
       now: Date.now(),
       realtime: context.env.USER_REALTIME_ROOM,
     }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
   )
   return context.json(result)
 })
@@ -690,11 +664,6 @@ dataApp.patch("/storage-settings", async (context) => {
         realtime: context.env.USER_REALTIME_ROOM,
       })
     : { deletedCount: 0, dataVersion: result.dataVersion }
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    deletion.dataVersion
-  )
   return context.json({
     success: true,
     deletedLinks: deletion.deletedCount,
@@ -772,11 +741,6 @@ dataApp.post("/usage/docs-seed", async (context) => {
       now: Date.now(),
       realtime: context.env.USER_REALTIME_ROOM,
     }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    settlement.dataVersion
   )
   const response = context.json({
     success: true,

@@ -1,3 +1,5 @@
+import { notifyAccountDataChanged } from "./data-version-notification"
+
 export interface OwnedWriteGuard {
   /**
    * EXISTS subquery tied to the post-state of the guarded write. Placeholder
@@ -54,6 +56,7 @@ interface ExecuteOwnedWriteInput {
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard
   readonly realtime?: DurableObjectNamespace
+  readonly notify?: boolean
 }
 
 export const executeOwnedWrite = async ({
@@ -61,6 +64,8 @@ export const executeOwnedWrite = async ({
   userId,
   statements,
   guard,
+  realtime,
+  notify = true,
 }: ExecuteOwnedWriteInput): Promise<OwnedWriteResult> => {
   if (statements.length === 0) {
     return {
@@ -86,11 +91,22 @@ export const executeOwnedWrite = async ({
     }
     throw new Error("Data version bump failed")
   }
-  return {
+  const result = {
     dataVersion: bumpRow.data_version,
     statementResults: results,
     changed: true,
   }
+  if (notify && realtime) {
+    await notifyAccountDataChanged(realtime, userId, result.dataVersion).catch(
+      () => {
+        console.warn("data_changed_push_failed", {
+          user_id: userId,
+          version: result.dataVersion,
+        })
+      }
+    )
+  }
+  return result
 }
 
 export const getDataVersion = async (

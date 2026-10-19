@@ -11,11 +11,11 @@ import { USER_REALTIME_ROOM_INTERNAL_URLS } from "../realtime/realtime-room-clie
  * the response path.
  */
 export const notifyAccountDataChanged = async (
-  env: Env,
+  realtime: DurableObjectNamespace,
   userId: string,
   version: number
 ): Promise<void> => {
-  await env.USER_REALTIME_ROOM?.getByName(userId).fetch(
+  await realtime.getByName(userId).fetch(
     new Request(USER_REALTIME_ROOM_INTERNAL_URLS.notifyDataChanged, {
       method: "POST",
       body: JSON.stringify({ version }),

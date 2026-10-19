@@ -15,7 +15,6 @@ import {
   LINK_EXTRACTION_BATCH_SIZE,
   LINK_EXTRACTION_MAX_ATTEMPTS,
 } from "./constants"
-import { notifyAccountDataChanged } from "./d1/data-version-notification"
 import {
   claimNextSavedLinkExtraction,
   getSavedLinkQueueError,
@@ -71,18 +70,6 @@ const getSavedExtractionIdentity = (
   )
 }
 
-const notifySafely = async (
-  env: Env,
-  userId: string,
-  dataVersion: number
-): Promise<void> => {
-  try {
-    await notifyAccountDataChanged(env, userId, dataVersion)
-  } catch (error) {
-    console.error("Unable to notify saved link extraction change", error)
-  }
-}
-
 const runSavedLinkExtraction = async ({
   runtime,
   claim,
@@ -112,29 +99,24 @@ const settlePendingExtraction = async ({
   requestId,
   startedAt,
 }: PendingExtractionInput): Promise<void> => {
-  const requeued = await requeuePendingSavedLinkExtraction(
-    database,
-    claim.userId,
-    {
-      operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
-      id: claim.id,
-      leaseExpiresAt: claim.leaseExpiresAt,
-      retryAfterSeconds: pending.retryAfterSeconds,
-      now: Date.now(),
-      realtime: env.USER_REALTIME_ROOM,
-      debugLogEntry: {
-        at: Date.now(),
-        pluginServerId: extraction.meta?.pluginServerId,
-        pluginId: extraction.meta?.pluginId,
-        outcome: "pending",
-        requestId,
-        attempt: claim.extractionAttempts,
-        durationMs: Date.now() - startedAt,
-        detail: `Server deferred extraction; retrying in ${pending.retryAfterSeconds}s`,
-      },
-    }
-  )
-  await notifySafely(env, claim.userId, requeued.dataVersion)
+  await requeuePendingSavedLinkExtraction(database, claim.userId, {
+    operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
+    id: claim.id,
+    leaseExpiresAt: claim.leaseExpiresAt,
+    retryAfterSeconds: pending.retryAfterSeconds,
+    now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
+    debugLogEntry: {
+      at: Date.now(),
+      pluginServerId: extraction.meta?.pluginServerId,
+      pluginId: extraction.meta?.pluginId,
+      outcome: "pending",
+      requestId,
+      attempt: claim.extractionAttempts,
+      durationMs: Date.now() - startedAt,
+      detail: `Server deferred extraction; retrying in ${pending.retryAfterSeconds}s`,
+    },
+  })
 }
 
 const settleEmptyExtraction = async ({
@@ -145,7 +127,7 @@ const settleEmptyExtraction = async ({
   requestId,
   startedAt,
 }: CompletedExtractionInput): Promise<void> => {
-  const settled = await settleSavedLinkExtraction(database, claim.userId, {
+  await settleSavedLinkExtraction(database, claim.userId, {
     operationId: `link-extraction:settle:${claim.id}:${claim.extractionAttempts}:failed`,
     id: claim.id,
     leaseExpiresAt: claim.leaseExpiresAt,
@@ -166,7 +148,6 @@ const settleEmptyExtraction = async ({
     now: Date.now(),
     realtime: env.USER_REALTIME_ROOM,
   })
-  await notifySafely(env, claim.userId, settled.dataVersion)
 }
 
 const settleCompletedExtraction = async ({
@@ -177,7 +158,7 @@ const settleCompletedExtraction = async ({
   requestId,
   startedAt,
 }: CompletedExtractionInput): Promise<void> => {
-  const settled = await settleSavedLinkExtraction(database, claim.userId, {
+  await settleSavedLinkExtraction(database, claim.userId, {
     operationId: `link-extraction:settle:${claim.id}:${claim.extractionAttempts}:complete`,
     id: claim.id,
     leaseExpiresAt: claim.leaseExpiresAt,
@@ -197,7 +178,6 @@ const settleCompletedExtraction = async ({
     now: Date.now(),
     realtime: env.USER_REALTIME_ROOM,
   })
-  await notifySafely(env, claim.userId, settled.dataVersion)
 }
 
 const settleFailedExtraction = async ({
@@ -214,7 +194,7 @@ const settleFailedExtraction = async ({
     linkId: claim.id,
     userId: claim.userId,
   })
-  const settled = await settleSavedLinkExtraction(database, claim.userId, {
+  await settleSavedLinkExtraction(database, claim.userId, {
     operationId: `link-extraction:settle:${claim.id}:${claim.extractionAttempts}:failed`,
     id: claim.id,
     leaseExpiresAt: claim.leaseExpiresAt,
@@ -237,7 +217,6 @@ const settleFailedExtraction = async ({
     now: Date.now(),
     realtime: env.USER_REALTIME_ROOM,
   })
-  await notifySafely(env, claim.userId, settled.dataVersion)
 }
 
 const processClaimedSavedLinkExtraction = async (
@@ -276,7 +255,6 @@ export const processSavedLinkExtraction = async (
   if (!claim) {
     return false
   }
-  await notifySafely(env, claim.userId, claim.dataVersion)
 
   const requestId = `background-link-extraction:${claim.id}:${claim.extractionAttempts}`
   const identity = getSavedExtractionIdentity(claim.metaJson)

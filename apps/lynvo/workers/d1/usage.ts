@@ -624,6 +624,7 @@ export const reserveManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
+    notify: false,
     statements,
   })
   // SAFETY: a conditional increment that hit its limit returns no row; the
@@ -737,6 +738,7 @@ export const settleManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
+    notify: false,
     statements: [
       ...releaseStatements,
       database
