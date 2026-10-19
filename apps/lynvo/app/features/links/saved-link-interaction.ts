@@ -110,7 +110,7 @@ export interface SavedLinkInteractionReporter {
   publish: (outcome: SavedLinkInteractionOutcome) => void
 }
 
-export const reportSavedLinkError = (
+const reportSavedLinkError = (
   reporter: SavedLinkInteractionReporter,
   error: SavedLinkInteractionError
 ): void => {

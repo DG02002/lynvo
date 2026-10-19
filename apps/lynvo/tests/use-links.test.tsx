@@ -411,14 +411,15 @@ describe("useLinks", () => {
     const { result } = renderLinksHook()
     await waitFor(() => expect(result.current.links).toHaveLength(1))
 
-    let createdId: string | undefined
+    let createdResult: unknown
     await act(async () => {
-      createdId = await result.current.actions.add("https://example.com/new", {
-        title: "Created link",
-      })
+      createdResult = await result.current.actions.add(
+        "https://example.com/new",
+        { title: "Created link" }
+      )
     })
 
-    expect(createdId).toBe("created-link")
+    expect(createdResult).toEqual({ kind: "saved", id: "created-link" })
     const createRequest = fetchResponses.mock.calls.find(
       ([path]) => String(path) === "/api/data/links/create-or-update"
     )

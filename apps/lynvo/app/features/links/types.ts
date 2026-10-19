@@ -109,6 +109,10 @@ export interface LinkViewItem {
   extractionStatus?: LinkExtractionStatus
 }
 
+export type LinkWriteResult =
+  | { readonly kind: "saved"; readonly id: string }
+  | { readonly kind: "failed"; readonly cause: unknown }
+
 export interface SavedLinkListItem extends LinkViewItem {
   kind: "saved"
 }

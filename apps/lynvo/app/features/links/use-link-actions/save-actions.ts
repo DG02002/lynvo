@@ -10,8 +10,6 @@ import {
 } from "~/features/links/save-intent"
 import {
   clearDismissedPluginDomainSuggestion,
-  reportGenericSavedLinkError,
-  reportSavedLinkError,
   dismissPluginDomainSuggestion,
   shouldOfferPluginDomainSuggestion,
   type SavedLinkInteractionError,
@@ -19,6 +17,7 @@ import {
 } from "~/features/links/saved-link-interaction"
 import type {
   ExtractedLink,
+  LinkWriteResult,
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
@@ -29,11 +28,13 @@ import {
   type PluginDomainSuggestion,
 } from "~/lib/plugin-domain"
 import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import {
+  getSaveIntentErrorMessage,
+  getUserFacingErrorMessage,
+} from "~/lib/user-facing-error"
 
 import type { OpenSelectionDialogOptions } from "./action-types"
 import type { SelectionDialogState } from "./interaction-state"
-import { getSaveError } from "./save-error-message"
 import {
   clearHighlightAfterDelay,
   resetSaveView,
@@ -62,11 +63,11 @@ export const useSaveActions = ({
     url: string,
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
-  ) => Promise<string | undefined>
+  ) => Promise<LinkWriteResult>
   enqueueLink: (
     savedUrl: string,
     sourceUrl?: string
-  ) => Promise<string | undefined>
+  ) => Promise<LinkWriteResult>
   updateLinks: (
     url: string,
     links: ExtractedLink[],
@@ -217,7 +218,15 @@ export const useSaveActions = ({
 
     switch (result.kind) {
       case "error":
-        reportGenericSavedLinkError(reporter, result.message)
+        {
+          const message = getSaveIntentErrorMessage(result.errorKind)
+          if (message) {
+            reporter.publish({
+              kind: "error",
+              error: { kind: "generic", message },
+            })
+          }
+        }
         reporter.publish({ kind: "clear-preview" })
         return undefined
       case "duplicate":
@@ -254,7 +263,15 @@ export const useSaveActions = ({
   ): PluginDomainSuggestion | undefined => {
     switch (result.kind) {
       case "error":
-        reportGenericSavedLinkError(reporter, result.message)
+        {
+          const message = getSaveIntentErrorMessage(result.errorKind)
+          if (message) {
+            reporter.publish({
+              kind: "error",
+              error: { kind: "generic", message },
+            })
+          }
+        }
         return undefined
       case "updated":
         reporter.publish({
@@ -302,7 +319,13 @@ export const useSaveActions = ({
     } catch (error) {
       console.error(error)
       reporter.publish({ kind: "clear-preview" })
-      reportSavedLinkError(reporter, getSaveError(error))
+      showErrorToast({
+        title: "Couldn’t save the link",
+        description: getUserFacingErrorMessage(
+          error,
+          "Unable to save link. Try again."
+        ),
+      })
     } finally {
       setIsSaving(false)
     }
@@ -329,10 +352,13 @@ export const useSaveActions = ({
       void offerPluginDomainSuggestion(applyConfirmSaveIntentResult(result))
     } catch (error) {
       console.error(error)
-      reportGenericSavedLinkError(
-        reporter,
-        "Unable to save the selected links. Try again."
-      )
+      showErrorToast({
+        title: "Couldn’t save the selected links",
+        description: getUserFacingErrorMessage(
+          error,
+          "Unable to save the selected links. Try again."
+        ),
+      })
     } finally {
       setIsSaving(false)
     }

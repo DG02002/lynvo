@@ -6,11 +6,8 @@ import type {
   MetaData,
 } from "~/features/links/types"
 import { showErrorToast } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
-import {
-  presentSavedLinkCommandFailure,
-  SavedLinkCommandError,
-} from "../saved-link-command-failure"
 import { createLinkViewItem } from "./link-items"
 import { fetchMetaInternal } from "./link-server"
 
@@ -56,9 +53,9 @@ export const showSaveError = (cause: unknown) => {
   console.error(cause)
   showErrorToast({
     title: "Couldn’t save the link",
-    description:
-      cause instanceof SavedLinkCommandError
-        ? presentSavedLinkCommandFailure(cause.failure)
-        : "Unable to save link. Try again.",
+    description: getUserFacingErrorMessage(
+      cause,
+      "Unable to save link. Try again."
+    ),
   })
 }

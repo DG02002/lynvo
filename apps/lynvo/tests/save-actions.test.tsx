@@ -9,6 +9,7 @@ import {
 import type { LinkViewItem } from "~/features/links/types"
 import { useSaveActions } from "~/features/links/use-link-actions/save-actions"
 import { client } from "~/lib/api/client"
+import { showErrorToast } from "~/lib/toast-notifications"
 
 describe("useSaveActions", () => {
   afterEach(() => {
@@ -27,8 +28,8 @@ describe("useSaveActions", () => {
       useSaveActions({
         url: "https://index.example.com/0:/Movies/",
         links,
-        addLink: vi.fn(async () => "link-1"),
-        enqueueLink: vi.fn(async () => "link-1"),
+        addLink: vi.fn(async () => ({ kind: "saved", id: "link-1" })),
+        enqueueLink: vi.fn(async () => ({ kind: "saved", id: "link-1" })),
         updateLinks: vi.fn(),
         openSelectionDialog: vi.fn(),
         setExtractionPreview: vi.fn(),
@@ -98,8 +99,8 @@ describe("useSaveActions", () => {
       useSaveActions({
         url: "https://index.example.com/0:/Movies/",
         links,
-        addLink: vi.fn(async () => "link-2"),
-        enqueueLink: vi.fn(async () => "link-2"),
+        addLink: vi.fn(async () => ({ kind: "saved", id: "link-2" })),
+        enqueueLink: vi.fn(async () => ({ kind: "saved", id: "link-2" })),
         updateLinks: vi.fn(),
         openSelectionDialog: vi.fn(),
         setExtractionPreview: vi.fn(),
@@ -174,8 +175,8 @@ describe("useSaveActions", () => {
       useSaveActions({
         url: "https://index.example.com/0:/Movies/",
         links,
-        addLink: vi.fn(async () => "link-fail"),
-        enqueueLink: vi.fn(async () => "link-fail"),
+        addLink: vi.fn(async () => ({ kind: "saved", id: "link-fail" })),
+        enqueueLink: vi.fn(async () => ({ kind: "saved", id: "link-fail" })),
         updateLinks: vi.fn(),
         openSelectionDialog: vi.fn(),
         setExtractionPreview: vi.fn(),
@@ -234,5 +235,95 @@ describe("useSaveActions", () => {
     // The highlight is refreshed at the completion moment, not only at
     // enqueue time.
     expect(setHighlightedId).toHaveBeenLastCalledWith("link-fail")
+  })
+
+  it("shows one toast for a failed write without setting the inline error", async () => {
+    const toastAdd = vi.spyOn(toast, "add")
+    const setError = vi.fn()
+    const cause = new Error("offline")
+    const enqueueLink = vi.fn(async () => {
+      showErrorToast({
+        title: "Couldn’t save the link",
+        description: "The link couldn’t be saved right now. Try again.",
+      })
+      return { kind: "failed" as const, cause }
+    })
+    const { result } = renderHook(() =>
+      useSaveActions({
+        url: "https://example.com/shows",
+        links: [],
+        addLink: vi.fn(async () => ({ kind: "saved", id: "unused" })),
+        enqueueLink,
+        updateLinks: vi.fn(),
+        openSelectionDialog: vi.fn(),
+        setExtractionPreview: vi.fn(),
+        closeSelectionDialog: vi.fn(),
+        selectionDialogState: {
+          open: false,
+          links: [],
+          meta: {},
+          originalUrl: "",
+        },
+        setError,
+        setCurrentUrl: vi.fn(),
+        setHighlightedId: vi.fn(),
+      })
+    )
+
+    await act(async () => {
+      await result.current.handleSave()
+    })
+
+    expect(toastAdd).toHaveBeenCalledOnce()
+    expect(setError).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "generic" })
+    )
+  })
+
+  it("shows one toast when confirming a selection write fails", async () => {
+    const toastAdd = vi.spyOn(toast, "add")
+    const setError = vi.fn()
+    const addLink = vi.fn(async () => {
+      showErrorToast({
+        title: "Couldn’t save the link",
+        description: "The link couldn’t be saved right now. Try again.",
+      })
+      return { kind: "failed" as const, cause: new Error("offline") }
+    })
+    const { result } = renderHook(() =>
+      useSaveActions({
+        url: "https://example.com/shows",
+        links: [],
+        addLink,
+        enqueueLink: vi.fn(async () => ({ kind: "saved", id: "unused" })),
+        updateLinks: vi.fn(),
+        openSelectionDialog: vi.fn(),
+        setExtractionPreview: vi.fn(),
+        closeSelectionDialog: vi.fn(),
+        selectionDialogState: {
+          open: true,
+          links: [
+            { id: "episode", label: "Episode", url: "https://example.com/1" },
+          ],
+          meta: { title: "Shows" },
+          originalUrl: "https://example.com/shows",
+        },
+        setError,
+        setCurrentUrl: vi.fn(),
+        setHighlightedId: vi.fn(),
+      })
+    )
+
+    await act(async () => {
+      await result.current.confirmSelection([
+        { id: "episode", label: "Episode", url: "https://example.com/1" },
+      ])
+    })
+
+    expect(addLink).toHaveBeenCalledOnce()
+    expect(toastAdd).toHaveBeenCalledOnce()
+    expect(setError).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "generic" })
+    )
   })
 })

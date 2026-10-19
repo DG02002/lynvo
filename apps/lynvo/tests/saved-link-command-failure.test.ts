@@ -2,9 +2,10 @@ import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
 import {
-  presentSavedLinkCommandFailure,
   SavedLinkCommandFailureSchema,
+  type SavedLinkCommandFailure,
 } from "~/features/links/saved-link-command-failure"
+import { presentSavedLinkCommandFailure } from "~/lib/user-facing-error"
 
 describe("saved-link command failure presentation", () => {
   it("round-trips every failure variant through the command schema", () => {
