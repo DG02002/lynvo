@@ -35,6 +35,12 @@ The typed Effect API is grouped under
 `apps/lynvo/app/lib/effect/api/`; D1-specific routes and transactions live in
 `apps/lynvo/workers/d1/`.
 
+New JSON endpoints belong in Effect HttpApi groups, which own their schemas,
+session and CSRF middleware, versioned responses, and typed error status.
+Existing `/api/data/*` routes migrate incrementally. Hono remains the edge
+shell for SSR, WebSocket upgrades, security headers, request logging, rate
+limits, and redirect or HTML auth flows. See [ADR 0001](../adr/0001-api-style.md).
+
 The browser calls Lynvo's same-origin API. It does not call the Plugin Server
 directly and never receives the Plugin Server's bearer credential.
 
