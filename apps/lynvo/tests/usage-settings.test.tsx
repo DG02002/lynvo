@@ -107,4 +107,78 @@ describe("UsageSettings", () => {
       screen.queryByRole("button", { name: "Try again" })
     ).not.toBeInTheDocument()
   })
+
+  it("uses the loaded plugin catalog for Lynvo usage names and icons", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubUsageFetch(() =>
+        Response.json({
+          metrics: [
+            {
+              id: "drive-daily",
+              label: "Drive extractions",
+              used: 2,
+              limit: 15,
+              unit: "extractions",
+              period: "daily",
+              resetsAt: "2030-02-02T00:00:00.000Z",
+              pluginId: "drive",
+            },
+          ],
+        })
+      )
+    )
+
+    const { container } = render(
+      <UsageSettings
+        lynvoPlugins={[
+          {
+            id: "drive",
+            name: "Google Drive Index",
+            sourceUrl: "https://drive.example",
+            icon: { url: "https://drive.example/icon.png" },
+            description: "Drive links",
+            supportsDomains: false,
+            domainRequired: "",
+          },
+        ]}
+      />
+    )
+
+    expect(await screen.findByText("Google Drive Index")).toBeVisible()
+    expect(
+      container.querySelector('img[src="https://drive.example/icon.png"]')
+    ).toBeInTheDocument()
+  })
+
+  it("keeps raw metric labels available when the plugin catalog fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubUsageFetch(() =>
+        Response.json({
+          metrics: [
+            {
+              id: "drive-daily",
+              label: "Drive extractions",
+              used: 2,
+              limit: 15,
+              unit: "extractions",
+              period: "daily",
+              resetsAt: "2030-02-02T00:00:00.000Z",
+              pluginId: "drive",
+            },
+          ],
+        })
+      )
+    )
+
+    render(<UsageSettings lynvoPlugins={null} />)
+
+    expect(await screen.findByText("Drive")).toBeVisible()
+    expect(
+      screen.getByText(
+        "Lynvo Plugin Server details couldn’t be loaded. Plugin names and icons may be unavailable."
+      )
+    ).toBeVisible()
+  })
 })

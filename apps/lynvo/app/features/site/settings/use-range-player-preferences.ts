@@ -66,15 +66,18 @@ export const useRangePlayerPreferences = ({
     ) {
       const preferences = normalizePlayerPreferences({
         rangeSupportedPlayerId:
-          cloudPreferences.rangeSupportedPlayerId ??
-          localPreferences.rangeSupportedPlayerId,
+          rangeSupportedMutationGeneration.current === 0
+            ? (cloudPreferences.rangeSupportedPlayerId ??
+              localPreferences.rangeSupportedPlayerId)
+            : localPreferences.rangeSupportedPlayerId,
         rangeUnsupportedPlayerId:
-          cloudPreferences.rangeUnsupportedPlayerId ??
-          localPreferences.rangeUnsupportedPlayerId,
+          rangeUnsupportedMutationGeneration.current === 0
+            ? (cloudPreferences.rangeUnsupportedPlayerId ??
+              localPreferences.rangeUnsupportedPlayerId)
+            : localPreferences.rangeUnsupportedPlayerId,
       })
       // Mirrors the cloud preference snapshot (external system) into
       // locally editable state once it arrives.
-      // oxlint-disable-next-line react/set-state-in-effect
       setRangeSupportedPlayerId(preferences.rangeSupportedPlayerId)
       setRangeUnsupportedPlayerId(preferences.rangeUnsupportedPlayerId)
       setRangeSupportedPlayer(

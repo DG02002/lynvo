@@ -13,6 +13,8 @@ import {
   loadCloudPlayerPreferences,
   saveCloudPlayerPreferences,
 } from "~/lib/settings/player-preferences-api"
+import { showErrorToast } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
@@ -36,7 +38,7 @@ export const PlayerSettings = ({
   const playerCacheKey = playerPreferenceIdentity
     ? getSettingsDataCacheKey("player", playerPreferenceIdentity)
     : undefined
-  const { data: cloudPreferencesData } = useAsyncResource(
+  const { data: cloudPreferencesData, reload } = useAsyncResource(
     () =>
       playerPreferenceIdentity
         ? loadPlayerPreferences()
@@ -56,8 +58,19 @@ export const PlayerSettings = ({
       if (playerCacheKey) {
         clearAsyncResourceCache(playerCacheKey)
       }
+      try {
+        await reload()
+      } catch (error) {
+        showErrorToast({
+          title: "Player settings were saved, but couldn’t be refreshed",
+          description: getUserFacingErrorMessage(
+            error,
+            "Saved player settings couldn’t be refreshed. Try again."
+          ),
+        })
+      }
     },
-    [playerCacheKey, savePlayerPreferences]
+    [playerCacheKey, reload, savePlayerPreferences]
   )
   const {
     rangeSupportedPlayerId,
