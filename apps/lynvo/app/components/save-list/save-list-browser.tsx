@@ -249,8 +249,10 @@ const MobileFolderTreeToggle = ({
   onToggle,
 }: MobileFolderTreeToggleProps) => (
   <Button
-    variant="ghost"
-    className="h-auto min-h-11 w-full justify-start gap-3 rounded-lg px-0 text-left font-normal md:hidden"
+    type="button"
+    variant="finder-row"
+    size="finder-row"
+    className="md:hidden"
     aria-expanded={isOpen}
     aria-label={isOpen ? "Collapse folder tree" : "Expand folder tree"}
     onClick={onToggle}
@@ -299,7 +301,7 @@ const FolderTree = ({
               aria-hidden="true"
               className={cn(
                 "absolute inset-y-0 -left-3 w-px",
-                doesActiveBranchContinue ? "bg-sky-500" : "bg-border/60"
+                doesActiveBranchContinue ? "bg-link" : "bg-border/60"
               )}
             />
           )}
@@ -307,9 +309,9 @@ const FolderTree = ({
             className={cn(
               "group relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
               isInPath || doesActiveBranchContinue
-                ? "before:bg-sky-500"
+                ? "before:bg-link"
                 : "before:bg-border/60",
-              isInPath ? "after:bg-sky-500" : "after:bg-border/60"
+              isInPath ? "after:bg-link" : "after:bg-border/60"
             )}
           >
             <button

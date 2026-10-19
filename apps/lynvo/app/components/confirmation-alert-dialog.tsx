@@ -1,14 +1,12 @@
 import { useRef, type ReactNode } from "react"
 
+import { AlertDialogHeroHeader } from "~/components/dialog-hero-header"
 import { Spinner } from "~/components/spinner"
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 import type { Button } from "~/components/ui/button"
 
@@ -43,19 +41,13 @@ export function ConfirmationAlertDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        initialFocus={cancelRef}
-        className="p-10 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-md"
-      >
+      <AlertDialogContent initialFocus={cancelRef} size="hero">
         {media}
-        <AlertDialogHeader className="w-full min-w-0 place-items-center gap-4 text-center sm:place-items-center sm:text-center">
-          <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-            {title}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="w-full min-w-0 break-words text-pretty text-center text-base text-muted-foreground">
-            {description}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+        <AlertDialogHeroHeader
+          title={title}
+          description={description}
+          descriptionClassName="break-words"
+        />
         <div className="mt-4 flex w-full flex-col gap-3">
           <AlertDialogAction
             size="lg"
@@ -70,9 +62,8 @@ export function ConfirmationAlertDialog({
           {cancelLabel !== null && (
             <AlertDialogCancel
               ref={cancelRef}
-              variant="outline"
               size="lg"
-              className="h-13.5 w-full border-muted-foreground/20"
+              className="h-13.5 w-full"
               disabled={disabled || pending}
             >
               {cancelLabel}

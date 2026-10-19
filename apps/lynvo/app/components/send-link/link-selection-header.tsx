@@ -27,7 +27,7 @@ export const LinkSelectionHeader = ({
     .join(", ")
 
   return (
-    <DialogHeader className="z-10 min-w-0 border-b bg-popover p-4 pb-4 text-left md:p-8 md:pb-6 flex flex-col gap-2">
+    <DialogHeader variant="sheet" className="z-10 min-w-0 text-left">
       {(pluginIcon || pluginName) && (
         <div className="mb-4 flex min-w-0 items-center gap-3">
           <PluginIcon iconUrl={pluginIcon} className="size-10 md:size-12" />
@@ -42,10 +42,7 @@ export const LinkSelectionHeader = ({
       )}
 
       {pageTitle ? (
-        <DialogTitle
-          aria-label={pageTitle}
-          className="text-base font-normal leading-tight text-foreground sm:text-lg"
-        >
+        <DialogTitle aria-label={pageTitle} size="quiet">
           <ExpandableFilename value={pageTitle} />
         </DialogTitle>
       ) : (

@@ -11,7 +11,7 @@ export function ClipboardAccessIcon({ className }: { className?: string }) {
         strokeWidth={1.5}
         className="size-full"
       />
-      <span className="clipboard-icon-shimmer absolute inset-0 text-blue-500">
+      <span className="clipboard-icon-shimmer absolute inset-0 text-link">
         <HugeiconsIcon
           icon={AiContentGenerator01Icon}
           strokeWidth={1.5}

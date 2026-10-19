@@ -651,9 +651,8 @@ const PluginCredentialEditor = ({
             <DialogTrigger
               render={
                 <Button
-                  variant="ghost"
+                  variant="quiet"
                   size="icon-sm"
-                  className="hover:bg-transparent dark:hover:bg-transparent"
                   aria-label={`Edit credentials for ${domain.domain}`}
                 />
               }
@@ -705,8 +704,8 @@ const PluginCredentialEditor = ({
               {domain.hasCredential && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  className="w-full text-destructive hover:bg-transparent hover:text-destructive"
+                  variant="destructive-quiet"
+                  className="w-full"
                   disabled={isSaving}
                   onClick={() => setIsRemoveCredentialDialogOpen(true)}
                 >
@@ -716,9 +715,8 @@ const PluginCredentialEditor = ({
             </FormDialogContent>
           </Dialog>
           <Button
-            variant="ghost"
+            variant="quiet"
             size="icon-sm"
-            className="hover:bg-transparent dark:hover:bg-transparent"
             aria-label={`Remove ${domain.domain}`}
             onClick={() => setIsRemoveDomainDialogOpen(true)}
           >

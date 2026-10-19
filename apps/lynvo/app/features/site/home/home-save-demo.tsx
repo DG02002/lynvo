@@ -393,7 +393,7 @@ export const HomeSaveDemo = () => {
         <button
           ref={copySourceRef}
           aria-label="Copy Source link"
-          className={`pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 ${isCopySourcePressed ? "scale-[0.96] bg-blue-500 text-white" : "bg-muted/80"}`}
+          className={`pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 ${isCopySourcePressed ? "scale-[0.96] bg-link text-white" : "bg-muted/80"}`}
           onClick={handleCopySourceClick}
           tabIndex={isCopySourceVisible ? 0 : -1}
           type="button"
@@ -454,10 +454,10 @@ export const HomeSaveDemo = () => {
               </div>
             </div>
 
-            <InputGroup className="h-13.5 w-full rounded-full border-2 border-default-medium bg-muted/30 sm:flex-1">
+            <InputGroup variant="url" className="w-full sm:flex-1">
               <InputGroupInput
                 aria-label="Link"
-                className="pl-5 text-base text-heading md:text-base"
+                variant="url"
                 placeholder="https://example.com/video"
                 readOnly
                 tabIndex={-1}
@@ -466,9 +466,8 @@ export const HomeSaveDemo = () => {
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
                   aria-label="Save link"
-                  className="size-11 rounded-full"
                   disabled={!isLinkPasted}
-                  size="icon-xs"
+                  size="icon-lg"
                   title="Save link"
                   type="button"
                   variant="default"
@@ -517,6 +516,9 @@ export const HomeSaveDemo = () => {
       </div>
 
       <svg
+        // A pointer glyph renders white fill on a black outline, like an OS
+        // cursor, regardless of theme.
+        // oxlint-disable shadcn/no-raw-colors -- OS cursor glyph colors, not a theme color
         className="home-demo-cursor pointer-events-none absolute z-[60] h-7 w-7 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]"
         data-visible={isCursorVisible}
         data-pressed={isCursorPressed}
@@ -535,6 +537,7 @@ export const HomeSaveDemo = () => {
           strokeLinejoin="round"
         />
       </svg>
+      {/* oxlint-enable shadcn/no-raw-colors */}
     </div>
   )
 }
@@ -546,7 +549,7 @@ const DemoLibraryItem = ({
 }: DemoLibraryItemProps) => (
   <div className="home-demo-library-item border-b last:border-b-0">
     <div
-      className={`flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3 ${item.isOpened ? "bg-sky-500/15" : ""}`}
+      className={`flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3 ${item.isOpened ? "bg-link/15" : ""}`}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 text-left md:gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center text-foreground md:size-14">
@@ -572,10 +575,10 @@ const DemoLibraryItem = ({
       <Button
         ref={menuTriggerRef}
         aria-label={`Open menu for ${item.title}`}
-        className={`size-8 shrink-0 text-foreground hover:bg-transparent hover:text-foreground ${isMenuTriggerPressed ? "scale-[0.96]" : ""}`}
+        className={`size-8 shrink-0 ${isMenuTriggerPressed ? "scale-[0.96]" : ""}`}
         size="icon"
         type="button"
-        variant="ghost"
+        variant="quiet"
       >
         <HugeiconsIcon icon={EllipsisIcon} />
       </Button>
@@ -666,10 +669,10 @@ const DemoRemoveDialog = ({
           Remove
         </Button>
         <Button
-          className="h-13.5 w-full border-muted-foreground/20"
+          className="h-13.5 w-full"
           size="lg"
           type="button"
-          variant="outline"
+          variant="outline-soft"
         >
           Cancel
         </Button>

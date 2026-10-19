@@ -2,14 +2,12 @@ import { AirplayLineIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useState } from "react"
 
+import { DialogHeroHeader } from "~/components/dialog-hero-header"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog"
 import { useRemoteControl } from "~/context/remote-control-context"
@@ -118,20 +116,15 @@ export const RemotePlayButton = ({
           }
         />
       )}
-      <DialogContent className="p-10 sm:max-w-md" showCloseButton={false}>
+      <DialogContent size="hero" showCloseButton={false}>
         <HugeiconsIcon
           icon={AirplayLineIcon}
           className="mx-auto size-16 text-foreground"
         />
-        <DialogHeader className="w-full items-center gap-4 text-center">
-          <DialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-            Connect Remote Play
-          </DialogTitle>
-          <DialogDescription className="w-full text-center text-base text-muted-foreground">
-            Open Lynvo in a browser on another device. Keep Lynvo open, then
-            choose that device from the list.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogHeroHeader
+          title="Connect Remote Play"
+          description="Open Lynvo in a browser on another device. Keep Lynvo open, then choose that device from the list."
+        />
         <div className="flex flex-col">
           <RemotePlayConnectionStatus
             activeSessionId={activeSessionId}

@@ -219,9 +219,8 @@ export function StorageSettings({ userId }: { userId?: string }) {
           <SettingsRow>
             <SettingsRowInfo label="Delete all links" />
             <Button
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none transition-colors shrink-0 px-4 text-sm font-normal"
+              variant="destructive-outline"
+              className="shrink-0"
               disabled={isClearingLinks || usage.savedLinkCount === 0}
               onClick={() => setIsClearLinksDialogOpen(true)}
             >

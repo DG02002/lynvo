@@ -3,12 +3,20 @@ import { cn } from "cn"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
 
-function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
+function Accordion({
+  className,
+  variant = "default",
+  ...props
+}: AccordionPrimitive.Root.Props & {
+  variant?: "default" | "plain"
+}) {
   return (
     <AccordionPrimitive.Root
       data-slot="accordion"
+      data-variant={variant}
       className={cn(
-        "flex w-full flex-col overflow-hidden rounded-2xl border",
+        "group/accordion flex w-full flex-col overflow-hidden rounded-2xl border",
+        variant === "plain" && "rounded-none border-0",
         className
       )}
       {...props}
@@ -16,11 +24,21 @@ function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   )
 }
 
-function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
+function AccordionItem({
+  className,
+  variant = "default",
+  ...props
+}: AccordionPrimitive.Item.Props & {
+  variant?: "default" | "borderless"
+}) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("not-last:border-b data-open:bg-muted/50", className)}
+      className={cn(
+        "not-last:border-b data-open:bg-muted/50 group-data-[variant=plain]/accordion:data-open:bg-transparent",
+        variant === "borderless" && "not-last:border-b-0",
+        className
+      )}
       {...props}
     />
   )
@@ -28,15 +46,20 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
 
 function AccordionTrigger({
   className,
+  variant = "default",
   children,
   ...props
-}: AccordionPrimitive.Trigger.Props) {
+}: AccordionPrimitive.Trigger.Props & {
+  variant?: "default" | "quiet" | "nav"
+}) {
   return (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
           "group/accordion-trigger relative flex flex-1 items-start justify-between gap-6 border border-transparent p-4 text-left text-sm font-medium transition-all outline-none hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 **:data-[slot=accordion-trigger-icon]:text-muted-foreground",
+          variant === "quiet" && "py-5 font-normal hover:no-underline",
+          variant === "nav" && "rounded-lg px-0 py-2.5 hover:no-underline",
           className
         )}
         {...props}
@@ -52,8 +75,11 @@ function AccordionTrigger({
 function AccordionContent({
   className,
   children,
+  variant = "default",
   ...props
-}: AccordionPrimitive.Panel.Props) {
+}: AccordionPrimitive.Panel.Props & {
+  variant?: "default" | "muted" | "nav"
+}) {
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
@@ -63,6 +89,8 @@ function AccordionContent({
       <div
         className={cn(
           "h-(--accordion-panel-height) pt-0 pb-4 data-ending-style:h-0 data-starting-style:h-0 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+          variant === "muted" && "pb-5 leading-6 text-muted-foreground",
+          variant === "nav" && "pb-2",
           className
         )}
       >

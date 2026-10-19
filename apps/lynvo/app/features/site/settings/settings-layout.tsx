@@ -63,10 +63,8 @@ export function SettingsLoadingBars({
 }) {
   return (
     <div aria-hidden="true" className={cn("flex flex-col gap-2", className)}>
-      <Skeleton
-        className={cn("loading-skeleton-pulse h-4", titleWidthClassName)}
-      />
-      <Skeleton className="loading-skeleton-pulse h-2 w-full rounded-full" />
+      <Skeleton className={cn("h-4", titleWidthClassName)} />
+      <Skeleton radius="full" className="h-2 w-full" />
     </div>
   )
 }

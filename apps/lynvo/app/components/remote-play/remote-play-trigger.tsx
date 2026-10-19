@@ -2,7 +2,6 @@ import { AirplayLineIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 import { Button } from "~/components/ui/button"
-import { cn } from "~/lib/utils"
 
 export const RemotePlayTrigger = ({
   activeSessionId,
@@ -17,18 +16,14 @@ export const RemotePlayTrigger = ({
 
   return (
     <Button
-      variant="ghost"
+      variant={activeSessionId ? "tonal" : "ghost"}
+      size="adaptive"
       aria-label={label}
-      className={cn(
-        "relative size-9 p-0 sm:w-auto sm:px-3 gap-2",
-        activeSessionId &&
-          "text-primary hover:text-primary bg-primary/10 hover:bg-primary/20",
-        "data-[state=open]:text-primary data-[state=open]:bg-primary/10"
-      )}
+      className="relative"
       title={label}
     >
       <HugeiconsIcon icon={AirplayLineIcon} className="size-5" />
-      <span className="hidden sm:inline font-medium">Remote Play</span>
+      <span className="hidden font-medium sm:inline">Remote Play</span>
       {activeSessionId && (
         <span className="absolute top-1 right-1 size-2 rounded-full bg-primary animate-pulse" />
       )}

@@ -83,7 +83,10 @@ describe("CustomPluginServerTable", () => {
     ).not.toBeInTheDocument()
 
     const infoButton = screen.getByRole("button", { name: "Source Alpha info" })
-    expect(infoButton.className).toContain("text-yellow")
+    // The warning color marks the icon itself, not the trigger button.
+    expect(infoButton.querySelector("svg")?.getAttribute("class")).toContain(
+      "text-warning-foreground"
+    )
 
     fireEvent.mouseEnter(infoButton)
 

@@ -382,9 +382,10 @@ const GallerySaveItem = ({
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
           <Button
             type="button"
-            variant="ghost"
+            variant="overlay"
+            size="xs"
             aria-label={`Choose links for ${group.displayTitle}`}
-            className="absolute bottom-4 left-1/2 z-10 h-10 -translate-x-1/2 rounded-full bg-background/80 px-3 text-xs shadow-none hover:bg-background/80 aria-expanded:bg-background/80 sm:left-4 sm:translate-x-0 dark:hover:bg-background/80"
+            className="absolute bottom-4 left-1/2 z-10 h-10 -translate-x-1/2 sm:left-4 sm:translate-x-0"
             onClick={(event) => {
               event.stopPropagation()
               actions.chooseLinks?.(item)

@@ -140,6 +140,28 @@
         ]
       }
     ],
+    // `layout` classes (margin, width, flex, positioning) are page-level
+    // decisions, so restyling those on a shadcn primitive stays allowed.
+    // Color, typography, spacing, and shape overrides must go through
+    // variants or wrapper elements instead of ad-hoc classNames.
+    "shadcn/no-restyle": [
+      "warn",
+      {
+        "allow": ["layout"],
+        "contracts": [
+          {
+            // Tabs and TabsList are the flex containers for tab panels and
+            // triggers; the gap between their children is theirs to set, so
+            // inter-child spacing stays allowed on them.
+            "pattern": "^(Tabs|TabsList)$",
+            "allow": ["layout", "gap-*"]
+          }
+        ]
+      }
+    ],
+    // Colors must come from the theme tokens in apps/lynvo/app/app.css, so
+    // raw palette and hex classes stay out of feature code.
+    "shadcn/no-raw-colors": "warn",
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
     "anti-slop/no-known-value-widening": "error",

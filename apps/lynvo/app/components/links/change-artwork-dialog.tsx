@@ -471,10 +471,15 @@ const ArtworkDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col gap-5 overflow-hidden p-5 sm:max-w-4xl sm:p-7">
-          <DialogHeader className="w-full min-w-0 shrink-0 pr-10">
-            <DialogTitle className="text-2xl font-medium text-balance">
-              {linkCopy.actions.changeArtwork}
+        <DialogContent
+          size="wide"
+          className="flex max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-4xl"
+        >
+          <DialogHeader className="w-full min-w-0 shrink-0">
+            <DialogTitle size="lg">
+              <span className="block pr-10 text-balance">
+                {linkCopy.actions.changeArtwork}
+              </span>
             </DialogTitle>
             <DialogDescription>
               Search TMDB (The Movie Database) and choose the movie or TV show

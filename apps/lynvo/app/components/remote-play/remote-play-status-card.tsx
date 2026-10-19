@@ -28,10 +28,9 @@ export const RemotePlayStatusCard = ({
       </div>
     </div>
     <Button
-      variant="ghost"
+      variant="destructive-quiet"
       size="sm"
       onClick={() => void onDisconnect()}
-      className="text-destructive hover:text-destructive hover:bg-destructive"
     >
       Disconnect Remote Play
     </Button>

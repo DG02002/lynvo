@@ -22,7 +22,6 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
 import { showLinkCopiedToast } from "~/lib/toast-notifications"
-import { cn } from "~/lib/utils"
 
 interface LinkActionsRemoveRequest {
   readonly url: string
@@ -61,12 +60,9 @@ export function LinkActionsDotMenu({
         render={
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             size="icon"
-            className={cn(
-              "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
-              className
-            )}
+            className={className}
             onClick={(event) => event.stopPropagation()}
           >
             <HugeiconsIcon icon={EllipsisIcon} />

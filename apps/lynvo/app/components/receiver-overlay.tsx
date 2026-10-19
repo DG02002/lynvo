@@ -20,7 +20,7 @@ export const ReceiverOverlay = () => {
   return (
     <Dialog open={isOpen}>
       <DialogPortal>
-        <DialogOverlay className="bg-background! backdrop-blur-none!" />
+        <DialogOverlay variant="solid" />
         <DialogPrimitive.Popup
           data-receiver-overlay="true"
           initialFocus={disconnectButtonRef}
@@ -35,7 +35,7 @@ export const ReceiverOverlay = () => {
                   className="size-6 text-primary"
                 />
               </div>
-              <DialogTitle className="text-xl font-semibold leading-normal">
+              <DialogTitle size="xl">
                 Connected to a controlling device
               </DialogTitle>
             </div>
@@ -48,7 +48,7 @@ export const ReceiverOverlay = () => {
                 {controllingDevices.map((device) => (
                   <span
                     key={device.id}
-                    className="inline-flex items-center rounded-full bg-primary px-6 py-2 text-lg font-bold text-primary ring-1 ring-inset ring-blue-700/10"
+                    className="inline-flex items-center rounded-full bg-primary px-6 py-2 text-lg font-bold text-primary ring-1 ring-inset ring-link/10"
                   >
                     {device.name}
                   </span>
