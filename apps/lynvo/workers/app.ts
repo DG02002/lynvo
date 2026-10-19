@@ -26,6 +26,7 @@ import {
   EFFECT_MUTATION_ROUTE_RATE_WINDOW_SECONDS,
   EXTRACTION_ROUTE_RATE_LIMIT,
   EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  INBOUND_API_BODY_READ_TIMEOUT_MS,
   MAX_INBOUND_API_BODY_BYTES,
 } from "./constants"
 import { scheduled } from "./cron"
@@ -95,7 +96,29 @@ const requestDeclaresOversizedApiBody = (request: Request): boolean => {
   )
 }
 
-const API_BODY_LIMIT_EXCEEDED = Symbol("API body limit exceeded")
+const API_BODY_LIMIT_EXCEEDED = new Error("API body limit exceeded")
+
+class ApiBodyReadTimedOutError extends Error {
+  constructor() {
+    super("API request body read timed out")
+    this.name = "ApiBodyReadTimedOutError"
+  }
+}
+
+const cancelRequestBody = (request: Request): void => {
+  try {
+    const cancellation = request.body?.cancel()
+    void cancellation?.catch((cause: unknown) => {
+      console.warn("api_body_cancel_failed", {
+        error: cause instanceof Error ? cause.message : String(cause),
+      })
+    })
+  } catch (cause) {
+    console.warn("api_body_cancel_failed", {
+      error: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
+}
 
 const requestBodyStreamExceedsApiBodyLimit = async (
   request: Request
@@ -105,6 +128,9 @@ const requestBodyStreamExceedsApiBodyLimit = async (
     return false
   }
   let bytesRead = 0
+  const signal = AbortSignal.timeout(INBOUND_API_BODY_READ_TIMEOUT_MS)
+  const cancelBodyOnTimeout = () => cancelRequestBody(request)
+  signal.addEventListener("abort", cancelBodyOnTimeout, { once: true })
   try {
     await body.pipeTo(
       new WritableStream<Uint8Array>({
@@ -115,22 +141,24 @@ const requestBodyStreamExceedsApiBodyLimit = async (
           }
           // The cloned request tees its stream, so cancel the original branch
           // while pipeTo cancels this branch after the sink rejects.
-          const cancellation = request.body?.cancel()
-          void cancellation?.catch((cause: unknown) => {
-            console.warn("api_body_limit_cancel_failed", {
-              error: cause instanceof Error ? cause.message : String(cause),
-            })
-          })
+          cancelRequestBody(request)
           throw API_BODY_LIMIT_EXCEEDED
         },
-      })
+      }),
+      { signal }
     )
     return false
   } catch (cause) {
     if (cause === API_BODY_LIMIT_EXCEEDED) {
       return true
     }
+    if (signal.aborted) {
+      cancelRequestBody(request)
+      throw new ApiBodyReadTimedOutError()
+    }
     throw cause
+  } finally {
+    signal.removeEventListener("abort", cancelBodyOnTimeout)
   }
 }
 
@@ -140,7 +168,23 @@ const requestExceedsApiBodyLimit = async (request: Request): Promise<boolean> =>
     (await requestBodyStreamExceedsApiBodyLimit(request)))
 
 app.use("/api/*", async (context, next) => {
-  if (!(await requestExceedsApiBodyLimit(context.req.raw))) {
+  let exceedsApiBodyLimit: boolean
+  try {
+    exceedsApiBodyLimit = await requestExceedsApiBodyLimit(context.req.raw)
+  } catch (cause) {
+    if (!(cause instanceof ApiBodyReadTimedOutError)) {
+      throw cause
+    }
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: "Request body could not be read before the configured deadline.",
+        retryable: true,
+      }),
+      408
+    )
+  }
+  if (!exceedsApiBodyLimit) {
     return next()
   }
   return context.json(

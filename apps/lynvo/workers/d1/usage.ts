@@ -613,10 +613,7 @@ export const reserveManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
-    notification: {
-      kind: "suppressed",
-      reason: "usage-accounting-does-not-change-snapshot",
-    },
+    notificationSuppressionReason: "usage-accounting-does-not-change-snapshot",
     statements,
   })
   // SAFETY: a conditional increment that hit its limit returns no row; the
@@ -730,10 +727,7 @@ export const settleManagedExtraction = async (
     database,
     userId,
     realtime: input.realtime,
-    notification: {
-      kind: "suppressed",
-      reason: "usage-accounting-does-not-change-snapshot",
-    },
+    notificationSuppressionReason: "usage-accounting-does-not-change-snapshot",
     statements: [
       ...releaseStatements,
       database
@@ -785,10 +779,8 @@ export const releaseExpiredManagedExtractions = async (
         ),
     ],
     guard: CHANGED_ROWS_GUARD,
-    notification: {
-      kind: "suppressed" as const,
-      reason: "usage-accounting-does-not-change-snapshot" as const,
-    },
+    notificationSuppressionReason:
+      "usage-accounting-does-not-change-snapshot" as const,
   }))
   const writeResults = await executeOwnedWriteBatch({
     database,

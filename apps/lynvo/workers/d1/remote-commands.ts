@@ -87,10 +87,7 @@ export const enqueueRemoteCommand = async (
     database,
     userId,
     realtime: input.realtime,
-    notification: {
-      kind: "suppressed",
-      reason: "remote-play-has-separate-notifications",
-    },
+    notificationSuppressionReason: "remote-play-has-separate-notifications",
     statements: [
       database
         .prepare(
@@ -213,10 +210,7 @@ export const claimNextRemoteCommand = async ({
     database,
     userId,
     realtime,
-    notification: {
-      kind: "suppressed",
-      reason: "remote-play-has-separate-notifications",
-    },
+    notificationSuppressionReason: "remote-play-has-separate-notifications",
     statements: [
       database
         .prepare(
@@ -292,10 +286,7 @@ export const reportRemoteCommandResult = async ({
         database,
         userId,
         realtime,
-        notification: {
-          kind: "suppressed",
-          reason: "remote-play-has-separate-notifications",
-        },
+        notificationSuppressionReason: "remote-play-has-separate-notifications",
         statements: [],
       }).then((ownedWrite) => ownedWrite.dataVersion),
     }
@@ -307,10 +298,7 @@ export const reportRemoteCommandResult = async ({
     database,
     userId,
     realtime,
-    notification: {
-      kind: "suppressed",
-      reason: "remote-play-has-separate-notifications",
-    },
+    notificationSuppressionReason: "remote-play-has-separate-notifications",
     statements: [
       database
         .prepare(

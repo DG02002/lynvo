@@ -72,25 +72,20 @@ type OwnedWriteNotificationSuppressionReason =
   | "remote-play-has-separate-notifications"
   | "usage-accounting-does-not-change-snapshot"
 
-interface SuppressedOwnedWriteNotification {
-  readonly kind: "suppressed"
-  readonly reason: OwnedWriteNotificationSuppressionReason
-}
-
 interface ExecuteOwnedWriteInput {
   readonly database: D1Database
   readonly userId: string
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard
   readonly realtime?: DurableObjectNamespace
-  readonly notification?: SuppressedOwnedWriteNotification
+  readonly notificationSuppressionReason?: OwnedWriteNotificationSuppressionReason
 }
 
 interface OwnedWriteBatchInput {
   readonly userId: string
   readonly statements: readonly D1PreparedStatement[]
   readonly guard?: OwnedWriteGuard
-  readonly notification?: SuppressedOwnedWriteNotification
+  readonly notificationSuppressionReason?: OwnedWriteNotificationSuppressionReason
 }
 
 interface ExecuteOwnedWriteBatchInput {
@@ -167,7 +162,7 @@ export const executeOwnedWriteBatch = async ({
     await Promise.all(
       writeResults.map(async (result, index) => {
         const write = writes[index]
-        if (!result.changed || write?.notification?.kind === "suppressed") {
+        if (!result.changed || write?.notificationSuppressionReason) {
           return
         }
         await notifyAccountDataChangedSafely(
@@ -187,12 +182,12 @@ export const executeOwnedWrite = async ({
   statements,
   guard,
   realtime,
-  notification,
+  notificationSuppressionReason,
 }: ExecuteOwnedWriteInput): Promise<OwnedWriteResult> => {
   const [result] = await executeOwnedWriteBatch({
     database,
     realtime,
-    writes: [{ userId, statements, guard, notification }],
+    writes: [{ userId, statements, guard, notificationSuppressionReason }],
   })
   if (!result) {
     throw new Error("Owned write result is missing")

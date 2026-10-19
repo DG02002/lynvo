@@ -10,7 +10,7 @@ import { USER_REALTIME_ROOM_INTERNAL_URLS } from "../realtime/realtime-room-clie
  * reconnect, in exchange for removing one Durable Object round trip from
  * the response path.
  */
-export const notifyAccountDataChanged = async (
+const notifyAccountDataChanged = async (
   realtime: DurableObjectNamespace,
   userId: string,
   version: number

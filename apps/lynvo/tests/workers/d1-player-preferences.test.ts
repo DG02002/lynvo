@@ -24,7 +24,7 @@ const NOW = 1_750_000_000_000
 const createUser = createUserFactory(
   env.DB,
   NOW,
-  () => "player-prefs@example.com"
+  () => `player-prefs-${crypto.randomUUID()}@example.com`
 )
 
 describe("d1 player preferences", () => {
@@ -217,6 +217,56 @@ describe("d1 player preferences", () => {
       expect(warning).toHaveBeenCalledWith("data_changed_push_failed", {
         user_id: user.id,
         version: result.dataVersion,
+        error: "room unavailable",
+      })
+    } finally {
+      warning.mockRestore()
+    }
+  })
+
+  it("keeps an Effect mutation successful when the realtime room rejects the push", async () => {
+    const user = await createUser()
+    const session = await createSession(env.DB, {
+      userId: user.id,
+      now: Date.now(),
+    })
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined)
+
+    try {
+      const response = await app.fetch(
+        await buildAuthenticatedWorkerRequest("/api/settings/player", {
+          method: "PATCH",
+          body: { rangeSupportedPlayerId: "vlc" },
+          userId: user.id,
+          sessionId: session.id,
+          sessionCookieValue: session.id,
+        }),
+        // SAFETY: Preserve the real Miniflare D1 and bindings while returning a failed realtime response.
+        {
+          ...env,
+          USER_REALTIME_ROOM: {
+            getByName: () => ({
+              fetch: async () =>
+                Response.json({ error: "room unavailable" }, { status: 503 }),
+            }),
+          },
+        } as Env
+      )
+
+      expect(response.status).toBe(200)
+      // SAFETY: The request is validated by the Effect endpoint schema under test.
+      const result = (await response.json()) as {
+        success: boolean
+        dataVersion: number
+      }
+      expect(result.success).toBe(true)
+      expect(result.dataVersion).toBe(await getDataVersion(env.DB, user.id))
+      expect(warning).toHaveBeenCalledWith("data_changed_push_failed", {
+        user_id: user.id,
+        version: result.dataVersion,
+        error: "Realtime data-change notification failed with HTTP 503",
       })
     } finally {
       warning.mockRestore()

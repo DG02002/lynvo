@@ -253,6 +253,23 @@ describe("d1 data routes", () => {
       ENVIRONMENT: "development",
       LYNVO_NO_AUTH: "true",
     } as Env
+    const notificationVersions: number[] = []
+    // SAFETY: Preserve the generated bindings while replacing only realtime with a capture stub.
+    const developmentEnvironmentWithRealtime = {
+      ...developmentEnvironment,
+      USER_REALTIME_ROOM: {
+        getByName: () => ({
+          fetch: async (input: RequestInfo | URL) => {
+            const notification =
+              input instanceof Request ? input : new Request(input)
+            // SAFETY: This internal endpoint receives the version sent by notifyAccountDataChangedSafely.
+            const body = (await notification.json()) as { version: number }
+            notificationVersions.push(body.version)
+            return Response.json({ delivered: true })
+          },
+        }),
+      },
+    } as Env
     const operationId = `${DOCS_SEED_MANAGED_USAGE_OPERATION_ID_PREFIX}2025-06-01`
     const seedUsage = () =>
       new Request("https://lynvo.test/api/data/usage/docs-seed", {
@@ -264,13 +281,19 @@ describe("d1 data routes", () => {
         body: JSON.stringify({ operationId }),
       })
 
-    const firstSeed = await app.fetch(seedUsage(), developmentEnvironment)
+    const firstSeed = await app.fetch(
+      seedUsage(),
+      developmentEnvironmentWithRealtime
+    )
     expect(firstSeed.status).toBe(200)
     const firstSeedBody = await readJsonBody<{ dataVersion: number }>(firstSeed)
     expect(firstSeed.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
       String(firstSeedBody.dataVersion)
     )
-    const secondSeed = await app.fetch(seedUsage(), developmentEnvironment)
+    const secondSeed = await app.fetch(
+      seedUsage(),
+      developmentEnvironmentWithRealtime
+    )
     expect(secondSeed.status).toBe(200)
     const secondSeedBody = await readJsonBody<{ dataVersion: number }>(
       secondSeed
@@ -278,6 +301,10 @@ describe("d1 data routes", () => {
     expect(secondSeed.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
       String(secondSeedBody.dataVersion)
     )
+    expect(notificationVersions).toEqual([
+      firstSeedBody.dataVersion,
+      secondSeedBody.dataVersion,
+    ])
 
     const usageResponse = await app.fetch(
       new Request("https://lynvo.test/api/data/usage"),
