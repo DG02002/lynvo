@@ -108,7 +108,7 @@ const renderSaveListContent = ({
 
 const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
   const location = useLocation()
-  const isSaveInputHidden = useIsTvBroAndroidTv()
+  const isTvBroSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const hasInitialItems = initialItems !== undefined
   const resolvedInitialSnapshotMeta = useMemo<InitialSnapshotMeta>(
@@ -188,7 +188,7 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
           : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
     >
-      {!isImmersiveRoute && !isSaveInputHidden && (
+      {!isImmersiveRoute && !isTvBroSaveInputHidden && (
         <div className="w-full">
           <LinkInputSection
             url={input.url}

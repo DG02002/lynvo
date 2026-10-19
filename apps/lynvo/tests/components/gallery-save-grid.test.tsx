@@ -8,17 +8,7 @@ import { AUTO_SAVE_LINKS_STORAGE_KEY } from "~/features/site/settings/auto-save-
 import { CARD_MENU_LONG_PRESS_DURATION_MS } from "~/lib/constants"
 
 import { createMemoryStorage } from "../memory-storage"
-
-const createActions = (): LinkItemActions => ({
-  play: vi.fn().mockResolvedValue({ accepted: true }),
-  remove: vi.fn(),
-  showLinks: vi.fn(),
-  markOpened: vi.fn(),
-  expandFolder: vi.fn(),
-  softRefresh: vi.fn(),
-  hardRefresh: vi.fn(),
-  expandMirror: vi.fn().mockResolvedValue(null),
-})
+import { createLinkItemActions } from "../support/link-item-actions"
 
 const createQueuedItem = (
   extractionStatus?: LinkListItem["extractionStatus"]
@@ -57,7 +47,10 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const renderQueuedGrid = (item: LinkListItem, actions = createActions()) =>
+const renderQueuedGrid = (
+  item: LinkListItem,
+  actions = createLinkItemActions()
+) =>
   render(
     <GallerySaveGrid
       groups={[
@@ -158,7 +151,7 @@ describe("GallerySaveGrid", () => {
             items: [createQueuedItem(undefined)],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         isHydrating={false}
         highlightedId={null}
@@ -217,7 +210,7 @@ describe("GallerySaveGrid", () => {
             items: [movieItem],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         isHydrating={false}
         highlightedId={null}
@@ -287,7 +280,7 @@ describe("GallerySaveGrid", () => {
   it("keeps Refresh reachable from a failed Saved link in Gallery view", () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
     localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, "true")
-    const actions = createActions()
+    const actions = createLinkItemActions()
     const failedItem = {
       ...createQueuedItem({
         state: "failed",
@@ -308,7 +301,7 @@ describe("GallerySaveGrid", () => {
 
   it("opens the Gallery group menu after a touch long press", () => {
     vi.useFakeTimers()
-    renderGroupGrid(createActions())
+    renderGroupGrid(createLinkItemActions())
 
     const groupButton = screen.getByRole("button", {
       name: "Open Moonlight",
@@ -332,7 +325,7 @@ describe("GallerySaveGrid", () => {
   })
 
   it("deletes every Saved link from a Gallery group menu", () => {
-    const actions = createActions()
+    const actions = createLinkItemActions()
     const [firstItem, secondItem] = renderGroupGrid(actions)
 
     fireEvent.click(
@@ -372,7 +365,7 @@ describe("GallerySaveGrid", () => {
             items: [createQueuedItem(undefined)],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         isHydrating={false}
         highlightedId={null}
@@ -392,7 +385,7 @@ describe("GallerySaveGrid", () => {
 
   it("offers artwork selection when a single item has no poster", () => {
     const actions = {
-      ...createActions(),
+      ...createLinkItemActions(),
       setArtwork: vi.fn(),
     }
 
@@ -425,7 +418,7 @@ describe("GallerySaveGrid", () => {
 
   it("offers artwork selection for a group without a poster", () => {
     const actions = {
-      ...createActions(),
+      ...createLinkItemActions(),
       setArtwork: vi.fn(),
     }
     const secondItem: LinkListItem = {
@@ -481,7 +474,7 @@ describe("GallerySaveGrid", () => {
             ],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         isHydrating={false}
         highlightedId={null}
@@ -524,7 +517,7 @@ describe("GallerySaveGrid", () => {
             ],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         isHydrating={false}
         highlightedId={null}
@@ -566,7 +559,7 @@ describe("GallerySaveGrid", () => {
             ],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set([failedItem.url])}
         isHydrating={false}
         highlightedId={null}
@@ -593,7 +586,7 @@ describe("GallerySaveGrid", () => {
             items: [createQueuedItem({ state: "queued" })],
           },
         ]}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set(["https://media.example/queued-item"])}
         isHydrating={false}
         highlightedId={null}
@@ -611,7 +604,7 @@ describe("GallerySaveGrid", () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
     localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, "false")
     const chooseLinks = vi.fn()
-    const actions = { ...createActions(), chooseLinks }
+    const actions = { ...createLinkItemActions(), chooseLinks }
     const multiLinkItem: LinkListItem = {
       ...createQueuedItem(undefined),
       id: "multi-link-item",

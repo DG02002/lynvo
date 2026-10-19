@@ -2,10 +2,10 @@ import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
-import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 import type { MediaArtworkRequest } from "../../shared/api-contracts"
+import { createLinkItemActions } from "../support/link-item-actions"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 import { readJsonInitBody } from "../support/request-inspection"
 
@@ -36,17 +36,6 @@ const createMediaArtworkFetch = () =>
       headers: { "Content-Type": "application/json" },
     })
   })
-
-const createActions = (): LinkItemActions => ({
-  play: vi.fn().mockResolvedValue({ accepted: true }),
-  remove: vi.fn(),
-  showLinks: vi.fn(),
-  markOpened: vi.fn(),
-  expandFolder: vi.fn(),
-  softRefresh: vi.fn(),
-  hardRefresh: vi.fn(),
-  expandMirror: vi.fn().mockResolvedValue(null),
-})
 
 const item: LinkViewItem = {
   kind: "saved",
@@ -227,7 +216,7 @@ describe("FinderBrowser episode rows", () => {
         items={[movieItem]}
         selectedItemUrl={movieItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -260,7 +249,7 @@ describe("FinderBrowser episode rows", () => {
         items={[{ ...movieItem, title: longMovieTitle }]}
         selectedItemUrl={movieItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -288,7 +277,7 @@ describe("FinderBrowser episode rows", () => {
         items={[item]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -336,7 +325,7 @@ describe("FinderBrowser episode rows", () => {
         items={[item]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -364,7 +353,7 @@ describe("FinderBrowser episode rows", () => {
         items={[savedTitleItem]}
         selectedItemUrl={savedTitleItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -385,7 +374,7 @@ describe("FinderBrowser episode rows", () => {
         items={[item]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -407,7 +396,7 @@ describe("FinderBrowser episode rows", () => {
         items={[wrappedSeasonItem]}
         selectedItemUrl={wrappedSeasonItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -464,7 +453,7 @@ describe("FinderBrowser episode rows", () => {
         items={[seasonWithSidecarsItem]}
         selectedItemUrl={seasonWithSidecarsItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -489,7 +478,7 @@ describe("FinderBrowser episode rows", () => {
         items={[sampleShowSeasonItem]}
         selectedItemUrl={sampleShowSeasonItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -559,7 +548,7 @@ describe("FinderBrowser episode rows", () => {
         items={[unresolvedItem]}
         selectedItemUrl={unresolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -575,7 +564,7 @@ describe("FinderBrowser episode rows", () => {
         items={[resolvedItem]}
         selectedItemUrl={resolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -618,7 +607,7 @@ describe("FinderBrowser episode rows", () => {
         items={[mixedSeasonsItem]}
         selectedItemUrl={mixedSeasonsItem.url}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
+        actions={createLinkItemActions()}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}

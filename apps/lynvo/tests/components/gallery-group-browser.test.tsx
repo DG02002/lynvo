@@ -12,6 +12,7 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 
 import type { MediaArtworkRequest } from "../../shared/api-contracts"
+import { createLinkItemActions } from "../support/link-item-actions"
 import { readJsonInitBody } from "../support/request-inspection"
 
 interface MediaArtworkBatchRequest {
@@ -51,17 +52,6 @@ const createMediaArtworkFetch = () =>
       headers: { "Content-Type": "application/json" },
     })
   })
-
-const createActions = (): LinkItemActions => ({
-  play: vi.fn().mockResolvedValue({ accepted: true }),
-  remove: vi.fn(),
-  showLinks: vi.fn(),
-  markOpened: vi.fn(),
-  expandFolder: vi.fn(),
-  softRefresh: vi.fn(),
-  hardRefresh: vi.fn(),
-  expandMirror: vi.fn().mockResolvedValue(null),
-})
 
 const createEpisodeItem = (
   itemId = "sample-episode-1",
@@ -113,7 +103,7 @@ const renderBrowser = (
   items: readonly LinkListItem[] = [createEpisodeItem()],
   overrides: { actions?: LinkItemActions; onExit?: () => void } = {}
 ) => {
-  const actions = overrides.actions ?? createActions()
+  const actions = overrides.actions ?? createLinkItemActions()
   const onExit = overrides.onExit ?? vi.fn()
   const view = render(
     <GalleryGroupBrowser
@@ -146,7 +136,7 @@ const renderNonEpisodeGroupBrowser = () =>
         lastAddedAt: Date.now(),
         items: [createEpisodeItem("ordinary-download", "downloaded-video.mkv")],
       }}
-      actions={createActions()}
+      actions={createLinkItemActions()}
       extractingItems={new Set()}
       onExit={vi.fn()}
       onOpenItem={vi.fn()}
@@ -446,7 +436,7 @@ describe("GalleryGroupBrowser", () => {
           episodeFilename.replace("S04E01", "S04E02")
         ),
       ],
-      { actions: createActions(), onExit: vi.fn() }
+      { actions: createLinkItemActions(), onExit: vi.fn() }
     )
 
     fireEvent.click(
