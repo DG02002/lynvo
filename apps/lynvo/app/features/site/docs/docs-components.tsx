@@ -1,5 +1,6 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 import {
+  Cancel01Icon,
   ApiIcon,
   ArrowDown01Icon,
   ArrowUpRight01Icon,
@@ -41,6 +42,7 @@ import {
   CodeBlockHeader,
   CodeBlockTitle,
 } from "~/components/ui/code-block"
+import { showErrorToast } from "~/lib/toast-notifications"
 import { cn } from "~/lib/utils"
 
 import { getDocumentationImageAsset } from "./docs-image-assets"
@@ -901,6 +903,8 @@ const getCodeCopyStatusMessage = (copyState: CodeCopyState, label: string) => {
   return ""
 }
 
+// The generated copy button swallows clipboard failures and has no fallback,
+// so docs own this control to report failures and preserve copy behavior.
 function DocsCodeBlockCopyButton({
   label,
   value,
@@ -922,6 +926,10 @@ function DocsCodeBlockCopyButton({
   )
 
   const copyCode = async () => {
+    if (value.length === 0) {
+      return
+    }
+
     clearTimeout(resetTimerRef.current)
 
     try {
@@ -938,6 +946,7 @@ function DocsCodeBlockCopyButton({
       onCopyStateChange("copied")
     } catch {
       onCopyStateChange("error")
+      showErrorToast({ title: getCodeCopyStatusMessage("error", label) })
     }
 
     resetTimerRef.current = setTimeout(() => {
@@ -948,8 +957,14 @@ function DocsCodeBlockCopyButton({
   return (
     <button
       type="button"
+      data-copy-state={copyState}
       aria-label={
         copyState === "copied" ? `Copied ${label}` : `Copy code from ${label}`
+      }
+      title={
+        copyState === "error"
+          ? getCodeCopyStatusMessage("error", label)
+          : undefined
       }
       className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-bg-scale duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
       onClick={() => void copyCode()}
@@ -959,9 +974,9 @@ function DocsCodeBlockCopyButton({
           icon={CopyIcon}
           className={cn(
             "absolute inset-0 size-3.5 transition-icon-swap duration-200",
-            copyState === "copied"
-              ? "scale-25 opacity-0 blur-xs"
-              : "scale-100 opacity-100"
+            copyState === "idle"
+              ? "scale-100 opacity-100"
+              : "scale-25 opacity-0 blur-xs"
           )}
         />
         <HugeiconsIcon
@@ -970,6 +985,15 @@ function DocsCodeBlockCopyButton({
             "absolute inset-0 size-3.5 transition-icon-swap duration-200",
             copyState === "copied"
               ? "scale-100 opacity-100"
+              : "scale-25 opacity-0 blur-xs"
+          )}
+        />
+        <HugeiconsIcon
+          icon={Cancel01Icon}
+          className={cn(
+            "absolute inset-0 size-3.5 transition-icon-swap duration-200",
+            copyState === "error"
+              ? "scale-100 opacity-100 text-destructive"
               : "scale-25 opacity-0 blur-xs"
           )}
         />
@@ -988,44 +1012,38 @@ function CodeBlock({
   const [copyState, setCopyState] = useState<CodeCopyState>("idle")
 
   return (
-    // data-not-typeset is the typeset system's attribute opt-out. Keep the
-    // former docs figure surface while using the shared CodeBlock structure.
-    <CodeBlockRoot
+    <figure
       data-not-typeset
-      // oxlint-disable-next-line shadcn/no-restyle -- Preserve the established docs code-block border and surface.
-      className="my-5 rounded-lg border-foreground/15 bg-background dark:bg-background"
+      className="my-5 overflow-hidden rounded-lg border border-foreground/15"
     >
-      <CodeBlockHeader
-        // oxlint-disable-next-line shadcn/no-restyle -- Preserve the established docs header bar.
-        className="min-h-10 justify-between gap-3 border-b border-foreground/15 bg-muted/30 pr-1 pt-0"
-      >
-        <CodeBlockTitle
-          // oxlint-disable-next-line shadcn/no-restyle -- Keep docs labels muted and regular-weight.
-          className="flex items-center gap-2 font-normal text-muted-foreground"
-        >
-          <span className="size-4 shrink-0" aria-hidden="true">
-            <CodeLabelIcon label={label} />
-          </span>
-          <span className="min-w-0 truncate">{label}</span>
-        </CodeBlockTitle>
-        <DocsCodeBlockCopyButton
-          label={label}
-          value={getNodeText(children)}
-          copyState={copyState}
-          onCopyStateChange={setCopyState}
-        />
-      </CodeBlockHeader>
-      <span
-        aria-live="polite"
-        className={cn(
-          "px-4 text-xs",
-          copyState === "error" ? "pb-2 text-destructive" : "sr-only"
-        )}
-      >
-        {getCodeCopyStatusMessage(copyState, label)}
-      </span>
-      {children}
-    </CodeBlockRoot>
+      {/* Flatten the shared parts so the docs frame owns the visual styling. */}
+      <CodeBlockRoot className="contents">
+        <CodeBlockHeader className="contents">
+          <header className="flex min-h-10 items-center justify-between gap-3 border-b border-foreground/15 bg-muted/30 pl-4 pr-1 text-sm text-muted-foreground">
+            <CodeBlockTitle className="contents">
+              <span className="flex min-w-0 items-center gap-2 font-normal text-muted-foreground">
+                <span className="size-4 shrink-0" aria-hidden="true">
+                  <CodeLabelIcon label={label} />
+                </span>
+                <span className="min-w-0 truncate">{label}</span>
+              </span>
+            </CodeBlockTitle>
+            <DocsCodeBlockCopyButton
+              label={label}
+              value={getNodeText(children)}
+              copyState={copyState}
+              onCopyStateChange={setCopyState}
+            />
+          </header>
+        </CodeBlockHeader>
+        <span aria-live="polite" className="sr-only">
+          {copyState === "copied"
+            ? getCodeCopyStatusMessage(copyState, label)
+            : ""}
+        </span>
+        {children}
+      </CodeBlockRoot>
+    </figure>
   )
 }
 
@@ -1206,18 +1224,16 @@ export const docsComponents: MDXComponents = {
     )
   },
   a: DocsLink,
-  // Every MDX pre renders inside CodeBlock. rehype-shiki supplies the nested
-  // code element and token markup, so CodeBlockContent would nest another
-  // code element and discard that markup. Mirror its content slot and
-  // keyboard-scroll behavior on the existing pre instead.
+  // rehype-shiki supplies the nested code element and token markup, so
+  // CodeBlockContent would add another code element around that markup. Keep
+  // the Shiki pre focusable and give it its own inset focus ring.
   pre: ({ className, ...props }) => (
     <pre
       {...props}
-      data-slot="code-block-content"
       dir="ltr"
       tabIndex={0}
       className={cn(
-        "min-w-0 overflow-x-auto p-4 font-mono text-code font-medium leading-6 outline-none",
+        "min-w-0 overflow-x-auto p-4 font-mono text-code font-medium leading-6 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
         className
       )}
     />

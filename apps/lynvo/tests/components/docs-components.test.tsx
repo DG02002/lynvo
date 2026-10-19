@@ -7,6 +7,7 @@ import {
   DocsFaq,
   DocsScreenshot,
 } from "~/features/site/docs/docs-components"
+import * as toastNotifications from "~/lib/toast-notifications"
 
 type PendingAnimation = {
   cancel: ReturnType<typeof vi.fn>
@@ -341,16 +342,49 @@ describe("CodeBlock", () => {
     expect(execCommand).toHaveBeenCalledWith("copy")
   })
 
-  it("announces and displays a copy failure when both clipboard paths fail", async () => {
+  it("shows a toast and red copy-button state when both clipboard paths fail", async () => {
     setSecureContext(true)
     const writeText = stubClipboard(() =>
       Promise.reject(new Error("Clipboard permission denied"))
     )
     const execCommand = stubLegacyClipboard(false)
-    const { container } = render(
+    const showErrorToast = vi.spyOn(toastNotifications, "showErrorToast")
+    render(
       <CodeBlock label="terminal">
         <Pre>
           <code>{"pnpm dev\n"}</code>
+        </Pre>
+      </CodeBlock>
+    )
+
+    const copyButton = screen.getByRole("button", {
+      name: "Copy code from terminal",
+    })
+    fireEvent.click(copyButton)
+
+    await waitFor(() =>
+      expect(copyButton).toHaveAttribute("data-copy-state", "error")
+    )
+    expect(copyButton.querySelector("svg.text-destructive")).toBeInTheDocument()
+    expect(copyButton).toHaveAttribute(
+      "title",
+      "terminal couldn’t be copied. Try again."
+    )
+    expect(showErrorToast).toHaveBeenCalledWith({
+      title: "terminal couldn’t be copied. Try again.",
+    })
+    expect(writeText).toHaveBeenCalledWith("pnpm dev\n")
+    expect(execCommand).toHaveBeenCalledWith("copy")
+  })
+
+  it("does nothing for an empty code block", async () => {
+    setSecureContext(true)
+    const writeText = stubClipboard()
+    const execCommand = stubLegacyClipboard(true)
+    const { container } = render(
+      <CodeBlock label="terminal">
+        <Pre>
+          <code>{""}</code>
         </Pre>
       </CodeBlock>
     )
@@ -359,19 +393,14 @@ describe("CodeBlock", () => {
       screen.getByRole("button", { name: "Copy code from terminal" })
     )
 
-    await waitFor(() =>
-      expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent(
-        "terminal couldn’t be copied. Try again."
-      )
-    )
+    expect(writeText).not.toHaveBeenCalled()
+    expect(execCommand).not.toHaveBeenCalled()
     expect(
-      screen.getByText("terminal couldn’t be copied. Try again.")
-    ).toHaveClass("text-destructive")
-    expect(writeText).toHaveBeenCalledWith("pnpm dev\n")
-    expect(execCommand).toHaveBeenCalledWith("copy")
+      container.querySelector('[aria-live="polite"]')
+    ).toBeEmptyDOMElement()
   })
 
-  it("keeps the highlighted code keyboard-scrollable as the content slot", () => {
+  it("keeps the highlighted code keyboard-scrollable with a focus ring", () => {
     const { container } = render(
       <CodeBlock label="terminal">
         <Pre className="shiki">
@@ -382,7 +411,12 @@ describe("CodeBlock", () => {
 
     const content = container.querySelector("pre")
     expect(content).toHaveAttribute("tabindex", "0")
-    expect(content).toHaveAttribute("data-slot", "code-block-content")
+    expect(content).toHaveAttribute("dir", "ltr")
+    expect(content).toHaveClass(
+      "focus-visible:ring-2",
+      "focus-visible:ring-inset"
+    )
+    expect(content).not.toHaveAttribute("data-slot")
   })
 })
 
