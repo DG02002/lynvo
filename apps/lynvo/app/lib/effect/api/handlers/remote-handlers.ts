@@ -1,5 +1,6 @@
 import { Effect, Result, Schema } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
+import { receiversResponseSchema } from "~shared/realtime-messages"
 
 import { getDataVersion } from "../../../../../workers/d1/data-version"
 import {
@@ -7,6 +8,7 @@ import {
   enqueueRemoteCommand,
   reportRemoteCommandResult,
 } from "../../../../../workers/d1/remote-commands"
+import { USER_REALTIME_ROOM_INTERNAL_URLS } from "../../../../../workers/realtime/realtime-room-client"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 import { parseRemoteTargetId } from "../../../remote-target"
 import { BackendError, ValidationError } from "../../errors"
@@ -15,10 +17,6 @@ import { CloudflareEnv } from "../../services/cloudflare-env"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
 import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
-
-const remotePresenceSchema = Schema.Struct({
-  receivers: Schema.Array(Schema.Struct({ id: Schema.String })),
-})
 
 export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
@@ -43,7 +41,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
           try: async () => {
             const response = await environment.USER_REALTIME_ROOM.getByName(
               user.id
-            ).fetch("https://realtime.internal/receivers")
+            ).fetch(USER_REALTIME_ROOM_INTERNAL_URLS.receivers)
             return await response.json()
           },
           catch: (cause) =>
@@ -52,8 +50,9 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
-        const parsedPresence =
-          Schema.decodeUnknownResult(remotePresenceSchema)(presence)
+        const parsedPresence = Schema.decodeUnknownResult(
+          receiversResponseSchema
+        )(presence)
         const receiverIsLive =
           Result.isSuccess(parsedPresence) &&
           parsedPresence.success.receivers.some(
@@ -72,6 +71,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               command: payload.command,
               payload: commandPayload,
               now: Date.now(),
+              realtime: environment.USER_REALTIME_ROOM,
             }),
           catch: (cause) =>
             new BackendError({
@@ -110,6 +110,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               sessionId: user.sid,
               receiverId: query.receiverId,
               now: Date.now(),
+              realtime: environment.USER_REALTIME_ROOM,
             }),
           catch: (cause) =>
             new BackendError({
@@ -158,6 +159,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               result: payload.result,
               message: payload.message,
               now: Date.now(),
+              realtime: environment.USER_REALTIME_ROOM,
             }),
           catch: (cause) =>
             new BackendError({

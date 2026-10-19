@@ -8,9 +8,12 @@ import {
   USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
 } from "../constants"
 import {
-  createDataVersionBumpStatement,
+  CHANGED_ROWS_GUARD,
+  type OwnedWriteBatchInput,
   executeOwnedWrite,
+  executeOwnedWriteBatch,
   getDataVersion,
+  groupByUserId,
 } from "./data-version"
 
 export const MANAGED_PLUGIN_IDS = [
@@ -30,6 +33,8 @@ const GLOBAL_USAGE_OWNER_KEY = "global"
 const USAGE_COUNTER_INITIAL_VALUE = 1
 const DAILY_USAGE_PERIOD = "daily"
 const MONTHLY_USAGE_PERIOD = "monthly"
+const USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON =
+  "usage-accounting-does-not-change-snapshot"
 
 interface UsagePeriod {
   key: string
@@ -320,19 +325,6 @@ const createAtomicCounterRefundStatement = (
     .bind(...counterBindings, operation.userId, operation.operationId)
 }
 
-const createExpiredManagedExtractionStatements = (
-  database: D1Database,
-  operation: ManagedOperationRecord,
-  now: number
-): readonly D1PreparedStatement[] => [
-  createAtomicCounterRefundStatement(database, operation),
-  database
-    .prepare(
-      "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved'"
-    )
-    .bind(operation.userId, operation.operationId, now),
-]
-
 export type ManagedExtractionReservationResult =
   | { status: "already-reserved"; dataVersion: number }
   | {
@@ -347,6 +339,7 @@ interface ManagedExtractionReservationInput {
   pluginId: ManagedPluginId
   usageLimitsDisabled?: boolean | undefined
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 interface ManagedExtractionUsageSnapshot {
@@ -622,6 +615,9 @@ export const reserveManagedExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
+    notificationSuppressionReason:
+      USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON,
     statements,
   })
   // SAFETY: a conditional increment that hit its limit returns no row; the
@@ -710,6 +706,7 @@ export const settleManagedExtraction = async (
     operationId: string
     outcome: "consumed" | "released"
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<ManagedExtractionSettlementResult> => {
   const operation = await findManagedOperation(
@@ -733,6 +730,9 @@ export const settleManagedExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
+    notificationSuppressionReason:
+      USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON,
     statements: [
       ...releaseStatements,
       database
@@ -754,24 +754,50 @@ export const settleManagedExtraction = async (
 
 export const releaseExpiredManagedExtractions = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime?: DurableObjectNamespace
 ): Promise<{ released: number }> => {
   const operations = await readExpiredManagedOperations(database, now)
   if (operations.length === 0) {
     return { released: 0 }
   }
-  const statements = operations.flatMap((operation) =>
-    createExpiredManagedExtractionStatements(database, operation, now)
+  const operationsByUserId = groupByUserId(
+    operations,
+    (operation) => operation.userId
   )
-  const affectedUserIds = new Set<string>()
-  for (const operation of operations) {
-    affectedUserIds.add(operation.userId)
-  }
-  for (const affectedUserId of affectedUserIds) {
-    statements.push(createDataVersionBumpStatement(database, affectedUserId))
-  }
-  await database.batch(statements)
-  return { released: operations.length }
+  const writes = [...operationsByUserId].map<OwnedWriteBatchInput>(
+    ([userId, userOperations]) => ({
+      userId,
+      statements: [
+        ...userOperations.map((operation) =>
+          createAtomicCounterRefundStatement(database, operation)
+        ),
+        database
+          .prepare(
+            "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?2 WHERE user_id = ?1 AND state = 'reserved' AND lease_expires_at <= ?2 AND operation_id IN (SELECT value FROM json_each(?3))"
+          )
+          .bind(
+            userId,
+            now,
+            JSON.stringify(
+              userOperations.map((operation) => operation.operationId)
+            )
+          ),
+      ],
+      guard: CHANGED_ROWS_GUARD,
+      notificationSuppressionReason:
+        USAGE_ACCOUNTING_NOTIFICATION_SUPPRESSION_REASON,
+    })
+  )
+  const writeResults = await executeOwnedWriteBatch({
+    database,
+    realtime,
+    writes,
+  })
+  const released = writeResults.reduce((total, result) => {
+    return total + result.lastStatementChanges
+  }, 0)
+  return { released }
 }
 
 export const getUsage = async (

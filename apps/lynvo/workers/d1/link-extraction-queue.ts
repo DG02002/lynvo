@@ -109,6 +109,7 @@ export const enqueueSavedLinkExtraction = (
     meta: string
     extractionCredential?: SavedLinkExtractionCredentialWrite | null
     now: number
+    realtime?: DurableObjectNamespace
   }
 ) =>
   createOrUpdateSavedLink(database, userId, {
@@ -122,6 +123,8 @@ const findNextExtractionCandidate = async (
   linkId?: string
 ): Promise<LinkRow | null> => {
   const linkFilter = linkId ? "AND id = ?2" : ""
+  // Do not filter exhausted attempts here: a crashed settlement must remain
+  // claimable so the runner can mark the link failed instead of stranding it.
   const statement = database.prepare(
     `SELECT ${SAVED_LINK_COLUMNS} FROM links
      WHERE (
@@ -196,7 +199,11 @@ const getCandidateReadinessCondition = (candidate: LinkRow): string =>
 
 export const claimNextSavedLinkExtraction = async (
   database: D1Database,
-  input: { now: number; linkId?: string }
+  input: {
+    now: number
+    linkId?: string
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<SavedLinkExtractionClaim | undefined> => {
   const candidate = await findNextExtractionCandidate(
     database,
@@ -238,6 +245,7 @@ export const claimNextSavedLinkExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId: candidate.user_id,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database
@@ -371,6 +379,7 @@ export const settleSavedLinkExtraction = async (
     error?: string
     debugLogEntry?: LinkDebugLogEntry
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<SavedLinkMutationResult> => {
   const completedOperation = await findCompletedSavedLinkOperation(
@@ -450,6 +459,7 @@ export const settleSavedLinkExtraction = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database
@@ -525,6 +535,7 @@ export const requeuePendingSavedLinkExtraction = async (
     retryAfterSeconds: number
     debugLogEntry?: LinkDebugLogEntry
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await findSavedLinkById(database, input.id)
@@ -592,6 +603,7 @@ export const requeuePendingSavedLinkExtraction = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database

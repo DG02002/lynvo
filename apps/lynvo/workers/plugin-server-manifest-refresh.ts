@@ -18,7 +18,6 @@ import {
   PLUGIN_SERVER_MANIFEST_REFRESH_INTERVAL_MS,
   PLUGIN_SERVER_PROXY_BALANCE_REFRESH_INTERVAL_MS,
 } from "./constants"
-import { notifyAccountDataChanged } from "./d1/data-version-notification"
 import {
   recordPluginServerRefreshSuccess,
   recordPluginServerVerificationFailure,
@@ -136,14 +135,12 @@ const refreshPluginServer = async ({
   const manifest: PluginServerManifest = await client.getManifest({
     apiKey: pluginServer.apiKey,
   })
-  const result = await recordPluginServerRefreshSuccess(database, userId, {
+  await recordPluginServerRefreshSuccess(database, userId, {
     id: pluginServer.id,
     manifest: JSON.stringify(manifest),
     now,
+    realtime: env.USER_REALTIME_ROOM,
   })
-  await notifyAccountDataChanged(env, userId, result.dataVersion).catch(
-    () => undefined
-  )
 }
 
 const refreshOnePluginServer = async ({
@@ -174,6 +171,7 @@ const refreshOnePluginServer = async ({
     await recordPluginServerVerificationFailure(database, row.user_id, {
       id: row.id,
       now,
+      realtime: env.USER_REALTIME_ROOM,
     }).catch(() => undefined)
     return false
   }
@@ -249,6 +247,7 @@ const refreshProxyProviderBalanceIfDue = async ({
       updateProxyProviderBalance(database, userId, {
         balance,
         now,
+        realtime: env.USER_REALTIME_ROOM,
       }),
   })
 }

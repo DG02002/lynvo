@@ -21,7 +21,7 @@ import {
   type RequestLoggingEnvironment,
 } from "../request-logging"
 import { isSameOriginRequest } from "../same-origin"
-import { notifyAccountDataChanged } from "./data-version-notification"
+import { notifyAccountDataChangedSafely } from "./data-version-notification"
 import { getD1Database } from "./db"
 import { resetDocsSeedManagedUsage } from "./docs-seed-usage"
 import {
@@ -330,6 +330,7 @@ const createOrUpdateLink = async ({
     ...linkBody,
     url: sourceInput.url,
     now,
+    realtime: context.env.USER_REALTIME_ROOM,
     createdAt: seedFixture?.createdAt,
     extractionState,
     extractionError: seedFixture?.extractionFailure,
@@ -346,11 +347,6 @@ const createOrUpdateLink = async ({
           preparation.session.userId,
           normalizedInput
         )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
   if (result.id && body.extractionState === "queued") {
     safeWaitUntil(
       context,
@@ -503,12 +499,11 @@ dataApp.post("/links/update-meta", async (context) => {
   const result = await updateSavedLinkMeta(
     preparation.database,
     preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
+    {
+      ...body,
+      now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
+    }
   )
   return context.json(result)
 })
@@ -532,12 +527,11 @@ dataApp.post("/links/apply-metadata-operation", async (context) => {
   const result = await applySavedLinkMetadataOperation(
     preparation.database,
     preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
+    {
+      ...body,
+      now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
+    }
   )
   return context.json(result)
 })
@@ -556,12 +550,12 @@ dataApp.post("/links/delete", async (context) => {
   const result = await deleteSavedLinkById(
     preparation.database,
     preparation.session.userId,
-    { operationId: body.operationId, id: body.id, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
+    {
+      operationId: body.operationId,
+      id: body.id,
+      now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
+    }
   )
   return context.json(result)
 })
@@ -579,12 +573,11 @@ dataApp.post("/links/clear", async (context) => {
   const result = await clearSavedLinks(
     preparation.database,
     preparation.session.userId,
-    { operationId: requestBody.body.operationId, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
+    {
+      operationId: requestBody.body.operationId,
+      now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
+    }
   )
   return context.json(result)
 })
@@ -655,7 +648,11 @@ dataApp.patch("/storage-settings", async (context) => {
   const result = await updateUserStorageRetentionDays(
     preparation.database,
     preparation.session.userId,
-    { days: body.days, now: Date.now() }
+    {
+      days: body.days,
+      now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
+    }
   )
   // The deletion is the last owned write; its version is the response's
   // version, not the retention update's.
@@ -665,13 +662,9 @@ dataApp.patch("/storage-settings", async (context) => {
         userId: preparation.session.userId,
         retentionDays: body.days,
         now: Date.now(),
+        realtime: context.env.USER_REALTIME_ROOM,
       })
     : { deletedCount: 0, dataVersion: result.dataVersion }
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    deletion.dataVersion
-  )
   return context.json({
     success: true,
     deletedLinks: deletion.deletedCount,
@@ -734,6 +727,7 @@ dataApp.post("/usage/docs-seed", async (context) => {
       operationId: requestBody.body.operationId,
       pluginId: "direct-media",
       now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
     }
   )
   const settlement = await settleManagedExtraction(
@@ -743,10 +737,11 @@ dataApp.post("/usage/docs-seed", async (context) => {
       operationId: requestBody.body.operationId,
       outcome: "consumed",
       now: Date.now(),
+      realtime: context.env.USER_REALTIME_ROOM,
     }
   )
-  await notifyAccountDataChanged(
-    context.env,
+  await notifyAccountDataChangedSafely(
+    context.env.USER_REALTIME_ROOM,
     preparation.session.userId,
     settlement.dataVersion
   )

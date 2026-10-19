@@ -20,6 +20,7 @@ import {
 } from "../../workers/d1/remote-commands"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
+import { buildAuthenticatedWorkerRequest } from "../support/worker-route"
 
 const NOW = 1_750_000_000_000
 
@@ -34,6 +35,71 @@ const createSessionForUser = async () => {
 }
 
 describe("d1 remote commands", () => {
+  it("sends Remote Play without a data-changed notification", async () => {
+    const owner = await createSessionForUser()
+    const session = await createSession(env.DB, {
+      userId: owner.user.id,
+      now: Date.now(),
+    })
+    const receiverId = `receiver-${crypto.randomUUID()}`
+    const targetId = `${session.id}:${receiverId}`
+    const notificationPaths: string[] = []
+
+    const response = await app.fetch(
+      await buildAuthenticatedWorkerRequest("/api/remote/send", {
+        method: "POST",
+        body: {
+          target_session_id: targetId,
+          command: "play",
+          data: { url: "https://example.com/video.mp4" },
+        },
+        userId: owner.user.id,
+        sessionId: session.id,
+        sessionCookieValue: session.id,
+      }),
+      // SAFETY: The route uses Miniflare D1 and a namespace double that models receiver lookup and inbox delivery.
+      {
+        ...env,
+        USER_REALTIME_ROOM: {
+          getByName: () => ({
+            fetch: async (input: RequestInfo | URL) => {
+              const url = new URL(
+                input instanceof Request || input instanceof URL
+                  ? input.url
+                  : input
+              )
+              notificationPaths.push(url.pathname)
+              if (url.pathname.endsWith("/receivers")) {
+                return Response.json({
+                  receivers: [
+                    {
+                      id: targetId,
+                      receiverId,
+                      deviceName: "Test receiver",
+                      lastActiveAt: Date.now(),
+                    },
+                  ],
+                })
+              }
+              if (url.pathname.endsWith("/notify-inbox")) {
+                return Response.json({ deliveredSocketCount: 1 })
+              }
+              return Response.json(
+                { error: "unexpected notification" },
+                { status: 500 }
+              )
+            },
+          }),
+        },
+      } as Env
+    )
+
+    expect(response.status).toBe(200)
+    expect(notificationPaths).toContain("/receivers")
+    expect(notificationPaths).toContain("/notify-inbox")
+    expect(notificationPaths).not.toContain("/notify-data-changed")
+  })
+
   it("refuses to target another user's session", async () => {
     const sender = await createSessionForUser()
     const target = await createSessionForUser()

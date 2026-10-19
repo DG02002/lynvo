@@ -167,7 +167,11 @@ export interface UpdateStorageRetentionDaysResult {
 export const updateUserStorageRetentionDays = async (
   database: D1Database,
   userId: string,
-  input: { days: number; now: number }
+  input: {
+    days: number
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<UpdateStorageRetentionDaysResult> => {
   const retentionDays = normalizeRetentionDays(input.days)
   const currentUserRow = await readRawUserRow(database, userId)
@@ -194,6 +198,7 @@ export const updateUserStorageRetentionDays = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database
@@ -248,7 +253,10 @@ export const getUserPlayerPreferences = async (
 export const updateUserPlayerPreferences = async (
   database: D1Database,
   userId: string,
-  input: PlayerPreferences & { now: number }
+  input: PlayerPreferences & {
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const currentUserRow = await readRawUserRow(database, userId)
   if (!currentUserRow) {
@@ -292,6 +300,7 @@ export const updateUserPlayerPreferences = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database

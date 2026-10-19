@@ -2,6 +2,8 @@ import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 import { LYNVO_PLUGIN_SERVER_ID } from "~shared/constants"
 
+import { PLUGIN_SERVER_REGISTRATION_TTL_MS } from "../../workers/constants"
+import { getDataVersion } from "../../workers/d1/data-version"
 import {
   beginPluginDomainCredentialChange,
   deletePluginDomainById,
@@ -15,6 +17,7 @@ import {
 import {
   beginPluginServerRegistration,
   deletePluginServerById,
+  expireStalePluginServerRegistrations,
   finalizePluginServerCredential,
   listPluginServers,
   listReadyPluginServersForService,
@@ -35,17 +38,17 @@ import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "../../workers/d1/storage-ledger"
-import { insertGoogleUser } from "../../workers/d1/users"
+import { createDataChangedRecorder } from "../support/realtime-notifications"
+import { createUserFactory } from "../support/worker-fixtures"
 import { createD1OwnershipReadPause } from "./d1-ownership-race"
 
 const NOW = 1_750_000_000_000
 
-const createUser = async () =>
-  insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: "plugin-test@example.com",
-    now: NOW,
-  })
+const createUser = createUserFactory(
+  env.DB,
+  NOW,
+  () => "plugin-test@example.com"
+)
 
 const credential = () => ({
   ciphertext: "ciphertext",
@@ -111,6 +114,35 @@ const registerReadyServer = async (
 }
 
 describe("d1 plugin registry", () => {
+  it("versions and pushes only expired registration sweeps", async () => {
+    const user = await createUser()
+    await beginPluginServerRegistration(env.DB, user.id, {
+      baseUrl: "https://plugins.example/pending-expiry",
+      now: NOW,
+    })
+    const recorder = createDataChangedRecorder()
+    const initialVersion = await getDataVersion(env.DB, user.id)
+    const earlySweep = await expireStalePluginServerRegistrations(
+      env.DB,
+      NOW + PLUGIN_SERVER_REGISTRATION_TTL_MS - 1,
+      recorder.realtime
+    )
+    expect(earlySweep.expired).toBe(0)
+    expect(await getDataVersion(env.DB, user.id)).toBe(initialVersion)
+    expect(recorder.deliveries).toEqual([])
+
+    const expiredSweep = await expireStalePluginServerRegistrations(
+      env.DB,
+      NOW + PLUGIN_SERVER_REGISTRATION_TTL_MS + 1,
+      recorder.realtime
+    )
+    expect(expiredSweep.expired).toBe(1)
+    expect(await getDataVersion(env.DB, user.id)).toBe(initialVersion + 1)
+    expect(recorder.deliveries).toEqual([
+      { userId: user.id, version: initialVersion + 1 },
+    ])
+  })
+
   it("registers, supersedes, finalizes, and lists a plugin server", async () => {
     const user = await createUser()
     const first = await beginPluginServerRegistration(env.DB, user.id, {

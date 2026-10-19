@@ -88,6 +88,7 @@ interface SaveProxyProviderKeyInput {
     readonly limit: number
   } | null
   readonly now: number
+  readonly realtime?: DurableObjectNamespace
 }
 
 export const saveProxyProviderKey = async (
@@ -162,6 +163,7 @@ export const saveProxyProviderKey = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       ...ledgerMutation.statements,
@@ -177,6 +179,7 @@ interface UpdateProxyProviderBalanceInput {
     readonly limit: number
   }
   readonly now: number
+  readonly realtime?: DurableObjectNamespace
 }
 
 export const updateProxyProviderBalance = async (
@@ -187,6 +190,7 @@ export const updateProxyProviderBalance = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       database
         .prepare(

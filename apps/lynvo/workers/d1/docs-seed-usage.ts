@@ -12,6 +12,7 @@ export const resetDocsSeedManagedUsage = async (
   await executeOwnedWrite({
     database,
     userId,
+    notificationSuppressionReason: "usage-accounting-does-not-change-snapshot",
     statements: [
       database
         .prepare(

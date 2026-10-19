@@ -7,7 +7,10 @@ import {
   DEVICE_APPROVAL_RATE_LIMIT,
   DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
 } from "../../workers/constants"
-import { createDeviceCode } from "../../workers/d1/device-auth"
+import {
+  authorizeDeviceCode,
+  createDeviceCode,
+} from "../../workers/d1/device-auth"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
 import { createTestRateLimiter } from "../support/rate-limiter"
@@ -128,6 +131,64 @@ describe("device auth Worker routes", () => {
     expect(limiter.calls.map(({ key }) => key)).toEqual([
       "auth:device-exchange:unknown",
     ])
+  })
+
+  it("rejects cross-origin device exchange claims", async () => {
+    const limiter = createTestRateLimiter(
+      () => new Response(null, { status: 200 })
+    )
+    const response = await app.fetch(
+      new Request("https://lynvo.test/api/auth/device/exchange", {
+        headers: { Origin: "https://attacker.example" },
+      }),
+      // SAFETY: This route only reads the D1 database and limiter binding supplied here.
+      {
+        DB: env.DB,
+        ENVIRONMENT: "production",
+        AUTH_RATE_LIMITER: limiter.namespace,
+      } as Env
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.text()).resolves.toBe("Forbidden")
+    expect(limiter.calls).toHaveLength(0)
+  })
+
+  it("allows same-origin device exchange claims", async () => {
+    const user = await insertGoogleUser(env.DB, {
+      googleSubject: `subject-${crypto.randomUUID()}`,
+      email: `device-exchange-${crypto.randomUUID()}@example.com`,
+      now: Date.now(),
+    })
+    const deviceCode = await createDeviceCode(env.DB, {
+      deviceName: "Living room TV",
+      now: Date.now(),
+    })
+    await authorizeDeviceCode(env.DB, {
+      code: deviceCode.code,
+      userId: user.id,
+      now: Date.now(),
+    })
+    const query = new URLSearchParams({
+      code: deviceCode.code,
+      pollSecret: deviceCode.pollSecret,
+      attemptId: crypto.randomUUID(),
+      generation: "1",
+    })
+    const response = await app.fetch(
+      new Request(
+        `https://lynvo.test/api/auth/device/exchange?${query.toString()}`,
+        { headers: { Origin: "https://lynvo.test" } }
+      ),
+      env
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      userId: user.id,
+      deviceName: "Living room TV",
+      sessionId: expect.any(String),
+    })
   })
 
   it("returns a distinct unavailable status when the polling limiter is unavailable", async () => {

@@ -5,6 +5,7 @@ import {
   listPendingRemoteCommandNotifications,
   type PendingRemoteCommandNotification,
 } from "./d1/remote-commands"
+import { USER_REALTIME_ROOM_INTERNAL_URLS } from "./realtime/realtime-room-client"
 
 const remoteInboxDeliverySchema = Schema.Struct({
   deliveredSocketCount: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
@@ -38,7 +39,7 @@ const broadcast = async (
     throw new Error("Remote command realtime room is unavailable")
   }
   const response = await environment.USER_REALTIME_ROOM.getByName(userId).fetch(
-    "https://realtime.internal/notify-inbox",
+    USER_REALTIME_ROOM_INTERNAL_URLS.notifyInbox,
     {
       method: "POST",
       body: JSON.stringify({ receiverId }),
