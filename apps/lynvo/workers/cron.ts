@@ -62,28 +62,33 @@ const sweepLinkCommandOperationsJob = async (
 
 const expirePluginServerRegistrationsJob = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime: DurableObjectNamespace
 ): Promise<D1MaintenanceSummary> => ({
   job: "plugin_server_registration_expiry",
-  deletedCount: (await expireStalePluginServerRegistrations(database, now))
-    .expired,
+  deletedCount: (
+    await expireStalePluginServerRegistrations(database, now, realtime)
+  ).expired,
 })
 
 const sweepRetainedLinksJob = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime: DurableObjectNamespace
 ): Promise<D1MaintenanceSummary> => ({
   job: "links_retention",
-  deletedCount: (await sweepExpiredLinks(database, now)).deletedLinks,
+  deletedCount: (await sweepExpiredLinks(database, now, realtime)).deletedLinks,
 })
 
 const releaseExpiredExtractionsJob = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime: DurableObjectNamespace
 ): Promise<D1MaintenanceSummary> => ({
   job: "managed_extraction_lease_expiry",
-  deletedCount: (await releaseExpiredManagedExtractions(database, now))
-    .released,
+  deletedCount: (
+    await releaseExpiredManagedExtractions(database, now, realtime)
+  ).released,
 })
 
 const cleanupRemoteCommandsJob = async (
@@ -133,25 +138,30 @@ const runD1Maintenance = async (
 }
 
 const runHourlyD1Maintenance = async (
-  database: D1Database
+  database: D1Database,
+  realtime: DurableObjectNamespace
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
     runD1Maintenance((now) =>
-      expirePluginServerRegistrationsJob(database, now)
+      expirePluginServerRegistrationsJob(database, now, realtime)
     ),
     drainPendingAccountErasuresJob(database),
   ])
 
 const runDailyD1Maintenance = async (
-  database: D1Database
+  database: D1Database,
+  realtime: DurableObjectNamespace
 ): Promise<MaintenanceOutcome> =>
-  runD1Maintenance((now) => sweepRetainedLinksJob(database, now))
+  runD1Maintenance((now) => sweepRetainedLinksJob(database, now, realtime))
 
 const runHighFrequencyD1Maintenance = async (
-  database: D1Database
+  database: D1Database,
+  realtime: DurableObjectNamespace
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
-    runD1Maintenance((now) => releaseExpiredExtractionsJob(database, now)),
+    runD1Maintenance((now) =>
+      releaseExpiredExtractionsJob(database, now, realtime)
+    ),
     runD1Maintenance((now) => cleanupRemoteCommandsJob(database, now)),
     runD1Maintenance((now) => sweepLinkCommandOperationsJob(database, now)),
   ])
@@ -180,7 +190,9 @@ const runHourlyMaintenanceCron = async ({
     refreshed_count: manifestRefresh.refreshed,
     failed_count: manifestRefresh.failed,
   })
-  const outcomes = database ? await runHourlyD1Maintenance(database) : []
+  const outcomes = database
+    ? await runHourlyD1Maintenance(database, env.USER_REALTIME_ROOM)
+    : []
   const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
   console.info("scheduled_hourly_maintenance", {
     operation: "scheduled_hourly_maintenance",
@@ -193,16 +205,18 @@ const runHourlyMaintenanceCron = async ({
 }
 
 interface ScheduledRetentionCronInput {
+  env: Env
   database: ReturnType<typeof getD1Database>
   startedAt: number
 }
 
 const runDailyRetentionCron = async ({
+  env,
   database,
   startedAt,
 }: ScheduledRetentionCronInput): Promise<void> => {
   const outcome = database
-    ? await runDailyD1Maintenance(database)
+    ? await runDailyD1Maintenance(database, env.USER_REALTIME_ROOM)
     : { kind: "skipped" as const }
   const failed = outcome.kind === "unavailable"
   console.info("scheduled_daily_retention", {
@@ -226,7 +240,7 @@ export const scheduled = async (
     return
   }
   if (controller.cron === CRON_SCHEDULE_DAILY_RETENTION) {
-    await runDailyRetentionCron({ database, startedAt })
+    await runDailyRetentionCron({ env, database, startedAt })
     return
   }
   // A rejection in any branch must not skip the outcome logging of the
@@ -246,7 +260,7 @@ export const scheduled = async (
         ? sweepD1AuthData(database)
         : Promise.resolve({ kind: "skipped" as const }),
       database
-        ? runHighFrequencyD1Maintenance(database)
+        ? runHighFrequencyD1Maintenance(database, env.USER_REALTIME_ROOM)
         : Promise.resolve<MaintenanceOutcome[]>([]),
       database
         ? processQueuedLinkExtractions(env, database).catch(

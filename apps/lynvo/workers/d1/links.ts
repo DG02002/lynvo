@@ -23,8 +23,8 @@ import {
 } from "../constants"
 import {
   CHANGED_ROWS_GUARD,
-  createDataVersionBumpStatement,
   executeOwnedWrite,
+  executeOwnedWriteBatch,
   getDataVersion,
   type OwnedWriteGuard,
   type OwnedWriteResult,
@@ -357,7 +357,6 @@ interface ExpiredLinkUserSummary {
 
 interface PreparedExpiredLinkUserMutation {
   statements: D1PreparedStatement[]
-  dataVersionStatement: D1PreparedStatement
 }
 
 interface ExpiredLinkBatchOutcome {
@@ -1671,20 +1670,19 @@ const prepareExpiredLinkUserMutation = async (
         deleteExtractionCredentials: false,
       }),
     ],
-    dataVersionStatement: createDataVersionBumpStatement(
-      database,
-      summary.userId,
-      CHANGED_ROWS_GUARD
-    ),
   }
 }
 
-const prepareExpiredLinkBatchStatements = async (
+const prepareExpiredLinkBatchWrites = async (
   database: D1Database,
   rows: readonly LinkRow[],
   now: number
 ): Promise<{
-  statements: D1PreparedStatement[]
+  writes: Array<{
+    userId: string
+    statements: D1PreparedStatement[]
+    guard: typeof CHANGED_ROWS_GUARD
+  }>
 }> => {
   const summaries = summarizeExpiredLinksByUser(rows)
   const preparedUsers = await Promise.all(
@@ -1692,28 +1690,26 @@ const prepareExpiredLinkBatchStatements = async (
       prepareExpiredLinkUserMutation(database, summary, now)
     )
   )
-  const statements: D1PreparedStatement[] = []
-  for (const preparedUser of preparedUsers) {
-    statements.push(...preparedUser.statements)
-    statements.push(preparedUser.dataVersionStatement)
+  return {
+    writes: summaries.map((summary, index) => ({
+      userId: summary.userId,
+      statements: preparedUsers[index]?.statements ?? [],
+      guard: CHANGED_ROWS_GUARD,
+    })),
   }
-  return { statements }
 }
 
 const processExpiredLinkBatch = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime?: DurableObjectNamespace
 ): Promise<ExpiredLinkBatchOutcome | undefined> => {
   const rows = await loadExpiredLinkBatch(database, now)
   if (!rows) {
     return undefined
   }
-  const { statements } = await prepareExpiredLinkBatchStatements(
-    database,
-    rows,
-    now
-  )
-  await database.batch(statements)
+  const { writes } = await prepareExpiredLinkBatchWrites(database, rows, now)
+  await executeOwnedWriteBatch({ database, realtime, writes })
   return {
     deletedLinks: rows.length,
     continued: rows.length === LINK_RETENTION_BATCH_SIZE,
@@ -1728,6 +1724,7 @@ export interface RetentionSweepOutcome {
 interface ExpiredLinkSweepState {
   database: D1Database
   now: number
+  realtime?: DurableObjectNamespace
   batchesRemaining: number
   deletedLinks: number
 }
@@ -1735,13 +1732,14 @@ interface ExpiredLinkSweepState {
 const sweepNextExpiredLinkBatch = async ({
   database,
   now,
+  realtime,
   batchesRemaining,
   deletedLinks,
 }: ExpiredLinkSweepState): Promise<RetentionSweepOutcome> => {
   if (batchesRemaining === 0) {
     return { deletedLinks, continued: true }
   }
-  const batchOutcome = await processExpiredLinkBatch(database, now)
+  const batchOutcome = await processExpiredLinkBatch(database, now, realtime)
   if (!batchOutcome) {
     return { deletedLinks, continued: false }
   }
@@ -1752,6 +1750,7 @@ const sweepNextExpiredLinkBatch = async ({
   return sweepNextExpiredLinkBatch({
     database,
     now,
+    realtime,
     batchesRemaining: batchesRemaining - 1,
     deletedLinks: nextDeletedLinks,
   })
@@ -1759,11 +1758,13 @@ const sweepNextExpiredLinkBatch = async ({
 
 export const sweepExpiredLinks = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime?: DurableObjectNamespace
 ): Promise<RetentionSweepOutcome> =>
   sweepNextExpiredLinkBatch({
     database,
     now,
+    realtime,
     batchesRemaining: RETENTION_SWEEP_MAX_BATCHES_PER_RUN,
     deletedLinks: 0,
   })

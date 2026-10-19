@@ -41,6 +41,7 @@ import {
   updateUserStorageRetentionDays,
 } from "../../workers/d1/users"
 import { processSavedLinkExtraction } from "../../workers/link-extraction-runner"
+import { createDataChangedRecorder } from "../support/realtime-notifications"
 import { createD1OwnershipReadPause } from "./d1-ownership-race"
 
 const NOW = 1_750_000_000_000
@@ -1847,6 +1848,54 @@ describe("d1 links", () => {
       .bind(secondUser.id)
       .first<{ saved_link_count: number }>()
     expect(ledger?.saved_link_count).toBe(0)
+  })
+
+  it("versions and pushes only retention sweep batches that delete links", async () => {
+    const user = await createUser()
+    const recorder = createDataChangedRecorder()
+    const initialVersion = await getDataVersion(env.DB, user.id)
+    const emptySweep = await sweepExpiredLinks(
+      env.DB,
+      NOW + 31 * DAY_MS,
+      recorder.realtime
+    )
+    expect(emptySweep.deletedLinks).toBe(0)
+    expect(await getDataVersion(env.DB, user.id)).toBe(initialVersion)
+    expect(recorder.deliveries).toEqual([])
+
+    await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "retention:push-target",
+      url: "https://example.com/retention-push",
+      now: NOW,
+    })
+    const secondUser = await createUser()
+    await createOrUpdateSavedLink(env.DB, secondUser.id, {
+      meta: emptyMetadataJson(),
+      operationId: "retention:push-target-second-user",
+      url: "https://example.com/retention-push-second-user",
+      now: NOW,
+    })
+    const beforeSweep = await getDataVersion(env.DB, user.id)
+    const secondUserBeforeSweep = await getDataVersion(env.DB, secondUser.id)
+    const sweep = await sweepExpiredLinks(
+      env.DB,
+      NOW + 31 * DAY_MS,
+      recorder.realtime
+    )
+
+    expect(sweep.deletedLinks).toBe(2)
+    expect(await getDataVersion(env.DB, user.id)).toBe(beforeSweep + 1)
+    expect(await getDataVersion(env.DB, secondUser.id)).toBe(
+      secondUserBeforeSweep + 1
+    )
+    expect(recorder.deliveries).toHaveLength(2)
+    expect(recorder.deliveries).toEqual(
+      expect.arrayContaining([
+        { userId: user.id, version: beforeSweep + 1 },
+        { userId: secondUser.id, version: secondUserBeforeSweep + 1 },
+      ])
+    )
   })
 
   it("sweeps expired command operations by TTL", async () => {

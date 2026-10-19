@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 
+import { getDataVersion } from "../../workers/d1/data-version"
 import {
   getUsage,
   releaseExpiredManagedExtractions,
@@ -11,6 +12,7 @@ import {
   MANAGED_PLUGIN_IDS,
 } from "../../workers/d1/usage"
 import { insertGoogleUser } from "../../workers/d1/users"
+import { createDataChangedRecorder } from "../support/realtime-notifications"
 
 const BASE_NOW = Date.UTC(2026, 7, 18, 0, 0, 0)
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -201,9 +203,26 @@ describe("d1 managed extraction operations", () => {
   it("releases an abandoned reservation after its lease expires", async () => {
     const user = await createUser()
     await reserve(user.id, "extract:abandoned", "direct-media", BASE_NOW)
+    const recorder = createDataChangedRecorder()
+    const initialVersion = await getDataVersion(env.DB, user.id)
+    const earlySweep = await releaseExpiredManagedExtractions(
+      env.DB,
+      BASE_NOW + 1,
+      recorder.realtime
+    )
+    expect(earlySweep.released).toBe(0)
+    expect(await getDataVersion(env.DB, user.id)).toBe(initialVersion)
+    expect(recorder.deliveries).toEqual([])
+
     const sweepNow = BASE_NOW + 5 * 60 * 1000 + 1_000
-    const result = await releaseExpiredManagedExtractions(env.DB, sweepNow)
+    const result = await releaseExpiredManagedExtractions(
+      env.DB,
+      sweepNow,
+      recorder.realtime
+    )
     expect(result.released).toBeGreaterThanOrEqual(1)
+    expect(await getDataVersion(env.DB, user.id)).toBe(initialVersion + 1)
+    expect(recorder.deliveries).toEqual([])
     const retry = await reserve(
       user.id,
       "extract:abandoned",

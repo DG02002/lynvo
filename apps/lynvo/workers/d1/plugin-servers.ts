@@ -5,8 +5,9 @@ import {
   PLUGIN_SERVER_REGISTRATION_TTL_MS,
 } from "../constants"
 import {
-  createDataVersionBumpStatement,
+  CHANGED_ROWS_GUARD,
   executeOwnedWrite,
+  executeOwnedWriteBatch,
   getDataVersion,
 } from "./data-version"
 import { createOpaqueId } from "./ids"
@@ -577,7 +578,8 @@ export const markPluginServerRegistrationFailed = async (
 
 export const expireStalePluginServerRegistrations = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime?: DurableObjectNamespace
 ): Promise<{ expired: number }> => {
   const { results } = await database
     .prepare(
@@ -588,46 +590,58 @@ export const expireStalePluginServerRegistrations = async (
   if (results.length === 0) {
     return { expired: 0 }
   }
-  const statements: D1PreparedStatement[] = []
-  const affectedUserIds = new Set<string>()
-  const preparationsByUserId = new Map(
-    await Promise.all(
-      [...new Set(results.map((row) => row.user_id))].map(
-        async (userId) =>
-          [userId, await ensureStorageLedger(database, userId, now)] as const
-      )
-    )
-  )
+  const rowsByUserId = new Map<string, PluginServerRow[]>()
   for (const row of results) {
-    const preparation = preparationsByUserId.get(row.user_id)
-    if (!preparation) {
-      throw new Error("Storage ledger preparation is missing")
+    const userRows = rowsByUserId.get(row.user_id)
+    if (userRows) {
+      userRows.push(row)
+    } else {
+      rowsByUserId.set(row.user_id, [row])
     }
-    statements.push(...preparation.statements)
-    const ledgerMutation = applyStorageMutation({
-      database,
-      preparation,
-      plan: {
-        domain: "pluginServerBytes",
-        currentBytes: byteLength(row),
-        nextBytes: 0,
-        savedLinkCountDelta: 0,
-      },
-      now,
+  }
+  const writes = await Promise.all(
+    [...rowsByUserId].map(async ([userId, userRows]) => {
+      const preparation = await ensureStorageLedger(database, userId, now)
+      const statements: D1PreparedStatement[] = []
+      for (const row of userRows) {
+        statements.push(...preparation.statements)
+        const ledgerMutation = applyStorageMutation({
+          database,
+          preparation,
+          plan: {
+            domain: "pluginServerBytes",
+            currentBytes: byteLength(row),
+            nextBytes: 0,
+            savedLinkCountDelta: 0,
+          },
+          now,
+        })
+        statements.push(...ledgerMutation.statements)
+      }
+      statements.push(
+        database
+          .prepare(
+            "DELETE FROM user_plugin_servers WHERE user_id = ?1 AND credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?2 AND id IN (SELECT value FROM json_each(?3))"
+          )
+          .bind(userId, now, JSON.stringify(userRows.map((row) => row.id)))
+      )
+      return {
+        userId,
+        statements,
+        guard: CHANGED_ROWS_GUARD,
+      }
     })
-    statements.push(
-      ...ledgerMutation.statements,
-      database
-        .prepare("DELETE FROM user_plugin_servers WHERE id = ?1")
-        .bind(row.id)
-    )
-    affectedUserIds.add(row.user_id)
-  }
-  for (const affectedUserId of affectedUserIds) {
-    statements.push(createDataVersionBumpStatement(database, affectedUserId))
-  }
-  await database.batch(statements)
-  return { expired: results.length }
+  )
+  const writeResults = await executeOwnedWriteBatch({
+    database,
+    realtime,
+    writes,
+  })
+  const expired = writeResults.reduce((total, result) => {
+    const deletionResult = result.statementResults.at(-2)
+    return total + (deletionResult?.meta.changes ?? 0)
+  }, 0)
+  return { expired }
 }
 
 export const recordPluginServerVerificationFailure = async (
