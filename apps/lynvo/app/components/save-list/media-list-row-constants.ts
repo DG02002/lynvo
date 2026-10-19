@@ -28,10 +28,3 @@ export const MEDIA_LIST_HEADER_MENU_CELL_CLASS = cn(
   "flex self-stretch items-center justify-center col-start-4",
   MEDIA_LIST_ROW_MENU_CELL_CLASS
 )
-
-const MEDIA_LIST_MENU_ICON_CLASS = "[&_svg]:size-7!"
-
-export const MEDIA_LIST_ROW_MENU_TRIGGER_CLASS = cn(
-  "size-full! rounded-none! bg-transparent text-foreground shadow-none hover:bg-muted aria-expanded:bg-muted dark:hover:bg-muted/50",
-  MEDIA_LIST_MENU_ICON_CLASS
-)

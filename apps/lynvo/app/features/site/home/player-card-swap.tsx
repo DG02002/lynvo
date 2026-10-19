@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, type CSSProperties } from "react"
 
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 
@@ -10,6 +10,11 @@ const PLAYER_PREVIEWS = {
   mpv: "/images/player-previews/mpv-player.webp",
   mx: "/images/player-previews/mx-player.webp",
 } satisfies Partial<Record<(typeof PLAYER_DEFINITIONS)[number]["id"], string>>
+
+// The initial slot placement travels through custom properties so the
+// .player-card-swap__card class owns the real declarations.
+type PlayerCardSlotStyle = CSSProperties &
+  Record<"--card-transform" | "--card-opacity" | "--card-z-index", string>
 
 const INITIAL_PLAYER_ORDER = PLAYER_DEFINITIONS.map((_, index) => index)
 
@@ -304,6 +309,12 @@ export const PlayerCardSwap = () => {
     >
       {PLAYER_DEFINITIONS.map((player, index) => {
         const preview = PLAYER_PREVIEWS[player.id]
+        const initialSlot = makeSlot(index, DEFAULT_LAYOUT)
+        const slotStyle: PlayerCardSlotStyle = {
+          "--card-transform": transformForSlot(initialSlot, DEFAULT_LAYOUT),
+          "--card-opacity": String(opacityForSlot(initialSlot)),
+          "--card-z-index": String(initialSlot.zIndex),
+        }
 
         return (
           <li
@@ -312,14 +323,7 @@ export const PlayerCardSwap = () => {
               cardRefs.current[index] = element
             }}
             className="player-card-swap__card"
-            style={{
-              transform: transformForSlot(
-                makeSlot(index, DEFAULT_LAYOUT),
-                DEFAULT_LAYOUT
-              ),
-              opacity: opacityForSlot(makeSlot(index, DEFAULT_LAYOUT)),
-              zIndex: makeSlot(index, DEFAULT_LAYOUT).zIndex,
-            }}
+            style={slotStyle}
           >
             <div className="player-card-swap__preview">
               {preview ? (
@@ -333,7 +337,7 @@ export const PlayerCardSwap = () => {
                   <img
                     src={player.iconUrl}
                     alt=""
-                    className="size-20 rounded-[18px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_16px_32px_-16px_rgba(0,0,0,0.45)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_16px_32px_-16px_rgba(0,0,0,0.7)]"
+                    className="size-20 rounded-2xl object-cover shadow-player-icon"
                   />
                   <span>Preview coming soon</span>
                 </div>

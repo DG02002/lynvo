@@ -12,6 +12,3 @@ export const settingsRowLabelClass = "text-sm font-normal text-foreground"
 export const settingsRowDescriptionClass =
   "text-xs text-muted-foreground leading-normal"
 export const settingsWarningTextClass = "text-warning-foreground"
-export const settingsSelectTriggerClass =
-  "bg-transparent border border-transparent shadow-none px-2.5 py-1 h-8 gap-1 rounded-xl text-sm font-normal text-foreground hover:bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none transition-colors cursor-pointer select-none w-auto justify-end"
-export const settingsSelectContentClass = "w-max min-w-max"

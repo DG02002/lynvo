@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { Button } from "~/components/ui/button"
+import { MenuTriggerButton } from "~/components/menu-trigger-button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +24,6 @@ interface ResolvableLinkMenuProps {
   onCopyLink: () => void
   onRefresh: () => void
   onRemove: () => void
-  triggerClassName: string
 }
 
 export const ResolvableLinkMenu = ({
@@ -32,7 +31,6 @@ export const ResolvableLinkMenu = ({
   onCopyLink,
   onRefresh,
   onRemove,
-  triggerClassName,
 }: ResolvableLinkMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
 
@@ -41,10 +39,10 @@ export const ResolvableLinkMenu = ({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="quiet" size="icon" className={triggerClassName}>
+            <MenuTriggerButton look="media-row">
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">Open menu for {itemLabel}</span>
-            </Button>
+            </MenuTriggerButton>
           }
         />
         <DropdownMenuContent align="end" className="w-48">

@@ -213,8 +213,8 @@ describe("SaveListBrowser", () => {
       name: "Open menu for Saved Collection",
     })
     expect(headerMenu).toHaveClass(
-      "size-full!",
-      "rounded-none!",
+      "size-full",
+      "rounded-none",
       "[&_svg]:size-7!",
       "text-foreground"
     )
@@ -1738,7 +1738,7 @@ describe("SaveListBrowser", () => {
     const menuTrigger = screen.getByRole("button", {
       name: `Open menu for ${longSourceUrl.slice(0, 79)}…`,
     })
-    expect(menuTrigger).toHaveClass("size-full!", "rounded-none!")
+    expect(menuTrigger).toHaveClass("size-full", "rounded-none")
     expect(menuTrigger.parentElement).toHaveClass("w-16", "text-foreground")
     expect(menuTrigger.parentElement).not.toHaveClass("border-s")
   })

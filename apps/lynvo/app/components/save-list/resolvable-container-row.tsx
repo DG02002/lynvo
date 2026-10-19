@@ -19,10 +19,7 @@ import {
   MediaListRowMeta,
   SaveListRowIcon,
 } from "~/components/save-list/media-list-row"
-import {
-  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
-  SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
-} from "~/components/save-list/media-list-row-constants"
+import { SAVE_LIST_ROW_ENTER_ANIMATION_CLASS } from "~/components/save-list/media-list-row-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
@@ -111,7 +108,6 @@ const ResolvedMirrorRows = ({
                       { itemLabel: mirror.label, markOpened }
                     )
                   }
-                  className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
                 />
               }
               onActivate={playMirror}
@@ -264,7 +260,6 @@ export const ResolvableContainerRow = ({
             onCopyLink={() => void navigator.clipboard.writeText(linkTarget)}
             onRefresh={refreshLink}
             onRemove={onRemove}
-            triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
           />
         }
         onActivate={openLink}

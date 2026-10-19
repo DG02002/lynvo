@@ -42,7 +42,7 @@ const GitHubLogo = () => (
     aria-hidden="true"
     viewBox="0 0 1024 1024"
     fill="none"
-    className="size-12 fill-[#1b1f23] dark:fill-white"
+    className="size-12 fill-github-mark dark:fill-white"
   >
     <path
       fillRule="evenodd"

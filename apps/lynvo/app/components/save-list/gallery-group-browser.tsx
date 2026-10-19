@@ -40,10 +40,7 @@ import {
   MediaListRowMeta,
   SaveListRowIcon,
 } from "./media-list-row"
-import {
-  MEDIA_LIST_HEADER_MENU_CELL_CLASS,
-  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
-} from "./media-list-row-constants"
+import { MEDIA_LIST_HEADER_MENU_CELL_CLASS } from "./media-list-row-constants"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
   FolderTitleDisplayToggleButton,
@@ -205,7 +202,7 @@ const GalleryGroupItemRow = ({
           playableLink={directLink}
           showRemove
           isRefreshing={isExtracting}
-          triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+          triggerLook="media-row"
         />
       }
       onActivate={handleActivate}
@@ -318,7 +315,12 @@ export const GalleryGroupBrowser = ({
           </div>
         ) : null}
         <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
-          <GalleryGroupMenu group={group} actions={actions} onExit={onExit} />
+          <GalleryGroupMenu
+            group={group}
+            actions={actions}
+            onExit={onExit}
+            triggerLook="media-row"
+          />
         </div>
       </header>
       <div className={GALLERY_GROUP_CONTENT_CLASS}>

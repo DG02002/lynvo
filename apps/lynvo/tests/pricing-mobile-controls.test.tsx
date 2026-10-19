@@ -66,8 +66,11 @@ describe("Pricing mobile controls", () => {
     const fixedControls = fixedLink?.parentElement
 
     expect(fixedControls).toHaveClass("fixed")
+    expect(fixedControls?.parentElement).toHaveClass(
+      "h-(--mobile-pricing-controls-height)"
+    )
     expect(fixedControls?.parentElement).toHaveStyle({
-      height: `${MOBILE_PRICING_CONTROLS_HEIGHT_PX}px`,
+      "--mobile-pricing-controls-height": `${MOBILE_PRICING_CONTROLS_HEIGHT_PX}px`,
     })
 
     act(() => {

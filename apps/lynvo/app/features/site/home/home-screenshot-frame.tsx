@@ -21,16 +21,23 @@ const desktopPalette = getScreenshotPalette(
 )
 const phonePalette = getScreenshotPalette(screenshotFrameSpec.homeThemes.phone)
 
-const createPaletteStyle = (
-  prefix: "desktop" | "phone",
-  palette: typeof desktopPalette
-) => ({
-  [`--home-screenshot-${prefix}-upper-right`]: palette.upperRight,
-  [`--home-screenshot-${prefix}-lower-left`]: palette.lowerLeft,
-  [`--home-screenshot-${prefix}-base-start`]: palette.baseStart,
-  [`--home-screenshot-${prefix}-base-middle`]: palette.baseMiddle,
-  [`--home-screenshot-${prefix}-base-end`]: palette.baseEnd,
-})
+// Written out per palette instead of built by a helper: the design-system
+// lint can only verify style objects whose custom-property keys are static.
+const desktopPaletteStyle: HomeScreenshotFrameStyle = {
+  "--home-screenshot-desktop-upper-right": desktopPalette.upperRight,
+  "--home-screenshot-desktop-lower-left": desktopPalette.lowerLeft,
+  "--home-screenshot-desktop-base-start": desktopPalette.baseStart,
+  "--home-screenshot-desktop-base-middle": desktopPalette.baseMiddle,
+  "--home-screenshot-desktop-base-end": desktopPalette.baseEnd,
+}
+
+const phonePaletteStyle: HomeScreenshotFrameStyle = {
+  "--home-screenshot-phone-upper-right": phonePalette.upperRight,
+  "--home-screenshot-phone-lower-left": phonePalette.lowerLeft,
+  "--home-screenshot-phone-base-start": phonePalette.baseStart,
+  "--home-screenshot-phone-base-middle": phonePalette.baseMiddle,
+  "--home-screenshot-phone-base-end": phonePalette.baseEnd,
+}
 
 const { frame } = screenshotFrameSpec
 const { aurora } = screenshotFrameSpec
@@ -77,8 +84,8 @@ export const HomeScreenshotFrame = () => {
   )
   const style: HomeScreenshotFrameStyle = {
     ...frameStyle,
-    ...createPaletteStyle("desktop", desktopPalette),
-    ...createPaletteStyle("phone", phonePalette),
+    ...desktopPaletteStyle,
+    ...phonePaletteStyle,
   }
 
   return (

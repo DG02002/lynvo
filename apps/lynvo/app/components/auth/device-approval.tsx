@@ -106,7 +106,7 @@ const DeviceApprovalStatusMessage = ({
       {canApprove && (
         <p
           aria-label="Sign-in verification code"
-          className="my-8 text-3xl font-normal tracking-[0.16em] text-foreground tabular-nums sm:text-4xl"
+          className="my-8 text-3xl font-normal tracking-code text-foreground tabular-nums sm:text-4xl"
         >
           {code}
         </p>

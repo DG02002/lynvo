@@ -43,9 +43,7 @@ const Logo = ({ variant = "icon-text", size = "md", className }: LogoProps) => {
 
   if (variant === "text-only") {
     return (
-      <span className={cn("font-bold tracking-[-0.04em]", textSize)}>
-        Lynvo
-      </span>
+      <span className={cn("font-bold tracking-heading", textSize)}>Lynvo</span>
     )
   }
 
@@ -59,9 +57,7 @@ const Logo = ({ variant = "icon-text", size = "md", className }: LogoProps) => {
           aria-hidden="true"
         />
       </span>
-      <span className={cn("font-bold tracking-[-0.04em]", textSize)}>
-        Lynvo
-      </span>
+      <span className={cn("font-bold tracking-heading", textSize)}>Lynvo</span>
     </div>
   )
 }
