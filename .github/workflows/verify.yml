@@ -31,7 +31,7 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+      - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
         with:
           advanced-security: false
 
@@ -86,12 +86,17 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
+      # Cache only outside release tags: tag runs upload release artifacts that
+      # deploy to production, so they must install from the lockfile rather than
+      # a restored cache.
       - name: Set up pnpm 12 and Node.js
         uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
         with:
           version: 12.5.1
           runtime: node@26.12.0
-          cache: true
+          # zizmor: ignore[cache-poisoning] The expression disables the cache on
+          # release-tag runs, which are the only publish context in this workflow.
+          cache: ${{ github.ref_type != 'tag' }}
           install: false
       - name: Update pnpm
         run: pnpm self-update
@@ -182,12 +187,15 @@ jobs:
             fi
           done
 
+      # No pnpm store cache: this job deploys the verified release to production,
+      # so the dependency graph must come from the lockfile, not a restored cache
+      # (zizmor cache-poisoning).
       - name: Set up pnpm 12 and Node.js
         uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
         with:
           version: 12.5.1
           runtime: node@26.12.0
-          cache: true
+          cache: false
           install: false
 
       - name: Update pnpm
