@@ -6,6 +6,7 @@ import { savePaths } from "~/lib/paths"
 
 import {
   createSaveListScrollLocationState,
+  getSaveListReturnTo,
   getSaveListScrollPosition,
 } from "./use-save-list-fullscreen"
 
@@ -43,12 +44,19 @@ export const useSaveFolderRoute = (
       if (savedLink?.id) {
         void navigate(
           `${savePaths.folderPrefix}${encodeURIComponent(savedLink.id)}`,
-          { state: createSaveListScrollLocationState(scrollPosition) }
+          {
+            state: {
+              ...createSaveListScrollLocationState(scrollPosition),
+              // Back must return to the page the folder was opened from — the
+              // group view when that is where the user came from.
+              lynvoSaveListReturnTo: `${location.pathname}${location.search}`,
+            },
+          }
         )
       }
     },
     closeSavedFolder: () =>
-      void navigate(savePaths.root, {
+      void navigate(getSaveListReturnTo(location.state) ?? savePaths.root, {
         replace: true,
         state: createSaveListScrollLocationState(
           getSaveListScrollPosition(location.state) ?? 0

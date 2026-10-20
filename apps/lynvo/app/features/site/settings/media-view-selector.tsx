@@ -1,7 +1,6 @@
 import { GridViewIcon, ListViewIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 
-import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 
 import type { MediaView } from "./media-view-preference"
@@ -11,7 +10,6 @@ interface MediaViewOption {
   label: string
   description: string
   icon: IconSvgElement
-  isBeta: boolean
 }
 
 interface MediaViewSelectorProps {
@@ -29,14 +27,12 @@ const mediaViewOptions: readonly MediaViewOption[] = [
     label: "List view",
     description: "Browse every saved link in rows.",
     icon: ListViewIcon,
-    isBeta: false,
   },
   {
     value: "gallery",
     label: "Gallery view",
     description: "Group movies and shows with artwork.",
     icon: GridViewIcon,
-    isBeta: true,
   },
 ]
 
@@ -102,7 +98,7 @@ export const MediaViewSelector = ({
             checked={isSelected}
             onChange={() => onValueChange(option.value)}
           />
-          <span className="block aspect-video min-h-0 overflow-hidden rounded-xl peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
+          <span className="block aspect-4/3 min-h-0 overflow-hidden rounded-xl peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring sm:aspect-video">
             <MediaViewPreview view={option.value} />
           </span>
           <span className="flex min-w-0 flex-col gap-1 px-1 pb-1">
@@ -113,7 +109,6 @@ export const MediaViewSelector = ({
                 aria-hidden="true"
               />
               <span className="min-w-0 flex-1">{option.label}</span>
-              {option.isBeta && <Badge variant="warning">Beta</Badge>}
             </span>
             <span
               className={cn(

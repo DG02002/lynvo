@@ -25,33 +25,19 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  Reflect.deleteProperty(window, "TVBro")
   vi.unstubAllGlobals()
 })
 
 describe("Media view preference", () => {
-  it("defaults to the List view in other browsers", () => {
-    expect(getMediaView()).toBe("list")
-  })
-
-  it("defaults to the Gallery view in TV Bro", () => {
-    Object.defineProperty(window, "TVBro", {
-      configurable: true,
-      value: {},
-    })
-
+  it("defaults to the Gallery view", () => {
     expect(getMediaView()).toBe("gallery")
   })
 
-  it("keeps an explicitly selected view in TV Bro", () => {
-    Object.defineProperty(window, "TVBro", {
-      configurable: true,
-      value: {},
-    })
-
+  it("keeps an explicitly selected List view", () => {
     setMediaView("list")
 
     expect(getMediaView()).toBe("list")
+    expect(localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)).toBe("list")
   })
 
   it("persists the selected view without touching account data", () => {

@@ -219,11 +219,11 @@ const readProxyKeyStatusLabel = ({
 }: {
   readonly hasKey: boolean
   readonly isLoading: boolean
-}): string => {
+}): string | undefined => {
   if (isLoading) {
     return "Checking saved key…"
   }
-  return hasKey ? "Key saved" : "No key saved"
+  return hasKey ? "Key saved" : undefined
 }
 
 interface ProxyProviderRowProps {
@@ -245,6 +245,7 @@ const ProxyProviderRow = ({
 }: ProxyProviderRowProps) => {
   const hasCredits =
     hasKey && balanceRemaining !== null && balanceLimit !== null
+  const keyStatusLabel = readProxyKeyStatusLabel({ hasKey, isLoading })
   const usedCredits = hasCredits
     ? Math.max(balanceLimit - balanceRemaining, 0)
     : 0
@@ -260,9 +261,11 @@ const ProxyProviderRow = ({
           <ScrapeDoMark className="size-9 shrink-0" />
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-sm text-foreground">Scrape.do</span>
-            <span className="text-xs text-muted-foreground">
-              {readProxyKeyStatusLabel({ hasKey, isLoading })}
-            </span>
+            {keyStatusLabel !== undefined && (
+              <span className="text-xs text-muted-foreground">
+                {keyStatusLabel}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -395,11 +398,10 @@ const ProxyKeyDialog = ({
         render={
           <Button
             variant={hasProxyKey ? "ghost" : "outline"}
-            size="sm"
+            size={hasProxyKey ? "sm" : "icon-sm"}
             aria-label={`${hasProxyKey ? "Change" : "Add"} Scrape.do key`}
           >
-            {!hasProxyKey && <HugeiconsIcon icon={Add01Icon} />}
-            {hasProxyKey ? "Change key" : "Add key"}
+            {hasProxyKey ? "Change key" : <HugeiconsIcon icon={Add01Icon} />}
           </Button>
         }
       />

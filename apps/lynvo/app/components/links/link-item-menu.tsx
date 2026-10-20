@@ -29,6 +29,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { isDirectMediaItem } from "~/features/links/link-metadata-accessors"
 import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
@@ -69,6 +70,8 @@ interface LinkItemMenuProps {
   triggerLook: MenuTriggerLook
   menuOpen?: boolean
   onMenuOpenChange?: (open: boolean) => void
+  /** Group member rows share the group's artwork; only the library card owns the pick. */
+  showChangeArtwork?: boolean
 }
 
 export const LinkItemMenu = ({
@@ -81,12 +84,16 @@ export const LinkItemMenu = ({
   triggerLook,
   menuOpen,
   onMenuOpenChange,
+  showChangeArtwork = true,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
   const [isReportDialogOpen, setIsReportDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const itemLabel = getMenuItemLabel(item)
+  // A Direct Media item is its own playable link; re-extraction cannot change
+  // it, so the refresh action would only burn an extraction.
+  const showRefreshAction = !isDirectMediaItem(item)
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
     : "Refresh link choices"
@@ -157,16 +164,18 @@ export const LinkItemMenu = ({
                 <HugeiconsIcon icon={Bug01Icon} />
                 {linkCopy.actions.reportIssue}
               </DropdownMenuItem>
-              {actions.setArtwork && (
+              {actions.setArtwork && showChangeArtwork && (
                 <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
                   <HugeiconsIcon icon={Image01Icon} />
                   {linkCopy.actions.changeArtwork}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => refreshLink(item.url)}>
-                <HugeiconsIcon icon={RefreshDotIcon} />
-                {refreshActionLabel}
-              </DropdownMenuItem>
+              {showRefreshAction && (
+                <DropdownMenuItem onClick={() => refreshLink(item.url)}>
+                  <HugeiconsIcon icon={RefreshDotIcon} />
+                  {refreshActionLabel}
+                </DropdownMenuItem>
+              )}
               {playableLink &&
                 !getMediaNodeInteractionState(playableLink).isFolder && (
                   <DropdownMenuSub>

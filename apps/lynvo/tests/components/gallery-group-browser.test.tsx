@@ -37,6 +37,8 @@ const createMediaArtworkFetch = () =>
       request.episodeNumber === undefined
         ? {
             posterPath: "/season-poster.jpg",
+            logoPath: "/show-logo.png",
+            genres: ["Crime", "Drama"],
             identity: { providerId: 1, title: "Sample", year: 2004 },
           }
         : {
@@ -61,6 +63,7 @@ const createActions = (): LinkItemActions => ({
   softRefresh: vi.fn(),
   hardRefresh: vi.fn(),
   expandMirror: vi.fn().mockResolvedValue(null),
+  setArtwork: vi.fn(),
 })
 
 const createEpisodeItem = (
@@ -183,6 +186,7 @@ describe("GalleryGroupBrowser", () => {
       screen.queryByRole("switch", { name: "Show episode names" })
     ).not.toBeInTheDocument()
     expect(screen.getByText("downloaded-video.mkv")).toBeInTheDocument()
+    // Back cell, empty title spacer, and the menu cell; no episode toggle.
     expect(screen.getByRole("banner").children).toHaveLength(3)
     expect(
       screen.getByRole("button", { name: "downloaded-video.mkv, new" })
@@ -207,19 +211,37 @@ describe("GalleryGroupBrowser", () => {
       ".save-list-group-artwork-frame"
     )
     expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
-    const artworkCredit = await screen.findByText("Artwork: Sample (2004)")
-    expect(artworkCredit).not.toHaveClass("hidden", "md:block")
+    // The panel replaces the header title with the show logo, genres, and
+    // the TMDB attribution.
+    const showLogo = await waitFor(() => {
+      const logoImage = view.container.querySelector(
+        'img[src*="show-logo.png"]'
+      )
+      expect(logoImage).toBeInTheDocument()
+      return logoImage
+    })
+    expect(showLogo?.className).toContain("object-contain")
+    expect(screen.getByText("Crime · Drama")).toBeVisible()
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAccessibleName(
+      "Sample Series Sample Arc S04"
+    )
+    expect(screen.getByAltText("The Movie Database (TMDB)")).toBeInTheDocument()
+    expect(screen.queryByText(/^Artwork:/)).not.toBeInTheDocument()
   })
 
   it("shows episode names by default and keeps filenames opt-in", async () => {
     const view = renderBrowser()
 
-    const groupHeading = screen.getByRole("heading", {
-      level: 1,
-      name: "Sample Series Sample Arc S04",
+    // The header title is gone; the panel's logo becomes the identity once
+    // the lookup resolves, and its heading stays for screen readers.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Sample Series Sample Arc S04",
+        })
+      ).toHaveClass("sr-only")
     })
-    expect(groupHeading).toBeInTheDocument()
-    expect(groupHeading).toHaveClass("hidden", "md:block")
     expect(screen.getByRole("banner")).toHaveClass(
       "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
@@ -435,6 +457,34 @@ describe("GalleryGroupBrowser", () => {
     expect(
       artworkFrame?.querySelector('img[src*="season-poster.jpg"]')
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps artwork picking and refreshing off group rows for direct media items", async () => {
+    const episodeItem = createEpisodeItem()
+    episodeItem.metadata.source.pluginId = "direct-media"
+    const { actions } = renderBrowser([episodeItem])
+
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: `Open menu for ${episodeFilename}`,
+      })[0]
+    )
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeVisible()
+    })
+
+    // The library card owns the artwork pick, and a Direct Media item is its
+    // own playable link, so neither action belongs on a group row.
+    expect(
+      screen.queryByRole("menuitem", { name: "Change artwork" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", { name: "Refresh" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: "Copy Source link" })
+    ).toBeInTheDocument()
+    expect(actions.setArtwork).not.toHaveBeenCalled()
   })
 
   it("removes every group item after a delete-all confirmation", async () => {

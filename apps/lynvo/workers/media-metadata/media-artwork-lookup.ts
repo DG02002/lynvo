@@ -75,6 +75,8 @@ const lookupArtworkById = async (
     status: "resolved",
     result: {
       posterPath: details.value.posterPath,
+      logoPath: details.value.logoPath,
+      genres: details.value.genres,
       identity: toIdentity({
         providerId: request.providerId,
         title: details.value.title,
@@ -269,6 +271,35 @@ const lookupEpisodeArtwork = async (
   }
 }
 
+interface WorkLevelDetailsRequest {
+  readonly adapter: TmdbAdapter
+  readonly mediaKind: "movie" | "tv"
+  readonly providerId: number
+}
+
+/**
+ * Season and poster results borrow the work-level clear logo and genre list
+ * from the movie/show details so detail surfaces can render them beside the
+ * poster. A failed details pass keeps the poster-only result.
+ */
+const withWorkLevelDetails = async (
+  { adapter, mediaKind, providerId }: WorkLevelDetailsRequest,
+  result: MediaArtworkResult
+): Promise<MediaArtworkResult> => {
+  const details =
+    mediaKind === "movie"
+      ? await adapter.getMovieDetails(providerId)
+      : await adapter.getTvDetails(providerId)
+  if (details.kind !== "success" || !details.value) {
+    return result
+  }
+  return {
+    ...result,
+    logoPath: details.value.logoPath,
+    genres: details.value.genres,
+  }
+}
+
 const lookupSeasonArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkRequest
@@ -310,11 +341,14 @@ const lookupSeasonArtwork = async (
     season.kind === "success" ? season.value?.posterPath : undefined
   return {
     status: "resolved",
-    result: {
-      posterPath: seasonPosterPath ?? show.posterPath,
-      identity: toIdentity(show),
-      candidates: toCandidates("tv", searchResults),
-    },
+    result: await withWorkLevelDetails(
+      { adapter, mediaKind: "tv", providerId: show.providerId },
+      {
+        posterPath: seasonPosterPath ?? show.posterPath,
+        identity: toIdentity(show),
+        candidates: toCandidates("tv", searchResults),
+      }
+    ),
   }
 }
 
@@ -335,11 +369,14 @@ const lookupTvArtwork = async (
   if (show) {
     return {
       status: "resolved",
-      result: {
-        posterPath: show.posterPath,
-        identity: toIdentity(show),
-        candidates: toCandidates("tv", searchResults),
-      },
+      result: await withWorkLevelDetails(
+        { adapter, mediaKind: "tv", providerId: show.providerId },
+        {
+          posterPath: show.posterPath,
+          identity: toIdentity(show),
+          candidates: toCandidates("tv", searchResults),
+        }
+      ),
     }
   }
   const subtitleSeason = await lookupSubtitleSeasonArtwork({
@@ -374,11 +411,14 @@ const lookupMovieArtwork = async (
   return movie
     ? {
         status: "resolved",
-        result: {
-          posterPath: movie.posterPath,
-          identity: toIdentity(movie),
-          candidates: toCandidates("movie", search.value),
-        },
+        result: await withWorkLevelDetails(
+          { adapter, mediaKind: "movie", providerId: movie.providerId },
+          {
+            posterPath: movie.posterPath,
+            identity: toIdentity(movie),
+            candidates: toCandidates("movie", search.value),
+          }
+        ),
       }
     : toEmptyOutcome("movie", search.value)
 }

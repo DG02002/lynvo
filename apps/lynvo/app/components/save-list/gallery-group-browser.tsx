@@ -7,7 +7,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useMemo } from "react"
 import type { MediaArtworkRequest } from "~shared/api-contracts"
 
-import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
@@ -201,6 +200,7 @@ const GalleryGroupItemRow = ({
           actions={actions}
           playableLink={directLink}
           showRemove
+          showChangeArtwork={false}
           isRefreshing={isExtracting}
           triggerLook="media-row"
         />
@@ -294,18 +294,9 @@ export const GalleryGroupBrowser = ({
     <section className="flex h-svh flex-col overflow-hidden bg-background">
       <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
         <SaveListBackButton onNavigateBack={onExit} />
-        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-          <h1
-            aria-label={group.displayTitle}
-            className="hidden w-full min-w-0 text-base font-normal md:block"
-          >
-            <ExpandableFilename
-              value={group.displayTitle}
-              clampClassName="line-clamp-1"
-              className="w-full"
-            />
-          </h1>
-        </div>
+        {/* The artwork panel carries the group's identity, so the header
+            column stays an empty grid spacer. */}
+        <div aria-hidden="true" className="min-w-0" />
         {canShowEpisodeNames ? (
           <div className="flex items-center justify-center px-1 md:px-0">
             <FolderTitleDisplayToggleButton

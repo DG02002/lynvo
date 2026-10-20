@@ -70,12 +70,24 @@ describe("Media artwork lookup", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it("resolves movie posters from search results", async () => {
+  it("resolves movie posters with the work logo and genres from details", async () => {
     const fetch = createUrlRoutingFetch([
       {
         urlIncludes: "/search/movie?",
         payload: {
           results: [{ id: 42, title: "Example Movie", poster_path: "/m.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/movie/42?",
+        payload: {
+          id: 42,
+          title: "Example Movie",
+          poster_path: "/m.jpg",
+          genres: [{ name: "Thriller" }],
+          images: {
+            logos: [{ file_path: "/movie-logo.png", iso_639_1: "en" }],
+          },
         },
       },
     ])
@@ -89,6 +101,8 @@ describe("Media artwork lookup", () => {
     expect(results).toEqual([
       {
         posterPath: "/m.jpg",
+        logoPath: "/movie-logo.png",
+        genres: ["Thriller"],
         identity: { providerId: 42, title: "Example Movie" },
         candidates: [
           {
@@ -96,6 +110,61 @@ describe("Media artwork lookup", () => {
             title: "Example Movie",
             mediaKind: "movie",
             posterPath: "/m.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
+  it("attaches the show logo and genres to season posters", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [{ id: 31, name: "Example Show", poster_path: "/show.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/tv/31/season/2",
+        payload: {
+          id: 31,
+          name: "Season 2",
+          poster_path: "/season.jpg",
+          season_number: 2,
+        },
+      },
+      {
+        urlIncludes: "/tv/31?",
+        payload: {
+          id: 31,
+          name: "Example Show",
+          poster_path: "/show.jpg",
+          genres: [{ name: "Drama" }, { name: "Crime" }],
+          images: {
+            logos: [{ file_path: "/show-logo.png", iso_639_1: "en" }],
+          },
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ mediaKind: "tv", title: "Example Show", seasonNumber: 2 }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/season.jpg",
+        logoPath: "/show-logo.png",
+        genres: ["Drama", "Crime"],
+        identity: { providerId: 31, title: "Example Show" },
+        candidates: [
+          {
+            providerId: 31,
+            title: "Example Show",
+            mediaKind: "tv",
+            posterPath: "/show.jpg",
           },
         ],
       },
@@ -517,6 +586,6 @@ describe("Media artwork lookup", () => {
         ],
       },
     ])
-    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
 })

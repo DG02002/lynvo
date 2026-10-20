@@ -163,7 +163,10 @@ describe("ProxySettings", () => {
       "href",
       "/settings/plugins"
     )
-    expect(await screen.findByText("No key saved")).toBeVisible()
+    expect(screen.queryByText("No key saved")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Add Scrape.do key" })
+    ).toBeVisible()
   })
 
   it("shows the refreshed balance and checked time after a refresh", async () => {

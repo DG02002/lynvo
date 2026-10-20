@@ -113,7 +113,7 @@ const ReportIssueDialog = ({
               }
             }}
           >
-            <TelegramMark className="size-5" />
+            <TelegramMark glyphOnly className="size-5" />
             Report on Telegram
           </AlertDialogAction>
           <AlertDialogAction

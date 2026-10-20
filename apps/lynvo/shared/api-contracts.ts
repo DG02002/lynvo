@@ -57,6 +57,9 @@ const MediaArtworkResultSchema = Schema.Struct({
   episodeTitle: Schema.optional(Schema.String),
   identity: Schema.optional(MediaArtworkIdentitySchema),
   candidates: Schema.optional(Schema.Array(MediaArtworkCandidateSchema)),
+  // Work-level clear logo and genre names for detail surfaces.
+  logoPath: Schema.optional(Schema.String),
+  genres: Schema.optional(Schema.Array(Schema.String)),
   // Transient provider failure; callers must not negative-cache it.
   failed: Schema.optional(Schema.Boolean),
 })

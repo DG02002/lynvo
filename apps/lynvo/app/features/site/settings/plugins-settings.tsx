@@ -22,7 +22,7 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
-import { PluginInfoTooltip } from "./plugin-info-tooltip"
+import { PluginInfoPopover } from "./plugin-info-popover"
 import type { LynvoPlugin } from "./plugin-settings-data"
 import {
   usePluginSettingsInteraction,
@@ -121,7 +121,7 @@ export function PluginsSettings({
                       <span className="text-sm font-normal text-foreground">
                         {plugin.name}
                       </span>
-                      <PluginInfoTooltip
+                      <PluginInfoPopover
                         pluginName={plugin.name}
                         description={plugin.description}
                         version={plugin.version}

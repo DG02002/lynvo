@@ -5,6 +5,9 @@ export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000
 export const REALTIME_HEARTBEAT_TIMEOUT_MS = REALTIME_HEARTBEAT_INTERVAL_MS * 2
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"
 export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
+// The managed Plugin Server's built-in Direct Media source id, as recorded in
+// saved-link metadata.source.pluginId.
+export const DIRECT_MEDIA_PLUGIN_ID = "direct-media"
 export const OUTBOUND_HTTP_MAX_REDIRECTS = 3
 export const OUTBOUND_HTTP_MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 export const OUTBOUND_HTTP_TIMEOUT_MS = 15_000
@@ -30,7 +33,10 @@ export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
 export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
-export const MEDIA_ARTWORK_CACHE_VERSION = 7
+// Clear logos only render at their own size steps; poster widths 404 there.
+export const TMDB_LOGO_SRC_WIDTHS_PX = [154, 300, 500] as const
+export const TMDB_LOGO_FULL_BASE_URL = `${TMDB_IMAGE_BASE_URL}/w500`
+export const MEDIA_ARTWORK_CACHE_VERSION = 8
 export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
 export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
 export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS

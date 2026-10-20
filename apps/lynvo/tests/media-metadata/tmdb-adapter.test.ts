@@ -229,6 +229,71 @@ describe("TMDB adapter", () => {
         attribution: "TMDB",
       },
     })
+    const [request] = fetch.mock.calls[0] ?? []
+    if (!(request instanceof Request)) {
+      throw new Error("TMDB transport did not receive a Request")
+    }
+    expect(request.url).toContain(
+      "/movie/42?append_to_response=images&include_image_language=en,null"
+    )
+  })
+
+  it("normalizes genres and picks the best clear logo from details", async () => {
+    const fetch = createFetch(
+      new Response(
+        JSON.stringify({
+          id: 43,
+          name: "Example Show",
+          first_air_date: "2019-11-14",
+          poster_path: "/show-poster.jpg",
+          genres: [
+            { id: 18, name: "Drama" },
+            { id: 80, name: "Crime" },
+          ],
+          images: {
+            logos: [
+              {
+                file_path: "/logo-languageless.png",
+                iso_639_1: null,
+                vote_average: 8,
+                vote_count: 4,
+              },
+              {
+                file_path: "/logo-french.png",
+                iso_639_1: "fr",
+                vote_average: 10,
+                vote_count: 9,
+              },
+              {
+                file_path: "/logo-english.png",
+                iso_639_1: "en",
+                vote_average: 5.5,
+                vote_count: 2,
+              },
+              { file_path: null, iso_639_1: "en" },
+            ],
+          },
+        }),
+        { status: 200 }
+      )
+    )
+    const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
+
+    const result = await adapter.getTvDetails(43)
+
+    expect(result).toEqual({
+      kind: "success",
+      value: {
+        kind: "tv",
+        providerId: 43,
+        title: "Example Show",
+        year: 2019,
+        posterPath: "/show-poster.jpg",
+        logoPath: "/logo-english.png",
+        genres: ["Drama", "Crime"],
+        attribution: "TMDB",
+      },
+    })
   })
 
   it("resolves release-part episode numbering through TMDB episode groups", async () => {

@@ -10,6 +10,8 @@ const CurrentLocation = () => {
 }
 
 const GALLERY_ENTRY_TITLE = "Hybrid view is now called Gallery view"
+const CURRENT_ENTRY_TITLE =
+  "Gallery view is the default, with clearer group pages"
 const LIBRARY_VIEWS_ENTRY_TITLE =
   "The Library now has List view and Gallery view"
 const PLUGIN_SERVER_ENTRY_TITLE =
@@ -79,6 +81,8 @@ describe("Changelog", () => {
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(within(updates).getByText(GALLERY_ENTRY_TITLE)).toBeVisible()
     expect(within(updates).getByText(LIBRARY_VIEWS_ENTRY_TITLE)).toBeVisible()
+    // The plugin-server entry sits past the first batch on the All tab.
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }))
     expect(getPluginServerEntryHeading(updates)).toBeVisible()
   })
 
@@ -93,7 +97,7 @@ describe("Changelog", () => {
 
     expect(
       within(updates).getAllByRole("heading", { level: 2 })[0]
-    ).toHaveTextContent(GALLERY_ENTRY_TITLE)
+    ).toHaveTextContent(CURRENT_ENTRY_TITLE)
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
     fireEvent.click(

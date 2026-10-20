@@ -4,7 +4,10 @@ import { useMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import { TMDB_LOGO_SHORT_SRC, TMDB_SITE_URL } from "~/lib/constants"
 
-import { GALLERY_GROUP_ARTWORK_SIZES } from "./save-list-layout-constants"
+import {
+  GALLERY_GROUP_ARTWORK_SIZES,
+  GALLERY_GROUP_LOGO_SIZES,
+} from "./save-list-layout-constants"
 import { SaveListCardSkeleton } from "./save-list-state"
 
 interface SeasonArtworkPanelProps {
@@ -60,6 +63,8 @@ export const SeasonArtworkPanel = ({
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const imageType = artwork?.stillPath ? "still" : "poster"
   const isArtworkPending = artworkRequest !== undefined && artwork === undefined
+  const logoPath = artwork?.logoPath
+  const genres = artwork?.genres
 
   return (
     <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
@@ -75,14 +80,32 @@ export const SeasonArtworkPanel = ({
           className="pointer-events-none absolute inset-0 shadow-depth-gloss"
         />
       </div>
-      {artwork?.identity ? (
-        <p className="pt-1 text-center text-xs text-muted-foreground">
-          Artwork: {artwork.identity.title}
-          {artwork.identity.year !== undefined
-            ? ` (${artwork.identity.year})`
-            : ""}
-        </p>
-      ) : null}
+      {/* The clear logo replaces the text title once it resolves; the text
+          stays the instant, always-present identity. */}
+      <div className="flex w-full flex-col items-center gap-1.5 pt-3">
+        {logoPath ? (
+          <>
+            <h1 className="sr-only">{displayTitle}</h1>
+            <TmdbImage
+              path={logoPath}
+              variant="card"
+              imageType="logo"
+              sizes={GALLERY_GROUP_LOGO_SIZES}
+              alt=""
+              className="h-auto max-h-16 w-auto max-w-full object-contain"
+            />
+          </>
+        ) : (
+          <h1 className="w-full text-center font-heading text-base font-normal">
+            {displayTitle}
+          </h1>
+        )}
+        {genres?.length ? (
+          <p className="text-center text-xs text-muted-foreground">
+            {genres.join(" · ")}
+          </p>
+        ) : null}
+      </div>
       {imagePath ? (
         <div className="flex justify-center pt-2">
           <a href={TMDB_SITE_URL} target="_blank" rel="noopener noreferrer">

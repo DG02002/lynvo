@@ -421,7 +421,10 @@ const GallerySaveItem = ({
           {...statusSpec}
           titleClassName="font-heading text-base font-normal"
         >
-          <h3 className="font-heading text-base font-normal break-words">
+          <h3
+            title={group.displayTitle}
+            className="font-heading text-base font-normal break-words line-clamp-2"
+          >
             {group.displayTitle}
           </h3>
           {isSingleItem && directLink?.expiry !== undefined && (

@@ -88,7 +88,8 @@ describe("media artwork cache", () => {
         candidates: [expectedCandidate],
       },
     ])
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // One search plus one work-details pass for the logo and genres.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
 
     await vi.waitFor(async () => {
       const cached = await globalThis.caches?.default.match(
@@ -112,7 +113,7 @@ describe("media artwork cache", () => {
         candidates: [expectedCandidate],
       },
     ])
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("does not serve a stored provider-id lookup from the title lookup's cache entry", async () => {

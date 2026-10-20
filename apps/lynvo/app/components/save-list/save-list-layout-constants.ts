@@ -1,5 +1,5 @@
 export const GALLERY_GRID_CLASS =
-  "stagger-children grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6"
+  "stagger-children grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6"
 
 export const GALLERY_IMAGE_SIZES =
   "(min-width: 1024px) 14vw, (min-width: 768px) 18vw, (min-width: 640px) 28vw, 45vw"
@@ -15,6 +15,9 @@ export const GALLERY_GROUP_CONTENT_CLASS =
 
 export const GALLERY_GROUP_ARTWORK_SIZES =
   "(orientation: landscape) and (max-height: 36rem) calc(66.6667svh - 5.75rem), (min-width: 1024px) 19rem, (min-width: 768px) 15rem, 18rem"
+
+export const GALLERY_GROUP_LOGO_SIZES =
+  "(min-width: 1024px) 22rem, (min-width: 768px) 18rem, 18rem"
 
 export const GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS = "block shrink-0"
 

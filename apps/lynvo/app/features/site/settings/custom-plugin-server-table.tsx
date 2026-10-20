@@ -27,7 +27,7 @@ import {
 import { sourceStatusVariant } from "~/lib/source-status-variant"
 import { cn } from "~/lib/utils"
 
-import { PluginInfoTooltip } from "./plugin-info-tooltip"
+import { PluginInfoPopover } from "./plugin-info-popover"
 import { getPluginServerManifestView } from "./plugin-server-manifest"
 import type { CustomPluginServer } from "./plugin-settings-interaction"
 import { SettingsList, SettingsRow } from "./settings-layout"
@@ -170,7 +170,7 @@ const CustomPluginServerRow = ({
                     <span className="truncate text-sm text-foreground">
                       {source.displayName}
                     </span>
-                    <PluginInfoTooltip
+                    <PluginInfoPopover
                       pluginName={source.displayName}
                       description={source.description}
                       version={source.version}
