@@ -16,9 +16,6 @@ export const GALLERY_GROUP_CONTENT_CLASS =
 export const GALLERY_GROUP_ARTWORK_SIZES =
   "(orientation: landscape) and (max-height: 36rem) calc(66.6667svh - 5.75rem), (min-width: 1024px) 19rem, (min-width: 768px) 15rem, 18rem"
 
-export const GALLERY_GROUP_LOGO_SIZES =
-  "(min-width: 1024px) 22rem, (min-width: 768px) 18rem, 18rem"
-
 export const GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS = "block shrink-0"
 
 export const SAVE_LIST_BROWSER_LAYOUT_CLASS = "save-list-browser-layout"

@@ -233,12 +233,10 @@ describe("TMDB adapter", () => {
     if (!(request instanceof Request)) {
       throw new Error("TMDB transport did not receive a Request")
     }
-    expect(request.url).toContain(
-      "/movie/42?append_to_response=images&include_image_language=en,null"
-    )
+    expect(request.url).toContain("/movie/42")
   })
 
-  it("normalizes genres and picks the best clear logo from details", async () => {
+  it("normalizes the genre list from details", async () => {
     const fetch = createFetch(
       new Response(
         JSON.stringify({
@@ -248,31 +246,8 @@ describe("TMDB adapter", () => {
           poster_path: "/show-poster.jpg",
           genres: [
             { id: 18, name: "Drama" },
-            { id: 80, name: "Crime" },
+            { id: 80, name: null },
           ],
-          images: {
-            logos: [
-              {
-                file_path: "/logo-languageless.png",
-                iso_639_1: null,
-                vote_average: 8,
-                vote_count: 4,
-              },
-              {
-                file_path: "/logo-french.png",
-                iso_639_1: "fr",
-                vote_average: 10,
-                vote_count: 9,
-              },
-              {
-                file_path: "/logo-english.png",
-                iso_639_1: "en",
-                vote_average: 5.5,
-                vote_count: 2,
-              },
-              { file_path: null, iso_639_1: "en" },
-            ],
-          },
         }),
         { status: 200 }
       )
@@ -289,8 +264,7 @@ describe("TMDB adapter", () => {
         title: "Example Show",
         year: 2019,
         posterPath: "/show-poster.jpg",
-        logoPath: "/logo-english.png",
-        genres: ["Drama", "Crime"],
+        genres: ["Drama"],
         attribution: "TMDB",
       },
     })

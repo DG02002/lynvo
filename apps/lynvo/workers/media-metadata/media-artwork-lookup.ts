@@ -6,12 +6,14 @@ import type {
 } from "../../shared/api-contracts"
 import {
   doesSeasonNameCoverRemainder,
+  scoreSearchResultTitle,
   selectBestSearchResult,
   selectLeadingTitleMatch,
 } from "./search-result-selection"
 import {
   createTmdbAdapter,
   type TmdbAdapter,
+  type TmdbAdapterResult,
   type TmdbSearchResult,
 } from "./tmdb-adapter"
 
@@ -75,7 +77,6 @@ const lookupArtworkById = async (
     status: "resolved",
     result: {
       posterPath: details.value.posterPath,
-      logoPath: details.value.logoPath,
       genres: details.value.genres,
       identity: toIdentity({
         providerId: request.providerId,
@@ -98,48 +99,81 @@ const toEmptyOutcome = (
   candidates: toCandidates(mediaKind, results),
 })
 
-/**
- * Filenames regularly carry a mistaken year; a year-filtered search then
- * hides the real work entirely, so an unfiltered retry runs whenever the
- * filtered pass selects nothing. Title scoring still gates the result.
- */
-const searchTvSelectingByTitle = async (
-  adapter: TmdbAdapter,
-  title: string,
-  year: number | undefined
-) => {
-  const filteredSearch =
-    year === undefined ? undefined : await adapter.searchTv(title, year)
-  if (filteredSearch && filteredSearch.kind !== "success") {
-    return filteredSearch
-  }
-  if (
-    filteredSearch &&
-    selectBestSearchResult(title, filteredSearch.value ?? [])
-  ) {
-    return filteredSearch
-  }
-  return adapter.searchTv(title)
+// A year-filtered search may only surface a fuzzy title match: season packs
+// stamp the season's year, not the show's premiere year, so the filter hides
+// the real work and a token-subset title slides through ("The Bear" year 2024
+// matches "The Hungry Games: Alaska's Big Bear Challenge" instead of the
+// 2022 show). Only a strong title match (exact or leading) settles without an
+// unfiltered pass, which then wins whenever its title matches better.
+const STRONG_TITLE_MATCH_SCORE = 0.9
+
+interface TmdbSearchResponse {
+  readonly kind: "success"
+  readonly value: readonly TmdbSearchResult[]
 }
 
-const searchMovieSelectingByTitle = async (
-  adapter: TmdbAdapter,
+const selectSearchResponseByTitle = (
+  title: string,
+  filteredSearch: TmdbSearchResponse | undefined,
+  unfilteredSearch: TmdbSearchResponse
+): TmdbSearchResponse => {
+  if (!filteredSearch) {
+    return unfilteredSearch
+  }
+  const filteredBest = selectBestSearchResult(title, filteredSearch.value)
+  const unfilteredBest = selectBestSearchResult(title, unfilteredSearch.value)
+  const filteredScore = filteredBest
+    ? scoreSearchResultTitle(title, filteredBest)
+    : 0
+  const unfilteredScore = unfilteredBest
+    ? scoreSearchResultTitle(title, unfilteredBest)
+    : 0
+  return unfilteredScore > filteredScore ? unfilteredSearch : filteredSearch
+}
+
+const searchSelectingByTitle = async (
+  search: (
+    title: string,
+    year?: number
+  ) => Promise<TmdbAdapterResult<readonly TmdbSearchResult[]>>,
   title: string,
   year: number | undefined
-) => {
+): Promise<TmdbAdapterResult<readonly TmdbSearchResult[]>> => {
   const filteredSearch =
-    year === undefined ? undefined : await adapter.searchMovie(title, year)
+    year === undefined ? undefined : await search(title, year)
   if (filteredSearch && filteredSearch.kind !== "success") {
     return filteredSearch
   }
-  if (
-    filteredSearch &&
-    selectBestSearchResult(title, filteredSearch.value ?? [])
-  ) {
-    return filteredSearch
+  if (filteredSearch) {
+    const filteredBest = selectBestSearchResult(
+      title,
+      filteredSearch.value ?? []
+    )
+    if (
+      filteredBest &&
+      scoreSearchResultTitle(title, filteredBest) >= STRONG_TITLE_MATCH_SCORE
+    ) {
+      return filteredSearch
+    }
   }
-  return adapter.searchMovie(title)
+  const unfilteredSearch = await search(title)
+  if (unfilteredSearch.kind !== "success" || !filteredSearch) {
+    return unfilteredSearch
+  }
+  return selectSearchResponseByTitle(title, filteredSearch, unfilteredSearch)
 }
+
+const searchTvSelectingByTitle = (
+  adapter: TmdbAdapter,
+  title: string,
+  year: number | undefined
+) => searchSelectingByTitle(adapter.searchTv, title, year)
+
+const searchMovieSelectingByTitle = (
+  adapter: TmdbAdapter,
+  title: string,
+  year: number | undefined
+) => searchSelectingByTitle(adapter.searchMovie, title, year)
 
 interface SubtitleSeasonArtwork {
   readonly posterPath: string | undefined
@@ -278,9 +312,9 @@ interface WorkLevelDetailsRequest {
 }
 
 /**
- * Season and poster results borrow the work-level clear logo and genre list
- * from the movie/show details so detail surfaces can render them beside the
- * poster. A failed details pass keeps the poster-only result.
+ * Season and poster results borrow the work-level genre list from the
+ * movie/show details so detail surfaces can render it under the poster. A
+ * failed details pass keeps the poster-only result.
  */
 const withWorkLevelDetails = async (
   { adapter, mediaKind, providerId }: WorkLevelDetailsRequest,
@@ -295,7 +329,6 @@ const withWorkLevelDetails = async (
   }
   return {
     ...result,
-    logoPath: details.value.logoPath,
     genres: details.value.genres,
   }
 }

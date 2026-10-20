@@ -33,10 +33,10 @@ export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
 export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
-// Clear logos only render at their own size steps; poster widths 404 there.
-export const TMDB_LOGO_SRC_WIDTHS_PX = [154, 300, 500] as const
-export const TMDB_LOGO_FULL_BASE_URL = `${TMDB_IMAGE_BASE_URL}/w500`
-export const MEDIA_ARTWORK_CACHE_VERSION = 8
+// v9: the year-filtered search no longer settles for fuzzy title matches,
+// so results cached with a wrong work (season years vs premiere years)
+// refresh.
+export const MEDIA_ARTWORK_CACHE_VERSION = 9
 export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
 export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
 export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS

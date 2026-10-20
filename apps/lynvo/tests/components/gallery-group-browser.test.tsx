@@ -37,7 +37,6 @@ const createMediaArtworkFetch = () =>
       request.episodeNumber === undefined
         ? {
             posterPath: "/season-poster.jpg",
-            logoPath: "/show-logo.png",
             genres: ["Crime", "Drama"],
             identity: { providerId: 1, title: "Sample", year: 2004 },
           }
@@ -186,7 +185,6 @@ describe("GalleryGroupBrowser", () => {
       screen.queryByRole("switch", { name: "Show episode names" })
     ).not.toBeInTheDocument()
     expect(screen.getByText("downloaded-video.mkv")).toBeInTheDocument()
-    // Back cell, empty title spacer, and the menu cell; no episode toggle.
     expect(screen.getByRole("banner").children).toHaveLength(3)
     expect(
       screen.getByRole("button", { name: "downloaded-video.mkv, new" })
@@ -211,20 +209,8 @@ describe("GalleryGroupBrowser", () => {
       ".save-list-group-artwork-frame"
     )
     expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
-    // The panel replaces the header title with the show logo, genres, and
-    // the TMDB attribution.
-    const showLogo = await waitFor(() => {
-      const logoImage = view.container.querySelector(
-        'img[src*="show-logo.png"]'
-      )
-      expect(logoImage).toBeInTheDocument()
-      return logoImage
-    })
-    expect(showLogo?.className).toContain("object-contain")
-    expect(screen.getByText("Crime · Drama")).toBeVisible()
-    expect(screen.getByRole("heading", { level: 1 })).toHaveAccessibleName(
-      "Sample Series Sample Arc S04"
-    )
+    // The panel keeps the genres and the TMDB attribution under the poster.
+    expect(await screen.findByText("Crime · Drama")).toBeVisible()
     expect(screen.getByAltText("The Movie Database (TMDB)")).toBeInTheDocument()
     expect(screen.queryByText(/^Artwork:/)).not.toBeInTheDocument()
   })
@@ -232,16 +218,12 @@ describe("GalleryGroupBrowser", () => {
   it("shows episode names by default and keeps filenames opt-in", async () => {
     const view = renderBrowser()
 
-    // The header title is gone; the panel's logo becomes the identity once
-    // the lookup resolves, and its heading stays for screen readers.
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", {
-          level: 1,
-          name: "Sample Series Sample Arc S04",
-        })
-      ).toHaveClass("sr-only")
+    const groupHeading = screen.getByRole("heading", {
+      level: 1,
+      name: "Sample Series Sample Arc S04",
     })
+    expect(groupHeading).toBeInTheDocument()
+    expect(groupHeading).toHaveClass("hidden", "md:block")
     expect(screen.getByRole("banner")).toHaveClass(
       "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",

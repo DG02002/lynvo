@@ -397,7 +397,7 @@ const ProxyKeyDialog = ({
       <DialogTrigger
         render={
           <Button
-            variant={hasProxyKey ? "ghost" : "outline"}
+            variant="ghost"
             size={hasProxyKey ? "sm" : "icon-sm"}
             aria-label={`${hasProxyKey ? "Change" : "Add"} Scrape.do key`}
           >

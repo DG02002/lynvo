@@ -423,7 +423,7 @@ const GallerySaveItem = ({
         >
           <h3
             title={group.displayTitle}
-            className="font-heading text-base font-normal break-words line-clamp-2"
+            className="font-heading text-base font-normal break-words line-clamp-2 min-h-12"
           >
             {group.displayTitle}
           </h3>

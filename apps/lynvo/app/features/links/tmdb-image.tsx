@@ -7,14 +7,12 @@ import {
   TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
   TMDB_IMAGE_DETAIL_BASE_URL,
   TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
-  TMDB_LOGO_FULL_BASE_URL,
-  TMDB_LOGO_SRC_WIDTHS_PX,
   TMDB_POSTER_SRC_WIDTHS_PX,
   TMDB_STILL_SRC_WIDTHS_PX,
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
-type TmdbImageType = "poster" | "still" | "logo"
+type TmdbImageType = "poster" | "still"
 
 interface TmdbImageProps {
   readonly path: string | undefined
@@ -51,18 +49,9 @@ const getTmdbImageBaseUrlPair = (
 const hasImageLoaded = (element: HTMLImageElement | null): boolean =>
   Boolean(element?.complete && element.naturalWidth > 0)
 
-const getTmdbSrcWidths = (imageType: TmdbImageType) => {
-  if (imageType === "still") {
-    return TMDB_STILL_SRC_WIDTHS_PX
-  }
-  if (imageType === "logo") {
-    return TMDB_LOGO_SRC_WIDTHS_PX
-  }
-  return TMDB_POSTER_SRC_WIDTHS_PX
-}
-
 const getTmdbImageSrcSet = (path: string, imageType: TmdbImageType): string => {
-  const srcWidths = getTmdbSrcWidths(imageType)
+  const srcWidths =
+    imageType === "still" ? TMDB_STILL_SRC_WIDTHS_PX : TMDB_POSTER_SRC_WIDTHS_PX
   return srcWidths
     .map(
       (srcWidth) => `${TMDB_IMAGE_BASE_URL}/w${srcWidth}${path} ${srcWidth}w`
@@ -70,17 +59,9 @@ const getTmdbImageSrcSet = (path: string, imageType: TmdbImageType): string => {
     .join(", ")
 }
 
-const getTmdbFullUrl = (
-  path: string | undefined,
-  imageType: TmdbImageType,
-  fullBaseUrl: string
-) => {
+const getTmdbFullUrl = (path: string | undefined, fullBaseUrl: string) => {
   if (!path) {
     return undefined
-  }
-
-  if (imageType === "logo") {
-    return `${TMDB_LOGO_FULL_BASE_URL}${path}`
   }
 
   return `${fullBaseUrl}${path}`
@@ -102,16 +83,11 @@ const TmdbImageContent = ({
   const previewImageRef = useRef<HTMLImageElement | null>(null)
   const fullImageRef = useRef<HTMLImageElement | null>(null)
 
-  const isLogo = imageType === "logo"
   const isRemotePath = path?.startsWith("http") ?? false
   const baseUrlPair = getTmdbImageBaseUrlPair(variant)
-  const fullUrl = isRemotePath
-    ? path
-    : getTmdbFullUrl(path, imageType, baseUrlPair.full)
+  const fullUrl = isRemotePath ? path : getTmdbFullUrl(path, baseUrlPair.full)
   const previewUrl =
-    !path || isRemotePath || isLogo
-      ? undefined
-      : `${baseUrlPair.preview}${path}`
+    !path || isRemotePath ? undefined : `${baseUrlPair.preview}${path}`
   const fullSrcSet =
     path && !isRemotePath ? getTmdbImageSrcSet(path, imageType) : undefined
 

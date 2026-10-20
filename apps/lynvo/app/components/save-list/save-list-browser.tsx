@@ -751,24 +751,18 @@ const FinderBrowser = ({
     >
       <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
         <SaveListBackButton onNavigateBack={navigateToParentFolder} />
-        {sharedSeasonIdentity ? (
-          // The season artwork panel carries the identity; the header column
-          // stays an empty grid spacer.
-          <div aria-hidden="true" className="min-w-0" />
-        ) : (
-          <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-            <h1
-              aria-label={headerTitle}
-              className="hidden w-full min-w-0 text-base font-normal md:block"
-            >
-              <ExpandableFilename
-                value={headerTitle}
-                clampClassName="line-clamp-1"
-                className="w-full"
-              />
-            </h1>
-          </div>
-        )}
+        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
+          <h1
+            aria-label={headerTitle}
+            className="hidden w-full min-w-0 text-base font-normal md:block"
+          >
+            <ExpandableFilename
+              value={headerTitle}
+              clampClassName="line-clamp-1"
+              className="w-full"
+            />
+          </h1>
+        </div>
         {shouldShowEpisodeStills ? (
           <div className="flex items-center justify-center px-1 md:px-0">
             <FolderTitleDisplayToggleButton

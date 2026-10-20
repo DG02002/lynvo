@@ -89,6 +89,23 @@ const scoreSearchResult = (
 }
 
 /**
+ * Relative strength of a result's title match for a query; 0 means the title
+ * does not match at all. Exposed so callers can compare a year-filtered pick
+ * against an unfiltered one.
+ */
+export const scoreSearchResultTitle = (
+  query: string,
+  result: TmdbSearchResult
+): number => {
+  const normalizedQuery = normalizeTitle(query)
+  return scoreSearchResult(
+    normalizedQuery,
+    normalizedQuery.split(" ").filter(Boolean),
+    result
+  )
+}
+
+/**
  * TMDB ranks loosely and returns fuzzy hits first when the query is
  * mistyped, so the first result is regularly a different work entirely.
  * Only a result whose title genuinely matches the query is used; when

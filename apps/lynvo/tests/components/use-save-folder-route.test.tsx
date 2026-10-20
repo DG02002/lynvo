@@ -37,8 +37,7 @@ const savedFolder: SavedLinkListItem = {
 const renderFolderRouteWrapper = ({ children }: PropsWithChildren) => (
   <MemoryRouter initialEntries={["/save"]}>
     <Routes>
-      <Route path="/save" element={children} />
-      <Route path="/save/folder/:savedLinkId" element={children} />
+      <Route path="/save/*?" element={children} />
     </Routes>
   </MemoryRouter>
 )
@@ -80,8 +79,7 @@ describe("saved folder routes", () => {
     const wrapper = ({ children }: PropsWithChildren) => (
       <MemoryRouter initialEntries={["/save?group=tv%3Asample%3AS01"]}>
         <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
+          <Route path="/save/*?" element={children} />
         </Routes>
       </MemoryRouter>
     )
@@ -141,8 +139,7 @@ describe("saved folder routes", () => {
     const wrapper = ({ children }: PropsWithChildren) => (
       <MemoryRouter initialEntries={["/save/folder/missing-id"]}>
         <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
+          <Route path="/save/*?" element={children} />
         </Routes>
       </MemoryRouter>
     )
@@ -164,8 +161,7 @@ describe("saved folder routes", () => {
         initialEntries={["/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"]}
       >
         <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
+          <Route path="/save/*?" element={children} />
         </Routes>
       </MemoryRouter>
     )

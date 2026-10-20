@@ -29,13 +29,6 @@ interface TmdbSearchPayloadItem {
   readonly overview?: string
 }
 
-interface TmdbImageLogoPayloadItem {
-  readonly file_path?: string | null
-  readonly iso_639_1?: string | null
-  readonly vote_average?: number
-  readonly vote_count?: number
-}
-
 interface TmdbDetailsPayload {
   readonly id?: number
   readonly title?: string
@@ -49,9 +42,6 @@ interface TmdbDetailsPayload {
   readonly season_number?: number
   readonly episode_number?: number
   readonly genres?: readonly { readonly name?: string | null }[]
-  readonly images?: {
-    readonly logos?: readonly TmdbImageLogoPayloadItem[] | null
-  }
 }
 
 interface TmdbEpisodeGroupListPayload {
@@ -100,7 +90,6 @@ interface TmdbMediaMetadata {
   readonly posterPath?: string
   readonly backdropPath?: string
   readonly stillPath?: string
-  readonly logoPath?: string
   readonly genres?: readonly string[]
   readonly seasonNumber?: number
   readonly episodeNumber?: number
@@ -160,7 +149,7 @@ interface TmdbEpisodeDetailsRequest {
   readonly episodeGroupNumber?: number
 }
 
-type TmdbAdapterResult<Value> =
+export type TmdbAdapterResult<Value> =
   | {
       readonly kind: "success"
       readonly value: Value
@@ -205,22 +194,6 @@ const detailsPayloadSchema = Schema.Struct({
         name: Schema.optional(Schema.NullOr(Schema.String)),
       })
     )
-  ),
-  images: Schema.optional(
-    Schema.Struct({
-      logos: Schema.optional(
-        Schema.NullOr(
-          Schema.Array(
-            Schema.Struct({
-              file_path: Schema.optional(Schema.NullOr(Schema.String)),
-              iso_639_1: Schema.optional(Schema.NullOr(Schema.String)),
-              vote_average: Schema.optional(Schema.Number),
-              vote_count: Schema.optional(Schema.Number),
-            })
-          )
-        )
-      ),
-    })
   ),
 })
 
@@ -306,31 +279,6 @@ const toSearchResult = (
   }
 }
 
-// English logos match the catalog's language; languageless ones are the
-// fallback when no localized variant exists.
-const logoLanguageRank = (language: string | null | undefined): number => {
-  if (language === "en") {
-    return 0
-  }
-  return language === null || language === undefined ? 1 : 2
-}
-
-const selectLogoPath = (
-  logos: readonly TmdbImageLogoPayloadItem[] | null | undefined
-): string | undefined => {
-  const candidates = (logos ?? []).flatMap((logo) =>
-    logo.file_path ? [logo] : []
-  )
-  const [bestLogo] = candidates.toSorted(
-    (firstLogo, secondLogo) =>
-      logoLanguageRank(firstLogo.iso_639_1) -
-        logoLanguageRank(secondLogo.iso_639_1) ||
-      (secondLogo.vote_average ?? 0) - (firstLogo.vote_average ?? 0) ||
-      (secondLogo.vote_count ?? 0) - (firstLogo.vote_count ?? 0)
-  )
-  return bestLogo?.file_path ?? undefined
-}
-
 const toMediaMetadata = (
   payload: TmdbDetailsPayload,
   kind: TmdbMediaMetadata["kind"],
@@ -353,7 +301,6 @@ const toMediaMetadata = (
     posterPath: payload.poster_path ?? undefined,
     backdropPath: payload.backdrop_path ?? undefined,
     stillPath: payload.still_path ?? undefined,
-    logoPath: selectLogoPath(payload.images?.logos),
     genres: genres.length > 0 ? genres : undefined,
     seasonNumber: payload.season_number,
     episodeNumber: payload.episode_number,
@@ -623,20 +570,11 @@ export const createTmdbAdapter = (
   return {
     searchMovie: (title, year) => search("movie", title, year),
     searchTv: (title, year) => search("tv", title, year),
-    // Work-level details carry the clear logo and the genre list, so those
-    // two requests append the image set instead of costing another round trip.
+    // Work-level details carry the genre list for detail surfaces.
     getMovieDetails: (providerId) =>
-      details(
-        `/movie/${providerId}?append_to_response=images&include_image_language=en,null`,
-        "movie",
-        providerId
-      ),
+      details(`/movie/${providerId}`, "movie", providerId),
     getTvDetails: (providerId) =>
-      details(
-        `/tv/${providerId}?append_to_response=images&include_image_language=en,null`,
-        "tv",
-        providerId
-      ),
+      details(`/tv/${providerId}`, "tv", providerId),
     getTvSeasonDetails: (providerId, seasonNumber) =>
       details(`/tv/${providerId}/season/${seasonNumber}`, "season", providerId),
     getTvSeasonList: async (providerId) => {
