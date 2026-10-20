@@ -1,6 +1,5 @@
 import {
   ProtocolError,
-  runWithRetries,
   type MediaNode,
   type ExtractSuccessResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
@@ -8,24 +7,20 @@ import { load } from "cheerio"
 import { Result, Schema } from "effect"
 
 import {
-  ONEDRIVE_FETCH_RETRIES,
-  ONEDRIVE_FETCH_RETRY_DELAY_MS,
-} from "../constants"
-import {
   createPluginResponseMetadata,
+  type PluginRetryPolicy,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
 import {
-  fetchValidatedUpstream,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
-  UpstreamPolicyError,
 } from "../upstream-response"
 import {
   assertSafeUpstreamUrl,
   decodeUrlComponent,
   encodeUrlPathSegment,
 } from "../url-policy"
+import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
 import { createSourcePlayableNode } from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
@@ -60,6 +55,7 @@ interface OneDrivePageOptions {
   readonly hashedPassword: string
   readonly initialToken?: string
   readonly startedAtMs?: number
+  readonly retry?: PluginRetryPolicy | undefined
 }
 
 interface OneDrivePageRequestOptions {
@@ -67,6 +63,8 @@ interface OneDrivePageRequestOptions {
   readonly path: string
   readonly nextToken: string
   readonly headers: HeadersInit
+  readonly startedAtMs: number
+  readonly retry?: PluginRetryPolicy | undefined
 }
 
 interface OneDriveResponseNodeOptions {
@@ -83,6 +81,7 @@ interface OneDriveInitialResponseOptions {
   readonly headers: HeadersInit
   readonly hashedPassword: string
   readonly startedAtMs: number
+  readonly retry?: PluginRetryPolicy | undefined
 }
 
 const oneDriveItemSchema: Schema.Codec<OneDriveItem> = Schema.Struct({
@@ -119,29 +118,6 @@ const sha256 = async (message: string): Promise<string> => {
   return Array.from(new Uint8Array(hashBuffer))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")
-}
-
-const fetchOneDrive = async (
-  targetUrl: string,
-  options: RequestInit
-): Promise<Response> => {
-  assertSafeUpstreamUrl(targetUrl)
-  return runWithRetries(() => fetchValidatedUpstream(targetUrl, options), {
-    maxRetries: ONEDRIVE_FETCH_RETRIES - 1,
-    decide: (outcome) => {
-      if (outcome._tag === "failure") {
-        return outcome.cause instanceof UpstreamPolicyError
-          ? { retry: false }
-          : { retry: true, delayMs: ONEDRIVE_FETCH_RETRY_DELAY_MS }
-      }
-      const { status } = outcome.value
-      return !outcome.value.ok &&
-        status !== 401 &&
-        (status === 429 || status >= 500)
-        ? { retry: true, delayMs: ONEDRIVE_FETCH_RETRY_DELAY_MS }
-        : { retry: false }
-    },
-  })
 }
 
 const encodeOneDrivePath = (path: string): string =>
@@ -222,13 +198,19 @@ const readOneDrivePage = async ({
   path,
   nextToken,
   headers,
+  startedAtMs,
+  retry,
 }: OneDrivePageRequestOptions): Promise<OneDriveApiResponse> => {
   const apiUrl = new URL("/api", origin)
   apiUrl.searchParams.set("path", path)
   if (nextToken) {
     apiUrl.searchParams.set("next", nextToken)
   }
-  const response = await fetchOneDrive(apiUrl.toString(), { headers })
+  const response = await fetchWithSourceRetries(
+    apiUrl.toString(),
+    { headers },
+    { retry, startedAtMs }
+  )
   if (response.status === 401) {
     const errorBody = await readBoundedUpstreamJson(response).catch(
       () => undefined
@@ -286,6 +268,7 @@ const fetchOneDrivePage = async ({
   hashedPassword,
   initialToken = "",
   startedAtMs = Date.now(),
+  retry,
 }: OneDrivePageOptions): Promise<MediaNode[]> => {
   const fetchPage = async (
     nextToken: string
@@ -295,6 +278,8 @@ const fetchOneDrivePage = async ({
       path,
       nextToken,
       headers,
+      startedAtMs,
+      retry,
     })
     return {
       value: result,
@@ -326,6 +311,7 @@ const extractOneDriveInitialNodes = async ({
   headers,
   hashedPassword,
   startedAtMs,
+  retry,
 }: OneDriveInitialResponseOptions): Promise<MediaNode[] | undefined> => {
   const nextData = extractOneDriveNextData(
     await readBoundedUpstreamText(response)
@@ -346,6 +332,7 @@ const extractOneDriveInitialNodes = async ({
           hashedPassword,
           initialToken: nextData.next,
           startedAtMs,
+          retry,
         }))
       )
     }
@@ -368,6 +355,7 @@ export const extractOneDriveIndex = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  retryStartedAtMs,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
   const parsedUrl = assertSafeUpstreamUrl(targetUrl)
   const path = decodeUrlComponent(parsedUrl.pathname)
@@ -377,11 +365,13 @@ export const extractOneDriveIndex = async ({
     ? { "od-protected-token": hashedPassword }
     : undefined
   const requestHeaders = headers ?? {}
-  const startedAtMs = Date.now()
+  const startedAtMs = retryStartedAtMs ?? Date.now()
 
-  const initialResponse = await fetchOneDrive(parsedUrl.toString(), {
-    headers,
-  })
+  const initialResponse = await fetchWithSourceRetries(
+    parsedUrl.toString(),
+    { headers },
+    { retry: plugin.retry, startedAtMs }
+  )
   if (initialResponse.status === 401) {
     throw password ? invalidPasswordError() : passwordRequiredError()
   }
@@ -393,6 +383,7 @@ export const extractOneDriveIndex = async ({
         headers: requestHeaders,
         hashedPassword,
         startedAtMs,
+        retry: plugin.retry,
       })
     : undefined
   nodes ??= await fetchOneDrivePage({
@@ -401,6 +392,7 @@ export const extractOneDriveIndex = async ({
     headers: requestHeaders,
     hashedPassword,
     startedAtMs,
+    retry: plugin.retry,
   })
   const pageTitle = decodeUrlComponent(
     parsedUrl.pathname

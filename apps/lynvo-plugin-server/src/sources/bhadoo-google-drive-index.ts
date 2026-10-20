@@ -16,10 +16,10 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
+  type PluginRetryPolicy,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
 import {
-  fetchValidatedUpstream,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
@@ -29,6 +29,7 @@ import {
   encodeUrlPathSegment,
 } from "../url-policy"
 import { extractDirectMedia } from "./direct-media"
+import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
 import { createSourcePlayableNode } from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
@@ -55,6 +56,8 @@ interface BhadooPageRequestOptions {
   readonly basicAuth?: HttpBasicAuth
   readonly pageToken: string
   readonly pageIndex: number
+  readonly retry?: PluginRetryPolicy | undefined
+  readonly startedAtMs: number
 }
 
 interface BhadooPageRequestBody {
@@ -69,6 +72,8 @@ interface BhadooFallbackItemRequestOptions {
   readonly endpointUrl: URL
   readonly fallbackId: string
   readonly basicAuth?: HttpBasicAuth
+  readonly retry?: PluginRetryPolicy | undefined
+  readonly startedAtMs: number
 }
 
 interface BhadooFolderTarget {
@@ -81,6 +86,8 @@ interface BhadooPaginationOptions {
   readonly fallbackId?: string
   readonly basicAuth?: HttpBasicAuth
   readonly folderUrl: URL
+  readonly retry?: PluginRetryPolicy | undefined
+  readonly startedAtMs: number
 }
 
 interface BhadooFileResponseOptions {
@@ -270,22 +277,28 @@ const createBhadooFolderTarget = (folderUrl: URL): BhadooFolderTarget => {
   return { endpointUrl, fallbackId }
 }
 
+// Bhadoo encodes read-only listing operations in POST bodies, so bounded retries are safe.
 const requestBhadooPage = async ({
   endpointUrl,
   fallbackId,
   basicAuth,
   pageToken,
   pageIndex,
+  retry,
+  startedAtMs,
 }: BhadooPageRequestOptions): Promise<BhadooGoogleDriveListResponse> => {
-  assertSafeUpstreamUrl(endpointUrl.toString())
   const authorizationHeaders = createAuthorizationHeaders(basicAuth)
-  const jsonResponse = await fetchValidatedUpstream(endpointUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authorizationHeaders },
-    body: JSON.stringify(
-      createBhadooPageRequestBody(fallbackId, pageToken, pageIndex)
-    ),
-  })
+  const jsonResponse = await fetchWithSourceRetries(
+    endpointUrl,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authorizationHeaders },
+      body: JSON.stringify(
+        createBhadooPageRequestBody(fallbackId, pageToken, pageIndex)
+      ),
+    },
+    { retry, startedAtMs }
+  )
   if (jsonResponse.ok) {
     return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
       await readBoundedUpstreamJson(jsonResponse)
@@ -295,14 +308,18 @@ const requestBhadooPage = async ({
 
   // HACK: Deployed Bhadoo indexes can require this reverse-envelope POST.
   // Keep this active protocol until those deployments are retired.
-  const reverseEnvelopeResponse = await fetchValidatedUpstream(endpointUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      ...authorizationHeaders,
+  const reverseEnvelopeResponse = await fetchWithSourceRetries(
+    endpointUrl,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        ...authorizationHeaders,
+      },
+      body: createBhadooPageFormBody(fallbackId, pageToken, pageIndex),
     },
-    body: createBhadooPageFormBody(fallbackId, pageToken, pageIndex),
-  })
+    { retry, startedAtMs }
+  )
   if (!reverseEnvelopeResponse.ok) {
     throw new Error(
       `Bhadoo Index upstream request failed (JSON ${jsonResponse.status}; reverse envelope ${reverseEnvelopeResponse.status}).`
@@ -317,16 +334,21 @@ const requestBhadooFallbackItem = async ({
   endpointUrl,
   fallbackId,
   basicAuth,
+  retry,
+  startedAtMs,
 }: BhadooFallbackItemRequestOptions): Promise<BhadooGoogleDriveItem> => {
-  assertSafeUpstreamUrl(endpointUrl.toString())
-  const response = await fetchValidatedUpstream(endpointUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...createAuthorizationHeaders(basicAuth),
+  const response = await fetchWithSourceRetries(
+    endpointUrl,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...createAuthorizationHeaders(basicAuth),
+      },
+      body: JSON.stringify({ id: fallbackId }),
     },
-    body: JSON.stringify({ id: fallbackId }),
-  })
+    { retry, startedAtMs }
+  )
   if (!response.ok) {
     await response.body?.cancel()
     throw new Error(`Bhadoo fallback item request failed (${response.status}).`)
@@ -360,6 +382,8 @@ const fetchBhadooNodes = async ({
   fallbackId,
   basicAuth,
   folderUrl,
+  retry,
+  startedAtMs,
 }: BhadooPaginationOptions): Promise<MediaNode[]> => {
   let nextPageIndex = 0
   const fetchPage = async (
@@ -371,6 +395,8 @@ const fetchBhadooNodes = async ({
       basicAuth,
       pageToken,
       pageIndex: nextPageIndex,
+      retry,
+      startedAtMs,
     })
     if (result.error) {
       throw new Error(
@@ -390,7 +416,7 @@ const fetchBhadooNodes = async ({
   return paginateUpstream(
     fetchPage,
     (result) => createBhadooNodes(result.data?.files ?? [], folderUrl),
-    { sourceName: "Bhadoo Index" }
+    { sourceName: "Bhadoo Index", startedAtMs }
   )
 }
 
@@ -399,7 +425,9 @@ export const extractBhadooGoogleDriveIndex = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  retryStartedAtMs,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const startedAtMs = retryStartedAtMs ?? Date.now()
   const folderUrl = assertSafeUpstreamUrl(targetUrl)
   folderUrl.username = ""
   folderUrl.password = ""
@@ -410,6 +438,7 @@ export const extractBhadooGoogleDriveIndex = async ({
       targetUrl: folderUrl.toString(),
       plugin,
       publicAssetOrigin,
+      retryStartedAtMs: startedAtMs,
     })
   }
   const fallbackItem = folderTarget.fallbackId
@@ -417,6 +446,8 @@ export const extractBhadooGoogleDriveIndex = async ({
         endpointUrl: folderTarget.endpointUrl,
         fallbackId: folderTarget.fallbackId,
         basicAuth: request.basicAuth,
+        retry: plugin.retry,
+        startedAtMs,
       })
     : undefined
   if (fallbackItem && folderUrl.searchParams.has("a")) {
@@ -446,6 +477,8 @@ export const extractBhadooGoogleDriveIndex = async ({
     fallbackId: folderTarget.fallbackId,
     basicAuth: request.basicAuth,
     folderUrl,
+    retry: plugin.retry,
+    startedAtMs,
   })
 
   return {

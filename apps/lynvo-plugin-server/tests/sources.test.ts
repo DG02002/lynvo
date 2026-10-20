@@ -222,6 +222,27 @@ describe("Direct Media source adapter", () => {
     expect(cancel).toHaveBeenCalledOnce()
   })
 
+  it("keeps exhausted transient probe failures retryable", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 503 }))
+
+    await expect(
+      extractDirectMedia({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example/video.mp4",
+          },
+        },
+        targetUrl: "https://media.example/video.mp4",
+        plugin: { ...plugin, retry: { maxRetries: 2, delayMs: 0 } },
+      })
+    ).rejects.toThrow("Direct Media upstream request failed (503).")
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+  })
+
   it("marks ignored ranges unsupported and preserves signed URL expiry", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(new Uint8Array([0]), {

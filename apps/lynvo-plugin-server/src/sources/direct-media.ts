@@ -11,8 +11,11 @@ import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
-import { fetchValidatedUpstream } from "../upstream-response"
 import { decodeUrlComponent } from "../url-policy"
+import {
+  fetchWithSourceRetries,
+  isRetryableSourceStatus,
+} from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
 import { readRangeRequestCapability } from "./media-node"
 
@@ -90,12 +93,19 @@ const getSignedUrlExpiry = (targetUrl: string, now: number) => {
 }
 
 export const extractDirectMedia = async (options: PluginAdapterOptions) => {
-  const response = await fetchValidatedUpstream(options.targetUrl, {
-    headers: {
-      "Accept-Encoding": "identity",
-      Range: DIRECT_MEDIA_RANGE_HEADER,
+  const response = await fetchWithSourceRetries(
+    options.targetUrl,
+    {
+      headers: {
+        "Accept-Encoding": "identity",
+        Range: DIRECT_MEDIA_RANGE_HEADER,
+      },
     },
-  })
+    {
+      retry: options.plugin.retry,
+      startedAtMs: options.retryStartedAtMs,
+    }
+  )
   try {
     const contentType =
       response.headers.get("Content-Type")?.toLowerCase() ?? ""
@@ -106,6 +116,11 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
     const isBlockedFilename = DIRECT_MEDIA_BLOCKED_EXTENSIONS.some(
       (extension) => filename.toLowerCase().endsWith(extension)
     )
+    if (isRetryableSourceStatus(response)) {
+      throw new Error(
+        `Direct Media upstream request failed (${response.status}).`
+      )
+    }
     if (
       (response.status !== 200 && response.status !== 206) ||
       !isSupportedContent ||

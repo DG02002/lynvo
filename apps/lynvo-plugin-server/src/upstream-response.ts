@@ -21,6 +21,10 @@ const REDIRECT_CREDENTIAL_HEADERS = [
 
 export class UpstreamPolicyError extends Error {}
 
+export interface FetchValidatedUpstreamOptions {
+  readonly timeoutMs?: number
+}
+
 const validateUpstreamUrl = (targetUrl: string): URL => {
   try {
     return assertSafeUpstreamUrl(targetUrl)
@@ -54,13 +58,14 @@ const withUpstreamErrors = async <Value>(
 
 export const fetchValidatedUpstream = (
   targetUrl: string | URL,
-  options: RequestInit
+  options: RequestInit,
+  fetchOptions: FetchValidatedUpstreamOptions = {}
 ): Promise<Response> =>
   withUpstreamErrors(() =>
     fetchValidatedRedirects(targetUrl, options, {
       validateUrl: (value) => validateUpstreamUrl(value.toString()),
       maxRedirects: UPSTREAM_REDIRECT_LIMIT,
-      timeoutMs: UPSTREAM_TIMEOUT_MS,
+      timeoutMs: fetchOptions.timeoutMs ?? UPSTREAM_TIMEOUT_MS,
       maximumResponseBytes: UPSTREAM_RESPONSE_BYTE_LIMIT,
       responseBodyMode: "stream",
       stripHeadersOnCrossOrigin: REDIRECT_CREDENTIAL_HEADERS,

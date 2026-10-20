@@ -14,13 +14,12 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
+  type PluginRetryPolicy,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
-import {
-  fetchValidatedUpstream,
-  readBoundedUpstreamText,
-} from "../upstream-response"
+import { readBoundedUpstreamText } from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
+import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
 import {
   createSourcePlayableNode,
@@ -99,6 +98,11 @@ export interface GoogleDrivePublicFileMetadata {
   rangeRequest: RangeRequestCapability
 }
 
+export interface FetchGoogleDrivePublicFileMetadataOptions {
+  readonly retry?: PluginRetryPolicy | undefined
+  readonly startedAtMs?: number | undefined
+}
+
 const isHtmlResponse = (response: Response): boolean =>
   response.headers.get("content-type")?.toLowerCase().includes("text/html") ??
   false
@@ -119,11 +123,14 @@ const getContentDispositionFilename = (
 }
 
 export const fetchGoogleDrivePublicFileMetadata = async (
-  downloadUrl: string
+  downloadUrl: string,
+  options: FetchGoogleDrivePublicFileMetadataOptions = {}
 ): Promise<GoogleDrivePublicFileMetadata> => {
-  const response = await fetchValidatedUpstream(downloadUrl, {
-    headers: { Range: "bytes=0-0" },
-  })
+  const response = await fetchWithSourceRetries(
+    downloadUrl,
+    { headers: { Range: "bytes=0-0" } },
+    { retry: options.retry, startedAtMs: options.startedAtMs }
+  )
   if (isHtmlResponse(response)) {
     await response.body?.cancel()
     throw new Error("Google Drive file is rate-limited. Try again in 24 hours.")
@@ -256,9 +263,15 @@ export const extractGoogleDrivePublicFolder = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  retryStartedAtMs,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const startedAtMs = retryStartedAtMs ?? Date.now()
   extractGoogleDriveFolderId(targetUrl)
-  const response = await fetchValidatedUpstream(targetUrl, {})
+  const response = await fetchWithSourceRetries(
+    targetUrl,
+    {},
+    { retry: plugin.retry, startedAtMs }
+  )
   if (!response.ok) {
     throw new Error("Google Drive folder is not publicly accessible.")
   }
@@ -303,12 +316,17 @@ export const extractGoogleDrivePublicFile = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  retryStartedAtMs,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const startedAtMs = retryStartedAtMs ?? Date.now()
   const sourceUrl = new URL(targetUrl)
   const fileId = extractGoogleDriveFileId(sourceUrl)
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
-  const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
+  const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl, {
+    retry: plugin.retry,
+    startedAtMs,
+  })
   const node = createSourcePlayableNode({
     id: fileId,
     label: metadata.filename,
