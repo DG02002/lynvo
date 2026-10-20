@@ -16,29 +16,29 @@ import {
   fetchWithSourceRetries,
   isRetryableSourceStatus,
 } from "./fetch-with-retries"
-import { formatFileSize } from "./file-size"
+import {
+  getResponseFileSize,
+  parseContentDispositionFilename,
+} from "./media-metadata"
 import { readRangeRequestCapability } from "./media-node"
 
-const CONTENT_DISPOSITION_FILENAME =
-  /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i
-const CONTENT_RANGE_TOTAL = /\/(\d+)$/
 const MAX_SIGNED_URL_DURATION_SECONDS = 31_536_000
 
 const getFilename = (targetUrl: string, headers: Headers): string => {
-  const headerFilename = CONTENT_DISPOSITION_FILENAME.exec(
-    headers.get("Content-Disposition") ?? ""
-  )?.[1]
+  const headerFilename = parseContentDispositionFilename(
+    headers.get("Content-Disposition")
+  )
   if (headerFilename) {
-    return decodeUrlComponent(headerFilename)
+    return headerFilename
   }
   const parsedUrl = new URL(targetUrl)
   const queryDisposition =
     parsedUrl.searchParams.get("response-content-disposition") ??
     parsedUrl.searchParams.get("content-disposition")
   if (queryDisposition) {
-    const match = CONTENT_DISPOSITION_FILENAME.exec(queryDisposition)?.[1]
+    const match = parseContentDispositionFilename(queryDisposition)
     if (match) {
-      return decodeUrlComponent(match)
+      return match
     }
   }
   const queryFilename =
@@ -48,18 +48,6 @@ const getFilename = (targetUrl: string, headers: Headers): string => {
   }
   const pathFilename = parsedUrl.pathname.split("/").at(-1)
   return pathFilename ? decodeUrlComponent(pathFilename) : "Unknown File"
-}
-
-const getFileSize = (status: number, headers: Headers): string | undefined => {
-  const rangeSize = CONTENT_RANGE_TOTAL.exec(
-    headers.get("Content-Range") ?? ""
-  )?.[1]
-  return formatFileSize(
-    rangeSize ??
-      (status === 200
-        ? (headers.get("Content-Length") ?? undefined)
-        : undefined)
-  )
 }
 
 const getSignedUrlExpiry = (targetUrl: string, now: number) => {
@@ -138,7 +126,7 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       url: options.targetUrl,
       status: "up" as const,
       rangeRequest: readRangeRequestCapability(response),
-      size: getFileSize(response.status, response.headers),
+      size: getResponseFileSize(response.status, response.headers),
       ...getSignedUrlExpiry(options.targetUrl, Date.now()),
     }
     return {

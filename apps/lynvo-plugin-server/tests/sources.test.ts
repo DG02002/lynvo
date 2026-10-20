@@ -222,6 +222,33 @@ describe("Direct Media source adapter", () => {
     expect(cancel).toHaveBeenCalledOnce()
   })
 
+  it("prefers extended UTF-8 Content-Disposition filenames", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Disposition":
+            "attachment; filename=\"fallback.mp4\"; filename*=UTF-8'en'%E2%9C%93%20clip.mp4",
+          "Content-Range": "bytes 0-0/1",
+        },
+      })
+    )
+
+    const result = await extractDirectMedia({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://media.example/video.mp4",
+        },
+      },
+      targetUrl: "https://media.example/video.mp4",
+      plugin,
+    })
+
+    expect(result.nodes[0]).toMatchObject({ label: "✓ clip.mp4" })
+  })
+
   it("keeps exhausted transient probe failures retryable", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

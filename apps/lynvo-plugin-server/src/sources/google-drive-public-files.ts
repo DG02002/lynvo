@@ -22,10 +22,15 @@ import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
 import {
+  getResponseFileSize,
+  parseContentDispositionFilename,
+} from "./media-metadata"
+import {
+  createSourceFolderNodes,
   createSourcePlayableNode,
   readRangeRequestCapability,
+  type SourceFolderNodeInput,
 } from "./media-node"
-import { isVideoFile } from "./video-file"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PATH_PATTERN = /^\/drive\/folders\/([^/]+)(?:\/|$)/
@@ -107,21 +112,6 @@ const isHtmlResponse = (response: Response): boolean =>
   response.headers.get("content-type")?.toLowerCase().includes("text/html") ??
   false
 
-const getContentDispositionFilename = (
-  contentDisposition: string | null
-): string | undefined => {
-  if (!contentDisposition) {
-    return undefined
-  }
-  const encodedFilename = /filename\*=UTF-8''([^;]+)/i.exec(
-    contentDisposition
-  )?.[1]
-  if (encodedFilename) {
-    return decodeUrlComponent(encodedFilename)
-  }
-  return /filename="([^"]+)"/i.exec(contentDisposition)?.[1]
-}
-
 export const fetchGoogleDrivePublicFileMetadata = async (
   downloadUrl: string,
   options: FetchGoogleDrivePublicFileMetadataOptions = {}
@@ -139,20 +129,15 @@ export const fetchGoogleDrivePublicFileMetadata = async (
     throw new Error("Google Drive file is not publicly accessible.")
   }
   const filename =
-    getContentDispositionFilename(
+    parseContentDispositionFilename(
       response.headers.get("content-disposition")
     ) ?? "Google Drive file"
-  const totalBytes =
-    /\/(\d+)$/.exec(response.headers.get("content-range") ?? "")?.[1] ??
-    (response.status === 200
-      ? response.headers.get("content-length")
-      : undefined) ??
-    undefined
+  const size = getResponseFileSize(response.status, response.headers)
   // The probe above already asked for one byte, so its response decides the
   // range capability instead of a second request at handoff time.
   const rangeRequest: RangeRequestCapability =
     readRangeRequestCapability(response)
-  return { filename, size: formatFileSize(totalBytes), rangeRequest }
+  return { filename, size, rangeRequest }
 }
 
 export interface GoogleDrivePublicFolderItem {
@@ -234,30 +219,29 @@ export const parseGoogleDrivePublicFolderItems = (
 export const createGoogleDrivePublicFolderNodes = (
   items: readonly GoogleDrivePublicFolderItem[]
 ): MediaNode[] =>
-  items.flatMap<MediaNode>((item) => {
-    if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+  createSourceFolderNodes(
+    items.flatMap<SourceFolderNodeInput>((item) => {
+      if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+        return [
+          {
+            kind: "folder",
+            id: item.id,
+            label: item.name,
+            nodeUrl: `https://drive.google.com/drive/folders/${encodeUrlPathSegment(item.id)}`,
+          },
+        ]
+      }
       return [
         {
-          kind: "resolvable",
+          kind: "file",
           id: item.id,
           label: item.name,
-          nodeUrl: `https://drive.google.com/drive/folders/${encodeUrlPathSegment(item.id)}`,
-          resolutionKind: "folder",
+          mediaUrl: () => createGoogleDriveDownloadUrl(item.id),
+          size: formatFileSize(item.size),
         },
       ]
-    }
-    if (!isVideoFile(item.name)) {
-      return []
-    }
-    const size = formatFileSize(item.size)
-    const node = createSourcePlayableNode({
-      id: item.id,
-      label: item.name,
-      url: createGoogleDriveDownloadUrl(item.id),
-      size,
     })
-    return [node]
-  })
+  )
 
 export const extractGoogleDrivePublicFolder = async ({
   targetUrl,

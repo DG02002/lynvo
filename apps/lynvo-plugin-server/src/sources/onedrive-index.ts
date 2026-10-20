@@ -22,9 +22,12 @@ import {
 } from "../url-policy"
 import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
-import { createSourcePlayableNode } from "./media-node"
+import { getLastPathSegment } from "./media-metadata"
+import {
+  createSourceFolderNodes,
+  type SourceFolderNodeInput,
+} from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
-import { isVideoFile } from "./video-file"
 
 interface OneDriveItem {
   readonly name: string
@@ -129,46 +132,51 @@ export const createOneDriveNodes = ({
   origin,
   hashedPassword,
 }: OneDriveNodeOptions): MediaNode[] =>
-  items.flatMap<MediaNode>((item) => {
-    if (item.folder) {
-      const nextPath = currentPath.endsWith("/")
-        ? currentPath + item.name
-        : `${currentPath}/${item.name}`
+  createSourceFolderNodes(
+    items.flatMap<SourceFolderNodeInput>((item) => {
+      if (item.folder) {
+        const nextPath = currentPath.endsWith("/")
+          ? currentPath + item.name
+          : `${currentPath}/${item.name}`
+        return [
+          {
+            kind: "folder",
+            id: item.id,
+            label: item.name,
+            nodeUrl: `${origin}${encodeOneDrivePath(nextPath)}`,
+          },
+        ]
+      }
+
+      if (!item.file) {
+        return []
+      }
+
+      const size = formatFileSize(item.size)
       return [
         {
-          kind: "resolvable" as const,
+          kind: "file",
           id: item.id,
           label: item.name,
-          nodeUrl: `${origin}${encodeOneDrivePath(nextPath)}`,
-          resolutionKind: "folder" as const,
+          mediaUrl: () => {
+            const fullPath = currentPath.endsWith("/")
+              ? currentPath + item.name
+              : `${currentPath}/${item.name}`
+            const playableUrl = new URL("/api/raw/", origin)
+            playableUrl.searchParams.set("path", fullPath)
+            if (hashedPassword) {
+              playableUrl.searchParams.set("odpt", hashedPassword)
+            }
+            return playableUrl.toString()
+          },
+          size,
+          // This authenticated index endpoint cannot safely probe the final media
+          // URL, so range capability remains unknown.
+          rangeRequest: "unknown",
         },
       ]
-    }
-
-    if (!item.file || !isVideoFile(item.name)) {
-      return []
-    }
-
-    const size = formatFileSize(item.size)
-    const fullPath = currentPath.endsWith("/")
-      ? currentPath + item.name
-      : `${currentPath}/${item.name}`
-    const playableUrl = new URL("/api/raw/", origin)
-    playableUrl.searchParams.set("path", fullPath)
-    if (hashedPassword) {
-      playableUrl.searchParams.set("odpt", hashedPassword)
-    }
-    const node = createSourcePlayableNode({
-      id: item.id,
-      label: item.name,
-      url: playableUrl.toString(),
-      size,
-      // This authenticated index endpoint cannot safely probe the final media
-      // URL, so range capability remains unknown.
-      rangeRequest: "unknown",
     })
-    return [node]
-  })
+  )
 
 const extractOneDriveNextData = (
   html: string
@@ -394,11 +402,7 @@ export const extractOneDriveIndex = async ({
     startedAtMs,
     retry: plugin.retry,
   })
-  const pageTitle = decodeUrlComponent(
-    parsedUrl.pathname
-      .split("/")
-      .findLast((pathSegment) => pathSegment.length > 0) ?? "OneDrive Index"
-  )
+  const pageTitle = getLastPathSegment(parsedUrl.pathname, "OneDrive Index")
   return {
     plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, pageTitle),
     nodes,

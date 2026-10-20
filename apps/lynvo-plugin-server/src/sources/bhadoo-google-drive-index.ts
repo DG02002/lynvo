@@ -23,15 +23,15 @@ import {
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
-import {
-  assertSafeUpstreamUrl,
-  decodeUrlComponent,
-  encodeUrlPathSegment,
-} from "../url-policy"
+import { assertSafeUpstreamUrl, encodeUrlPathSegment } from "../url-policy"
 import { extractDirectMedia } from "./direct-media"
 import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
-import { createSourcePlayableNode } from "./media-node"
+import { getLastPathSegment } from "./media-metadata"
+import {
+  createSourceFolderNodes,
+  type SourceFolderNodeInput,
+} from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
 import { isVideoFile } from "./video-file"
 
@@ -123,10 +123,7 @@ const bhadooGoogleDriveListResponseSchema = Schema.Struct({
 
 export const getBhadooPathFilename = (url: string | URL): string => {
   const parsedUrl = url instanceof URL ? url : new URL(url)
-  const finalSegment = parsedUrl.pathname
-    .split("/")
-    .findLast((pathPart) => pathPart.length > 0)
-  return finalSegment ? decodeUrlComponent(finalSegment) : "Google Drive Index"
+  return getLastPathSegment(parsedUrl.pathname, "Google Drive Index")
 }
 
 const isBhadooFallbackUrl = (url: URL): boolean =>
@@ -159,41 +156,45 @@ export const createBhadooNodes = (
   items: readonly BhadooGoogleDriveItem[],
   folderUrl: URL
 ): MediaNode[] =>
-  items.flatMap<MediaNode>((item) => {
-    if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+  createSourceFolderNodes(
+    items.flatMap<SourceFolderNodeInput>((item) => {
+      if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+        return [
+          {
+            kind: "folder",
+            id: item.id,
+            label: item.name,
+            nodeUrl: createBhadooFolderNodeUrl(folderUrl, item),
+          },
+        ]
+      }
+      const size = formatBhadooFileSize(item.size)
       return [
         {
-          kind: "resolvable" as const,
+          kind: "file",
           id: item.id,
           label: item.name,
-          nodeUrl: createBhadooFolderNodeUrl(folderUrl, item),
-          resolutionKind: "folder" as const,
+          mediaUrl: () => {
+            const playableUrl = item.link
+              ? new URL(item.link, folderUrl)
+              : new URL(
+                  encodeUrlPathSegment(item.name),
+                  folderUrl.toString().endsWith("/")
+                    ? folderUrl
+                    : `${folderUrl}/`
+                )
+            playableUrl.username = ""
+            playableUrl.password = ""
+            return playableUrl.toString()
+          },
+          size,
+          // The index supplies the final URL but does not expose a safe probe
+          // endpoint, so range capability remains unknown.
+          rangeRequest: "unknown",
         },
       ]
-    }
-    if (!isVideoFile(item.name)) {
-      return []
-    }
-    const playableUrl = item.link
-      ? new URL(item.link, folderUrl)
-      : new URL(
-          encodeUrlPathSegment(item.name),
-          folderUrl.toString().endsWith("/") ? folderUrl : `${folderUrl}/`
-        )
-    playableUrl.username = ""
-    playableUrl.password = ""
-    const size = formatBhadooFileSize(item.size)
-    const node = createSourcePlayableNode({
-      id: item.id,
-      label: item.name,
-      url: playableUrl.toString(),
-      size,
-      // The index supplies the final URL but does not expose a safe probe
-      // endpoint, so range capability remains unknown.
-      rangeRequest: "unknown",
     })
-    return [node]
-  })
+  )
 
 const decodeBhadooReverseEnvelope = (
   encodedResponse: string
