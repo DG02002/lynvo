@@ -147,6 +147,72 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  verify-plugin-server-template:
+    name: Generated Plugin Server contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --no-experimental-webstorage
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Set up pnpm 12 and Node.js
+        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          version: 12.5.1
+          runtime: node@26.12.0
+          cache: false
+          install: false
+      - name: Update pnpm
+        run: pnpm self-update
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Pack the checked-out Plugin Server Protocol
+        working-directory: packages/plugin-server-protocol
+        run: pnpm pack --pack-destination "$RUNNER_TEMP"
+      - name: Record the checked-out protocol tarball path
+        run: |
+          protocol_version="$(node -p "require('./packages/plugin-server-protocol/package.json').version")"
+          echo "PROTOCOL_TARBALL=${RUNNER_TEMP}/dg02002-lynvo-plugin-server-protocol-${protocol_version}.tgz" >> "$GITHUB_ENV"
+      - name: Generate a Plugin Server outside the worktree
+        env:
+          PROJECT_DIR: ${{ runner.temp }}/lynvo-plugin-server-contract
+        run: |
+          case "$PROJECT_DIR" in
+            "$GITHUB_WORKSPACE"|"$GITHUB_WORKSPACE"/*)
+              echo "::error::Generated project must be outside the worktree"
+              exit 1
+              ;;
+          esac
+          node packages/create-lynvo-plugin-server/bin/create-lynvo-plugin-server.mjs \
+            "$PROJECT_DIR" --skip-install
+      # The public registry can lag a protocol change on this branch. Test the
+      # generated source against the checked-out protocol package instead.
+      - name: Use the checked-out protocol in the generated project
+        env:
+          PROJECT_DIR: ${{ runner.temp }}/lynvo-plugin-server-contract
+        run: |
+          node --input-type=module - "$PROJECT_DIR/package.json" "$PROTOCOL_TARBALL" <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises"
+
+          const [packagePath, protocolTarball] = process.argv.slice(2)
+          const packageJson = JSON.parse(await readFile(packagePath, "utf8"))
+          packageJson.dependencies["@dg02002/lynvo-plugin-server-protocol"] =
+            `file:${protocolTarball}`
+          await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`)
+          NODE
+      - name: Install generated project dependencies
+        working-directory: ${{ runner.temp }}/lynvo-plugin-server-contract
+        run: pnpm install
+      - name: Run generated project contract tests
+        working-directory: ${{ runner.temp }}/lynvo-plugin-server-contract
+        run: pnpm test
+
   deploy-production:
     name: Deploy production
     needs:
