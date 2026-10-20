@@ -7,11 +7,22 @@ import {
 
 import { PLUGIN_SERVER_ID, PLUGIN_SERVER_NAME } from "./constants"
 
+export interface PluginRetryPolicy {
+  readonly maxRetries: number
+  readonly delayMs: number
+}
+
+export interface SourceRequestContext {
+  readonly retry?: PluginRetryPolicy | undefined
+  readonly startedAtMs: number
+}
+
 export interface PluginAdapterOptions {
   request: ExtractRequest
   targetUrl: string
   plugin: LynvoPluginDefinition
   publicAssetOrigin?: string
+  sourceRequestContext?: SourceRequestContext | undefined
 }
 
 export interface LynvoPluginDefinition {
@@ -26,8 +37,18 @@ export interface LynvoPluginDefinition {
   matchers?: PluginServerMatcher[]
   credential?: PluginCredential
   discovery?: { confidence: "pattern" | "verified" }
+  retry?: PluginRetryPolicy | undefined
   extract: (options: PluginAdapterOptions) => Promise<ExtractSuccessResponse>
 }
+
+export const getSourceRequestContext = (
+  plugin: LynvoPluginDefinition,
+  sourceRequestContext?: SourceRequestContext
+): SourceRequestContext =>
+  sourceRequestContext ?? {
+    retry: plugin.retry,
+    startedAtMs: Date.now(),
+  }
 
 export const createPluginResponseMetadata = (
   plugin: LynvoPluginDefinition,

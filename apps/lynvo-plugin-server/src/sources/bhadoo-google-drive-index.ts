@@ -16,21 +16,24 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
+  getSourceRequestContext,
   type PluginAdapterOptions,
+  type SourceRequestContext,
 } from "../plugin-adapter"
 import {
-  fetchValidatedUpstream,
+  cancelUpstreamResponseBody,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
-import {
-  assertSafeUpstreamUrl,
-  decodeUrlComponent,
-  encodeUrlPathSegment,
-} from "../url-policy"
+import { assertSafeUpstreamUrl, encodeUrlPathSegment } from "../url-policy"
 import { extractDirectMedia } from "./direct-media"
+import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
-import { createSourcePlayableNode } from "./media-node"
+import { getLastPathSegment } from "./media-metadata"
+import {
+  createSourceFolderNodes,
+  type SourceFolderNodeInput,
+} from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
 import { isVideoFile } from "./video-file"
 
@@ -49,7 +52,7 @@ export interface BhadooGoogleDriveListResponse {
   error?: { code?: number; message?: string }
 }
 
-interface BhadooPageRequestOptions {
+interface BhadooPageRequestOptions extends SourceRequestContext {
   readonly endpointUrl: URL
   readonly fallbackId?: string
   readonly basicAuth?: HttpBasicAuth
@@ -65,7 +68,7 @@ interface BhadooPageRequestBody {
   readonly page_index: number
 }
 
-interface BhadooFallbackItemRequestOptions {
+interface BhadooFallbackItemRequestOptions extends SourceRequestContext {
   readonly endpointUrl: URL
   readonly fallbackId: string
   readonly basicAuth?: HttpBasicAuth
@@ -76,7 +79,7 @@ interface BhadooFolderTarget {
   readonly fallbackId?: string
 }
 
-interface BhadooPaginationOptions {
+interface BhadooPaginationOptions extends SourceRequestContext {
   readonly endpointUrl: URL
   readonly fallbackId?: string
   readonly basicAuth?: HttpBasicAuth
@@ -89,6 +92,13 @@ interface BhadooFileResponseOptions {
   readonly plugin: PluginAdapterOptions["plugin"]
   readonly publicAssetOrigin?: string
 }
+
+const createReplaySafeBhadooRequestOptions = (
+  sourceRequestContext: SourceRequestContext
+) => ({
+  ...sourceRequestContext,
+  requestReplaySafe: true,
+})
 
 const bhadooGoogleDriveItemSchema = Schema.Struct({
   id: Schema.String,
@@ -116,10 +126,7 @@ const bhadooGoogleDriveListResponseSchema = Schema.Struct({
 
 export const getBhadooPathFilename = (url: string | URL): string => {
   const parsedUrl = url instanceof URL ? url : new URL(url)
-  const finalSegment = parsedUrl.pathname
-    .split("/")
-    .findLast((pathPart) => pathPart.length > 0)
-  return finalSegment ? decodeUrlComponent(finalSegment) : "Google Drive Index"
+  return getLastPathSegment(parsedUrl.pathname, "Google Drive Index")
 }
 
 const isBhadooFallbackUrl = (url: URL): boolean =>
@@ -152,41 +159,44 @@ export const createBhadooNodes = (
   items: readonly BhadooGoogleDriveItem[],
   folderUrl: URL
 ): MediaNode[] =>
-  items.flatMap<MediaNode>((item) => {
-    if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+  createSourceFolderNodes(
+    items.flatMap<SourceFolderNodeInput>((item) => {
+      if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+        return [
+          {
+            kind: "folder",
+            id: item.id,
+            label: item.name,
+            nodeUrl: createBhadooFolderNodeUrl(folderUrl, item),
+          },
+        ]
+      }
+      if (!isVideoFile(item.name)) {
+        return []
+      }
+      const size = formatBhadooFileSize(item.size)
+      const playableUrl = item.link
+        ? new URL(item.link, folderUrl)
+        : new URL(
+            encodeUrlPathSegment(item.name),
+            folderUrl.toString().endsWith("/") ? folderUrl : `${folderUrl}/`
+          )
+      playableUrl.username = ""
+      playableUrl.password = ""
       return [
         {
-          kind: "resolvable" as const,
+          kind: "file",
           id: item.id,
           label: item.name,
-          nodeUrl: createBhadooFolderNodeUrl(folderUrl, item),
-          resolutionKind: "folder" as const,
+          mediaUrl: playableUrl.toString(),
+          size,
+          // The index supplies the final URL but does not expose a safe probe
+          // endpoint, so range capability remains unknown.
+          rangeRequest: "unknown",
         },
       ]
-    }
-    if (!isVideoFile(item.name)) {
-      return []
-    }
-    const playableUrl = item.link
-      ? new URL(item.link, folderUrl)
-      : new URL(
-          encodeUrlPathSegment(item.name),
-          folderUrl.toString().endsWith("/") ? folderUrl : `${folderUrl}/`
-        )
-    playableUrl.username = ""
-    playableUrl.password = ""
-    const size = formatBhadooFileSize(item.size)
-    const node = createSourcePlayableNode({
-      id: item.id,
-      label: item.name,
-      url: playableUrl.toString(),
-      size,
-      // The index supplies the final URL but does not expose a safe probe
-      // endpoint, so range capability remains unknown.
-      rangeRequest: "unknown",
     })
-    return [node]
-  })
+  )
 
 const decodeBhadooReverseEnvelope = (
   encodedResponse: string
@@ -270,40 +280,55 @@ const createBhadooFolderTarget = (folderUrl: URL): BhadooFolderTarget => {
   return { endpointUrl, fallbackId }
 }
 
+// Bhadoo encodes read-only listing operations in POST bodies, so bounded retries are safe.
 const requestBhadooPage = async ({
   endpointUrl,
   fallbackId,
   basicAuth,
   pageToken,
   pageIndex,
+  retry,
+  startedAtMs,
 }: BhadooPageRequestOptions): Promise<BhadooGoogleDriveListResponse> => {
-  assertSafeUpstreamUrl(endpointUrl.toString())
-  const authorizationHeaders = createAuthorizationHeaders(basicAuth)
-  const jsonResponse = await fetchValidatedUpstream(endpointUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authorizationHeaders },
-    body: JSON.stringify(
-      createBhadooPageRequestBody(fallbackId, pageToken, pageIndex)
-    ),
+  const requestRetryOptions = createReplaySafeBhadooRequestOptions({
+    retry,
+    startedAtMs,
   })
+  const authorizationHeaders = createAuthorizationHeaders(basicAuth)
+  const jsonResponse = await fetchWithSourceRetries(
+    endpointUrl,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authorizationHeaders },
+      body: JSON.stringify(
+        createBhadooPageRequestBody(fallbackId, pageToken, pageIndex)
+      ),
+    },
+    requestRetryOptions
+  )
   if (jsonResponse.ok) {
     return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
       await readBoundedUpstreamJson(jsonResponse)
     )
   }
-  await jsonResponse.body?.cancel()
+  await cancelUpstreamResponseBody(jsonResponse)
 
   // HACK: Deployed Bhadoo indexes can require this reverse-envelope POST.
   // Keep this active protocol until those deployments are retired.
-  const reverseEnvelopeResponse = await fetchValidatedUpstream(endpointUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      ...authorizationHeaders,
+  const reverseEnvelopeResponse = await fetchWithSourceRetries(
+    endpointUrl,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        ...authorizationHeaders,
+      },
+      body: createBhadooPageFormBody(fallbackId, pageToken, pageIndex),
     },
-    body: createBhadooPageFormBody(fallbackId, pageToken, pageIndex),
-  })
+    requestRetryOptions
+  )
   if (!reverseEnvelopeResponse.ok) {
+    await cancelUpstreamResponseBody(reverseEnvelopeResponse)
     throw new Error(
       `Bhadoo Index upstream request failed (JSON ${jsonResponse.status}; reverse envelope ${reverseEnvelopeResponse.status}).`
     )
@@ -313,22 +338,32 @@ const requestBhadooPage = async ({
   )
 }
 
+// This POST retrieves a listed item and does not mutate the index.
 const requestBhadooFallbackItem = async ({
   endpointUrl,
   fallbackId,
   basicAuth,
+  retry,
+  startedAtMs,
 }: BhadooFallbackItemRequestOptions): Promise<BhadooGoogleDriveItem> => {
-  assertSafeUpstreamUrl(endpointUrl.toString())
-  const response = await fetchValidatedUpstream(endpointUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...createAuthorizationHeaders(basicAuth),
-    },
-    body: JSON.stringify({ id: fallbackId }),
+  const requestRetryOptions = createReplaySafeBhadooRequestOptions({
+    retry,
+    startedAtMs,
   })
+  const response = await fetchWithSourceRetries(
+    endpointUrl,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...createAuthorizationHeaders(basicAuth),
+      },
+      body: JSON.stringify({ id: fallbackId }),
+    },
+    requestRetryOptions
+  )
   if (!response.ok) {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
     throw new Error(`Bhadoo fallback item request failed (${response.status}).`)
   }
   return Schema.decodeUnknownSync(bhadooGoogleDriveItemSchema)(
@@ -360,7 +395,10 @@ const fetchBhadooNodes = async ({
   fallbackId,
   basicAuth,
   folderUrl,
+  retry,
+  startedAtMs,
 }: BhadooPaginationOptions): Promise<MediaNode[]> => {
+  const sourceRequestContext = { retry, startedAtMs }
   let nextPageIndex = 0
   const fetchPage = async (
     pageToken: string
@@ -371,6 +409,7 @@ const fetchBhadooNodes = async ({
       basicAuth,
       pageToken,
       pageIndex: nextPageIndex,
+      ...sourceRequestContext,
     })
     if (result.error) {
       throw new Error(
@@ -390,7 +429,10 @@ const fetchBhadooNodes = async ({
   return paginateUpstream(
     fetchPage,
     (result) => createBhadooNodes(result.data?.files ?? [], folderUrl),
-    { sourceName: "Bhadoo Index" }
+    {
+      sourceName: "Bhadoo Index",
+      startedAtMs: sourceRequestContext.startedAtMs,
+    }
   )
 }
 
@@ -399,7 +441,12 @@ export const extractBhadooGoogleDriveIndex = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  sourceRequestContext: providedSourceRequestContext,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const sourceRequestContext = getSourceRequestContext(
+    plugin,
+    providedSourceRequestContext
+  )
   const folderUrl = assertSafeUpstreamUrl(targetUrl)
   folderUrl.username = ""
   folderUrl.password = ""
@@ -410,6 +457,7 @@ export const extractBhadooGoogleDriveIndex = async ({
       targetUrl: folderUrl.toString(),
       plugin,
       publicAssetOrigin,
+      sourceRequestContext,
     })
   }
   const fallbackItem = folderTarget.fallbackId
@@ -417,6 +465,7 @@ export const extractBhadooGoogleDriveIndex = async ({
         endpointUrl: folderTarget.endpointUrl,
         fallbackId: folderTarget.fallbackId,
         basicAuth: request.basicAuth,
+        ...sourceRequestContext,
       })
     : undefined
   if (fallbackItem && folderUrl.searchParams.has("a")) {
@@ -446,6 +495,7 @@ export const extractBhadooGoogleDriveIndex = async ({
     fallbackId: folderTarget.fallbackId,
     basicAuth: request.basicAuth,
     folderUrl,
+    ...sourceRequestContext,
   })
 
   return {

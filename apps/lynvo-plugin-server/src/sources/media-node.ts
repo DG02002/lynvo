@@ -1,6 +1,7 @@
 import {
   createPlayableNode,
   type PlayableNode,
+  type MediaNode,
   type RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 
@@ -8,14 +9,30 @@ interface SourcePlayableNodeOptions {
   readonly id: string
   readonly label: string
   readonly url: string
-  readonly size?: string
-  readonly rangeRequest?: RangeRequestCapability
+  readonly size?: string | undefined
+  readonly rangeRequest?: RangeRequestCapability | undefined
 }
 
 interface SourcePlayableNodeExtras {
   size?: string
   rangeRequest?: RangeRequestCapability
 }
+
+export type SourceFolderNodeInput =
+  | {
+      readonly kind: "folder"
+      readonly id: string
+      readonly label: string
+      readonly nodeUrl: string
+    }
+  | {
+      readonly kind: "file"
+      readonly id: string
+      readonly label: string
+      readonly mediaUrl: string
+      readonly size?: string | undefined
+      readonly rangeRequest?: RangeRequestCapability | undefined
+    }
 
 export const readRangeRequestCapability = (
   response: Pick<Response, "status" | "headers">
@@ -49,3 +66,25 @@ export const createSourcePlayableNode = ({
   }
   return Object.keys(extras).length > 0 ? { ...node, ...extras } : node
 }
+
+export const createSourceFolderNodes = (
+  items: readonly SourceFolderNodeInput[]
+): MediaNode[] =>
+  items.map((item): MediaNode => {
+    if (item.kind === "folder") {
+      return {
+        kind: "resolvable",
+        id: item.id,
+        label: item.label,
+        nodeUrl: item.nodeUrl,
+        resolutionKind: "folder",
+      }
+    }
+    return createSourcePlayableNode({
+      id: item.id,
+      label: item.label,
+      url: item.mediaUrl,
+      size: item.size,
+      rangeRequest: item.rangeRequest,
+    })
+  })

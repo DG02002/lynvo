@@ -25,6 +25,7 @@ import {
 import type { LynvoPluginDefinition } from "./plugin-adapter"
 import { extractBhadooGoogleDriveIndex } from "./sources/bhadoo-google-drive-index"
 import { extractDirectMedia } from "./sources/direct-media"
+import { DEFAULT_SOURCE_RETRY_POLICY } from "./sources/fetch-with-retries"
 import { extractGoogleDrivePublicLink } from "./sources/google-drive-public-files"
 import { extractOneDriveIndex } from "./sources/onedrive-index"
 import {
@@ -65,6 +66,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     iconPath: "/icons/sources/bhadoo-cloud.svg",
     status: "active",
     version: BHADOO_SOURCE_IMPLEMENTATION_VERSION,
+    retry: DEFAULT_SOURCE_RETRY_POLICY,
     matchers: bhadooMatchers,
     credential: { kind: "http-basic", scope: "domain", required: false },
     discovery: { confidence: "pattern" },
@@ -79,6 +81,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     iconPath: "/icons/sources/google-drive-public-files.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
+    retry: DEFAULT_SOURCE_RETRY_POLICY,
     matchers: googleDrivePublicFileMatchers,
     extract: extractGoogleDrivePublicLink,
   },
@@ -90,6 +93,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     iconPath: "/icons/sources/direct-media.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
+    retry: DEFAULT_SOURCE_RETRY_POLICY,
     matchStrategy: "probe",
     extract: extractDirectMedia,
   },
@@ -102,6 +106,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     iconPath: "/icons/sources/onedrive-index.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
+    retry: DEFAULT_SOURCE_RETRY_POLICY,
     matchStrategy: "probe",
     credential: { kind: "domain-password", scope: "domain", required: false },
     extract: extractOneDriveIndex,
@@ -250,5 +255,15 @@ export const extractWithLynvoPlugin = async (
   if (!plugin) {
     throw new ProtocolError("UNSUPPORTED_URL", "No Plugin matches this link.")
   }
-  return plugin.extract({ request, targetUrl, plugin, publicAssetOrigin })
+  // One start time makes request retries share the extraction's total budget.
+  return plugin.extract({
+    request,
+    targetUrl,
+    plugin,
+    publicAssetOrigin,
+    sourceRequestContext: {
+      retry: plugin.retry,
+      startedAtMs: Date.now(),
+    },
+  })
 }

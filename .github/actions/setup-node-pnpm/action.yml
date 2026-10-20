@@ -1,0 +1,24 @@
+name: Set up Node.js and pnpm dependencies
+description: Set up the pinned Node.js and pnpm versions and install the workspace.
+inputs:
+  cache:
+    description: Whether to restore the pnpm store cache.
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm 12 and Node.js
+      uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+      with:
+        version: 12.5.1
+        runtime: node@26.12.0
+        # zizmor: ignore[cache-poisoning] Cache is enabled only for non-release verification.
+        cache: ${{ inputs.cache }}
+        install: false
+    - name: Update pnpm
+      shell: bash
+      run: pnpm self-update
+    - name: Install workspace dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
