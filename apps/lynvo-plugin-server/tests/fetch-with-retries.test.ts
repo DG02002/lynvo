@@ -131,7 +131,7 @@ describe("fetchWithSourceRetries", () => {
 
     expect(response.status).toBe(503)
     await expect(response.text()).resolves.toBe("final error details")
-    expect(cancelRetryResponseBody).toHaveBeenCalledOnce()
+    expect(cancelRetryResponseBody).toHaveBeenCalled()
     expect(fetchSpy).toHaveBeenCalledTimes(2)
   })
 

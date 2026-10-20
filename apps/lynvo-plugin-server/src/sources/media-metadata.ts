@@ -28,17 +28,16 @@ const decodeExtendedFilename = (
   const match = EXTENDED_FILENAME_VALUE.exec(extendedFilename)
   const charset = match?.[1]?.toLowerCase()
   const encodedFilename = match?.[2]
-  if (
-    !charset ||
-    !encodedFilename ||
-    INVALID_PERCENT_ESCAPE.test(encodedFilename)
-  ) {
+  if (!charset || !encodedFilename) {
     return undefined
   }
   if (charset === "utf-8") {
     return decodeUrlComponent(encodedFilename)
   }
   if (charset === "iso-8859-1") {
+    if (INVALID_PERCENT_ESCAPE.test(encodedFilename)) {
+      return undefined
+    }
     return encodedFilename.replaceAll(
       /%([\da-f]{2})/gi,
       (_match, hexadecimalByte: string) =>
