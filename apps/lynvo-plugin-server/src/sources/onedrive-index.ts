@@ -376,12 +376,11 @@ export const extractOneDriveIndex = async ({
     { headers },
     sourceRequestContext
   )
-  if (initialResponse.status === 401) {
-    await cancelUpstreamResponseBody(initialResponse)
-    throw password ? invalidPasswordError() : passwordRequiredError()
-  }
   if (!initialResponse.ok) {
     await cancelUpstreamResponseBody(initialResponse)
+    if (initialResponse.status === 401) {
+      throw password ? invalidPasswordError() : passwordRequiredError()
+    }
   }
   let nodes = initialResponse.ok
     ? await extractOneDriveInitialNodes({
