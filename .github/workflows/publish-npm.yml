@@ -46,7 +46,7 @@ jobs:
       # No pnpm store cache: this job builds the artifact that npm publish ships,
       # so the dependency graph must come from the lockfile, not a restored cache
       # (zizmor cache-poisoning).
-      - uses: ./.github/actions/setup-node-pnpm
+      - uses: $/.github/actions/setup-node-pnpm
         with:
           cache: false
 

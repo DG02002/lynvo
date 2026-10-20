@@ -15,6 +15,22 @@ describe("Content-Disposition metadata", () => {
     ).toBe("✓ clip.mp4")
   })
 
+  it("decodes ISO-8859-1 extended filenames", () => {
+    expect(
+      parseContentDispositionFilename(
+        "attachment; filename=legacy.mp4; filename*=ISO-8859-1''caf%E9.mp4"
+      )
+    ).toBe("café.mp4")
+  })
+
+  it("falls back to filename when an extended filename uses an unsupported charset", () => {
+    expect(
+      parseContentDispositionFilename(
+        "attachment; filename=fallback.mp4; filename*=windows-1252''caf%E9.mp4"
+      )
+    ).toBe("fallback.mp4")
+  })
+
   it("parses quoted filenames containing semicolons and escaped quotes", () => {
     expect(
       parseContentDispositionFilename(

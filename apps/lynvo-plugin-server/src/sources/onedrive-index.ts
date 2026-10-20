@@ -13,6 +13,7 @@ import {
   type SourceRequestContext,
 } from "../plugin-adapter"
 import {
+  cancelUpstreamResponseBody,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
@@ -53,19 +54,21 @@ export interface OneDriveNodeOptions {
   readonly hashedPassword: string
 }
 
-interface OneDrivePageOptions extends SourceRequestContext {
+interface OneDrivePageOptions {
   readonly origin: string
   readonly path: string
   readonly headers: HeadersInit
   readonly hashedPassword: string
   readonly initialToken?: string
+  readonly sourceRequestContext: SourceRequestContext
 }
 
-interface OneDrivePageRequestOptions extends SourceRequestContext {
+interface OneDrivePageRequestOptions {
   readonly origin: string
   readonly path: string
   readonly nextToken: string
   readonly headers: HeadersInit
+  readonly sourceRequestContext: SourceRequestContext
 }
 
 interface OneDriveResponseNodeOptions {
@@ -75,12 +78,13 @@ interface OneDriveResponseNodeOptions {
   readonly hashedPassword: string
 }
 
-interface OneDriveInitialResponseOptions extends SourceRequestContext {
+interface OneDriveInitialResponseOptions {
   readonly response: Response
   readonly path: string
   readonly origin: string
   readonly headers: HeadersInit
   readonly hashedPassword: string
+  readonly sourceRequestContext: SourceRequestContext
 }
 
 const oneDriveItemSchema: Schema.Codec<OneDriveItem> = Schema.Struct({
@@ -200,8 +204,7 @@ const readOneDrivePage = async ({
   path,
   nextToken,
   headers,
-  retry,
-  startedAtMs,
+  sourceRequestContext,
 }: OneDrivePageRequestOptions): Promise<OneDriveApiResponse> => {
   const apiUrl = new URL("/api", origin)
   apiUrl.searchParams.set("path", path)
@@ -211,7 +214,7 @@ const readOneDrivePage = async ({
   const response = await fetchWithSourceRetries(
     apiUrl.toString(),
     { headers },
-    { retry, startedAtMs }
+    sourceRequestContext
   )
   if (response.status === 401) {
     const errorBody = await readBoundedUpstreamJson(response).catch(
@@ -226,6 +229,7 @@ const readOneDrivePage = async ({
     throw invalidPasswordError()
   }
   if (!response.ok) {
+    await cancelUpstreamResponseBody(response)
     throw new Error("OneDrive Index upstream request failed.")
   }
   const data = Schema.decodeUnknownResult(oneDriveApiResponseSchema)(
@@ -269,8 +273,7 @@ const fetchOneDrivePage = async ({
   headers,
   hashedPassword,
   initialToken = "",
-  retry,
-  startedAtMs,
+  sourceRequestContext,
 }: OneDrivePageOptions): Promise<MediaNode[]> => {
   const fetchPage = async (
     nextToken: string
@@ -280,8 +283,7 @@ const fetchOneDrivePage = async ({
       path,
       nextToken,
       headers,
-      retry,
-      startedAtMs,
+      sourceRequestContext,
     })
     return {
       value: result,
@@ -301,7 +303,7 @@ const fetchOneDrivePage = async ({
     {
       sourceName: "OneDrive Index",
       initialToken,
-      startedAtMs,
+      startedAtMs: sourceRequestContext.startedAtMs,
     }
   )
 }
@@ -312,8 +314,7 @@ const extractOneDriveInitialNodes = async ({
   origin,
   headers,
   hashedPassword,
-  retry,
-  startedAtMs,
+  sourceRequestContext,
 }: OneDriveInitialResponseOptions): Promise<MediaNode[] | undefined> => {
   const nextData = extractOneDriveNextData(
     await readBoundedUpstreamText(response)
@@ -333,8 +334,7 @@ const extractOneDriveInitialNodes = async ({
           headers,
           hashedPassword,
           initialToken: nextData.next,
-          retry,
-          startedAtMs,
+          sourceRequestContext,
         }))
       )
     }
@@ -377,7 +377,11 @@ export const extractOneDriveIndex = async ({
     sourceRequestContext
   )
   if (initialResponse.status === 401) {
+    await cancelUpstreamResponseBody(initialResponse)
     throw password ? invalidPasswordError() : passwordRequiredError()
+  }
+  if (!initialResponse.ok) {
+    await cancelUpstreamResponseBody(initialResponse)
   }
   let nodes = initialResponse.ok
     ? await extractOneDriveInitialNodes({
@@ -386,7 +390,7 @@ export const extractOneDriveIndex = async ({
         origin: parsedUrl.origin,
         headers: requestHeaders,
         hashedPassword,
-        ...sourceRequestContext,
+        sourceRequestContext,
       })
     : undefined
   nodes ??= await fetchOneDrivePage({
@@ -394,7 +398,7 @@ export const extractOneDriveIndex = async ({
     path,
     headers: requestHeaders,
     hashedPassword,
-    ...sourceRequestContext,
+    sourceRequestContext,
   })
   const pageTitle = getLastPathSegment(parsedUrl.pathname, "OneDrive Index")
   return {

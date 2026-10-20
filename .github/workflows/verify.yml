@@ -89,7 +89,7 @@ jobs:
       # Cache only outside release tags: tag runs upload release artifacts that
       # deploy to production, so they must install from the lockfile rather than
       # a restored cache.
-      - uses: ./.github/actions/setup-node-pnpm
+      - uses: $/.github/actions/setup-node-pnpm
         with:
           cache: ${{ github.ref_type != 'tag' }}
       - name: Verify optimized images are committed
@@ -151,7 +151,7 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - uses: ./.github/actions/setup-node-pnpm
+      - uses: $/.github/actions/setup-node-pnpm
       - name: Pack the checked-out Plugin Server Protocol
         working-directory: packages/plugin-server-protocol
         run: pnpm pack --pack-destination "$RUNNER_TEMP"
@@ -226,7 +226,7 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - uses: ./.github/actions/setup-node-pnpm
+      - uses: $/.github/actions/setup-node-pnpm
         with:
           cache: false
 

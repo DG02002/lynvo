@@ -265,7 +265,10 @@ describe("Direct Media source adapter", () => {
         targetUrl: "https://media.example/video.mp4",
         plugin: { ...plugin, retry: { maxRetries: 2, delayMs: 0 } },
       })
-    ).rejects.toThrow("Direct Media upstream request failed (503).")
+    ).rejects.toMatchObject({
+      code: "TEMPORARY_FAILURE",
+      message: "Direct Media upstream request failed (503).",
+    })
 
     expect(fetchSpy).toHaveBeenCalledTimes(3)
   })
@@ -1276,16 +1279,16 @@ describe("Google Drive public files source adapter", () => {
   })
 
   it("does not mistake a partial response length for the Drive file size", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(new Uint8Array([0]), {
-        status: 206,
-        headers: {
-          "Content-Disposition": 'attachment; filename="example-video.mkv"',
-          "Content-Length": "1",
-          "Content-Range": "bytes 0-0/*",
-        },
-      })
-    )
+    const response = new Response(new Uint8Array([0]), {
+      status: 206,
+      headers: {
+        "Content-Disposition": 'attachment; filename="example-video.mkv"',
+        "Content-Length": "1",
+        "Content-Range": "bytes 0-0/*",
+      },
+    })
+    const cancel = vi.spyOn(response.body!, "cancel")
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
 
     await expect(
       fetchGoogleDrivePublicFileMetadata(
@@ -1295,5 +1298,6 @@ describe("Google Drive public files source adapter", () => {
       filename: "example-video.mkv",
       rangeRequest: "supported",
     })
+    expect(cancel).toHaveBeenCalledOnce()
   })
 })

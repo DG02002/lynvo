@@ -18,7 +18,10 @@ import {
   type PluginAdapterOptions,
   type SourceRequestContext,
 } from "../plugin-adapter"
-import { readBoundedUpstreamText } from "../upstream-response"
+import {
+  cancelUpstreamResponseBody,
+  readBoundedUpstreamText,
+} from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
@@ -119,22 +122,27 @@ export const fetchGoogleDrivePublicFileMetadata = async (
     sourceRequestContext
   )
   if (isHtmlResponse(response)) {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive file is rate-limited. Try again in 24 hours.")
   }
   if (!response.ok) {
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive file is not publicly accessible.")
   }
-  const filename =
-    parseContentDispositionFilename(
-      response.headers.get("content-disposition")
-    ) ?? "Google Drive file"
-  const size = getResponseFileSize(response)
-  // The probe above already asked for one byte, so its response decides the
-  // range capability instead of a second request at handoff time.
-  const rangeRequest: RangeRequestCapability =
-    readRangeRequestCapability(response)
-  return { filename, size, rangeRequest }
+  try {
+    const filename =
+      parseContentDispositionFilename(
+        response.headers.get("content-disposition")
+      ) ?? "Google Drive file"
+    const size = getResponseFileSize(response)
+    // The probe above already asked for one byte, so its response decides the
+    // range capability instead of a second request at handoff time.
+    const rangeRequest: RangeRequestCapability =
+      readRangeRequestCapability(response)
+    return { filename, size, rangeRequest }
+  } finally {
+    await cancelUpstreamResponseBody(response)
+  }
 }
 
 export interface GoogleDrivePublicFolderItem {
@@ -260,6 +268,7 @@ export const extractGoogleDrivePublicFolder = async ({
     sourceRequestContext
   )
   if (!response.ok) {
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive folder is not publicly accessible.")
   }
   const declaredSize = Number(response.headers.get("content-length"))
@@ -267,7 +276,7 @@ export const extractGoogleDrivePublicFolder = async ({
     Number.isFinite(declaredSize) &&
     declaredSize > GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES
   ) {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive public folder response is too large.")
   }
   const html = await readBoundedUpstreamText(response).catch((error) => {

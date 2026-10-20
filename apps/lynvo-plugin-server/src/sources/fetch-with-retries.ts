@@ -6,6 +6,7 @@ import {
 } from "../constants"
 import type { PluginRetryPolicy, SourceRequestContext } from "../plugin-adapter"
 import {
+  cancelUpstreamResponseBody,
   fetchValidatedUpstream,
   UpstreamPolicyError,
 } from "../upstream-response"
@@ -19,6 +20,12 @@ export interface FetchWithSourceRetriesOptions extends Partial<SourceRequestCont
   readonly requestReplaySafe?: boolean | undefined
   readonly now?: (() => number) | undefined
   readonly sleep?: ((delayMs: number) => Promise<void>) | undefined
+}
+
+interface SourceRetryRunOptions {
+  readonly maxRetries: number
+  readonly decide: Parameters<typeof runWithRetries<Response>>[1]["decide"]
+  sleep?: NonNullable<Parameters<typeof runWithRetries<Response>>[1]["sleep"]>
 }
 
 export const isRetryableSourceStatus = (response: Response): boolean =>
@@ -35,21 +42,13 @@ const isRetryableFailure = (cause: unknown): boolean => {
   )
 }
 
-const cancelRetryResponseBody = async (response: Response): Promise<void> => {
-  try {
-    await response.body?.cancel()
-  } catch {
-    // The retry decision is based on the HTTP status, even if body cleanup fails.
-  }
-}
-
 /**
  * Retries transport failures (`TypeError` and `TimeoutError`) plus 429/5xx
  * responses, with a fixed delay and no jitter. Bodyless idempotent methods are
  * replayed by default. Other requests need an explicit `requestReplaySafe: true`
- * because their operation and body must both be safe to repeat. Bodies from
- * retryable responses are canceled before the response is returned, including
- * when the retry budget is exhausted; callers must not read those bodies.
+ * because their operation and body must both be safe to repeat. A retryable
+ * response body is canceled only when another attempt will run; callers retain
+ * access to the final response body.
  */
 export const fetchWithSourceRetries = (
   targetUrl: string | URL,
@@ -74,8 +73,11 @@ export const fetchWithSourceRetries = (
   const now = options.now ?? Date.now
   const getRemainingTimeMs = (): number =>
     EXTRACTION_ELAPSED_TIME_LIMIT_MS - (now() - startedAtMs)
+  let pendingRetryResponseBodyCancellation: Promise<void> | undefined
 
   const execute = async (): Promise<Response> => {
+    await pendingRetryResponseBodyCancellation
+    pendingRetryResponseBodyCancellation = undefined
     const timeoutMs = Math.floor(
       Math.min(UPSTREAM_TIMEOUT_MS, getRemainingTimeMs())
     )
@@ -86,12 +88,9 @@ export const fetchWithSourceRetries = (
     const response = await fetchValidatedUpstream(targetUrl, requestOptions, {
       timeoutMs,
     })
-    if (isRetryableSourceStatus(response)) {
-      await cancelRetryResponseBody(response)
-    }
     return response
   }
-  const retryOptions: Parameters<typeof runWithRetries<Response>>[1] = {
+  const retryOptions: SourceRetryRunOptions = {
     maxRetries,
     decide: (outcome) => {
       const retryable =
@@ -101,11 +100,16 @@ export const fetchWithSourceRetries = (
       if (!retryable || getRemainingTimeMs() <= retry.delayMs) {
         return { retry: false } as const
       }
+      if (outcome._tag === "success") {
+        pendingRetryResponseBodyCancellation = cancelUpstreamResponseBody(
+          outcome.value
+        )
+      }
       return { retry: true, delayMs: retry.delayMs } as const
     },
   }
-  if (options.sleep) {
-    return runWithRetries(execute, { ...retryOptions, sleep: options.sleep })
+  if (options.sleep !== undefined) {
+    retryOptions.sleep = options.sleep
   }
   return runWithRetries(execute, retryOptions)
 }

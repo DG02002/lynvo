@@ -85,6 +85,56 @@ describe("fetchWithSourceRetries", () => {
     ])
   })
 
+  it("does not retry a body-bearing request without explicit replay safety", async () => {
+    const terminalResponse = new Response("upstream error details", {
+      status: 503,
+    })
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(terminalResponse)
+
+    const response = await fetchWithSourceRetries(
+      "https://index.example/api",
+      { method: "POST", body: JSON.stringify({ path: "/Movies" }) },
+      {
+        retry: { maxRetries: 2, delayMs: 0 },
+        sleep: async () => undefined,
+      }
+    )
+
+    expect(response.status).toBe(503)
+    await expect(response.text()).resolves.toBe("upstream error details")
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels retried response bodies but preserves the exhausted response body", async () => {
+    const retryResponse = new Response("interim error details", {
+      status: 503,
+    })
+    const finalResponse = new Response("final error details", {
+      status: 503,
+    })
+    const cancelRetryResponseBody = vi.spyOn(retryResponse.body!, "cancel")
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(retryResponse)
+      .mockResolvedValueOnce(finalResponse)
+
+    const response = await fetchWithSourceRetries(
+      "https://media.example/video.mp4",
+      {},
+      {
+        retry: { maxRetries: 1, delayMs: 0 },
+        sleep: async () => undefined,
+      }
+    )
+
+    expect(response.status).toBe(503)
+    await expect(response.text()).resolves.toBe("final error details")
+    expect(cancelRetryResponseBody).toHaveBeenCalledOnce()
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+  })
+
   it("does not retry non-retryable HTTP statuses or unsafe URLs", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

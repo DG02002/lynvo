@@ -12,6 +12,7 @@ import {
   getSourceRequestContext,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
+import { cancelUpstreamResponseBody } from "../upstream-response"
 import { decodeUrlComponent } from "../url-policy"
 import {
   fetchWithSourceRetries,
@@ -141,6 +142,6 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       extensions: {},
     }
   } finally {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
   }
 }

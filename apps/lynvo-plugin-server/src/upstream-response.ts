@@ -72,6 +72,20 @@ export const fetchValidatedUpstream = (
     })
   )
 
+/**
+ * Release a response after its body is intentionally discarded. Cleanup is
+ * best-effort so a stream failure does not replace the adapter's chosen error.
+ */
+export const cancelUpstreamResponseBody = async (
+  response: Response
+): Promise<void> => {
+  try {
+    await response.body?.cancel()
+  } catch {
+    // Response cleanup must not replace the status-derived adapter result.
+  }
+}
+
 export const readBoundedUpstreamText = (response: Response): Promise<string> =>
   withUpstreamErrors(() =>
     readBoundedResponseText(response, {

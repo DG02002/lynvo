@@ -70,25 +70,21 @@ export const createSourcePlayableNode = ({
 export const createSourceFolderNodes = (
   items: readonly SourceFolderNodeInput[]
 ): MediaNode[] =>
-  items.flatMap<MediaNode>((item) => {
+  items.map((item): MediaNode => {
     if (item.kind === "folder") {
-      return [
-        {
-          kind: "resolvable" as const,
-          id: item.id,
-          label: item.label,
-          nodeUrl: item.nodeUrl,
-          resolutionKind: "folder" as const,
-        },
-      ]
-    }
-    return [
-      createSourcePlayableNode({
+      return {
+        kind: "resolvable",
         id: item.id,
         label: item.label,
-        url: item.mediaUrl,
-        size: item.size,
-        rangeRequest: item.rangeRequest,
-      }),
-    ]
+        nodeUrl: item.nodeUrl,
+        resolutionKind: "folder",
+      }
+    }
+    return createSourcePlayableNode({
+      id: item.id,
+      label: item.label,
+      url: item.mediaUrl,
+      size: item.size,
+      rangeRequest: item.rangeRequest,
+    })
   })

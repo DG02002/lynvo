@@ -21,6 +21,7 @@ import {
   type SourceRequestContext,
 } from "../plugin-adapter"
 import {
+  cancelUpstreamResponseBody,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
@@ -91,6 +92,13 @@ interface BhadooFileResponseOptions {
   readonly plugin: PluginAdapterOptions["plugin"]
   readonly publicAssetOrigin?: string
 }
+
+const createReplaySafeBhadooRequestOptions = (
+  sourceRequestContext: SourceRequestContext
+) => ({
+  ...sourceRequestContext,
+  requestReplaySafe: true,
+})
 
 const bhadooGoogleDriveItemSchema = Schema.Struct({
   id: Schema.String,
@@ -282,11 +290,10 @@ const requestBhadooPage = async ({
   retry,
   startedAtMs,
 }: BhadooPageRequestOptions): Promise<BhadooGoogleDriveListResponse> => {
-  const sourceRequestContext = {
+  const requestRetryOptions = createReplaySafeBhadooRequestOptions({
     retry,
     startedAtMs,
-    requestReplaySafe: true,
-  }
+  })
   const authorizationHeaders = createAuthorizationHeaders(basicAuth)
   const jsonResponse = await fetchWithSourceRetries(
     endpointUrl,
@@ -297,14 +304,14 @@ const requestBhadooPage = async ({
         createBhadooPageRequestBody(fallbackId, pageToken, pageIndex)
       ),
     },
-    sourceRequestContext
+    requestRetryOptions
   )
   if (jsonResponse.ok) {
     return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
       await readBoundedUpstreamJson(jsonResponse)
     )
   }
-  await jsonResponse.body?.cancel()
+  await cancelUpstreamResponseBody(jsonResponse)
 
   // HACK: Deployed Bhadoo indexes can require this reverse-envelope POST.
   // Keep this active protocol until those deployments are retired.
@@ -318,9 +325,10 @@ const requestBhadooPage = async ({
       },
       body: createBhadooPageFormBody(fallbackId, pageToken, pageIndex),
     },
-    sourceRequestContext
+    requestRetryOptions
   )
   if (!reverseEnvelopeResponse.ok) {
+    await cancelUpstreamResponseBody(reverseEnvelopeResponse)
     throw new Error(
       `Bhadoo Index upstream request failed (JSON ${jsonResponse.status}; reverse envelope ${reverseEnvelopeResponse.status}).`
     )
@@ -338,11 +346,10 @@ const requestBhadooFallbackItem = async ({
   retry,
   startedAtMs,
 }: BhadooFallbackItemRequestOptions): Promise<BhadooGoogleDriveItem> => {
-  const sourceRequestContext = {
+  const requestRetryOptions = createReplaySafeBhadooRequestOptions({
     retry,
     startedAtMs,
-    requestReplaySafe: true,
-  }
+  })
   const response = await fetchWithSourceRetries(
     endpointUrl,
     {
@@ -353,10 +360,10 @@ const requestBhadooFallbackItem = async ({
       },
       body: JSON.stringify({ id: fallbackId }),
     },
-    sourceRequestContext
+    requestRetryOptions
   )
   if (!response.ok) {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
     throw new Error(`Bhadoo fallback item request failed (${response.status}).`)
   }
   return Schema.decodeUnknownSync(bhadooGoogleDriveItemSchema)(

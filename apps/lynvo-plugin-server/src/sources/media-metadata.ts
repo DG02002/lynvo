@@ -2,6 +2,8 @@ import { decodeUrlComponent } from "../url-policy"
 import { formatFileSize } from "./file-size"
 
 const CONTENT_RANGE_TOTAL = /\/(\d+)$/
+const EXTENDED_FILENAME_VALUE = /^([^']*)'[^']*'(.*)$/
+const INVALID_PERCENT_ESCAPE = /%(?![\da-f]{2})/i
 
 const getContentDispositionParameter = (
   contentDisposition: string,
@@ -20,6 +22,32 @@ const getContentDispositionParameter = (
   return match?.[2]?.trim()
 }
 
+const decodeExtendedFilename = (
+  extendedFilename: string
+): string | undefined => {
+  const match = EXTENDED_FILENAME_VALUE.exec(extendedFilename)
+  const charset = match?.[1]?.toLowerCase()
+  const encodedFilename = match?.[2]
+  if (
+    !charset ||
+    !encodedFilename ||
+    INVALID_PERCENT_ESCAPE.test(encodedFilename)
+  ) {
+    return undefined
+  }
+  if (charset === "utf-8") {
+    return decodeUrlComponent(encodedFilename)
+  }
+  if (charset === "iso-8859-1") {
+    return encodedFilename.replaceAll(
+      /%([\da-f]{2})/gi,
+      (_match, hexadecimalByte: string) =>
+        String.fromCharCode(Number.parseInt(hexadecimalByte, 16))
+    )
+  }
+  return undefined
+}
+
 export const parseContentDispositionFilename = (
   contentDisposition: string | null
 ): string | undefined => {
@@ -32,12 +60,9 @@ export const parseContentDispositionFilename = (
     "filename*"
   )
   if (extendedFilename !== undefined) {
-    const utf8Prefix = /^UTF-8'[^']*'/i.exec(extendedFilename)?.[0]
-    const encodedFilename = utf8Prefix
-      ? extendedFilename.slice(utf8Prefix.length)
-      : extendedFilename
-    if (encodedFilename) {
-      return decodeUrlComponent(encodedFilename)
+    const decodedExtendedFilename = decodeExtendedFilename(extendedFilename)
+    if (decodedExtendedFilename) {
+      return decodedExtendedFilename
     }
   }
 
