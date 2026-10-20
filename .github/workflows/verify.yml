@@ -67,7 +67,7 @@ jobs:
           fi
 
   verify:
-    name: Repository verification
+    name: Repository checks
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -187,12 +187,30 @@ jobs:
         working-directory: ${{ runner.temp }}/lynvo-plugin-server-contract
         run: pnpm test
 
+  verify-required-checks:
+    name: Repository verification
+    if: always()
+    needs:
+      - verify
+      - verify-plugin-server-template
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all repository verification jobs to pass
+        if: >-
+          ${{
+            needs.verify.result != 'success' ||
+            needs['verify-plugin-server-template'].result != 'success'
+          }}
+        run: |
+          echo "::error::Repository verification requires repository checks and the generated project contract to pass."
+          exit 1
+
   deploy-production:
     name: Deploy production
     needs:
       - workflow-security
       - verify-release-tag
-      - verify
+      - verify-required-checks
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     timeout-minutes: 30

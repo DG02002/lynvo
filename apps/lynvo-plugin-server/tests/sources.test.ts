@@ -1204,12 +1204,13 @@ describe("Google Drive public files source adapter", () => {
     })
   })
 
-  it("maps malformed encoded content-disposition filenames to unsupported URLs", async () => {
+  it("uses the plain filename when an extended UTF-8 filename is malformed", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, {
         status: 206,
         headers: {
-          "Content-Disposition": "attachment; filename*=UTF-8''bad%",
+          "Content-Disposition":
+            "attachment; filename=fallback.mkv; filename*=UTF-8''bad%",
           "Content-Range": "bytes 0-0/1",
         },
       })
@@ -1219,7 +1220,7 @@ describe("Google Drive public files source adapter", () => {
       fetchGoogleDrivePublicFileMetadata(
         "https://drive.usercontent.google.com/download?id=file-id"
       )
-    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
+    ).resolves.toMatchObject({ filename: "fallback.mkv" })
   })
 
   it("preserves a Drive resource key in the download URL", async () => {

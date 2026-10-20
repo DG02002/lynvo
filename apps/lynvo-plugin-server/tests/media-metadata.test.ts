@@ -31,6 +31,14 @@ describe("Content-Disposition metadata", () => {
     ).toBe("fallback.mp4")
   })
 
+  it("falls back to filename when an extended UTF-8 filename is malformed", () => {
+    expect(
+      parseContentDispositionFilename(
+        "attachment; filename=fallback.mp4; filename*=UTF-8''caf%E9.mp4"
+      )
+    ).toBe("fallback.mp4")
+  })
+
   it("parses quoted filenames containing semicolons and escaped quotes", () => {
     expect(
       parseContentDispositionFilename(

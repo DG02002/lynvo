@@ -32,7 +32,12 @@ const decodeExtendedFilename = (
     return undefined
   }
   if (charset === "utf-8") {
-    return decodeUrlComponent(encodedFilename)
+    try {
+      return decodeUrlComponent(encodedFilename)
+    } catch {
+      // A malformed extended value should not hide a usable plain filename.
+      return undefined
+    }
   }
   if (charset === "iso-8859-1") {
     if (INVALID_PERCENT_ESCAPE.test(encodedFilename)) {
