@@ -9,6 +9,7 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
+  getSourceRequestContext,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
 import { decodeUrlComponent } from "../url-policy"
@@ -81,6 +82,10 @@ const getSignedUrlExpiry = (targetUrl: string, now: number) => {
 }
 
 export const extractDirectMedia = async (options: PluginAdapterOptions) => {
+  const sourceRequestContext = getSourceRequestContext(
+    options.plugin,
+    options.sourceRequestContext
+  )
   const response = await fetchWithSourceRetries(
     options.targetUrl,
     {
@@ -89,12 +94,15 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
         Range: DIRECT_MEDIA_RANGE_HEADER,
       },
     },
-    {
-      retry: options.plugin.retry,
-      startedAtMs: options.retryStartedAtMs,
-    }
+    sourceRequestContext
   )
   try {
+    if (isRetryableSourceStatus(response)) {
+      throw new ProtocolError(
+        "TEMPORARY_FAILURE",
+        `Direct Media upstream request failed (${response.status}).`
+      )
+    }
     const contentType =
       response.headers.get("Content-Type")?.toLowerCase() ?? ""
     const filename = getFilename(options.targetUrl, response.headers)
@@ -104,11 +112,6 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
     const isBlockedFilename = DIRECT_MEDIA_BLOCKED_EXTENSIONS.some(
       (extension) => filename.toLowerCase().endsWith(extension)
     )
-    if (isRetryableSourceStatus(response)) {
-      throw new Error(
-        `Direct Media upstream request failed (${response.status}).`
-      )
-    }
     if (
       (response.status !== 200 && response.status !== 206) ||
       !isSupportedContent ||
@@ -126,7 +129,7 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       url: options.targetUrl,
       status: "up" as const,
       rangeRequest: readRangeRequestCapability(response),
-      size: getResponseFileSize(response.status, response.headers),
+      size: getResponseFileSize(response),
       ...getSignedUrlExpiry(options.targetUrl, Date.now()),
     }
     return {

@@ -69,6 +69,7 @@ describe("fetchWithSourceRetries", () => {
       { method: "POST", body: requestBody },
       {
         retry: { maxRetries: 1, delayMs: 0 },
+        requestReplaySafe: true,
         sleep: async () => undefined,
       }
     )

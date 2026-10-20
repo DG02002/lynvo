@@ -261,6 +261,9 @@ export const extractWithLynvoPlugin = async (
     targetUrl,
     plugin,
     publicAssetOrigin,
-    retryStartedAtMs: Date.now(),
+    sourceRequestContext: {
+      retry: plugin.retry,
+      startedAtMs: Date.now(),
+    },
   })
 }

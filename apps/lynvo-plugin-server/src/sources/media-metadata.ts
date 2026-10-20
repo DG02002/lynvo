@@ -45,19 +45,20 @@ export const parseContentDispositionFilename = (
     contentDisposition,
     "filename"
   )
-  return filename ? decodeUrlComponent(filename) : undefined
+  return filename || undefined
 }
 
 export const getResponseFileSize = (
-  status: number,
-  headers: Headers
+  response: Pick<Response, "status" | "headers">
 ): string | undefined => {
   const rangeSize = CONTENT_RANGE_TOTAL.exec(
-    headers.get("Content-Range") ?? ""
+    response.headers.get("Content-Range") ?? ""
   )?.[1]
   const responseSize =
     rangeSize ??
-    (status === 200 ? (headers.get("Content-Length") ?? undefined) : undefined)
+    (response.status === 200
+      ? (response.headers.get("Content-Length") ?? undefined)
+      : undefined)
   return formatFileSize(responseSize)
 }
 

@@ -5,8 +5,6 @@ import {
   type RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 
-import { isVideoFile } from "./video-file"
-
 interface SourcePlayableNodeOptions {
   readonly id: string
   readonly label: string
@@ -31,7 +29,7 @@ export type SourceFolderNodeInput =
       readonly kind: "file"
       readonly id: string
       readonly label: string
-      readonly mediaUrl: () => string
+      readonly mediaUrl: string
       readonly size?: string | undefined
       readonly rangeRequest?: RangeRequestCapability | undefined
     }
@@ -84,14 +82,11 @@ export const createSourceFolderNodes = (
         },
       ]
     }
-    if (!isVideoFile(item.label)) {
-      return []
-    }
     return [
       createSourcePlayableNode({
         id: item.id,
         label: item.label,
-        url: item.mediaUrl(),
+        url: item.mediaUrl,
         size: item.size,
         rangeRequest: item.rangeRequest,
       }),

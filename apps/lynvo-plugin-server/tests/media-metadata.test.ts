@@ -18,17 +18,17 @@ describe("Content-Disposition metadata", () => {
   it("parses quoted filenames containing semicolons and escaped quotes", () => {
     expect(
       parseContentDispositionFilename(
-        'attachment; filename="The; \\"final\\" cut.mp4"'
+        'attachment; filename="The; 50%off \\"final\\" cut.mp4"'
       )
-    ).toBe('The; "final" cut.mp4')
+    ).toBe('The; 50%off "final" cut.mp4')
   })
 
-  it("parses unquoted filename parameters", () => {
+  it("treats unquoted filename parameters as literal text", () => {
     expect(
       parseContentDispositionFilename(
         "attachment; filename=unquoted%20clip.mp4"
       )
-    ).toBe("unquoted clip.mp4")
+    ).toBe("unquoted%20clip.mp4")
   })
 })
 
@@ -36,18 +36,30 @@ describe("response file metadata", () => {
   it("uses the total from Content-Range for partial responses", () => {
     expect(
       getResponseFileSize(
-        206,
-        new Headers({ "Content-Range": "bytes 0-0/1105713" })
+        new Response(null, {
+          status: 206,
+          headers: { "Content-Range": "bytes 0-0/1105713" },
+        })
       )
     ).toBe("1.05 MB")
   })
 
   it("uses Content-Length only for a complete response", () => {
     expect(
-      getResponseFileSize(200, new Headers({ "Content-Length": "2048" }))
+      getResponseFileSize(
+        new Response(null, {
+          status: 200,
+          headers: { "Content-Length": "2048" },
+        })
+      )
     ).toBe("2 KB")
     expect(
-      getResponseFileSize(206, new Headers({ "Content-Length": "2048" }))
+      getResponseFileSize(
+        new Response(null, {
+          status: 206,
+          headers: { "Content-Length": "2048" },
+        })
+      )
     ).toBeUndefined()
   })
 

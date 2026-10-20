@@ -89,19 +89,9 @@ jobs:
       # Cache only outside release tags: tag runs upload release artifacts that
       # deploy to production, so they must install from the lockfile rather than
       # a restored cache.
-      - name: Set up pnpm 12 and Node.js
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+      - uses: ./.github/actions/setup-node-pnpm
         with:
-          version: 12.5.1
-          runtime: node@26.12.0
-          # zizmor: ignore[cache-poisoning] The expression disables the cache on
-          # release-tag runs, which are the only publish context in this workflow.
           cache: ${{ github.ref_type != 'tag' }}
-          install: false
-      - name: Update pnpm
-        run: pnpm self-update
-      - name: Install the verified dependency graph
-        run: pnpm install --frozen-lockfile
       - name: Verify optimized images are committed
         run: |
           pnpm images:optimize
@@ -161,17 +151,7 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - name: Set up pnpm 12 and Node.js
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
-        with:
-          version: 12.5.1
-          runtime: node@26.12.0
-          cache: false
-          install: false
-      - name: Update pnpm
-        run: pnpm self-update
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-node-pnpm
       - name: Pack the checked-out Plugin Server Protocol
         working-directory: packages/plugin-server-protocol
         run: pnpm pack --pack-destination "$RUNNER_TEMP"
@@ -183,12 +163,6 @@ jobs:
         env:
           PROJECT_DIR: ${{ runner.temp }}/lynvo-plugin-server-contract
         run: |
-          case "$PROJECT_DIR" in
-            "$GITHUB_WORKSPACE"|"$GITHUB_WORKSPACE"/*)
-              echo "::error::Generated project must be outside the worktree"
-              exit 1
-              ;;
-          esac
           node packages/create-lynvo-plugin-server/bin/create-lynvo-plugin-server.mjs \
             "$PROJECT_DIR" --skip-install
       # The public registry can lag a protocol change on this branch. Test the
@@ -231,16 +205,6 @@ jobs:
     env:
       COMMIT_HASH: ${{ github.sha }}
     steps:
-      - name: Check out the verified commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          sparse-checkout: |
-            /*
-            !/.repos/
-          sparse-checkout-cone-mode: false
-          persist-credentials: false
-
       - name: Verify production credentials are available
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -253,22 +217,18 @@ jobs:
             fi
           done
 
-      # No pnpm store cache: this job deploys the verified release to production,
-      # so the dependency graph must come from the lockfile, not a restored cache
-      # (zizmor cache-poisoning).
-      - name: Set up pnpm 12 and Node.js
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+      - name: Check out the verified commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 12.5.1
-          runtime: node@26.12.0
+          ref: ${{ github.sha }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
           cache: false
-          install: false
-
-      - name: Update pnpm
-        run: pnpm self-update
-
-      - name: Install the verified dependency graph
-        run: pnpm install --frozen-lockfile
 
       - name: Set immutable release identity
         id: release

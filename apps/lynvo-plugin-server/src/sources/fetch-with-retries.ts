@@ -4,7 +4,7 @@ import {
   EXTRACTION_ELAPSED_TIME_LIMIT_MS,
   UPSTREAM_TIMEOUT_MS,
 } from "../constants"
-import type { PluginRetryPolicy } from "../plugin-adapter"
+import type { PluginRetryPolicy, SourceRequestContext } from "../plugin-adapter"
 import {
   fetchValidatedUpstream,
   UpstreamPolicyError,
@@ -15,9 +15,8 @@ export const DEFAULT_SOURCE_RETRY_POLICY: PluginRetryPolicy = {
   delayMs: 2_000,
 }
 
-export interface FetchWithSourceRetriesOptions {
-  readonly retry?: PluginRetryPolicy | undefined
-  readonly startedAtMs?: number | undefined
+export interface FetchWithSourceRetriesOptions extends Partial<SourceRequestContext> {
+  readonly requestReplaySafe?: boolean | undefined
   readonly now?: (() => number) | undefined
   readonly sleep?: ((delayMs: number) => Promise<void>) | undefined
 }
@@ -44,12 +43,33 @@ const cancelRetryResponseBody = async (response: Response): Promise<void> => {
   }
 }
 
+/**
+ * Retries transport failures (`TypeError` and `TimeoutError`) plus 429/5xx
+ * responses, with a fixed delay and no jitter. Bodyless idempotent methods are
+ * replayed by default. Other requests need an explicit `requestReplaySafe: true`
+ * because their operation and body must both be safe to repeat. Bodies from
+ * retryable responses are canceled before the response is returned, including
+ * when the retry budget is exhausted; callers must not read those bodies.
+ */
 export const fetchWithSourceRetries = (
   targetUrl: string | URL,
   requestOptions: RequestInit,
   options: FetchWithSourceRetriesOptions = {}
 ): Promise<Response> => {
   const retry = options.retry ?? DEFAULT_SOURCE_RETRY_POLICY
+  const method = (requestOptions.method ?? "GET").toUpperCase()
+  const isIdempotentMethod = [
+    "DELETE",
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PUT",
+  ].includes(method)
+  const hasBody =
+    requestOptions.body !== undefined && requestOptions.body !== null
+  const requestReplaySafe =
+    options.requestReplaySafe ?? (isIdempotentMethod && !hasBody)
+  const maxRetries = requestReplaySafe ? retry.maxRetries : 0
   const startedAtMs = options.startedAtMs ?? Date.now()
   const now = options.now ?? Date.now
   const getRemainingTimeMs = (): number =>
@@ -71,13 +91,9 @@ export const fetchWithSourceRetries = (
     }
     return response
   }
-  const optionsWithoutSleep = {
-    maxRetries: retry.maxRetries,
-    decide: (
-      outcome:
-        | { readonly _tag: "success"; readonly value: Response }
-        | { readonly _tag: "failure"; readonly cause: unknown }
-    ) => {
+  const retryOptions: Parameters<typeof runWithRetries<Response>>[1] = {
+    maxRetries,
+    decide: (outcome) => {
       const retryable =
         outcome._tag === "failure"
           ? isRetryableFailure(outcome.cause)
@@ -88,8 +104,8 @@ export const fetchWithSourceRetries = (
       return { retry: true, delayMs: retry.delayMs } as const
     },
   }
-
-  return options.sleep
-    ? runWithRetries(execute, { ...optionsWithoutSleep, sleep: options.sleep })
-    : runWithRetries(execute, optionsWithoutSleep)
+  if (options.sleep) {
+    return runWithRetries(execute, { ...retryOptions, sleep: options.sleep })
+  }
+  return runWithRetries(execute, retryOptions)
 }

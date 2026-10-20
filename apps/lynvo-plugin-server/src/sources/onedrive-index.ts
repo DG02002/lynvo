@@ -8,8 +8,9 @@ import { Result, Schema } from "effect"
 
 import {
   createPluginResponseMetadata,
-  type PluginRetryPolicy,
+  getSourceRequestContext,
   type PluginAdapterOptions,
+  type SourceRequestContext,
 } from "../plugin-adapter"
 import {
   readBoundedUpstreamJson,
@@ -28,6 +29,7 @@ import {
   type SourceFolderNodeInput,
 } from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
+import { isVideoFile } from "./video-file"
 
 interface OneDriveItem {
   readonly name: string
@@ -51,23 +53,19 @@ export interface OneDriveNodeOptions {
   readonly hashedPassword: string
 }
 
-interface OneDrivePageOptions {
+interface OneDrivePageOptions extends SourceRequestContext {
   readonly origin: string
   readonly path: string
   readonly headers: HeadersInit
   readonly hashedPassword: string
   readonly initialToken?: string
-  readonly startedAtMs?: number
-  readonly retry?: PluginRetryPolicy | undefined
 }
 
-interface OneDrivePageRequestOptions {
+interface OneDrivePageRequestOptions extends SourceRequestContext {
   readonly origin: string
   readonly path: string
   readonly nextToken: string
   readonly headers: HeadersInit
-  readonly startedAtMs: number
-  readonly retry?: PluginRetryPolicy | undefined
 }
 
 interface OneDriveResponseNodeOptions {
@@ -77,14 +75,12 @@ interface OneDriveResponseNodeOptions {
   readonly hashedPassword: string
 }
 
-interface OneDriveInitialResponseOptions {
+interface OneDriveInitialResponseOptions extends SourceRequestContext {
   readonly response: Response
   readonly path: string
   readonly origin: string
   readonly headers: HeadersInit
   readonly hashedPassword: string
-  readonly startedAtMs: number
-  readonly retry?: PluginRetryPolicy | undefined
 }
 
 const oneDriveItemSchema: Schema.Codec<OneDriveItem> = Schema.Struct({
@@ -148,27 +144,25 @@ export const createOneDriveNodes = ({
         ]
       }
 
-      if (!item.file) {
+      if (!item.file || !isVideoFile(item.name)) {
         return []
       }
 
       const size = formatFileSize(item.size)
+      const fullPath = currentPath.endsWith("/")
+        ? currentPath + item.name
+        : `${currentPath}/${item.name}`
+      const playableUrl = new URL("/api/raw/", origin)
+      playableUrl.searchParams.set("path", fullPath)
+      if (hashedPassword) {
+        playableUrl.searchParams.set("odpt", hashedPassword)
+      }
       return [
         {
           kind: "file",
           id: item.id,
           label: item.name,
-          mediaUrl: () => {
-            const fullPath = currentPath.endsWith("/")
-              ? currentPath + item.name
-              : `${currentPath}/${item.name}`
-            const playableUrl = new URL("/api/raw/", origin)
-            playableUrl.searchParams.set("path", fullPath)
-            if (hashedPassword) {
-              playableUrl.searchParams.set("odpt", hashedPassword)
-            }
-            return playableUrl.toString()
-          },
+          mediaUrl: playableUrl.toString(),
           size,
           // This authenticated index endpoint cannot safely probe the final media
           // URL, so range capability remains unknown.
@@ -206,8 +200,8 @@ const readOneDrivePage = async ({
   path,
   nextToken,
   headers,
-  startedAtMs,
   retry,
+  startedAtMs,
 }: OneDrivePageRequestOptions): Promise<OneDriveApiResponse> => {
   const apiUrl = new URL("/api", origin)
   apiUrl.searchParams.set("path", path)
@@ -275,8 +269,8 @@ const fetchOneDrivePage = async ({
   headers,
   hashedPassword,
   initialToken = "",
-  startedAtMs = Date.now(),
   retry,
+  startedAtMs,
 }: OneDrivePageOptions): Promise<MediaNode[]> => {
   const fetchPage = async (
     nextToken: string
@@ -286,8 +280,8 @@ const fetchOneDrivePage = async ({
       path,
       nextToken,
       headers,
-      startedAtMs,
       retry,
+      startedAtMs,
     })
     return {
       value: result,
@@ -318,8 +312,8 @@ const extractOneDriveInitialNodes = async ({
   origin,
   headers,
   hashedPassword,
-  startedAtMs,
   retry,
+  startedAtMs,
 }: OneDriveInitialResponseOptions): Promise<MediaNode[] | undefined> => {
   const nextData = extractOneDriveNextData(
     await readBoundedUpstreamText(response)
@@ -339,8 +333,8 @@ const extractOneDriveInitialNodes = async ({
           headers,
           hashedPassword,
           initialToken: nextData.next,
-          startedAtMs,
           retry,
+          startedAtMs,
         }))
       )
     }
@@ -363,8 +357,12 @@ export const extractOneDriveIndex = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
-  retryStartedAtMs,
+  sourceRequestContext: providedSourceRequestContext,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const sourceRequestContext = getSourceRequestContext(
+    plugin,
+    providedSourceRequestContext
+  )
   const parsedUrl = assertSafeUpstreamUrl(targetUrl)
   const path = decodeUrlComponent(parsedUrl.pathname)
   const password = request.password ?? ""
@@ -373,12 +371,10 @@ export const extractOneDriveIndex = async ({
     ? { "od-protected-token": hashedPassword }
     : undefined
   const requestHeaders = headers ?? {}
-  const startedAtMs = retryStartedAtMs ?? Date.now()
-
   const initialResponse = await fetchWithSourceRetries(
     parsedUrl.toString(),
     { headers },
-    { retry: plugin.retry, startedAtMs }
+    sourceRequestContext
   )
   if (initialResponse.status === 401) {
     throw password ? invalidPasswordError() : passwordRequiredError()
@@ -390,8 +386,7 @@ export const extractOneDriveIndex = async ({
         origin: parsedUrl.origin,
         headers: requestHeaders,
         hashedPassword,
-        startedAtMs,
-        retry: plugin.retry,
+        ...sourceRequestContext,
       })
     : undefined
   nodes ??= await fetchOneDrivePage({
@@ -399,8 +394,7 @@ export const extractOneDriveIndex = async ({
     path,
     headers: requestHeaders,
     hashedPassword,
-    startedAtMs,
-    retry: plugin.retry,
+    ...sourceRequestContext,
   })
   const pageTitle = getLastPathSegment(parsedUrl.pathname, "OneDrive Index")
   return {

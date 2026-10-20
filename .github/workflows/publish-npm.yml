@@ -43,23 +43,12 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
-
       # No pnpm store cache: this job builds the artifact that npm publish ships,
       # so the dependency graph must come from the lockfile, not a restored cache
       # (zizmor cache-poisoning).
-      - name: Set up pnpm 12 and Node.js
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+      - uses: ./.github/actions/setup-node-pnpm
         with:
-          version: 12.5.1
-          runtime: node@26.12.0
           cache: false
-          install: false
-
-      - name: Update pnpm
-        run: pnpm self-update
-
-      - name: Install the tagged dependency graph
-        run: pnpm install --frozen-lockfile
 
       - name: Resolve and verify release identity
         id: release

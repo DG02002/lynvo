@@ -14,8 +14,9 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
-  type PluginRetryPolicy,
+  getSourceRequestContext,
   type PluginAdapterOptions,
+  type SourceRequestContext,
 } from "../plugin-adapter"
 import { readBoundedUpstreamText } from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
@@ -31,6 +32,7 @@ import {
   readRangeRequestCapability,
   type SourceFolderNodeInput,
 } from "./media-node"
+import { isVideoFile } from "./video-file"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PATH_PATTERN = /^\/drive\/folders\/([^/]+)(?:\/|$)/
@@ -103,23 +105,18 @@ export interface GoogleDrivePublicFileMetadata {
   rangeRequest: RangeRequestCapability
 }
 
-export interface FetchGoogleDrivePublicFileMetadataOptions {
-  readonly retry?: PluginRetryPolicy | undefined
-  readonly startedAtMs?: number | undefined
-}
-
 const isHtmlResponse = (response: Response): boolean =>
   response.headers.get("content-type")?.toLowerCase().includes("text/html") ??
   false
 
 export const fetchGoogleDrivePublicFileMetadata = async (
   downloadUrl: string,
-  options: FetchGoogleDrivePublicFileMetadataOptions = {}
+  sourceRequestContext: Partial<SourceRequestContext> = {}
 ): Promise<GoogleDrivePublicFileMetadata> => {
   const response = await fetchWithSourceRetries(
     downloadUrl,
     { headers: { Range: "bytes=0-0" } },
-    { retry: options.retry, startedAtMs: options.startedAtMs }
+    sourceRequestContext
   )
   if (isHtmlResponse(response)) {
     await response.body?.cancel()
@@ -132,7 +129,7 @@ export const fetchGoogleDrivePublicFileMetadata = async (
     parseContentDispositionFilename(
       response.headers.get("content-disposition")
     ) ?? "Google Drive file"
-  const size = getResponseFileSize(response.status, response.headers)
+  const size = getResponseFileSize(response)
   // The probe above already asked for one byte, so its response decides the
   // range capability instead of a second request at handoff time.
   const rangeRequest: RangeRequestCapability =
@@ -231,12 +228,15 @@ export const createGoogleDrivePublicFolderNodes = (
           },
         ]
       }
+      if (!isVideoFile(item.name)) {
+        return []
+      }
       return [
         {
           kind: "file",
           id: item.id,
           label: item.name,
-          mediaUrl: () => createGoogleDriveDownloadUrl(item.id),
+          mediaUrl: createGoogleDriveDownloadUrl(item.id),
           size: formatFileSize(item.size),
         },
       ]
@@ -247,14 +247,17 @@ export const extractGoogleDrivePublicFolder = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
-  retryStartedAtMs,
+  sourceRequestContext: providedSourceRequestContext,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
-  const startedAtMs = retryStartedAtMs ?? Date.now()
+  const sourceRequestContext = getSourceRequestContext(
+    plugin,
+    providedSourceRequestContext
+  )
   extractGoogleDriveFolderId(targetUrl)
   const response = await fetchWithSourceRetries(
     targetUrl,
     {},
-    { retry: plugin.retry, startedAtMs }
+    sourceRequestContext
   )
   if (!response.ok) {
     throw new Error("Google Drive folder is not publicly accessible.")
@@ -300,17 +303,20 @@ export const extractGoogleDrivePublicFile = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
-  retryStartedAtMs,
+  sourceRequestContext: providedSourceRequestContext,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
-  const startedAtMs = retryStartedAtMs ?? Date.now()
+  const sourceRequestContext = getSourceRequestContext(
+    plugin,
+    providedSourceRequestContext
+  )
   const sourceUrl = new URL(targetUrl)
   const fileId = extractGoogleDriveFileId(sourceUrl)
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
-  const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl, {
-    retry: plugin.retry,
-    startedAtMs,
-  })
+  const metadata = await fetchGoogleDrivePublicFileMetadata(
+    downloadUrl,
+    sourceRequestContext
+  )
   const node = createSourcePlayableNode({
     id: fileId,
     label: metadata.filename,
