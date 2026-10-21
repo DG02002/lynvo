@@ -110,6 +110,19 @@ Use `pnpm dev` from the repository root. It runs
 `apps/lynvo/scripts/start-local-dev.mjs`, which applies local D1 migrations
 with Wrangler and then starts the React Router/Vite dev server.
 
+Local D1 records migrations by filename, so a migration edited after a local
+run applied it never re-runs and the local schema silently drifts. The
+symptom is a 503 from every route reading the drifted table, such as
+`GET /api/proxy` failing with "Proxy settings couldn't be loaded" when
+`user_proxy_providers` lacks a column the code selects. Compare
+`PRAGMA table_info(<table>)` through the read-only D1 inspection above with
+the migration that created the table, then repair the local database with a
+targeted `ALTER TABLE ... ADD COLUMN` (from `apps/lynvo`, `pnpm exec wrangler
+d1 execute lynvo-db --local --command "..."`) or reset the local state
+entirely when the data is disposable. Never add a repository migration for
+the repair: environments that applied the merged migration already have the
+column and would fail on it.
+
 The app's `apps/lynvo/vite.config.ts` configures
 `apps/lynvo-plugin-server/wrangler.jsonc` as an auxiliary Worker. The local
 environment in `apps/lynvo/wrangler.jsonc` maps `LYNVO_PLUGIN_SERVER` to
