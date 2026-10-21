@@ -1,5 +1,6 @@
+import { getShouldAskBeforeMarkingAsWatched } from "~/lib/settings/opened-confirmation-preference"
+
 export const OPENED_CONFIRMATION_EVENT = "lynvo:opened-confirmation"
-const SMALL_SCREEN_MEDIA_QUERY = "(max-width: 639px)"
 
 declare global {
   interface OpenedConfirmationDetail {
@@ -17,7 +18,7 @@ export const markAfterAcceptedHandoff = ({
     return
   }
 
-  if (window.matchMedia(SMALL_SCREEN_MEDIA_QUERY).matches) {
+  if (getShouldAskBeforeMarkingAsWatched()) {
     window.dispatchEvent(
       new CustomEvent<OpenedConfirmationDetail>(OPENED_CONFIRMATION_EVENT, {
         detail: { itemLabel, markOpened },

@@ -1,7 +1,14 @@
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
 import { LoadErrorRetry } from "~/components/load-error-retry"
-import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
+import {
+  LynvoPluginServerAvatar,
+  PluginIcon,
+  PluginServerAvatar,
+} from "~/components/plugin-icon"
 import { Button } from "~/components/ui/button"
-import { Progress } from "~/components/ui/progress"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { clampPercentage } from "~/lib/usage/usage-read"
@@ -17,6 +24,8 @@ import {
   SettingsList,
   SettingsPanel,
   SettingsRow,
+  SettingsHeadingText,
+  SettingsUsageMeter,
 } from "./settings-layout"
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -54,23 +63,21 @@ const UsageSummary = ({
   const resetDate = formatResetDate(resetsAt)
 
   return (
-    <div className="flex flex-col gap-3 py-4">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-normal text-foreground">{limitLabel}</h2>
-        <span className="shrink-0 text-base font-normal tabular-nums text-foreground">
-          {remainingPercent}% remaining
-        </span>
-      </div>
-      <Progress
-        value={remainingPercent}
-        aria-label={`${label} monthly usage remaining`}
-      />
-      {resetDate && (
-        <span className="text-sm text-muted-foreground">
-          Resets {resetDate}
-        </span>
-      )}
-    </div>
+    <SettingsUsageMeter
+      title={<SettingsHeadingText as="h4">{limitLabel}</SettingsHeadingText>}
+      trailing={`${remainingPercent}% remaining`}
+      progress={{
+        value: remainingPercent,
+        label: `${label} monthly usage remaining`,
+      }}
+      footer={
+        resetDate && (
+          <span className="text-sm text-muted-foreground">
+            Resets {resetDate}
+          </span>
+        )
+      }
+    />
   )
 }
 
@@ -86,10 +93,12 @@ const UsageItem = ({
   name,
   used,
   limit,
+  compact = false,
 }: UsageReadEntry & {
   hideIcon: boolean
+  compact?: boolean
 }) => (
-  <SettingsRow className="py-2">
+  <SettingsRow className={compact ? "py-0" : "py-2"}>
     <div className="flex min-w-0 items-center gap-2.5">
       {!hideIcon && (
         <PluginIcon icon={icon} iconUrl={iconUrl} className="size-6" />
@@ -101,6 +110,58 @@ const UsageItem = ({
     </span>
   </SettingsRow>
 )
+
+const UsageServerGroup = ({
+  avatar,
+  children,
+  name,
+}: {
+  avatar: React.ReactNode
+  children: React.ReactNode
+  name: string
+}) => {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+  const contentId = React.useId()
+
+  return (
+    <div className="flex flex-col">
+      <SettingsRow className="gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          {avatar}
+          <SettingsHeadingText as="h3" className="truncate">
+            {name}
+          </SettingsHeadingText>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-10"
+          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${name} usage`}
+          aria-expanded={isExpanded}
+          aria-controls={contentId}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            className={`transition-transform duration-200 ${
+              isExpanded ? "rotate-180" : "rotate-0"
+            }`}
+          />
+        </Button>
+      </SettingsRow>
+      <div
+        id={contentId}
+        className={
+          isExpanded
+            ? "ms-15 flex flex-col gap-2 border-t border-border pb-4"
+            : "hidden"
+        }
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
 
 const UsageLoading = () => (
   <SettingsList role="status" aria-label="Loading usage">
@@ -174,85 +235,144 @@ export const UsageSettings = ({
     )
   }
 
+  const lynvoSystemEntries = snapshot.lynvo.entries.filter(
+    (item) => item.iconKind === "hidden"
+  )
+  const lynvoPluginEntries = snapshot.lynvo.entries.filter(
+    (item) => item.iconKind !== "hidden"
+  )
+
   return (
     <div className="flex flex-col gap-7">
-      <SettingsPanel className="gap-4">
+      <SettingsPanel className="gap-2">
         <SectionHeading
-          title="Lynvo Plugin Server usage"
-          description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
-        />
-        {lynvoPlugins === null && (
-          <SettingsList>
-            <SettingsRow>
-              <div className="flex flex-col items-start gap-2">
-                <p className="text-sm text-muted-foreground">
-                  Lynvo Plugin Server details couldn’t be loaded. Plugin names
-                  and icons may be unavailable.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                >
-                  Reload settings
-                </Button>
-              </div>
-            </SettingsRow>
-          </SettingsList>
-        )}
-        <UsageSummary
-          label="Lynvo Plugin Server"
-          remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
-          resetsAt={snapshot.lynvo.resetsAt}
+          title="Built-in Plugin Server usage"
+          description="The built-in Plugin Server reports usage for Lynvo Plugins."
+          size="base"
         />
         <SettingsList>
-          {snapshot.lynvo.entries.map((item) => (
-            <UsageItem
-              {...item}
-              key={item.key}
-              icon={item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon}
-              hideIcon={item.iconKind === "hidden"}
+          <UsageServerGroup
+            name="Lynvo Plugin Server"
+            avatar={
+              <LynvoPluginServerAvatar
+                name="Lynvo Plugin Server"
+                className="size-12"
+              />
+            }
+          >
+            {lynvoPlugins === null && (
+              <SettingsList>
+                <SettingsRow>
+                  <div className="flex flex-col items-start gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      Lynvo Plugin Server details couldn’t be loaded. Plugin
+                      names and icons may be unavailable.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.reload()}
+                    >
+                      Reload settings
+                    </Button>
+                  </div>
+                </SettingsRow>
+              </SettingsList>
+            )}
+            <UsageSummary
+              label="Lynvo Plugin Server"
+              remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
+              resetsAt={snapshot.lynvo.resetsAt}
             />
-          ))}
+            {lynvoSystemEntries.length > 0 && (
+              <div className="flex flex-col">
+                {lynvoSystemEntries.map((item) => (
+                  <UsageItem {...item} key={item.key} hideIcon compact />
+                ))}
+              </div>
+            )}
+            {lynvoPluginEntries.length > 0 && (
+              <SettingsList>
+                {lynvoPluginEntries.map((item) => (
+                  <UsageItem
+                    {...item}
+                    key={item.key}
+                    icon={
+                      item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon
+                    }
+                    hideIcon={item.iconKind === "hidden"}
+                  />
+                ))}
+              </SettingsList>
+            )}
+          </UsageServerGroup>
         </SettingsList>
       </SettingsPanel>
 
       {(snapshot.custom.groups.length > 0 ||
         snapshot.custom.failures.length > 0) && (
-        <SettingsPanel className="gap-4">
+        <SettingsPanel className="gap-2">
           <SectionHeading
             title="Custom Plugin Server usage"
             description="Each Custom Plugin Server reports the usage it tracks for your account."
+            size="base"
           />
-          {snapshot.custom.groups.map((group) => (
-            <div key={group.key} className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <PluginServerAvatar
-                  serverId={group.key}
-                  name={group.serverName}
-                  className="size-10"
-                />
-                <span className="text-base font-normal text-foreground">
-                  {group.serverName}
-                </span>
-              </div>
-              <UsageSummary
-                label={group.serverName}
-                limitLabel="Usage limit"
-                remainingPercent={group.remainingPercent}
-                resetsAt={group.resetsAt}
-              />
-              <SettingsList>
-                {group.entries.map((item) => (
-                  <UsageItem
-                    {...item}
-                    key={item.key}
-                    hideIcon={item.iconKind === "hidden"}
-                  />
-                ))}
-              </SettingsList>
-            </div>
-          ))}
+          {snapshot.custom.groups.length > 0 && (
+            <SettingsList>
+              {snapshot.custom.groups.map((group) => {
+                const systemEntries = group.entries.filter(
+                  (item) => item.iconKind === "hidden"
+                )
+                const pluginEntries = group.entries.filter(
+                  (item) => item.iconKind !== "hidden"
+                )
+
+                return (
+                  <UsageServerGroup
+                    key={group.key}
+                    name={group.serverName}
+                    avatar={
+                      <PluginServerAvatar
+                        serverId={group.key}
+                        name={group.serverName}
+                        className="size-12"
+                      />
+                    }
+                  >
+                    <UsageSummary
+                      label={group.serverName}
+                      limitLabel="Usage limit"
+                      remainingPercent={group.remainingPercent}
+                      resetsAt={group.resetsAt}
+                    />
+                    {systemEntries.length > 0 && (
+                      <div className="flex flex-col">
+                        {systemEntries.map((item) => (
+                          <UsageItem
+                            {...item}
+                            key={item.key}
+                            hideIcon
+                            compact
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {pluginEntries.length > 0 && (
+                      <SettingsList>
+                        {pluginEntries.map((item) => (
+                          <UsageItem
+                            {...item}
+                            key={item.key}
+                            hideIcon={false}
+                          />
+                        ))}
+                      </SettingsList>
+                    )}
+                  </UsageServerGroup>
+                )
+              })}
+            </SettingsList>
+          )}
           {snapshot.custom.failures.length > 0 && (
             <SettingsList>
               {snapshot.custom.failures.map((failure) => (

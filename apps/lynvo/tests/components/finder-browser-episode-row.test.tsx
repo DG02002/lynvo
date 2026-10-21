@@ -72,11 +72,15 @@ const createMediaArtworkFetch = () =>
   vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     // SAFETY: the test fetch receives the JSON body produced by the artwork client
     const requestBody = readJsonInitBody(init) as MediaArtworkBatchRequest
-    const results = requestBody.requests.map((request) =>
-      request.episodeNumber === undefined
-        ? {}
-        : { stillPath: "/episode-1.jpg", episodeTitle: "Episode 1" }
-    )
+    const results = requestBody.requests.map((request) => {
+      if (request.requireExactTitleMatch) {
+        return { posterPath: "/show-poster.jpg", genres: ["Drama"] }
+      }
+      if (request.episodeNumber === undefined) {
+        return {}
+      }
+      return { stillPath: "/episode-1.jpg", episodeTitle: "Episode 1" }
+    })
     return new Response(JSON.stringify({ results }), {
       headers: { "Content-Type": "application/json" },
     })
@@ -193,6 +197,82 @@ const wrappedSeasonItem: LinkViewItem = {
   },
 }
 
+const createShowFolderItem = (title: string): LinkViewItem => {
+  const slug = title.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")
+  return {
+    ...item,
+    id: `${slug}-saved-link`,
+    url: `https://media.example/${slug}`,
+    title,
+    metadata: {
+      ...item.metadata,
+      extraction: {
+        ...item.metadata.extraction,
+        extractedLinks: [
+          {
+            id: `${slug}-show-folder`,
+            url: `https://media.example/${slug}/`,
+            label: title,
+            type: "folder",
+            mediaNodeKind: "group",
+            childrenResolved: true,
+            children: [
+              {
+                id: `${slug}-season-01`,
+                url: `https://media.example/${slug}/season-01/`,
+                label: "Season 01",
+                type: "folder",
+                mediaNodeKind: "group",
+                childrenResolved: true,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  }
+}
+
+const downloadsFolderItem: LinkViewItem = {
+  ...item,
+  id: "downloads-folder",
+  url: "https://media.example/downloads",
+  title: "Downloads",
+  metadata: {
+    ...item.metadata,
+    extraction: {
+      ...item.metadata.extraction,
+      extractedLinks: [
+        {
+          id: "downloads-root",
+          url: "https://media.example/downloads/",
+          label: "Downloads",
+          type: "folder",
+          mediaNodeKind: "group",
+          childrenResolved: true,
+          children: [
+            {
+              id: "downloads-movie",
+              url: "https://media.example/downloads/movie.mkv",
+              label: "Example Movie (2020).mkv",
+              type: "file",
+              mediaNodeKind: "playable",
+            },
+            {
+              id: "downloads-episode",
+              url: "https://media.example/downloads/episode.mkv",
+              label: "Example Show S01E01.mkv",
+              type: "file",
+              mediaNodeKind: "playable",
+            },
+          ],
+        },
+      ],
+    },
+  },
+}
+
 const createSampleShowEpisodeLink = (episodeNumber: number): ExtractedLink => ({
   id: `sample-show-s01e${episodeNumber}`,
   url: `https://media.example/sample-show-s01e${episodeNumber}`,
@@ -255,6 +335,79 @@ afterEach(() => {
 })
 
 describe("FinderBrowser episode rows", () => {
+  it.each(["Breaking Bad", "The Last of Us"])(
+    "shows an exact-matched show poster for the %s folder",
+    async (showTitle) => {
+      const artworkFetch = createMediaArtworkFetch()
+      vi.stubGlobal("fetch", artworkFetch)
+
+      const itemWithShowFolder = createShowFolderItem(showTitle)
+      const view = render(
+        <FinderBrowserHarness
+          items={[itemWithShowFolder]}
+          selectedItemUrl={itemWithShowFolder.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createLinkItemActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+          shouldShowRowPosters
+        />
+      )
+
+      expect(
+        screen.getByRole("heading", { name: showTitle })
+      ).toBeInTheDocument()
+      expect(
+        await screen.findByAltText(`Artwork for ${showTitle}`)
+      ).toHaveAttribute("src", expect.stringContaining("show-poster.jpg"))
+      expect(
+        view.container.querySelector(".save-list-group-artwork-frame")
+      ).toBeInTheDocument()
+
+      const artworkRequests = artworkFetch.mock.calls.flatMap(
+        ([_input, requestInit]) => {
+          // SAFETY: the test fetch receives the artwork client's JSON body.
+          const requestBody = readJsonInitBody(
+            requestInit
+          ) as MediaArtworkBatchRequest
+          return requestBody.requests
+        }
+      )
+      expect(artworkRequests).toContainEqual({
+        mediaKind: "tv",
+        title: showTitle,
+        requireExactTitleMatch: true,
+      })
+    }
+  )
+
+  it("does not request show artwork for a mixed Downloads folder", () => {
+    const artworkFetch = createMediaArtworkFetch()
+    vi.stubGlobal("fetch", artworkFetch)
+
+    const view = render(
+      <FinderBrowserHarness
+        items={[downloadsFolderItem]}
+        selectedItemUrl={downloadsFolderItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createLinkItemActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Downloads" })
+    ).toBeInTheDocument()
+    expect(
+      view.container.querySelector(".save-list-group-artwork-frame")
+    ).not.toBeInTheDocument()
+    expect(artworkFetch).not.toHaveBeenCalled()
+  })
+
   it("hides the episode-name control for movie folders", () => {
     render(
       <FinderBrowserHarness

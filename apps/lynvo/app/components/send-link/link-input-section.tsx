@@ -116,7 +116,7 @@ export function LinkInputSection({
             onClick={pasteClipboardUrl}
             tabIndex={clipboardUrl ? 0 : -1}
           >
-            <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-900 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
+            <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-5000 shimmer-spread-24 motion-reduce:animate-none block max-w-full truncate text-base font-normal text-primary">
               {clipboardUrl}
             </span>
           </button>
@@ -146,6 +146,7 @@ export function LinkInputSection({
           id="link-input"
           placeholder="https://example.com/video"
           variant="url"
+          data-url-field-input=""
           value={url}
           onChange={(e) => {
             setUrl(e.target.value)
@@ -178,7 +179,7 @@ export function LinkInputSection({
               aria-label="Enable clipboard suggestions"
               className="active:scale-[0.96]"
             >
-              <ClipboardAccessIcon className="size-6" />
+              <ClipboardAccessIcon className="size-8" />
             </InputGroupButton>
           )}
           <InputGroupButton
@@ -189,14 +190,16 @@ export function LinkInputSection({
             title="Save link"
             aria-label="Save link"
             variant="default"
+            className="size-12 -my-[5px] sm:size-13"
+            data-url-field-save-button=""
           >
             {isSaving ? (
-              <Spinner className="size-6" aria-label="Saving link…" />
+              <Spinner className="size-7" aria-label="Saving link…" />
             ) : (
               <HugeiconsIcon
                 icon={ArrowRight02Icon}
                 strokeWidth={2}
-                className="size-6"
+                className="size-8"
               />
             )}
           </InputGroupButton>

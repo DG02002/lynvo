@@ -217,7 +217,6 @@ export const useProxyProviderCommands = ({
         key: "proxy-key:scrape-do",
         operation: () => commands.setProxyProviderKey(token),
         messages: {
-          success: isRemoving ? "Proxy key removed" : "Proxy key saved",
           failure: isRemoving
             ? "The proxy key couldn’t be removed. Try again."
             : "The proxy key couldn’t be saved. Try again.",
@@ -237,7 +236,6 @@ export const useProxyProviderCommands = ({
       key: "proxy-balance:scrape-do",
       operation: () => commands.refreshProxyProviderBalance(),
       messages: {
-        success: "Proxy balance refreshed",
         failure: "The proxy balance couldn’t be refreshed. Try again.",
       },
       target: "server",

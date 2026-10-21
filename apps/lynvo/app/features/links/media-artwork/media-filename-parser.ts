@@ -22,6 +22,12 @@ const CHILD_EPISODE_PATTERN = new RegExp(
   `\\b(?:EPISODE|EP)\\s*(\\d{1,${MEDIA_FILENAME_MAX_EPISODE_DIGITS}})\\b`,
   "i"
 )
+// Release names use compact "Ep06" markers without a season number. Keep
+// "Episode 06" parent-folder-only so prose titles stay unambiguous.
+const EPISODE_LABEL_PATTERN = new RegExp(
+  `\\bEP\\s*(\\d{1,${MEDIA_FILENAME_MAX_EPISODE_DIGITS}})\\b`,
+  "gi"
+)
 // A digit marker missing its episode number may be any case, and placeholder
 // slots are filler characters (SxxEyy) in any case — but the general
 // letter-shaped form is only meaningful in uppercase, because lowercase
@@ -62,7 +68,7 @@ interface MarkerMatch {
   readonly kind: "episode" | "episode-range" | "season"
   readonly index: number
   readonly endIndex: number
-  readonly seasonNumber: number
+  readonly seasonNumber?: number
   readonly episodeNumber?: number
   readonly episodeEnd?: number
 }
@@ -195,14 +201,18 @@ const getNormalizedTitleIdentity = (title: string): string =>
   title
     .normalize("NFKC")
     .toLocaleLowerCase()
+    .replaceAll("&", " and ")
     .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
     .replaceAll(/\s+/g, " ")
 
 const getFilenameEpisodeTitle = (suffix: string): string | undefined => {
   const technicalStart = findTechnicalTokenStart(suffix)
-  return normalizeTitle(
+  const episodeTitleSuffix =
     technicalStart === undefined ? suffix : suffix.slice(0, technicalStart)
+  // Some releases append an eight-character hex id after the episode marker.
+  return normalizeTitle(
+    episodeTitleSuffix.replace(/\s+\([A-F\d]{8}\)\s*$/i, "")
   )
 }
 
@@ -224,6 +234,39 @@ const toUnknownCandidate = (
   confidence: "low",
 })
 
+const findUniqueEpisodeLabelMatch = (
+  matchingText: string
+): RegExpMatchArray | null | undefined => {
+  EPISODE_LABEL_PATTERN.lastIndex = 0
+  const episodeLabelMatches = [...matchingText.matchAll(EPISODE_LABEL_PATTERN)]
+  if (episodeLabelMatches.length > 1) {
+    return null
+  }
+  const [episodeLabelMatch] = episodeLabelMatches
+  return episodeLabelMatch
+}
+
+const findSeasonEpisodeMarker = (
+  matchingText: string
+): MarkerMatch | null | undefined => {
+  EPISODE_PATTERN.lastIndex = 0
+  const episodeMatches = [...matchingText.matchAll(EPISODE_PATTERN)]
+  const [firstEpisodeMatch] = episodeMatches
+  if (episodeMatches.length > 1) {
+    return null
+  }
+  if (!firstEpisodeMatch) {
+    return undefined
+  }
+  return {
+    kind: "episode",
+    index: firstEpisodeMatch.index ?? 0,
+    endIndex: (firstEpisodeMatch.index ?? 0) + firstEpisodeMatch[0].length,
+    seasonNumber: Number(firstEpisodeMatch[1]),
+    episodeNumber: Number(firstEpisodeMatch[2]),
+  }
+}
+
 const findMarkerMatch = (matchingText: string): MarkerMatch | undefined => {
   const rangeMatch = EPISODE_RANGE_PATTERN.exec(matchingText)
   if (rangeMatch) {
@@ -237,19 +280,28 @@ const findMarkerMatch = (matchingText: string): MarkerMatch | undefined => {
     }
   }
 
-  EPISODE_PATTERN.lastIndex = 0
-  const episodeMatches = [...matchingText.matchAll(EPISODE_PATTERN)]
-  const [firstEpisodeMatch] = episodeMatches
-  if (firstEpisodeMatch && episodeMatches.length === 1) {
+  const seasonEpisodeMarker = findSeasonEpisodeMarker(matchingText)
+  if (seasonEpisodeMarker === null) {
+    return undefined
+  }
+  if (seasonEpisodeMarker) {
+    return seasonEpisodeMarker
+  }
+
+  const episodeLabelMatch = findUniqueEpisodeLabelMatch(matchingText)
+  if (episodeLabelMatch === null) {
+    return undefined
+  }
+  if (episodeLabelMatch) {
+    const index = episodeLabelMatch.index ?? 0
     return {
       kind: "episode",
-      index: firstEpisodeMatch.index ?? 0,
-      endIndex: (firstEpisodeMatch.index ?? 0) + firstEpisodeMatch[0].length,
-      seasonNumber: Number(firstEpisodeMatch[1]),
-      episodeNumber: Number(firstEpisodeMatch[2]),
+      index,
+      endIndex: index + episodeLabelMatch[0].length,
+      episodeNumber: Number(episodeLabelMatch[1]),
     }
   }
-  if (episodeMatches.length > 1) {
+  if (episodeLabelMatches.length > 1) {
     return undefined
   }
 
@@ -367,10 +419,14 @@ const parseFilename = (
   }
 
   const marker = findMarkerMatch(matchingText)
-  const hasRepeatedEpisodeMarkers = (() => {
-    EPISODE_PATTERN.lastIndex = 0
-    return [...matchingText.matchAll(EPISODE_PATTERN)].length > 1
-  })()
+  const episodeMarkerCount = (pattern: RegExp): number => {
+    pattern.lastIndex = 0
+    return [...matchingText.matchAll(pattern)].length
+  }
+  const hasRepeatedEpisodeMarkers =
+    episodeMarkerCount(EPISODE_PATTERN) +
+      episodeMarkerCount(EPISODE_LABEL_PATTERN) >
+    1
   const hasMalformedMarker =
     MALFORMED_MARKER_DIGIT_PATTERN.test(matchingText) ||
     MALFORMED_MARKER_PLACEHOLDER_PATTERN.test(matchingText) ||

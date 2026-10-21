@@ -34,11 +34,14 @@ export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
 export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
-// v9: the year-filtered search no longer settles for fuzzy title matches,
-// so results cached with a wrong work (season years vs premiere years)
-// refresh.
-export const MEDIA_ARTWORK_CACHE_VERSION = 9
+// v11 refreshes results cached before work-level content certifications were
+// available from the artwork Worker.
+export const MEDIA_ARTWORK_CACHE_VERSION = 11
 export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
+// Increment when matching changes so unresolved TMDB candidates retry once.
+export const MEDIA_ARTWORK_TITLE_MATCH_VERSION = 1
+export const MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER =
+  "x-lynvo-artwork-title-match-version"
 export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
 export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS
 export const CARD_MENU_LONG_PRESS_DURATION_MS = 500

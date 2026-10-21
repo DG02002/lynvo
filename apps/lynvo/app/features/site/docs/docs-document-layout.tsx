@@ -71,7 +71,7 @@ const DocsSidebarContents = ({
           <AccordionItem value={group.group} variant="borderless">
             <AccordionTrigger variant="nav">{group.group}</AccordionTrigger>
             <AccordionContent variant="nav" className="-mx-4">
-              <ul className="flex flex-col gap-0.5 [&_a]:no-underline">
+              <ul className="flex flex-col gap-0.5">
                 {group.pages.map((page) => {
                   const isCurrentPage = page.slug === currentSlug
 
@@ -122,7 +122,7 @@ export const DocsShell = ({
   currentSlug?: string
   children: ReactNode
 }) => (
-  <div className="w-full lg:flex">
+  <div className="docs-shell w-full lg:flex">
     <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] w-72 shrink-0 flex-col self-start overflow-y-auto border-r border-border px-5 py-7 lg:flex xl:w-80 xl:px-6">
       <DocsSidebarContents section={section} currentSlug={currentSlug} />
     </aside>

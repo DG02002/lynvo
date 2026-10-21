@@ -38,7 +38,6 @@ export const useProxySettings = ({
         key: `proxy-toggle:${id}`,
         operation: () => commands.togglePluginServerProxy(id, !enabled),
         messages: {
-          success: enabled ? "Proxy disabled" : "Proxy enabled",
           failure: "The proxy setting couldn’t be updated. Try again.",
         },
         target: "server",

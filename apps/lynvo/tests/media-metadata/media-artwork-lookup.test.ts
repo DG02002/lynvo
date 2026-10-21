@@ -7,6 +7,8 @@ interface TmdbStubResultItem {
   readonly id?: number
   readonly title?: string
   readonly name?: string
+  readonly first_air_date?: string
+  readonly release_date?: string
   readonly poster_path?: string | null
 }
 
@@ -135,7 +137,11 @@ describe("Media artwork lookup", () => {
           id: 31,
           name: "Example Show",
           poster_path: "/show.jpg",
+          origin_country: ["US"],
           genres: [{ name: "Drama" }, { name: "Crime" }],
+          content_ratings: {
+            results: [{ iso_3166_1: "US", rating: "TV-MA" }],
+          },
         },
       },
     ])
@@ -150,6 +156,7 @@ describe("Media artwork lookup", () => {
       {
         posterPath: "/season.jpg",
         genres: ["Drama", "Crime"],
+        contentRating: "TV-MA",
         identity: { providerId: 31, title: "Example Show" },
         candidates: [
           {
@@ -237,6 +244,92 @@ describe("Media artwork lookup", () => {
         ],
       },
     ])
+  })
+
+  it("resolves show folder posters when TMDB uses an ampersand", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [
+            {
+              id: 549,
+              name: "Law & Order",
+              first_air_date: "1990-09-13",
+              poster_path: "/law-and-order.jpg",
+            },
+          ],
+        },
+      },
+      {
+        urlIncludes: "/tv/549",
+        payload: {
+          id: 549,
+          name: "Law & Order",
+          first_air_date: "1990-09-13",
+          poster_path: "/law-and-order.jpg",
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [
+        {
+          mediaKind: "tv",
+          title: "Law and Order",
+          year: 1990,
+          requireExactTitleMatch: true,
+        },
+      ],
+      { fetch }
+    )
+
+    expect(results[0]).toMatchObject({
+      posterPath: "/law-and-order.jpg",
+      identity: { providerId: 549, title: "Law & Order", year: 1990 },
+    })
+  })
+
+  it("does not use a fuzzy title for an exact show folder lookup", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [
+            {
+              id: 1396,
+              name: "Breaking Bad",
+              poster_path: "/breaking-bad.jpg",
+            },
+          ],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [
+        {
+          mediaKind: "tv",
+          title: "Breaking Ba",
+          requireExactTitleMatch: true,
+        },
+      ],
+      { fetch }
+    )
+
+    expect(results[0]).toEqual({
+      candidates: [
+        {
+          providerId: 1396,
+          title: "Breaking Bad",
+          mediaKind: "tv",
+          posterPath: "/breaking-bad.jpg",
+        },
+      ],
+    })
+    expect(fetch).toHaveBeenCalledOnce()
   })
 
   it("returns empty artwork when no search result matches", async () => {

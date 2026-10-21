@@ -30,7 +30,11 @@ import { cn } from "~/lib/utils"
 import { PluginInfoPopover } from "./plugin-info-popover"
 import { getPluginServerManifestView } from "./plugin-server-manifest"
 import type { CustomPluginServer } from "./plugin-settings-interaction"
-import { SettingsList, SettingsRow } from "./settings-layout"
+import {
+  SettingsHeadingText,
+  SettingsList,
+  SettingsRow,
+} from "./settings-layout"
 
 interface CustomPluginServerRowProps {
   pluginServer: CustomPluginServer
@@ -50,7 +54,7 @@ const CustomPluginServerRow = ({
   onRefreshPluginServer,
   onTogglePluginServer,
 }: CustomPluginServerRowProps) => {
-  const [isExpanded, setIsExpanded] = React.useState(true)
+  const [isExpanded, setIsExpanded] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [isDeleting, setIsDeleting] = React.useState(false)
   const manifest = getPluginServerManifestView(
@@ -65,21 +69,21 @@ const CustomPluginServerRow = ({
   return (
     <div className="flex flex-col">
       <SettingsRow className="gap-4">
-        <div className="-ml-1 flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <PluginServerAvatar
             serverId={pluginServer.id}
             name={manifest.name}
-            className="size-10"
+            className="size-12"
           />
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-sm text-foreground">
+              <SettingsHeadingText as="h3" className="truncate">
                 {manifest.name}
-              </span>
+              </SettingsHeadingText>
               {isDown && <Badge variant="destructive">Unavailable</Badge>}
             </div>
             <span
-              className="truncate font-mono text-xs text-muted-foreground"
+              className="truncate text-sm text-muted-foreground"
               title={pluginServer.baseUrl}
             >
               {pluginServer.baseUrl}
@@ -158,7 +162,7 @@ const CustomPluginServerRow = ({
       {manifest.plugins.length > 0 && isExpanded && (
         <div
           id={sourceListId}
-          className="ml-9 divide-y divide-border border-t border-border"
+          className="ms-15 divide-y divide-border border-t border-border"
         >
           {manifest.plugins.map((source) => {
             const projectUrl = source.homepage ?? source.hosts.at(0)

@@ -163,7 +163,7 @@ const GallerySaveItemArtwork = ({
           type="button"
           variant="outline"
           size="sm"
-          className="relative z-10"
+          className="relative z-10 text-foreground"
           onClick={(event) => {
             event.stopPropagation()
             onChooseArtwork()
@@ -396,7 +396,7 @@ const GallerySaveItem = ({
           </Button>
         )}
         {canOpenMenu && (
-          <div className="absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 has-[:focus-visible]:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
+          <div className="absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 has-[:focus-visible]:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:pointer-events-none focus-within:pointer-events-auto has-aria-expanded:pointer-events-auto motion-reduce:transition-none [&_svg]:size-7!">
             {isSingleItem && item ? (
               <LinkItemMenu
                 item={item}
@@ -425,17 +425,19 @@ const GallerySaveItem = ({
           {...statusSpec}
           titleClassName="font-heading text-base font-normal"
         >
-          <h3
-            title={group.displayTitle}
-            className="font-heading text-base font-normal break-words line-clamp-2 min-h-12"
-          >
-            {group.displayTitle}
-          </h3>
-          {isSingleItem && directLink?.expiry !== undefined && (
-            <span className="mt-1 flex justify-center text-xs text-muted-foreground">
-              <PlayableExpiryBadge expiresAt={directLink.expiry} />
-            </span>
-          )}
+          <div className="min-h-12">
+            <h3
+              title={group.displayTitle}
+              className="font-heading text-base font-normal break-words line-clamp-2"
+            >
+              {group.displayTitle}
+            </h3>
+            {isSingleItem && directLink?.expiry !== undefined && (
+              <span className="mt-1 flex justify-center text-xs text-muted-foreground">
+                <PlayableExpiryBadge expiresAt={directLink.expiry} />
+              </span>
+            )}
+          </div>
         </ExtractionStatusTitle>
       </div>
       <ReportIssueDialog

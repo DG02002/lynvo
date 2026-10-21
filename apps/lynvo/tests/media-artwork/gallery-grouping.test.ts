@@ -468,6 +468,64 @@ describe("getGalleryGroups", () => {
     })
   })
 
+  it("uses the exact show poster for a folder with multiple seasons and specials", () => {
+    const groups = getGalleryGroups([
+      createEpisodeItem(
+        "https://example.com/breaking-bad/",
+        "Breaking Bad",
+        2_000,
+        [
+          {
+            nodeKey: "show",
+            label: "Breaking Bad",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "season-1",
+                label: "Season 01",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [
+                  {
+                    nodeKey: "episode-1",
+                    label: "Breaking Bad (2008) - S01E01 - Pilot - 1080p.mkv",
+                    type: "file",
+                    mediaNodeKind: "playable",
+                  },
+                ],
+              },
+              {
+                nodeKey: "specials",
+                label: "Specials",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [
+                  {
+                    nodeKey: "special-1",
+                    label:
+                      "Breaking Bad (2008) - S00E01 - Wedding Day - 1080p.mkv",
+                    type: "file",
+                    mediaNodeKind: "playable",
+                  },
+                ],
+              },
+            ],
+          },
+        ]
+      ),
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.displayTitle).toBe("Breaking Bad")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "tv",
+      title: "Breaking Bad",
+      year: 2008,
+      requireExactTitleMatch: true,
+    })
+  })
+
   it("keeps a mixed container as its own group titled by its name", () => {
     const groups = getGalleryGroups([
       {

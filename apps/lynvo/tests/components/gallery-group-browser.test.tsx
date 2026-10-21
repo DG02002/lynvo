@@ -71,6 +71,7 @@ const createMediaArtworkFetch = () =>
         ? {
             posterPath: "/season-poster.jpg",
             genres: ["Crime", "Drama"],
+            contentRating: "TV-MA",
             identity: { providerId: 1, title: "Sample", year: 2004 },
           }
         : {
@@ -231,7 +232,7 @@ describe("GalleryGroupBrowser", () => {
     )
     expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
     // The panel keeps the genres and the TMDB attribution under the poster.
-    expect(await screen.findByText("Crime · Drama")).toBeVisible()
+    expect(await screen.findByText("Crime · Drama · TV-MA")).toBeVisible()
     expect(screen.getByAltText("The Movie Database (TMDB)")).toBeInTheDocument()
     expect(screen.queryByText(/^Artwork:/)).not.toBeInTheDocument()
   })

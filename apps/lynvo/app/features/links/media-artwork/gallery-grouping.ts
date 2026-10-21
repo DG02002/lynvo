@@ -15,6 +15,7 @@ interface GalleryIdentity {
   readonly normalizedTitle: string
   readonly requestTitle: string
   readonly displayTitle: string
+  readonly requireExactTitleMatch?: boolean
   readonly year?: number
   readonly seasonNumber?: number
 }
@@ -33,6 +34,7 @@ interface MutableGalleryGroup {
   anchorYear?: number
   anchorSeason?: number
   requestTitle?: string
+  requireExactTitleMatch?: boolean
   displayTitle: string
   lastAddedAt: number
   items: LinkListItem[]
@@ -111,7 +113,23 @@ const getGalleryIdentity = (
 }
 
 const getGalleryIdentityKey = (identity: GalleryIdentity): string =>
-  `${identity.mediaKind}:${identity.normalizedTitle}:${identity.seasonNumber ?? ""}`
+  `${identity.mediaKind}:${identity.normalizedTitle}:${identity.year ?? ""}:${identity.seasonNumber ?? ""}`
+
+const hasConflictingDescendantIdentity = (
+  identities: ReadonlyMap<string, GalleryIdentity>
+): boolean => {
+  const titleIdentities = new Set(
+    [...identities.values()].map(
+      ({ mediaKind, normalizedTitle }) => `${mediaKind}:${normalizedTitle}`
+    )
+  )
+  const years = new Set(
+    [...identities.values()]
+      .map((identity) => identity.year)
+      .filter((year): year is number => year !== undefined)
+  )
+  return titleIdentities.size > 1 || years.size > 1
+}
 
 // A wrapper may only borrow a descendant identity when every confidently
 // parsed descendant agrees; a listing spanning several titles or seasons is
@@ -127,7 +145,7 @@ const collectConfidentDescendantIdentities = (
     childParentFolderName?: string
   ) => {
     for (const node of childNodes) {
-      if (identitiesByKey.size > 1) {
+      if (hasConflictingDescendantIdentity(identitiesByKey)) {
         return
       }
       const nodeLabel = node.label?.trim()
@@ -164,10 +182,35 @@ const getGalleryItemIdentity = (
   if (extractedLinks.length > 0) {
     const descendantIdentities =
       collectConfidentDescendantIdentities(extractedLinks)
-    if (descendantIdentities.size > 1) {
+    if (hasConflictingDescendantIdentity(descendantIdentities)) {
       return undefined
     }
-    const [descendantIdentity] = descendantIdentities.values()
+    const identities = [...descendantIdentities.values()]
+    if (identities.length > 1) {
+      const savedTitle = item.title?.trim() || itemLabel
+      const showContainerIdentity = getMultiSeasonShowContainerIdentity(
+        identities,
+        savedTitle,
+        itemLabel
+      )
+      if (showContainerIdentity) {
+        return showContainerIdentity
+      }
+
+      const seasons = new Set(
+        identities
+          .map((identity) => identity.seasonNumber)
+          .filter((season): season is number => season !== undefined)
+      )
+      if (seasons.size > 1) {
+        return undefined
+      }
+    }
+    const [descendantIdentity] = identities.toSorted(
+      (firstIdentity, secondIdentity) =>
+        Number(secondIdentity.year !== undefined) -
+        Number(firstIdentity.year !== undefined)
+    )
     if (descendantIdentity) {
       const savedTitle =
         descendantIdentity.mediaKind === "tv"
@@ -182,6 +225,58 @@ const getGalleryItemIdentity = (
 // The selection's title may retain an article omitted by release filenames.
 // Only borrow it when the remaining title and any explicit years agree.
 const withoutArticle = (title: string) => title.replace(/^(?:the|an|a) /, "")
+
+const getMultiSeasonShowContainerIdentity = (
+  identities: readonly GalleryIdentity[],
+  savedTitle: string,
+  displayTitle: string
+): GalleryIdentity | undefined => {
+  const [firstIdentity] = identities
+  if (
+    !firstIdentity ||
+    firstIdentity.mediaKind !== "tv" ||
+    identities.some(
+      (identity) =>
+        identity.mediaKind !== "tv" ||
+        identity.normalizedTitle !== firstIdentity.normalizedTitle
+    )
+  ) {
+    return undefined
+  }
+
+  const seasons = new Set(
+    identities
+      .map((identity) => identity.seasonNumber)
+      .filter((season): season is number => season !== undefined)
+  )
+  const years = new Set(
+    identities
+      .map((identity) => identity.year)
+      .filter((year): year is number => year !== undefined)
+  )
+  const savedIdentity = getGalleryIdentity(savedTitle)
+  if (
+    seasons.size < 2 ||
+    years.size > 1 ||
+    !savedIdentity ||
+    withoutArticle(savedIdentity.normalizedTitle) !==
+      withoutArticle(firstIdentity.normalizedTitle) ||
+    (savedIdentity.year !== undefined &&
+      [...years].some((year) => year !== savedIdentity.year))
+  ) {
+    return undefined
+  }
+
+  const year = savedIdentity.year ?? [...years][0]
+  return {
+    mediaKind: "tv",
+    normalizedTitle: firstIdentity.normalizedTitle,
+    requestTitle: savedIdentity.requestTitle,
+    displayTitle,
+    requireExactTitleMatch: true,
+    year,
+  }
+}
 
 const reconcileSavedTitle = (
   identity: GalleryIdentity,
@@ -282,6 +377,7 @@ const findOrAdoptYearGroup = (
     anchorYear: identity.year,
     anchorSeason: identity.seasonNumber,
     requestTitle: identity.requestTitle,
+    requireExactTitleMatch: identity.requireExactTitleMatch,
     displayTitle: identity.displayTitle,
     lastAddedAt: 0,
     items: [],
@@ -313,12 +409,16 @@ const getGroupArtworkRequest = (
     }
   }
   if (group.mediaKind === "tv") {
-    return {
+    const artworkRequest: MediaArtworkRequest = {
       mediaKind: "tv",
       title: group.requestTitle,
       year: group.anchorYear,
       seasonNumber: group.anchorSeason,
     }
+    if (!group.requireExactTitleMatch) {
+      return artworkRequest
+    }
+    return { ...artworkRequest, requireExactTitleMatch: true }
   }
   return {
     mediaKind: "movie",

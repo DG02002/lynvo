@@ -1268,7 +1268,7 @@ describe("SaveListBrowser", () => {
     ).not.toBeInTheDocument()
     expect(markOpened).not.toHaveBeenCalled()
     expect(playableItemButton).not.toHaveClass("bg-destructive/15")
-    expect(playableItemButton).not.toHaveClass("bg-link/15")
+    expect(playableItemButton).not.toHaveClass("bg-opened/15")
     expect(playableItemButton).toHaveClass("bg-muted/60")
     expect(playableItemRow).toHaveAttribute("data-resolution-state", "expanded")
     expect(
@@ -1322,7 +1322,7 @@ describe("SaveListBrowser", () => {
         "https://resolver-beta.example/playable-item-one"
       )
     )
-    expect(playableItemButton).toHaveClass("bg-link/15")
+    expect(playableItemButton).toHaveClass("bg-opened/15")
 
     fireEvent.click(playableItemButton)
     await waitFor(() => {
@@ -1813,7 +1813,7 @@ describe("SaveListBrowser", () => {
 
     expect(
       screen.getByRole("button", { name: "Open video.mp4, opened" })
-    ).toHaveClass("bg-link/15")
+    ).toHaveClass("bg-opened/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")

@@ -3,7 +3,11 @@ import {
   type MediaArtworkRequest,
   type MediaArtworkResult,
 } from "../../shared/api-contracts"
-import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
+import {
+  MEDIA_ARTWORK_CACHE_VERSION,
+  MEDIA_ARTWORK_TITLE_MATCH_VERSION,
+  MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER,
+} from "../constants"
 import {
   lookupMediaArtworkOutcomes,
   mediaArtworkOutcomeToResult,
@@ -36,6 +40,7 @@ const canonicalRequestJson = (request: MediaArtworkRequest): string =>
     request.year ?? null,
     request.seasonNumber ?? null,
     request.episodeNumber ?? null,
+    ...(request.requireExactTitleMatch ? ["exact-title"] : []),
   ])
 
 const buildCacheUrl = async (request: MediaArtworkRequest): Promise<string> => {
@@ -60,7 +65,18 @@ const readCachedResult = async (
   try {
     // SAFETY: cache entries are written exclusively by writeCachedResult,
     // whose bodies are MediaArtworkResult JSON.
-    return (await cached.json()) as MediaArtworkResult
+    const result = (await cached.json()) as MediaArtworkResult
+    const isUnresolvedCandidateResult = Boolean(
+      result.candidates?.length && !result.posterPath && !result.stillPath
+    )
+    if (
+      isUnresolvedCandidateResult &&
+      cached.headers.get(MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER) !==
+        String(MEDIA_ARTWORK_TITLE_MATCH_VERSION)
+    ) {
+      return undefined
+    }
+    return result
   } catch {
     return undefined
   }
@@ -89,6 +105,9 @@ const writeCachedResult = async ({
     new Response(JSON.stringify(result), {
       headers: {
         "content-type": "application/json",
+        [MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER]: String(
+          MEDIA_ARTWORK_TITLE_MATCH_VERSION
+        ),
         "cache-control": `public, max-age=${maxAge}`,
         expires: new Date((nowSeconds + maxAge) * 1000).toUTCString(),
       },

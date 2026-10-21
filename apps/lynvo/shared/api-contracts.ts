@@ -47,6 +47,8 @@ export const MediaArtworkRequestSchema = Schema.Struct({
   year: Schema.optional(Schema.Number),
   seasonNumber: Schema.optional(Schema.Number),
   episodeNumber: Schema.optional(Schema.Number),
+  // Container titles should resolve only when TMDB returns the same title.
+  requireExactTitleMatch: Schema.optional(Schema.Boolean),
   // When set, artwork resolves by immutable id; title matching is skipped.
   providerId: Schema.optional(Schema.Number),
 })
@@ -57,8 +59,9 @@ const MediaArtworkResultSchema = Schema.Struct({
   episodeTitle: Schema.optional(Schema.String),
   identity: Schema.optional(MediaArtworkIdentitySchema),
   candidates: Schema.optional(Schema.Array(MediaArtworkCandidateSchema)),
-  // Work-level genre names for detail surfaces.
+  // Work-level genre names and content certification for detail surfaces.
   genres: Schema.optional(Schema.Array(Schema.String)),
+  contentRating: Schema.optional(Schema.String),
   // Transient provider failure; callers must not negative-cache it.
   failed: Schema.optional(Schema.Boolean),
 })

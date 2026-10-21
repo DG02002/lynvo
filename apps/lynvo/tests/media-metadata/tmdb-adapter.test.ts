@@ -236,7 +236,7 @@ describe("TMDB adapter", () => {
     expect(request.url).toContain("/movie/42")
   })
 
-  it("normalizes the genre list from details", async () => {
+  it("normalizes the genre list and picks the origin-country content rating", async () => {
     const fetch = createFetch(
       new Response(
         JSON.stringify({
@@ -244,10 +244,17 @@ describe("TMDB adapter", () => {
           name: "Example Show",
           first_air_date: "2019-11-14",
           poster_path: "/show-poster.jpg",
+          origin_country: ["IN"],
           genres: [
             { id: 18, name: "Drama" },
             { id: 80, name: null },
           ],
+          content_ratings: {
+            results: [
+              { iso_3166_1: "US", rating: "TV-MA" },
+              { iso_3166_1: "IN", rating: "A" },
+            ],
+          },
         }),
         { status: 200 }
       )
@@ -265,6 +272,53 @@ describe("TMDB adapter", () => {
         year: 2019,
         posterPath: "/show-poster.jpg",
         genres: ["Drama"],
+        contentRating: "A",
+        attribution: "TMDB",
+      },
+    })
+    const [request] = fetch.mock.calls[0] ?? []
+    if (!(request instanceof Request)) {
+      throw new Error("TMDB transport did not receive a Request")
+    }
+    expect(request.url).toContain("/tv/43?append_to_response=content_ratings")
+  })
+
+  it("falls back to the US movie certification without an origin rating", async () => {
+    const fetch = createFetch(
+      new Response(
+        JSON.stringify({
+          id: 44,
+          title: "Example Movie",
+          release_date: "2026-04-03",
+          production_countries: [{ iso_3166_1: "FR" }],
+          release_dates: {
+            results: [
+              {
+                iso_3166_1: "FR",
+                release_dates: [{ certification: "" }],
+              },
+              {
+                iso_3166_1: "US",
+                release_dates: [{ certification: "R" }],
+              },
+            ],
+          },
+        }),
+        { status: 200 }
+      )
+    )
+    const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
+
+    const result = await adapter.getMovieDetails(44)
+
+    expect(result).toEqual({
+      kind: "success",
+      value: {
+        kind: "movie",
+        providerId: 44,
+        title: "Example Movie",
+        year: 2026,
+        contentRating: "R",
         attribution: "TMDB",
       },
     })

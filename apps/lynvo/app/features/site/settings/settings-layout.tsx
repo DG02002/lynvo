@@ -2,6 +2,7 @@ import * as React from "react"
 import { Link, type LinkProps } from "react-router"
 
 import { SelectTrigger as LynvoSelectTrigger } from "~/components/select-trigger"
+import { Progress } from "~/components/ui/progress"
 import { SelectContent } from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
 import { useViewTransition } from "~/lib/client-profile"
@@ -208,21 +209,88 @@ export function SectionHeading({
   title,
   description,
   destructive = false,
+  size = "default",
+  descriptionSize = "sm",
 }: {
   title: string
   description?: string
   destructive?: boolean
+  size?: "default" | "base"
+  descriptionSize?: "sm" | "base"
 }) {
+  const descriptionSizeClass =
+    descriptionSize === "base" ? "text-base" : "text-sm"
+
   return (
     <div className="flex flex-col gap-1">
-      <h2
-        className={cn("text-lg font-normal", destructive && "text-destructive")}
+      <SettingsHeadingText
+        as="h2"
+        size={size === "base" ? "base" : "large"}
+        className={destructive ? "text-destructive" : undefined}
       >
         {title}
-      </h2>
+      </SettingsHeadingText>
       {description && (
-        <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
+        <p
+          className={cn(
+            "max-w-2xl text-muted-foreground",
+            descriptionSizeClass
+          )}
+        >
+          {description}
+        </p>
       )}
+    </div>
+  )
+}
+
+export function SettingsHeadingText({
+  as: Heading = "h2",
+  children,
+  className,
+  size = "base",
+}: {
+  as?: "h2" | "h3" | "h4"
+  children: React.ReactNode
+  className?: string
+  size?: "base" | "large"
+}) {
+  return (
+    <Heading
+      className={cn(
+        size === "large" ? "text-lg" : "text-base",
+        "font-normal tracking-tight text-foreground",
+        className
+      )}
+    >
+      {children}
+    </Heading>
+  )
+}
+
+export function SettingsUsageMeter({
+  footer,
+  progress,
+  title,
+  trailing,
+}: {
+  footer?: React.ReactNode
+  progress?: { value: number; label: string }
+  title: React.ReactNode
+  trailing: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2 pt-2">
+      <div className="flex items-center justify-between gap-4">
+        {title}
+        <div className="flex shrink-0 items-center gap-2 text-base font-normal tabular-nums text-foreground">
+          {trailing}
+        </div>
+      </div>
+      {progress && (
+        <Progress value={progress.value} aria-label={progress.label} />
+      )}
+      {footer}
     </div>
   )
 }

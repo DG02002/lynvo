@@ -63,6 +63,32 @@ describe("search result selection", () => {
     ).toMatchObject({ providerId: 100 })
   })
 
+  it("treats ampersand and the word and as the same title spelling", () => {
+    expect(
+      selectBestSearchResult("Law and Order", [result("Law & Order", 549)], {
+        requireExactTitleMatch: true,
+      })
+    ).toMatchObject({ providerId: 549 })
+    expect(
+      selectBestSearchResult("Law & Order", [result("Law and Order", 550)], {
+        requireExactTitleMatch: true,
+      })
+    ).toMatchObject({ providerId: 550 })
+  })
+
+  it("rejects near matches when a folder requires the exact TV title", () => {
+    expect(
+      selectBestSearchResult(
+        "Breaking Ba",
+        [result("Breaking Bad", 1396, 2008)],
+        { requireExactTitleMatch: true }
+      )
+    ).toBeUndefined()
+    expect(
+      selectBestSearchResult("Breaking Ba", [result("Breaking Bad", 1396)])
+    ).toMatchObject({ providerId: 1396 })
+  })
+
   it("refuses an exact-title tie across different years", () => {
     const selected = selectBestSearchResult("The Avengers", [
       result("The Avengers", 101, 1998),

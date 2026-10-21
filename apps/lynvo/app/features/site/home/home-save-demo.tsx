@@ -455,7 +455,7 @@ export const HomeSaveDemo = () => {
                     tabIndex={isClipboardOpen ? 0 : -1}
                   >
                     <span
-                      className={`${isClipboardOpen ? "shimmer shimmer-color-blue-500/60 shimmer-duration-900 shimmer-spread-24" : ""} block max-w-full truncate text-base font-normal text-primary`}
+                      className={`${isClipboardOpen ? "shimmer shimmer-color-blue-500/60 shimmer-duration-3000 shimmer-spread-24" : ""} block max-w-full truncate text-base font-normal text-primary`}
                     >
                       {HOME_DEMO_CLIPBOARD_URL}
                     </span>
@@ -557,7 +557,7 @@ const DemoLibraryItem = ({
 }: DemoLibraryItemProps) => (
   <div className="home-demo-library-item border-b last:border-b-0">
     <div
-      className={`flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3 ${item.isOpened ? "bg-link/15" : ""}`}
+      className={`flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3 ${item.isOpened ? "bg-opened/15" : ""}`}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 text-left md:gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center text-foreground md:size-14">

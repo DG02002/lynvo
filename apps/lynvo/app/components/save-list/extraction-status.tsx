@@ -148,7 +148,7 @@ const ExtractionStatusText = ({
         "min-w-0 animate-in animation-duration-500 fade-in motion-reduce:animate-none"
       )}
     >
-      <span className="shimmer shimmer-duration-900">{message}</span>
+      <span className="shimmer shimmer-duration-2400">{message}</span>
     </span>
   </span>
 )

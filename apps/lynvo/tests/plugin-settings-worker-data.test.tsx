@@ -48,6 +48,9 @@ describe("Plugin settings browser data", () => {
       <PluginsSettings lynvoPlugins={null} requestOrigin="https://lynvo.test" />
     )
 
+    expect(
+      screen.getByRole("img", { name: "Lynvo Plugin Server" })
+    ).toBeVisible()
     expect(await screen.findByText("https://plugins.example.com")).toBeVisible()
     await waitFor(() => {
       expect(requestedPaths).toEqual(

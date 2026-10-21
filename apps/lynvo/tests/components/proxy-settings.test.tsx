@@ -93,7 +93,7 @@ describe("ProxySettings", () => {
 
     expect(await screen.findByText("First Server")).toBeVisible()
     expect(screen.getByRole("img", { name: "Scrape.do" })).toBeVisible()
-    expect(screen.getByText("Key saved")).toBeVisible()
+    expect(screen.queryByText("Key saved")).not.toBeInTheDocument()
     expect(screen.getByText("Monthly credit usage")).toBeVisible()
     expect(screen.getByText("3% used")).toBeVisible()
     expect(screen.getByText("27 of 1,000 credits used")).toBeVisible()
@@ -108,13 +108,13 @@ describe("ProxySettings", () => {
     expect(
       screen.getByRole("button", { name: "Refresh Scrape.do credits" })
     ).toBeVisible()
-    expect(
-      screen.getByRole("button", { name: "Remove Scrape.do key" })
-    ).toBeVisible()
-
     fireEvent.click(
-      screen.getByRole("button", { name: "Change Scrape.do key" })
+      screen.getByRole("button", { name: "Scrape.do key actions" })
     )
+    expect(screen.getByRole("menuitem", { name: "Change key" })).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Remove key" })).toBeVisible()
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Change key" }))
     expect(
       screen.getByText(
         "Lynvo encrypts this key and sends it only to servers whose proxy switch is on during Extraction."

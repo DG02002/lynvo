@@ -12,6 +12,7 @@ const normalizeTitle = (value: string): string =>
     .replaceAll(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replaceAll(/['’]/g, "")
+    .replaceAll("&", " and ")
     .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
 
@@ -59,12 +60,12 @@ const tokenMatches = (queryToken: string, candidateToken: string): boolean =>
     candidateToken.length >= 4 &&
     levenshteinWithin(queryToken, candidateToken, 2))
 
-const scoreSearchResult = (
+const scoreSearchResultTitleText = (
   normalizedQuery: string,
   queryTokens: readonly string[],
-  result: TmdbSearchResult
+  title: string
 ): number => {
-  const normalizedTitle = normalizeTitle(result.title)
+  const normalizedTitle = normalizeTitle(title)
   if (normalizedTitle === normalizedQuery) {
     return 1
   }
@@ -88,6 +89,19 @@ const scoreSearchResult = (
   return matchedTokens === identityTokens.length ? 0.75 : 0
 }
 
+const scoreSearchResult = (
+  normalizedQuery: string,
+  queryTokens: readonly string[],
+  result: TmdbSearchResult
+): number =>
+  Math.max(
+    ...[result.title, result.originalTitle]
+      .filter((title): title is string => Boolean(title))
+      .map((title) =>
+        scoreSearchResultTitleText(normalizedQuery, queryTokens, title)
+      )
+  )
+
 /**
  * Relative strength of a result's title match for a query; 0 means the title
  * does not match at all. Exposed so callers can compare a year-filtered pick
@@ -108,15 +122,16 @@ export const scoreSearchResultTitle = (
 /**
  * TMDB ranks loosely and returns fuzzy hits first when the query is
  * mistyped, so the first result is regularly a different work entirely.
- * Only a result whose title genuinely matches the query is used; when
- * nothing matches, no artwork beats wrong artwork. An exact-title tie
- * across different years ("The Avengers" 1998 vs 2012) is the same
- * ambiguity: the picker decides through the empty outcome's candidates
- * instead of a silent coin flip.
+ * Only a result whose display title or original title genuinely matches the
+ * query is used; when nothing matches, no artwork beats wrong artwork. An
+ * exact-title tie across different years ("The Avengers" 1998 vs 2012) is
+ * the same ambiguity: the picker decides through the empty outcome's
+ * candidates instead of a silent coin flip.
  */
 export const selectBestSearchResult = (
   query: string,
-  results: readonly TmdbSearchResult[]
+  results: readonly TmdbSearchResult[],
+  options: { readonly requireExactTitleMatch?: boolean } = {}
 ): TmdbSearchResult | undefined => {
   const normalizedQuery = normalizeTitle(query)
   const queryTokens = normalizedQuery.split(" ").filter(Boolean)
@@ -127,10 +142,14 @@ export const selectBestSearchResult = (
   let topResults: readonly TmdbSearchResult[] = []
   for (const result of results) {
     const score = scoreSearchResult(normalizedQuery, queryTokens, result)
-    if (score > bestScore) {
+    if (score > bestScore && (!options.requireExactTitleMatch || score === 1)) {
       bestScore = score
       topResults = [result]
-    } else if (score > 0 && score === bestScore) {
+    } else if (
+      score > 0 &&
+      score === bestScore &&
+      (!options.requireExactTitleMatch || score === 1)
+    ) {
       topResults = [...topResults, result]
     }
   }

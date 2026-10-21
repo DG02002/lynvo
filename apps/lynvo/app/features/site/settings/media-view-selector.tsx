@@ -37,8 +37,7 @@ const mediaViewOptions: readonly MediaViewOption[] = [
 ]
 
 const ListViewPreview = () => (
-  <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
-    <span className="h-2 w-16 rounded-full bg-foreground/20" />
+  <div aria-hidden="true" className="flex h-full min-h-0 flex-col p-2">
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 items-center gap-2 border-b border-border/70">
         <span className="size-5 shrink-0 rounded bg-foreground/10" />
@@ -57,12 +56,17 @@ const ListViewPreview = () => (
 )
 
 const GalleryViewPreview = () => (
-  <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
-    <span className="h-2 w-16 rounded-full bg-foreground/20" />
-    <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
-      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
-      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
-      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
+  <div aria-hidden="true" className="flex h-full min-h-0 flex-col p-2">
+    <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-1 gap-2 sm:grid-cols-5 sm:grid-rows-2">
+      {Array.from({ length: 10 }, (_, posterIndex) => (
+        <span
+          key={posterIndex}
+          className={cn(
+            "min-w-0 rounded-lg border border-foreground/15 bg-foreground/10",
+            posterIndex >= 3 && "hidden sm:block"
+          )}
+        />
+      ))}
     </div>
   </div>
 )

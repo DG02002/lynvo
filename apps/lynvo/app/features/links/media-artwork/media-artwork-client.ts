@@ -16,10 +16,11 @@ import {
   MEDIA_ARTWORK_FLUSH_DELAY_MS,
   MEDIA_ARTWORK_FOUND_TTL_MS,
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
+  MEDIA_ARTWORK_TITLE_MATCH_VERSION,
 } from "~/lib/constants"
 
-export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
-  [
+export const getMediaArtworkKey = (request: MediaArtworkRequest): string => {
+  const keyParts = [
     `v${MEDIA_ARTWORK_CACHE_VERSION}`,
     request.providerId ?? "",
     request.mediaKind,
@@ -27,7 +28,12 @@ export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
     request.year ?? "",
     request.seasonNumber ?? "",
     request.episodeNumber ?? "",
-  ].join("|")
+  ]
+  if (request.requireExactTitleMatch) {
+    keyParts.push("exact-title")
+  }
+  return keyParts.join("|")
+}
 
 const mediaArtworkResults = new Map<string, MediaArtworkResult | null>()
 const mediaArtworkListeners = new Map<string, Set<() => void>>()
@@ -37,7 +43,13 @@ let mediaArtworkFlushTimer: ReturnType<typeof setTimeout> | undefined
 interface CachedMediaArtworkEntry {
   readonly value: MediaArtworkResult | null
   readonly expiresAt: number
+  readonly titleMatchVersion?: number
 }
+
+const isUnresolvedCandidateResult = (
+  value: MediaArtworkResult | null | undefined
+): boolean =>
+  Boolean(value?.candidates?.length && !value.posterPath && !value.stillPath)
 
 const toMediaArtworkCacheKey = (key: string): string =>
   `${MEDIA_ARTWORK_CACHE_STORAGE_PREFIX}${key}`
@@ -102,6 +114,13 @@ const readCachedMediaArtwork = (
       localStorage.removeItem(toMediaArtworkCacheKey(key))
       return undefined
     }
+    if (
+      isUnresolvedCandidateResult(parsedEntry.value) &&
+      parsedEntry.titleMatchVersion !== MEDIA_ARTWORK_TITLE_MATCH_VERSION
+    ) {
+      localStorage.removeItem(toMediaArtworkCacheKey(key))
+      return undefined
+    }
     return parsedEntry.value ?? null
   } catch {
     return undefined
@@ -119,6 +138,7 @@ const writeCachedMediaArtwork = (
   try {
     const cacheEntry: CachedMediaArtworkEntry = {
       value,
+      titleMatchVersion: MEDIA_ARTWORK_TITLE_MATCH_VERSION,
       expiresAt:
         Date.now() +
         (hasResolvedArtwork

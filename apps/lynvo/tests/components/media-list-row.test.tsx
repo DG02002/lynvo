@@ -99,7 +99,7 @@ describe("MediaListRow", () => {
 
     expect(
       screen.getByRole("button", { name: "Title text, opened" })
-    ).toHaveClass("bg-link/15")
+    ).toHaveClass("bg-opened/15")
   })
 
   it("announces a new row state", () => {

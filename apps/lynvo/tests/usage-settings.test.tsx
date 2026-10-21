@@ -147,6 +147,9 @@ describe("UsageSettings", () => {
 
     expect(await screen.findByText("Google Drive Index")).toBeVisible()
     expect(
+      screen.getByRole("img", { name: "Lynvo Plugin Server" })
+    ).toBeVisible()
+    expect(
       container.querySelector('img[src="https://drive.example/icon.png"]')
     ).toBeInTheDocument()
   })

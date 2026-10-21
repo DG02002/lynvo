@@ -150,6 +150,45 @@ describe("media artwork cache", () => {
     ])
   })
 
+  it("keeps exact-title folder lookups separate from fuzzy cache entries", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input)
+      if (url.includes("/tv/1396")) {
+        return jsonResponse({
+          id: 1396,
+          title: "Breaking Bad",
+          poster_path: "/breaking-bad.jpg",
+        })
+      }
+      return jsonResponse({
+        results: [
+          { id: 1396, title: "Breaking Bad", poster_path: "/breaking-bad.jpg" },
+        ],
+      })
+    })
+    const dependencies = {
+      waitUntil: () => {},
+      fetch: fetchMock,
+    }
+    const fuzzyRequest = { mediaKind: "tv" as const, title: "Breaking Ba" }
+    const exactRequest = { ...fuzzyRequest, requireExactTitleMatch: true }
+
+    const fuzzyResult = await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      [fuzzyRequest],
+      dependencies
+    )
+    const exactResult = await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      [exactRequest],
+      dependencies
+    )
+
+    expect(fuzzyResult[0]?.posterPath).toBe("/breaking-bad.jpg")
+    expect(exactResult[0]?.posterPath).toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it("ignores a negative entry from the previous cache namespace", async () => {
     const title = "Legacy Cache Test"
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
