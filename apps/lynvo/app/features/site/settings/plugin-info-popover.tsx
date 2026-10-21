@@ -4,13 +4,13 @@ import type { ReactNode } from "react"
 
 import { Button } from "~/components/ui/button"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
 import { cn } from "~/lib/utils"
 
-interface PluginInfoTooltipProps {
+interface PluginInfoPopoverProps {
   pluginName: string
   description?: string
   version?: string
@@ -19,14 +19,14 @@ interface PluginInfoTooltipProps {
   projectUrl?: string
 }
 
-export function PluginInfoTooltip({
+export function PluginInfoPopover({
   pluginName,
   description,
   version,
   usageMultiplier,
   proxyCreditUsage,
   projectUrl,
-}: PluginInfoTooltipProps) {
+}: PluginInfoPopoverProps) {
   const hasUsageHint = usageMultiplier !== undefined && usageMultiplier > 1
   if (
     !description &&
@@ -46,8 +46,11 @@ export function PluginInfoTooltip({
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger
+    <Popover>
+      <PopoverTrigger
+        // Touch has no hover: the popover stays a tap target there while
+        // pointer users keep the familiar hover reveal.
+        openOnHover
         render={
           <Button
             type="button"
@@ -67,22 +70,26 @@ export function PluginInfoTooltip({
               : "text-muted-foreground group-hover/button:text-foreground"
           )}
         />
-      </TooltipTrigger>
-      <TooltipContent variant="rich">
-        {description && <p>{description}</p>}
-        {version && <p>Version {version}</p>}
-        {usageHint}
-        {projectUrl && (
-          <a
-            href={projectUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="break-all font-medium underline underline-offset-2"
-          >
-            {projectUrl}
-          </a>
-        )}
-      </TooltipContent>
-    </Tooltip>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-64">
+        <div className="flex min-w-0 flex-col gap-1">
+          {description && <p>{description}</p>}
+          {version && (
+            <p className="text-muted-foreground">Version {version}</p>
+          )}
+          {usageHint}
+          {projectUrl && (
+            <a
+              href={projectUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all font-medium underline underline-offset-2"
+            >
+              {projectUrl}
+            </a>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

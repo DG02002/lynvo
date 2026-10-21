@@ -93,6 +93,16 @@ const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
   return descendedPath
 }
 
+// The entry view auto-descends through single-folder wrappers, so leaving it
+// must not surface them again one level at a time: when a step up would land
+// strictly inside the auto-descended chain, back leaves the saved link.
+const isAutoDescendedWrapperLevel = (
+  path: readonly FolderLevel[],
+  autoDescendPath: readonly FolderLevel[]
+) =>
+  path.length < autoDescendPath.length &&
+  path.every((folder, index) => folder.id === autoDescendPath[index]?.id)
+
 export const useFinderBrowserState = ({
   item,
   actions,
@@ -118,6 +128,10 @@ export const useFinderBrowserState = ({
     [location.search]
   )
   const [rootLinks, setRootLinks] = useState(() => itemRootLinks)
+  const autoDescendPath = useMemo(
+    () => getSingleFolderDescendPath(rootLinks),
+    [rootLinks]
+  )
   const initialFolderPath = useMemo(
     () =>
       parsedFolderPath.hasSearchParam
@@ -181,7 +195,13 @@ export const useFinderBrowserState = ({
         search: nextSearch,
         hash: currentLocation.hash,
       },
-      { preventScrollReset: true, replace }
+      // Keeping the state carries the library scroll position and the
+      // folder's return target across folder-path navigations.
+      {
+        preventScrollReset: true,
+        replace,
+        state: currentLocation.state,
+      }
     )
   }
 
@@ -307,11 +327,14 @@ export const useFinderBrowserState = ({
   }
 
   const navigateToParentFolder = () => {
-    if (visibleFolderPath.length === 0) {
+    const parentFolderPath = visibleFolderPath.slice(0, -1)
+    if (
+      visibleFolderPath.length === 0 ||
+      isAutoDescendedWrapperLevel(parentFolderPath, autoDescendPath)
+    ) {
       onExit()
       return
     }
-    const parentFolderPath = visibleFolderPath.slice(0, -1)
 
     const parentFolderIds = parentFolderPath.map((folder) => folder.id)
     if (
@@ -331,9 +354,13 @@ export const useFinderBrowserState = ({
     ({ currentLocation, nextLocation, historyAction }) =>
       historyAction === NavigationType.Pop &&
       visibleFolderPath.length > 0 &&
+      !isAutoDescendedWrapperLevel(
+        visibleFolderPath.slice(0, -1),
+        autoDescendPath
+      ) &&
       currentLocation.pathname.startsWith(savePaths.folderPrefix) &&
       !nextLocation.pathname.startsWith(savePaths.folderPrefix),
-    [visibleFolderPath.length]
+    [visibleFolderPath, autoDescendPath]
   )
   const folderExitBlocker = useBlocker(shouldBlockFolderExit)
   const handleBlockedFolderExit = useEffectEvent(() => {

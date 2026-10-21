@@ -185,6 +185,7 @@ const GalleryGroupItemRow = ({
           actions={actions}
           playableLink={directLink}
           showRemove
+          showChangeArtwork={false}
           isRefreshing={isExtracting}
           triggerLook="media-row"
         />
@@ -284,7 +285,7 @@ export const GalleryGroupBrowser = ({
           <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
             <h1
               aria-label={group.displayTitle}
-              className="hidden w-full min-w-0 text-base font-normal md:block"
+              className="hidden w-full min-w-0 text-lg font-medium tracking-tight md:block"
             >
               <ExpandableFilename
                 value={group.displayTitle}

@@ -6,6 +6,12 @@ import {
   type MediaArtworkResponse,
   type MediaArtworkResult,
 } from "~shared/api-contracts"
+import {
+  getMediaArtworkTitleMatchCacheKeyParts,
+  isCurrentMediaArtworkTitleMatchVersion,
+  isUnresolvedMediaArtworkResult,
+  MEDIA_ARTWORK_TITLE_MATCH_VERSION,
+} from "~shared/media-artwork-cache"
 
 import { requestSameOrigin } from "~/lib/api/client"
 import {
@@ -18,8 +24,8 @@ import {
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
 } from "~/lib/constants"
 
-export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
-  [
+export const getMediaArtworkKey = (request: MediaArtworkRequest): string => {
+  const keyParts = [
     `v${MEDIA_ARTWORK_CACHE_VERSION}`,
     request.providerId ?? "",
     request.mediaKind,
@@ -27,7 +33,10 @@ export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
     request.year ?? "",
     request.seasonNumber ?? "",
     request.episodeNumber ?? "",
-  ].join("|")
+  ]
+  keyParts.push(...getMediaArtworkTitleMatchCacheKeyParts(request))
+  return keyParts.join("|")
+}
 
 const mediaArtworkResults = new Map<string, MediaArtworkResult | null>()
 const mediaArtworkListeners = new Map<string, Set<() => void>>()
@@ -37,6 +46,7 @@ let mediaArtworkFlushTimer: ReturnType<typeof setTimeout> | undefined
 interface CachedMediaArtworkEntry {
   readonly value: MediaArtworkResult | null
   readonly expiresAt: number
+  readonly titleMatchVersion?: number
 }
 
 const toMediaArtworkCacheKey = (key: string): string =>
@@ -102,6 +112,13 @@ const readCachedMediaArtwork = (
       localStorage.removeItem(toMediaArtworkCacheKey(key))
       return undefined
     }
+    if (
+      isUnresolvedMediaArtworkResult(parsedEntry.value) &&
+      !isCurrentMediaArtworkTitleMatchVersion(parsedEntry.titleMatchVersion)
+    ) {
+      localStorage.removeItem(toMediaArtworkCacheKey(key))
+      return undefined
+    }
     return parsedEntry.value ?? null
   } catch {
     return undefined
@@ -119,6 +136,7 @@ const writeCachedMediaArtwork = (
   try {
     const cacheEntry: CachedMediaArtworkEntry = {
       value,
+      titleMatchVersion: MEDIA_ARTWORK_TITLE_MATCH_VERSION,
       expiresAt:
         Date.now() +
         (hasResolvedArtwork

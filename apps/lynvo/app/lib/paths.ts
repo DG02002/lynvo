@@ -33,7 +33,8 @@ export const policyPaths = {
   usagePolicy: "/policies/usage-policy",
 } as const
 
-const saveFolderRouteSegment = "save/folder"
+const saveRouteSegment = "save"
+const saveFolderRouteSegment = `${saveRouteSegment}/folder`
 
 export const SAVE_FOLDER_PATH_SEARCH_PARAM = "path"
 
@@ -45,7 +46,10 @@ export const hasSaveGroupSearchParam = (search: string): boolean =>
   new URLSearchParams(search).has(SAVE_GROUP_SEARCH_PARAM)
 
 export const savePaths = {
-  root: "/save",
+  root: `/${saveRouteSegment}`,
   folderPrefix: `/${saveFolderRouteSegment}/`,
-  folderRoute: `${saveFolderRouteSegment}/:savedLinkId`,
+  /** Matches /save and every /save/folder/<id> as one route, so internal
+      navigations reuse the loaded snapshot without a loader round trip or a
+      remount mid-transition. */
+  splatRoute: `${saveRouteSegment}/*?`,
 } as const

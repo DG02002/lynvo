@@ -1,6 +1,7 @@
 import {
   AbacusIcon,
   AtomIcon,
+  LoomIcon,
   CalculatorIcon,
   ChessKnightIcon,
   ConeIcon,
@@ -135,6 +136,9 @@ interface PluginServerAvatarProps {
   readonly className?: string
 }
 
+const PLUGIN_SERVER_AVATAR_SURFACE_CLASS =
+  "flex shrink-0 items-center justify-center rounded-lg border border-foreground/15 bg-gradient-to-br text-white"
+
 export const PluginServerAvatar = ({
   serverId,
   name,
@@ -152,13 +156,34 @@ export const PluginServerAvatar = ({
       role="img"
       aria-label={name}
       data-plugin-server-avatar={serverId}
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white",
-        gradient,
-        className
-      )}
+      className={cn(PLUGIN_SERVER_AVATAR_SURFACE_CLASS, gradient, className)}
     >
-      <HugeiconsIcon icon={icon} className="size-[55%]" aria-hidden="true" />
+      <HugeiconsIcon icon={icon} className="size-[65%]" aria-hidden="true" />
     </span>
   )
 }
+
+// The official Lynvo Plugin Server keeps its own mark instead of a hashed
+// avatar: the white Loom glyph on the brand-black tile sets the first-party
+// server apart from the decorative Custom Server avatars.
+export const LynvoPluginServerAvatar = ({
+  name,
+  className,
+}: {
+  readonly name: string
+  readonly className?: string
+}) => (
+  <span
+    role="img"
+    aria-label={name}
+    data-plugin-server-avatar="lynvo-plugin-server"
+    className={cn(
+      PLUGIN_SERVER_AVATAR_SURFACE_CLASS,
+      // oxlint-disable-next-line shadcn/no-raw-colors -- Requested black first-party mark, stable across themes.
+      "from-neutral-900 to-black",
+      className
+    )}
+  >
+    <HugeiconsIcon icon={LoomIcon} className="size-[65%]" aria-hidden="true" />
+  </span>
+)

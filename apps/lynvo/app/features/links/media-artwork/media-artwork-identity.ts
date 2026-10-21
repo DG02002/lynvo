@@ -47,9 +47,16 @@ export const getMediaArtworkRequest = (
 
   if (
     (candidate.kind === "episode" || candidate.kind === "episode-range") &&
-    candidate.seasonNumber !== undefined &&
     candidate.episodeNumber !== undefined
   ) {
+    if (candidate.seasonNumber === undefined) {
+      return {
+        mediaKind: "tv",
+        title: candidate.title,
+        year: candidate.year,
+        episodeNumber: candidate.episodeNumber,
+      }
+    }
     return {
       mediaKind: "tv",
       title: candidate.title,
@@ -60,6 +67,22 @@ export const getMediaArtworkRequest = (
   }
 
   return undefined
+}
+
+export const getShowFolderArtworkRequest = (
+  folderLabel: string
+): MediaArtworkRequest | undefined => {
+  const candidate = parseMediaFilename(folderLabel)
+  if (candidate.kind !== "movie" || !candidate.title) {
+    return undefined
+  }
+
+  return {
+    mediaKind: "tv",
+    title: candidate.title,
+    year: candidate.year,
+    requireExactTitleMatch: true,
+  }
 }
 
 export const hasEpisodeMarker = (
@@ -124,11 +147,10 @@ export const getMediaDisplayTitle = (
       : candidate.title
   }
 
-  if (
-    candidate.kind === "episode" &&
-    candidate.seasonNumber !== undefined &&
-    candidate.episodeNumber !== undefined
-  ) {
+  if (candidate.kind === "episode" && candidate.episodeNumber !== undefined) {
+    if (candidate.seasonNumber === undefined) {
+      return `${candidate.title} Ep${getTwoDigitLabel(candidate.episodeNumber)}`
+    }
     return `${candidate.title} S${getTwoDigitLabel(candidate.seasonNumber)}E${getTwoDigitLabel(candidate.episodeNumber)}`
   }
 

@@ -7,6 +7,8 @@ interface TmdbStubResultItem {
   readonly id?: number
   readonly title?: string
   readonly name?: string
+  readonly first_air_date?: string
+  readonly release_date?: string
   readonly poster_path?: string | null
 }
 
@@ -70,12 +72,21 @@ describe("Media artwork lookup", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it("resolves movie posters from search results", async () => {
+  it("resolves movie posters with the work genres from details", async () => {
     const fetch = createUrlRoutingFetch([
       {
         urlIncludes: "/search/movie?",
         payload: {
           results: [{ id: 42, title: "Example Movie", poster_path: "/m.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/movie/42",
+        payload: {
+          id: 42,
+          title: "Example Movie",
+          poster_path: "/m.jpg",
+          genres: [{ name: "Thriller" }],
         },
       },
     ])
@@ -89,6 +100,7 @@ describe("Media artwork lookup", () => {
     expect(results).toEqual([
       {
         posterPath: "/m.jpg",
+        genres: ["Thriller"],
         identity: { providerId: 42, title: "Example Movie" },
         candidates: [
           {
@@ -96,6 +108,62 @@ describe("Media artwork lookup", () => {
             title: "Example Movie",
             mediaKind: "movie",
             posterPath: "/m.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
+  it("attaches the show genres to season posters", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [{ id: 31, name: "Example Show", poster_path: "/show.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/tv/31/season/2",
+        payload: {
+          id: 31,
+          name: "Season 2",
+          poster_path: "/season.jpg",
+          season_number: 2,
+        },
+      },
+      {
+        urlIncludes: "/tv/31",
+        payload: {
+          id: 31,
+          name: "Example Show",
+          poster_path: "/show.jpg",
+          origin_country: ["US"],
+          genres: [{ name: "Drama" }, { name: "Crime" }],
+          content_ratings: {
+            results: [{ iso_3166_1: "US", rating: "TV-MA" }],
+          },
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ mediaKind: "tv", title: "Example Show", seasonNumber: 2 }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/season.jpg",
+        genres: ["Drama", "Crime"],
+        contentRating: "TV-MA",
+        identity: { providerId: 31, title: "Example Show" },
+        candidates: [
+          {
+            providerId: 31,
+            title: "Example Show",
+            mediaKind: "tv",
+            posterPath: "/show.jpg",
           },
         ],
       },
@@ -176,6 +244,92 @@ describe("Media artwork lookup", () => {
         ],
       },
     ])
+  })
+
+  it("resolves show folder posters when TMDB uses an ampersand", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [
+            {
+              id: 549,
+              name: "Law & Order",
+              first_air_date: "1990-09-13",
+              poster_path: "/law-and-order.jpg",
+            },
+          ],
+        },
+      },
+      {
+        urlIncludes: "/tv/549",
+        payload: {
+          id: 549,
+          name: "Law & Order",
+          first_air_date: "1990-09-13",
+          poster_path: "/law-and-order.jpg",
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [
+        {
+          mediaKind: "tv",
+          title: "Law and Order",
+          year: 1990,
+          requireExactTitleMatch: true,
+        },
+      ],
+      { fetch }
+    )
+
+    expect(results[0]).toMatchObject({
+      posterPath: "/law-and-order.jpg",
+      identity: { providerId: 549, title: "Law & Order", year: 1990 },
+    })
+  })
+
+  it("does not use a fuzzy title for an exact show folder lookup", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [
+            {
+              id: 1396,
+              name: "Breaking Bad",
+              poster_path: "/breaking-bad.jpg",
+            },
+          ],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [
+        {
+          mediaKind: "tv",
+          title: "Breaking Ba",
+          requireExactTitleMatch: true,
+        },
+      ],
+      { fetch }
+    )
+
+    expect(results[0]).toEqual({
+      candidates: [
+        {
+          providerId: 1396,
+          title: "Breaking Bad",
+          mediaKind: "tv",
+          posterPath: "/breaking-bad.jpg",
+        },
+      ],
+    })
+    expect(fetch).toHaveBeenCalledOnce()
   })
 
   it("returns empty artwork when no search result matches", async () => {
@@ -483,6 +637,78 @@ describe("Media artwork lookup", () => {
     ])
   })
 
+  it("prefers the unfiltered search when the year only yields a fuzzy match", async () => {
+    // Season packs stamp the season's year, not the show's premiere year:
+    // the 2024 filter hides the real 2022 "The Bear" and only a token-subset
+    // title ("...Big Bear Challenge") survives it.
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "first_air_date_year=2024",
+        payload: {
+          results: [
+            {
+              id: 252179,
+              name: "The Hungry Games: Alaska's Big Bear Challenge",
+              poster_path: "/wrong.jpg",
+            },
+          ],
+        },
+      },
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [
+            {
+              id: 136315,
+              name: "The Bear",
+              poster_path: "/the-bear.jpg",
+            },
+          ],
+        },
+      },
+      {
+        urlIncludes: "/tv/136315/season/3",
+        payload: {
+          id: 136315,
+          name: "Season 3",
+          poster_path: "/the-bear-s03.jpg",
+          season_number: 3,
+        },
+      },
+      {
+        urlIncludes: "/tv/136315",
+        payload: {
+          id: 136315,
+          name: "The Bear",
+          poster_path: "/the-bear.jpg",
+          genres: [{ name: "Comedy" }, { name: "Drama" }],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ mediaKind: "tv", title: "The Bear", year: 2024, seasonNumber: 3 }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/the-bear-s03.jpg",
+        genres: ["Comedy", "Drama"],
+        identity: { providerId: 136315, title: "The Bear" },
+        candidates: [
+          {
+            providerId: 136315,
+            title: "The Bear",
+            mediaKind: "tv",
+            posterPath: "/the-bear.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
   it("retries without the year when the filename year hides the work", async () => {
     const fetch = createUrlRoutingFetch([
       {
@@ -517,6 +743,6 @@ describe("Media artwork lookup", () => {
         ],
       },
     ])
-    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
 })

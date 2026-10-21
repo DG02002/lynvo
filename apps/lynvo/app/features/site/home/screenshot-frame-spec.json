@@ -38,10 +38,7 @@
       }
     ]
   },
-  "homeThemes": {
-    "desktop": "aurora-058",
-    "phone": "aurora-059"
-  },
+  "responsiveImageWidths": [480, 640, 960, 1600, 2400],
   "docsCanvas": {
     "widthCssPixels": 1470,
     "heightCssPixels": 827,

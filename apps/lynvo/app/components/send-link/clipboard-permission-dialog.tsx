@@ -66,15 +66,15 @@ export function ClipboardPermissionDialog({
           <div
             aria-hidden={step < 2}
             className={cn(
-              "grid transition-collapse duration-200 motion-reduce:transition-none",
-              step >= 2
-                ? "grid-rows-[1fr] opacity-100"
-                : "grid-rows-[0fr] opacity-0"
+              // The row always occupies its height: the carousel steps fade
+              // it instead of collapsing, so the alert size never changes.
+              "grid transition-opacity duration-200 motion-reduce:transition-none",
+              step >= 2 ? "opacity-100" : "opacity-0"
             )}
           >
             <div className="min-h-0 overflow-hidden">
               <div className="w-full rounded-md px-1 py-2 text-left">
-                <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-900 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
+                <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-3000 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
                   {HOME_DEMO_CLIPBOARD_URL}
                 </span>
               </div>

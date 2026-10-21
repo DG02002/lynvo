@@ -3,6 +3,7 @@ import type {
   PluginServerUsage,
   UsageMetric,
 } from "../api-contracts"
+import { DIRECT_MEDIA_PLUGIN_ID } from "../constants"
 
 const LYNVO_DAILY_LIMIT_METRIC_ID = "lynvo-plugin-server-operations"
 const CUSTOM_USAGE_FAILURE =
@@ -77,7 +78,7 @@ const normalizeLynvoSection = (
         (candidate) => candidate.id === metric.pluginId
       )
       const isDailyLimit = metric.id === LYNVO_DAILY_LIMIT_METRIC_ID
-      const isDirect = metric.pluginId === "direct-media"
+      const isDirect = metric.pluginId === DIRECT_MEDIA_PLUGIN_ID
       const iconKind = getLynvoUsageIconKind(isDailyLimit, isDirect)
       return {
         key: metric.id,

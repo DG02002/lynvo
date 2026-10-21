@@ -6,16 +6,37 @@ import { savePaths } from "~/lib/paths"
 
 import {
   createSaveListScrollLocationState,
+  getSaveListReturnTo,
   getSaveListScrollPosition,
 } from "./use-save-list-fullscreen"
+
+const FOLDER_SPLAT_PREFIX = "folder/"
+
+// The saved folder lives in the splat of the single /save route: /save itself
+// has an empty splat, a folder URL carries "folder/<encoded saved link id>",
+// and anything else under /save is not a route this app renders.
+const readSavedLinkIdFromSplat = (splat: string | undefined): string | null => {
+  if (!splat) {
+    return null
+  }
+  if (!splat.startsWith(FOLDER_SPLAT_PREFIX)) {
+    return ""
+  }
+  try {
+    return decodeURIComponent(splat.slice(FOLDER_SPLAT_PREFIX.length))
+  } catch {
+    return ""
+  }
+}
 
 export const useSaveFolderRoute = (
   items: LinkListItem[],
   isPending: boolean
 ) => {
-  const { savedLinkId } = useParams<{ savedLinkId: string }>()
+  const { "*": splat } = useParams<"*">()
   const location = useLocation()
   const navigate = useNavigate()
+  const savedLinkId = readSavedLinkIdFromSplat(splat)
   const selectedItemUrl = useMemo(() => {
     if (!savedLinkId) {
       return null
@@ -27,7 +48,7 @@ export const useSaveFolderRoute = (
   }, [items, savedLinkId])
 
   useEffect(() => {
-    if (savedLinkId && !isPending && !selectedItemUrl) {
+    if (savedLinkId !== null && !isPending && !selectedItemUrl) {
       void navigate(savePaths.root, { replace: true })
     }
   }, [isPending, navigate, savedLinkId, selectedItemUrl])
@@ -43,12 +64,19 @@ export const useSaveFolderRoute = (
       if (savedLink?.id) {
         void navigate(
           `${savePaths.folderPrefix}${encodeURIComponent(savedLink.id)}`,
-          { state: createSaveListScrollLocationState(scrollPosition) }
+          {
+            state: {
+              ...createSaveListScrollLocationState(scrollPosition),
+              // Back must return to the page the folder was opened from — the
+              // group view when that is where the user came from.
+              lynvoSaveListReturnTo: `${location.pathname}${location.search}`,
+            },
+          }
         )
       }
     },
     closeSavedFolder: () =>
-      void navigate(savePaths.root, {
+      void navigate(getSaveListReturnTo(location.state) ?? savePaths.root, {
         replace: true,
         state: createSaveListScrollLocationState(
           getSaveListScrollPosition(location.state) ?? 0

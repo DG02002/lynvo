@@ -37,8 +37,7 @@ const savedFolder: SavedLinkListItem = {
 const renderFolderRouteWrapper = ({ children }: PropsWithChildren) => (
   <MemoryRouter initialEntries={["/save"]}>
     <Routes>
-      <Route path="/save" element={children} />
-      <Route path="/save/folder/:savedLinkId" element={children} />
+      <Route path="/save/*?" element={children} />
     </Routes>
   </MemoryRouter>
 )
@@ -64,6 +63,7 @@ describe("saved folder routes", () => {
     expect(result.current.folder.selectedItemUrl).toBe(savedFolder.url)
     expect(result.current.locationState).toEqual({
       lynvoSaveListScrollPosition: 625,
+      lynvoSaveListReturnTo: "/save",
     })
 
     void act(() => result.current.folder.closeSavedFolder())
@@ -72,6 +72,39 @@ describe("saved folder routes", () => {
     expect(result.current.folder.selectedItemUrl).toBeNull()
     expect(result.current.locationState).toEqual({
       lynvoSaveListScrollPosition: 625,
+    })
+  })
+
+  it("closes the folder back onto the group view it was opened from", async () => {
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <MemoryRouter initialEntries={["/save?group=tv%3Asample%3AS01"]}>
+        <Routes>
+          <Route path="/save/*?" element={children} />
+        </Routes>
+      </MemoryRouter>
+    )
+    const { result } = renderHook(
+      () => ({
+        folder: useSaveFolderRoute([savedFolder], false),
+        pathname: useLocation().pathname,
+        search: useLocation().search,
+      }),
+      { wrapper }
+    )
+
+    void act(() => result.current.folder.openSavedFolder(savedFolder.url, 0))
+
+    await waitFor(() =>
+      expect(result.current.pathname).toBe(
+        "/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"
+      )
+    )
+
+    void act(() => result.current.folder.closeSavedFolder())
+
+    await waitFor(() => {
+      expect(result.current.pathname).toBe("/save")
+      expect(result.current.search).toBe("?group=tv%3Asample%3AS01")
     })
   })
 
@@ -106,8 +139,7 @@ describe("saved folder routes", () => {
     const wrapper = ({ children }: PropsWithChildren) => (
       <MemoryRouter initialEntries={["/save/folder/missing-id"]}>
         <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
+          <Route path="/save/*?" element={children} />
         </Routes>
       </MemoryRouter>
     )
@@ -129,8 +161,7 @@ describe("saved folder routes", () => {
         initialEntries={["/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"]}
       >
         <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
+          <Route path="/save/*?" element={children} />
         </Routes>
       </MemoryRouter>
     )

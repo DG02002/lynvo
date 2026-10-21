@@ -35,7 +35,7 @@ export const FolderTitleDisplayToggleButton = ({
         checked={titleDisplay === "episode"}
         onCheckedChange={() => onToggle()}
       />
-      Show episode names
+      <span className="tracking-tight">Show episode names</span>
     </Label>
   )
 }

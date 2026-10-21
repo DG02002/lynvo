@@ -45,6 +45,20 @@ const ENTRY_BATCH_SIZE = 5
 const changelogEntries: ChangelogEntry[] = [
   {
     type: "general",
+    date: "Oct 20, 2026",
+    dateTime: "2026-10-20",
+    title: "Gallery view is the default, with clearer group pages",
+    category: "Product",
+    description: [
+      "Gallery view is now the default Library view for every supported browser and no longer marked Beta. Choose List view in Settings > General, under Saved links view, to keep the row layout.",
+      "Group pages list the work's genres and content rating under the poster and drop the old artwork credit line. Back inside a folder now returns to the page the folder was opened from instead of stepping through wrapper folders, and moving between the Library, a group, and a folder no longer refetches the saved-links snapshot, so those transitions are instant.",
+      "Saved-link menus drop Refresh on Direct Media links, which are already their own playable link, and episode rows no longer offer Change artwork; that choice stays on the Gallery group menu. Plugin details now open on tap, the Scrape.do card shows a + button until a key is saved, and Android TV sessions appear with a TV icon.",
+      "Plugin Domain settings no longer offer a separate Remove credentials action. Remove the domain to clear its credentials; replacing credentials remains available from the domain settings.",
+      "General settings also include Ask before marking items as watched. When enabled, Lynvo asks before updating the watched state after you open a link; otherwise, it marks the item watched automatically.",
+    ],
+  },
+  {
+    type: "general",
     date: "Sep 19, 2026",
     dateTime: "2026-09-19",
     title: "Hybrid view is now called Gallery view",

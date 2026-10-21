@@ -70,6 +70,8 @@ const createMediaArtworkFetch = () =>
       request.episodeNumber === undefined
         ? {
             posterPath: "/season-poster.jpg",
+            genres: ["Crime", "Drama"],
+            contentRating: "TV-MA",
             identity: { providerId: 1, title: "Sample", year: 2004 },
           }
         : {
@@ -228,9 +230,12 @@ describe("GalleryGroupBrowser", () => {
     const artworkFrame = view.container.querySelector(
       ".save-list-group-artwork-frame"
     )
-    expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
-    const artworkCredit = await screen.findByText("Artwork: Sample (2004)")
-    expect(artworkCredit).not.toHaveClass("hidden", "md:block")
+    expect(artworkFrame?.parentElement).toHaveClass("max-w-60", "md:max-w-none")
+    // The panel keeps the genres and the TMDB attribution under the poster.
+    expect(await screen.findByText("Crime · Drama")).toBeVisible()
+    expect(screen.getByText("TV-MA")).toBeVisible()
+    expect(screen.getByAltText("The Movie Database (TMDB)")).toBeInTheDocument()
+    expect(screen.queryByText(/^Artwork:/)).not.toBeInTheDocument()
   })
 
   it("shows episode names by default and keeps filenames opt-in", async () => {
@@ -274,13 +279,13 @@ describe("GalleryGroupBrowser", () => {
     })
     expect(episodeNamesSwitch).toBeInTheDocument()
     expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "true")
-    expect(screen.getByText("Show episode names")).toHaveClass(
+    expect(screen.getByText("Show episode names").parentElement).toHaveClass(
       "text-base",
       "text-foreground"
     )
-    expect(screen.getByText("Show episode names")).not.toHaveClass(
-      "text-muted-foreground"
-    )
+    expect(
+      screen.getByText("Show episode names").parentElement
+    ).not.toHaveClass("text-muted-foreground")
   })
 
   it("lets users switch gallery rows to filenames", async () => {
@@ -457,6 +462,39 @@ describe("GalleryGroupBrowser", () => {
     expect(
       artworkFrame?.querySelector('img[src*="season-poster.jpg"]')
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps artwork picking and refreshing off group rows for direct media items", async () => {
+    const episodeItem = createEpisodeItem()
+    episodeItem.metadata.source.pluginId = "direct-media"
+    // The shared factory omits setArtwork; including it here proves the row
+    // hides the action because of the row, not the missing capability.
+    const setArtwork = vi.fn()
+    const { actions } = renderBrowser([episodeItem], {
+      actions: createLinkItemActions({ setArtwork }),
+    })
+
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: `Open menu for ${episodeFilename}`,
+      })[0]
+    )
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeVisible()
+    })
+
+    // The library card owns the artwork pick, and a Direct Media item is its
+    // own playable link, so neither action belongs on a group row.
+    expect(
+      screen.queryByRole("menuitem", { name: "Change artwork" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", { name: "Refresh" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: "Copy Source link" })
+    ).toBeInTheDocument()
+    expect(actions.setArtwork).not.toHaveBeenCalled()
   })
 
   it("removes every group item after a delete-all confirmation", async () => {

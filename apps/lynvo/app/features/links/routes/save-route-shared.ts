@@ -2,7 +2,7 @@ import type { ShouldRevalidateFunction } from "react-router"
 import type { SavedLinkApiRecord } from "~shared/api-contracts"
 
 import { savedLinkApiRecordToViewItem } from "~/features/links/use-links"
-import { SAVE_FOLDER_PATH_SEARCH_PARAM, savePaths } from "~/lib/paths"
+import { SAVE_FOLDER_PATH_SEARCH_PARAM } from "~/lib/paths"
 
 import type { Route } from "./+types/_site.save"
 
@@ -20,6 +20,9 @@ export const toInitialSaveItems = (savedLinks: readonly SavedLinkApiRecord[]) =>
     return item ? [item] : []
   })
 
+// The group and folder-path params only change which part of the snapshot is
+// on screen, so they must not re-run the loader. Realtime version comparison
+// keeps the reused snapshot fresh.
 const searchWithout = (url: URL, ...keys: string[]): string => {
   const searchParams = new URLSearchParams(url.search)
   for (const key of keys) {
@@ -28,51 +31,27 @@ const searchWithout = (url: URL, ...keys: string[]): string => {
   return searchParams.toString()
 }
 
-const searchWithoutGroup = (url: URL): string => searchWithout(url, "group")
-
-const searchWithoutGroupAndFolderPath = (url: URL): string => {
-  return searchWithout(url, "group", SAVE_FOLDER_PATH_SEARCH_PARAM)
-}
-
-const isSaveFolderPath = (pathname: string): boolean =>
-  pathname.startsWith(savePaths.folderPrefix)
-
-const hasSameNonGroupSearch = (currentUrl: URL, nextUrl: URL): boolean =>
-  searchWithoutGroup(currentUrl) === searchWithoutGroup(nextUrl)
+const hasSameSnapshotSearch = (currentUrl: URL, nextUrl: URL): boolean =>
+  searchWithout(currentUrl, "group", SAVE_FOLDER_PATH_SEARCH_PARAM) ===
+  searchWithout(nextUrl, "group", SAVE_FOLDER_PATH_SEARCH_PARAM)
 
 type SaveRouteRevalidationArgs = Parameters<ShouldRevalidateFunction>[0]
 
-const shouldRevalidateSavedLinksRoute = (
-  args: SaveRouteRevalidationArgs,
-  canReuseSnapshot: (args: SaveRouteRevalidationArgs) => boolean
-): boolean => {
-  const { defaultShouldRevalidate, formMethod } = args
+export const shouldRevalidateSaveRoute: ShouldRevalidateFunction = ({
+  currentUrl,
+  nextUrl,
+  defaultShouldRevalidate,
+  formMethod,
+}: SaveRouteRevalidationArgs) => {
   if (formMethod && formMethod.toUpperCase() !== "GET") {
     return defaultShouldRevalidate
   }
 
-  return canReuseSnapshot(args) ? false : defaultShouldRevalidate
+  // An identical URL means an explicit revalidate() call: honor it.
+  const isSameLocation =
+    currentUrl.pathname === nextUrl.pathname &&
+    currentUrl.search === nextUrl.search
+  return !isSameLocation && hasSameSnapshotSearch(currentUrl, nextUrl)
+    ? false
+    : defaultShouldRevalidate
 }
-
-export const shouldRevalidateSaveRoute: ShouldRevalidateFunction = (args) =>
-  shouldRevalidateSavedLinksRoute(
-    args,
-    ({ currentUrl, nextUrl }) =>
-      currentUrl.pathname === nextUrl.pathname &&
-      currentUrl.search !== nextUrl.search &&
-      hasSameNonGroupSearch(currentUrl, nextUrl)
-  )
-
-export const shouldRevalidateSaveFolderRoute: ShouldRevalidateFunction = (
-  args
-) =>
-  shouldRevalidateSavedLinksRoute(
-    args,
-    ({ currentUrl, nextUrl }) =>
-      isSaveFolderPath(currentUrl.pathname) &&
-      isSaveFolderPath(nextUrl.pathname) &&
-      searchWithoutGroupAndFolderPath(currentUrl) ===
-        searchWithoutGroupAndFolderPath(nextUrl) &&
-      (currentUrl.pathname !== nextUrl.pathname ||
-        currentUrl.search !== nextUrl.search)
-  )

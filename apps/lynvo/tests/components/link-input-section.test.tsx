@@ -5,6 +5,46 @@ import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { linkCopy } from "~/features/links/link-copy"
 
 describe("LinkInputSection", () => {
+  it("keeps the original input styles while slightly enlarging the save button", () => {
+    const { container } = render(
+      <LinkInputSection
+        url=""
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+        extractionPreview={null}
+        error={null}
+        setError={vi.fn()}
+      />
+    )
+    const inputGroup = container.querySelector('[data-slot="input-group"]')
+    const inputGroupAddon = container.querySelector(
+      '[data-slot="input-group-addon"][data-align="inline-end"]'
+    )
+    const linkInput = container.querySelector("#link-input")
+
+    expect(inputGroup).toHaveClass(
+      "w-full",
+      "sm:flex-1",
+      "h-13.5",
+      "border-2",
+      "has-[[data-slot=input-group-control]:focus-visible]:border-link",
+      "has-[[data-slot=input-group-control]:focus-visible]:ring-0"
+    )
+    expect(linkInput).toHaveClass("pl-5", "text-base", "ring-0")
+    expect(linkInput).toHaveAttribute("data-url-field-input", "")
+    expect(linkInput).not.toHaveClass("h-full")
+    expect(inputGroupAddon).toHaveClass("py-2")
+    expect(screen.getByRole("button", { name: "Save link" })).toHaveClass(
+      "size-12",
+      "-my-[5px]",
+      "sm:size-13"
+    )
+    const saveButton = screen.getByRole("button", { name: "Save link" })
+    expect(saveButton).toHaveAttribute("data-url-field-save-button", "")
+    expect(saveButton.querySelector("svg")).toHaveClass("size-8")
+  })
+
   it("presents an existing link as a warning", () => {
     render(
       <LinkInputSection
@@ -103,11 +143,13 @@ describe("LinkInputSection", () => {
       screen.getByRole("button", { name: "Allow clipboard access" })
     )
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(screen.getByText("https://example.com/new-source")).toHaveClass(
-        "font-normal"
+        "font-normal",
+        "shimmer-duration-5000",
+        "motion-reduce:animate-none"
       )
-    )
+    })
     expect(readText).toHaveBeenCalledTimes(1)
   })
 

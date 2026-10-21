@@ -103,4 +103,32 @@ describe("ReportIssueDialog", () => {
       "Request ID: request-failed"
     )
   })
+
+  it("uses the Help Center marks and keeps Telegram's badge distinct", () => {
+    render(
+      <ReportIssueDialog
+        item={createReportItem()}
+        open
+        onOpenChange={vi.fn()}
+      />
+    )
+    const telegramButton = screen.getByRole("button", {
+      name: /Report on Telegram/,
+    })
+    const githubButton = screen.getByRole("button", {
+      name: /Report on GitHub/,
+    })
+
+    expect(telegramButton).toHaveClass("border-0", "bg-input/30")
+    expect(githubButton).toHaveClass("border-0", "bg-input/30")
+    expect(telegramButton.querySelector("svg")).toHaveAttribute(
+      "viewBox",
+      "0 0 256 256"
+    )
+    expect(githubButton.querySelector("svg")).toHaveAttribute(
+      "viewBox",
+      "0 0 1024 1024"
+    )
+    expect(githubButton.querySelector("svg")).toHaveClass("fill-current")
+  })
 })

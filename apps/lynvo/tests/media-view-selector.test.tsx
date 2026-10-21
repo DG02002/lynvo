@@ -9,7 +9,7 @@ describe("MediaViewSelector", () => {
 
     expect(screen.getByRole("radio", { name: "Gallery view" })).toBeChecked()
     expect(screen.getByRole("radio", { name: "List view" })).not.toBeChecked()
-    expect(screen.getAllByText("Beta")).toHaveLength(1)
+    expect(screen.queryByText("Beta")).not.toBeInTheDocument()
     expect(screen.getByText("Browse every saved link in rows.")).toBeVisible()
     expect(
       screen.getByText("Group movies and shows with artwork.")

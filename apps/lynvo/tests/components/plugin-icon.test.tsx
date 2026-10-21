@@ -2,7 +2,11 @@ import { GoogleDriveIcon } from "@hugeicons/core-free-icons"
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { PluginIcon, PluginServerAvatar } from "~/components/plugin-icon"
+import {
+  LynvoPluginServerAvatar,
+  PluginIcon,
+  PluginServerAvatar,
+} from "~/components/plugin-icon"
 
 describe("PluginIcon", () => {
   it("renders explicitly provided Hugeicons", () => {
@@ -77,5 +81,21 @@ describe("PluginServerAvatar", () => {
           .querySelector("[data-plugin-server-avatar]")
           ?.getAttribute("class")
     expect(iconsDiffer).toBe(true)
+  })
+})
+
+describe("LynvoPluginServerAvatar", () => {
+  it("renders the stable first-party server mark accessibly", () => {
+    const { container } = render(
+      <LynvoPluginServerAvatar name="Lynvo Plugin Server" />
+    )
+    const tile = container.querySelector(
+      '[data-plugin-server-avatar="lynvo-plugin-server"]'
+    )
+
+    expect(tile).toHaveAttribute("role", "img")
+    expect(tile).toHaveAttribute("aria-label", "Lynvo Plugin Server")
+    expect(tile).toHaveClass("from-neutral-900", "to-black")
+    expect(tile?.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
   })
 })

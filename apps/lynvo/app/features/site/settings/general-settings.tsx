@@ -8,6 +8,10 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { Switch } from "~/components/ui/switch"
+import {
+  setShouldAskBeforeMarkingAsWatched,
+  useShouldAskBeforeMarkingAsWatched,
+} from "~/lib/settings/opened-confirmation-preference"
 
 import {
   setShouldAutoSaveAllLinks,
@@ -33,8 +37,10 @@ const appearanceOptions = [
 export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
+  const shouldAskBeforeMarkingAsWatched = useShouldAskBeforeMarkingAsWatched()
   const mediaView = useMediaView()
   const appearanceLabelId = useId()
+  const watchedConfirmationLabelId = useId()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -77,6 +83,18 @@ export const GeneralSettings = () => {
             checked={shouldAutoSaveAllLinks}
             onCheckedChange={setShouldAutoSaveAllLinks}
             aria-label="Save all links automatically"
+          />
+        </SettingsRow>
+        <SettingsRow>
+          <SettingsRowInfo
+            label="Ask before marking items as watched"
+            labelId={watchedConfirmationLabelId}
+            description="After a link opens in a player, ask whether to mark it as watched."
+          />
+          <Switch
+            checked={shouldAskBeforeMarkingAsWatched}
+            onCheckedChange={setShouldAskBeforeMarkingAsWatched}
+            aria-labelledby={watchedConfirmationLabelId}
           />
         </SettingsRow>
         <SettingsRow className="items-start flex-col gap-4">

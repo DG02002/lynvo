@@ -14,11 +14,10 @@ export const createRoutes = (isDevelopment: boolean) =>
     // Site layout wrapping the pages
     layout("features/site/routes/_site.tsx", [
       index("features/site/routes/_site._index.tsx"),
-      route("save", "features/links/routes/_site.save.tsx"),
-      route(
-        savePaths.folderRoute,
-        "features/links/routes/_site.save-folder.tsx"
-      ),
+      // One splat route covers the Library and every saved folder: client
+      // navigations between them keep the same route match, so the loaded
+      // snapshot is reused instead of refetching and remounting.
+      route(savePaths.splatRoute, "features/links/routes/_site.save.tsx"),
       route("settings", "features/site/routes/_site.settings.tsx", [
         index("features/site/routes/_site.settings._index.ts"),
         route("general", "features/site/routes/_site.settings.general.tsx"),

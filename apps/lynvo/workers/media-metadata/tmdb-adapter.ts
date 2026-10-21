@@ -23,10 +23,26 @@ interface TmdbSearchPayloadItem {
   readonly id?: number
   readonly title?: string
   readonly name?: string
+  readonly original_title?: string
+  readonly original_name?: string
   readonly release_date?: string
   readonly first_air_date?: string
   readonly poster_path?: string | null
   readonly overview?: string
+}
+
+interface TmdbContentRatingRegionPayload {
+  readonly iso_3166_1?: string | null
+  readonly rating?: string | null
+}
+
+interface TmdbReleaseDateRegionPayload {
+  readonly iso_3166_1?: string | null
+  readonly release_dates?:
+    | readonly {
+        readonly certification?: string | null
+      }[]
+    | null
 }
 
 interface TmdbDetailsPayload {
@@ -41,6 +57,19 @@ interface TmdbDetailsPayload {
   readonly still_path?: string | null
   readonly season_number?: number
   readonly episode_number?: number
+  readonly genres?: readonly { readonly name?: string | null }[]
+  readonly origin_country?: readonly (string | null)[] | null
+  readonly production_countries?:
+    | readonly {
+        readonly iso_3166_1?: string | null
+      }[]
+    | null
+  readonly content_ratings?: {
+    readonly results?: readonly TmdbContentRatingRegionPayload[] | null
+  }
+  readonly release_dates?: {
+    readonly results?: readonly TmdbReleaseDateRegionPayload[] | null
+  }
 }
 
 interface TmdbEpisodeGroupListPayload {
@@ -70,6 +99,7 @@ interface TmdbEpisodeGroupPayload {
 export interface TmdbSearchResult {
   readonly providerId: number
   readonly title: string
+  readonly originalTitle?: string
   readonly year?: number
   readonly posterPath?: string
   readonly overview?: string
@@ -89,6 +119,8 @@ interface TmdbMediaMetadata {
   readonly posterPath?: string
   readonly backdropPath?: string
   readonly stillPath?: string
+  readonly genres?: readonly string[]
+  readonly contentRating?: string
   readonly seasonNumber?: number
   readonly episodeNumber?: number
   readonly attribution: "TMDB"
@@ -147,7 +179,7 @@ interface TmdbEpisodeDetailsRequest {
   readonly episodeGroupNumber?: number
 }
 
-type TmdbAdapterResult<Value> =
+export type TmdbAdapterResult<Value> =
   | {
       readonly kind: "success"
       readonly value: Value
@@ -165,6 +197,8 @@ const searchPayloadSchema = Schema.Struct({
         id: Schema.optional(Schema.Number),
         title: Schema.optional(Schema.String),
         name: Schema.optional(Schema.String),
+        original_title: Schema.optional(Schema.String),
+        original_name: Schema.optional(Schema.String),
         release_date: Schema.optional(Schema.String),
         first_air_date: Schema.optional(Schema.String),
         poster_path: Schema.optional(Schema.NullOr(Schema.String)),
@@ -186,6 +220,63 @@ const detailsPayloadSchema = Schema.Struct({
   still_path: Schema.optional(Schema.NullOr(Schema.String)),
   season_number: Schema.optional(Schema.Number),
   episode_number: Schema.optional(Schema.Number),
+  genres: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        name: Schema.optional(Schema.NullOr(Schema.String)),
+      })
+    )
+  ),
+  origin_country: Schema.optional(
+    Schema.NullOr(Schema.Array(Schema.NullOr(Schema.String)))
+  ),
+  production_countries: Schema.optional(
+    Schema.NullOr(
+      Schema.Array(
+        Schema.Struct({
+          iso_3166_1: Schema.optional(Schema.NullOr(Schema.String)),
+        })
+      )
+    )
+  ),
+  content_ratings: Schema.optional(
+    Schema.Struct({
+      results: Schema.optional(
+        Schema.NullOr(
+          Schema.Array(
+            Schema.Struct({
+              iso_3166_1: Schema.optional(Schema.NullOr(Schema.String)),
+              rating: Schema.optional(Schema.NullOr(Schema.String)),
+            })
+          )
+        )
+      ),
+    })
+  ),
+  release_dates: Schema.optional(
+    Schema.Struct({
+      results: Schema.optional(
+        Schema.NullOr(
+          Schema.Array(
+            Schema.Struct({
+              iso_3166_1: Schema.optional(Schema.NullOr(Schema.String)),
+              release_dates: Schema.optional(
+                Schema.NullOr(
+                  Schema.Array(
+                    Schema.Struct({
+                      certification: Schema.optional(
+                        Schema.NullOr(Schema.String)
+                      ),
+                    })
+                  )
+                )
+              ),
+            })
+          )
+        )
+      ),
+    })
+  ),
 })
 
 const tvSeasonListPayloadSchema = Schema.Struct({
@@ -264,10 +355,50 @@ const toSearchResult = (
   return {
     providerId: item.id,
     title,
+    originalTitle:
+      item.original_title?.trim() || item.original_name?.trim() || undefined,
     year: getYear(item.release_date ?? item.first_air_date),
     posterPath,
     overview: item.overview?.trim() || undefined,
   }
+}
+
+// A work's own certification reads most native ("A" on an Indian title,
+// "TV-MA" on a US one); the US rating is the common fallback, then any
+// region's, so an empty result only happens when nobody certified the work.
+const selectContentRating = (
+  payload: TmdbDetailsPayload,
+  mediaKind: "movie" | "tv",
+  preferredRegion: string | undefined
+): string | undefined => {
+  const ratingsByRegion = new Map<string, string>()
+  if (mediaKind === "tv") {
+    for (const region of payload.content_ratings?.results ?? []) {
+      const rating = region.rating?.trim()
+      if (region.iso_3166_1 && rating) {
+        ratingsByRegion.set(region.iso_3166_1, rating)
+      }
+    }
+  } else {
+    for (const region of payload.release_dates?.results ?? []) {
+      const certification = (region.release_dates ?? [])
+        .map((release) => release.certification?.trim())
+        .find((candidate) => Boolean(candidate))
+      if (region.iso_3166_1 && certification) {
+        ratingsByRegion.set(region.iso_3166_1, certification)
+      }
+    }
+  }
+  if (ratingsByRegion.size === 0) {
+    return undefined
+  }
+  return (
+    (preferredRegion !== undefined
+      ? ratingsByRegion.get(preferredRegion)
+      : undefined) ??
+    ratingsByRegion.get("US") ??
+    ratingsByRegion.values().next().value
+  )
 }
 
 const toMediaMetadata = (
@@ -280,6 +411,17 @@ const toMediaMetadata = (
   if (!providerId || providerId <= 0 || !title) {
     return undefined
   }
+  const genres = (payload.genres ?? [])
+    .map((genre) => genre.name?.trim())
+    .filter((name): name is string => Boolean(name))
+  const preferredRegion =
+    kind === "movie"
+      ? ((payload.production_countries ?? []).find(
+          (country) => country.iso_3166_1
+        )?.iso_3166_1 ?? undefined)
+      : ((payload.origin_country ?? []).find(
+          (country) => country !== null && country !== undefined
+        ) ?? undefined)
   return {
     kind,
     providerId,
@@ -289,6 +431,12 @@ const toMediaMetadata = (
     posterPath: payload.poster_path ?? undefined,
     backdropPath: payload.backdrop_path ?? undefined,
     stillPath: payload.still_path ?? undefined,
+    genres: genres.length > 0 ? genres : undefined,
+    contentRating: selectContentRating(
+      payload,
+      kind === "movie" ? "movie" : "tv",
+      preferredRegion
+    ),
     seasonNumber: payload.season_number,
     episodeNumber: payload.episode_number,
     attribution: TMDB_ATTRIBUTION,
@@ -557,10 +705,20 @@ export const createTmdbAdapter = (
   return {
     searchMovie: (title, year) => search("movie", title, year),
     searchTv: (title, year) => search("tv", title, year),
+    // Work-level details carry the genre list and content certification; TV
+    // and movies expose the certification under different endpoints.
     getMovieDetails: (providerId) =>
-      details(`/movie/${providerId}`, "movie", providerId),
+      details(
+        `/movie/${providerId}?append_to_response=release_dates`,
+        "movie",
+        providerId
+      ),
     getTvDetails: (providerId) =>
-      details(`/tv/${providerId}`, "tv", providerId),
+      details(
+        `/tv/${providerId}?append_to_response=content_ratings`,
+        "tv",
+        providerId
+      ),
     getTvSeasonDetails: (providerId, seasonNumber) =>
       details(`/tv/${providerId}/season/${seasonNumber}`, "season", providerId),
     getTvSeasonList: async (providerId) => {

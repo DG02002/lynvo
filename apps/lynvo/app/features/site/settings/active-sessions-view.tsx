@@ -1,4 +1,4 @@
-import { SmartPhone02Icon } from "@hugeicons/core-free-icons"
+import { ModernTvIcon, SmartPhone02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { useState } from "react"
 
@@ -58,6 +58,17 @@ const getSessionClientName = (deviceName: string) =>
     ? "Lynvo on Android"
     : "Lynvo Web"
 
+// TV Bro sessions report "TV Bro on Android TV"; a TV must not read as a phone.
+const getSessionDeviceIcon = (deviceName: string): IconSvgElement => {
+  if (/android tv|tv bro/i.test(deviceName)) {
+    return ModernTvIcon
+  }
+  if (/iphone|ipad|android|pixel|phone/i.test(deviceName)) {
+    return SmartPhone02Icon
+  }
+  return LaptopMinimalIcon
+}
+
 const getSessionDeviceName = (deviceName: string) =>
   deviceName.trim() || "Unnamed device"
 
@@ -113,10 +124,7 @@ export const ActiveSessionsView = ({
     <div className="flex flex-col gap-6 py-4">
       <SettingsList className="divide-y-0 border-y-0">
         {orderSessions(sessions).map((session) => {
-          const isMobile = /iphone|ipad|android|pixel|phone/i.test(
-            session.deviceName
-          )
-          const DeviceIcon = isMobile ? SmartPhone02Icon : LaptopMinimalIcon
+          const DeviceIcon = getSessionDeviceIcon(session.deviceName)
           const clientName = getSessionClientName(session.deviceName)
 
           return (

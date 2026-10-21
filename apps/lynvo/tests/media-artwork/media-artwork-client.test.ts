@@ -46,6 +46,23 @@ describe("media artwork client cache", () => {
     ).toBe(client.getMediaArtworkKey(artworkRequest))
   })
 
+  it("keeps strict title lookups separate from fuzzy artwork cache entries", async () => {
+    const client = await importMediaArtworkClient()
+    const strictRequest = {
+      mediaKind: "tv" as const,
+      title: "Breaking Bad",
+      requireExactTitleMatch: true,
+    }
+    const flexibleRequest = {
+      mediaKind: "tv" as const,
+      title: "Breaking Bad",
+    }
+
+    expect(client.getMediaArtworkKey(strictRequest)).not.toBe(
+      client.getMediaArtworkKey(flexibleRequest)
+    )
+  })
+
   it("does not reuse entries from the previous artwork cache namespace", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

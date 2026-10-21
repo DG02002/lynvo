@@ -1,7 +1,6 @@
 import {
   Add01Icon,
   Alert01Icon,
-  ArrowDown01Icon,
   Delete02Icon,
   Edit02Icon,
   Link01Icon,
@@ -15,14 +14,14 @@ import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
-import { PluginIcon } from "~/components/plugin-icon"
+import { LynvoPluginServerAvatar, PluginIcon } from "~/components/plugin-icon"
 import { Alert, AlertDescription } from "~/components/ui/alert"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
-import { PluginInfoTooltip } from "./plugin-info-tooltip"
+import { PluginInfoPopover } from "./plugin-info-popover"
 import type { LynvoPlugin } from "./plugin-settings-data"
 import type {
   CustomPluginServer,
@@ -34,6 +33,8 @@ import {
 } from "./plugin-settings-schemas"
 import {
   SettingsPanel,
+  SettingsDisclosure,
+  SettingsDisclosureContent,
   SettingsList,
   SettingsRow,
   SectionHeading,
@@ -74,7 +75,6 @@ export function PluginsSettings({
     domains,
     handleDeleteDomain,
     handleSetDomainCredential,
-    handleDeleteDomainCredential,
     domainDrafts,
     domainOperations,
     updateDomainDraft,
@@ -90,127 +90,174 @@ export function PluginsSettings({
     }, {})
   }, [domains])
 
+  const lynvoPluginsHeader = (
+    <div className="flex min-w-0 items-center gap-3">
+      <LynvoPluginServerAvatar name="Lynvo Plugin Server" className="size-12" />
+      <SectionHeading
+        title="Lynvo Plugins"
+        description="Provided by the Lynvo Plugin Server."
+        size="base"
+        descriptionSize="sm"
+      />
+    </div>
+  )
+
   return (
     <SettingsPanel className="gap-8">
       <div className="flex flex-col gap-3">
-        <SectionHeading title="Lynvo plugins" />
+        <SectionHeading
+          title="Built-in Plugin Server usage"
+          description="The built-in Plugin Server reports usage for Lynvo Plugins."
+          size="base"
+        />
         <SettingsList>
-          {lynvoPlugins === null && (
-            <SettingsRow>
-              <div className="flex flex-col items-start gap-2">
-                <p className="text-sm text-muted-foreground">
-                  Lynvo Plugin Server details couldn’t be loaded.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                >
-                  Reload settings
-                </Button>
-              </div>
-            </SettingsRow>
-          )}
-          {(lynvoPlugins ?? []).map((plugin) => {
-            const pluginDomains = domainsByPlugin[plugin.id] || []
-            const isDomainsExpanded = expandedPluginIds.has(plugin.id)
-            const draft = domainDrafts[plugin.id] ?? EMPTY_DOMAIN_DRAFT
-            const operation = domainOperations[plugin.id]
-            return (
-              <div key={plugin.id} className="flex flex-col">
-                <SettingsRow>
-                  <div className="flex items-center gap-3">
-                    <PluginIcon icon={plugin.icon} className="size-10" />
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="text-sm font-normal text-foreground">
-                        {plugin.name}
-                      </span>
-                      <PluginInfoTooltip
-                        pluginName={plugin.name}
-                        description={plugin.description}
-                        version={plugin.version}
-                        usageMultiplier={plugin.usageMultiplier}
-                        proxyCreditUsage={plugin.proxyCreditUsage}
-                        projectUrl={plugin.sourceUrl}
-                      />
-                    </div>
-                  </div>
-                  {plugin.supportsDomains && (
-                    <div className="flex shrink-0 items-center gap-1">
-                      <AddPluginDomainDialog
-                        plugin={plugin}
-                        domain={draft.domain}
-                        username={draft.username}
-                        password={draft.password}
-                        isPasswordProtected={draft.isCredentialEnabled}
-                        error={operation?.error}
-                        isAdding={operation?.status === "pending"}
-                        onDomainChange={(value) =>
-                          updateDomainDraft(plugin.id, { domain: value })
-                        }
-                        onUsernameChange={(value) =>
-                          updateDomainDraft(plugin.id, { username: value })
-                        }
-                        onPasswordChange={(value) =>
-                          updateDomainDraft(plugin.id, { password: value })
-                        }
-                        onPasswordProtectedChange={(value) =>
-                          updateDomainDraft(plugin.id, {
-                            isCredentialEnabled: value,
-                          })
-                        }
-                        onSubmit={async (event) => {
-                          event.preventDefault()
-                          return await addDomain(plugin.id)
-                        }}
-                        onAdded={() =>
-                          setExpandedPluginIds((current) =>
-                            new Set(current).add(plugin.id)
-                          )
-                        }
-                      />
-                      {pluginDomains.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-10"
-                          aria-label={`${isDomainsExpanded ? "Hide" : "Show"} domains for ${plugin.name}`}
-                          aria-expanded={isDomainsExpanded}
-                          onClick={() =>
-                            setExpandedPluginIds((current) => {
-                              const next = new Set(current)
-                              if (next.has(plugin.id)) {
-                                next.delete(plugin.id)
-                              } else {
-                                next.add(plugin.id)
-                              }
-                              return next
-                            })
-                          }
-                        >
-                          <HugeiconsIcon
-                            icon={ArrowDown01Icon}
-                            className={`transition-transform duration-200 ${
-                              isDomainsExpanded ? "rotate-180" : "rotate-0"
-                            }`}
-                          />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+          {lynvoPlugins && lynvoPlugins.length > 0 ? (
+            <SettingsDisclosure
+              label="Lynvo Plugins"
+              contentId="lynvo-plugin-server-plugins"
+              contentClassName="divide-y divide-border"
+              renderHeader={(disclosureButton) => (
+                <SettingsRow className="gap-4">
+                  {lynvoPluginsHeader}
+                  {disclosureButton}
                 </SettingsRow>
-                {plugin.supportsDomains && isDomainsExpanded && (
-                  <PluginDomainList
-                    plugin={plugin}
-                    domains={pluginDomains}
-                    onSaveCredential={handleSetDomainCredential}
-                    onDeleteCredential={handleDeleteDomainCredential}
-                    onDeleteDomain={handleDeleteDomain}
-                  />
-                )}
-              </div>
-            )
-          })}
+              )}
+            >
+              {lynvoPlugins.map((plugin) => {
+                const pluginDomains = domainsByPlugin[plugin.id] || []
+                const isDomainsExpanded = expandedPluginIds.has(plugin.id)
+                const draft = domainDrafts[plugin.id] ?? EMPTY_DOMAIN_DRAFT
+                const operation = domainOperations[plugin.id]
+                return (
+                  <SettingsDisclosure
+                    key={plugin.id}
+                    label={`domains for ${plugin.name}`}
+                    canExpand={
+                      plugin.supportsDomains &&
+                      (pluginDomains.length > 0 || isDomainsExpanded)
+                    }
+                    expanded={isDomainsExpanded}
+                    contentClassName="ms-0 border-0"
+                    onExpandedChange={(isExpanded) =>
+                      setExpandedPluginIds((current) => {
+                        const next = new Set(current)
+                        if (isExpanded) {
+                          next.add(plugin.id)
+                        } else {
+                          next.delete(plugin.id)
+                        }
+                        return next
+                      })
+                    }
+                    renderHeader={(disclosureButton) => (
+                      <SettingsRow className="gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <PluginIcon icon={plugin.icon} className="size-10" />
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="text-sm font-normal text-foreground">
+                              {plugin.name}
+                            </span>
+                            <PluginInfoPopover
+                              pluginName={plugin.name}
+                              description={plugin.description}
+                              version={plugin.version}
+                              usageMultiplier={plugin.usageMultiplier}
+                              proxyCreditUsage={plugin.proxyCreditUsage}
+                              projectUrl={plugin.sourceUrl}
+                            />
+                          </div>
+                        </div>
+                        {plugin.supportsDomains && (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <AddPluginDomainDialog
+                              plugin={plugin}
+                              domain={draft.domain}
+                              username={draft.username}
+                              password={draft.password}
+                              isPasswordProtected={draft.isCredentialEnabled}
+                              error={operation?.error}
+                              isAdding={operation?.status === "pending"}
+                              onDomainChange={(value) =>
+                                updateDomainDraft(plugin.id, {
+                                  domain: value,
+                                })
+                              }
+                              onUsernameChange={(value) =>
+                                updateDomainDraft(plugin.id, {
+                                  username: value,
+                                })
+                              }
+                              onPasswordChange={(value) =>
+                                updateDomainDraft(plugin.id, {
+                                  password: value,
+                                })
+                              }
+                              onPasswordProtectedChange={(value) =>
+                                updateDomainDraft(plugin.id, {
+                                  isCredentialEnabled: value,
+                                })
+                              }
+                              onSubmit={async (event) => {
+                                event.preventDefault()
+                                return await addDomain(plugin.id)
+                              }}
+                              onAdded={() =>
+                                setExpandedPluginIds((current) =>
+                                  new Set(current).add(plugin.id)
+                                )
+                              }
+                            />
+                            {disclosureButton}
+                          </div>
+                        )}
+                      </SettingsRow>
+                    )}
+                  >
+                    {plugin.supportsDomains && (
+                      <PluginDomainList
+                        plugin={plugin}
+                        domains={pluginDomains}
+                        onSaveCredential={handleSetDomainCredential}
+                        onDeleteDomain={handleDeleteDomain}
+                      />
+                    )}
+                  </SettingsDisclosure>
+                )
+              })}
+            </SettingsDisclosure>
+          ) : (
+            <>
+              <SettingsRow className="gap-4">{lynvoPluginsHeader}</SettingsRow>
+              {lynvoPlugins === null && (
+                <SettingsDisclosureContent>
+                  <SettingsRow>
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        Lynvo Plugin Server details couldn’t be loaded.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.reload()}
+                      >
+                        Reload settings
+                      </Button>
+                    </div>
+                  </SettingsRow>
+                </SettingsDisclosureContent>
+              )}
+              {lynvoPlugins?.length === 0 && (
+                <SettingsDisclosureContent>
+                  <p
+                    className="py-4 text-sm text-muted-foreground"
+                    role="status"
+                  >
+                    No Lynvo Plugins are available.
+                  </p>
+                </SettingsDisclosureContent>
+              )}
+            </>
+          )}
         </SettingsList>
       </div>
 
@@ -385,7 +432,6 @@ interface PluginDomainListProps {
     password: string,
     username?: string
   ) => Promise<boolean>
-  onDeleteCredential: (domainId: string) => Promise<void>
   onDeleteDomain: (domainId: string) => Promise<void>
 }
 
@@ -393,7 +439,6 @@ const PluginDomainList = ({
   plugin,
   domains,
   onSaveCredential,
-  onDeleteCredential,
   onDeleteDomain,
 }: PluginDomainListProps) => (
   <div className="ml-[3.25rem] divide-y border-t pr-1">
@@ -409,7 +454,6 @@ const PluginDomainList = ({
             domain={domain}
             credentialKind={plugin.credentialKind}
             onSave={onSaveCredential}
-            onDeleteCredential={onDeleteCredential}
             onDeleteDomain={onDeleteDomain}
           />
         ))}
@@ -473,6 +517,8 @@ export const CustomPluginServersSection = ({
         <SectionHeading
           title="Custom Plugin Servers"
           description="Connect a Custom Plugin Server to open links from the Sources its Plugins support."
+          size="base"
+          descriptionSize="sm"
         />
         <Dialog
           open={isAddPluginServerOpen}
@@ -596,7 +642,6 @@ interface PluginCredentialEditorProps {
     password: string,
     username?: string
   ) => Promise<boolean>
-  onDeleteCredential: (domainId: string) => Promise<void>
   onDeleteDomain: (domainId: string) => Promise<void>
 }
 
@@ -604,18 +649,14 @@ const PluginCredentialEditor = ({
   domain,
   credentialKind,
   onSave,
-  onDeleteCredential,
   onDeleteDomain,
 }: PluginCredentialEditorProps) => {
   const [isEditing, setIsEditing] = React.useState(false)
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [isSaving, setIsSaving] = React.useState(false)
-  const [isRemoveCredentialDialogOpen, setIsRemoveCredentialDialogOpen] =
-    React.useState(false)
   const [isRemoveDomainDialogOpen, setIsRemoveDomainDialogOpen] =
     React.useState(false)
-  const [isRemovingCredential, setIsRemovingCredential] = React.useState(false)
   const [isRemovingDomain, setIsRemovingDomain] = React.useState(false)
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -710,17 +751,6 @@ const PluginCredentialEditor = ({
                   />
                 </Field>
               </FieldGroup>
-              {domain.hasCredential && (
-                <Button
-                  type="button"
-                  variant="destructive-quiet"
-                  className="w-full"
-                  disabled={isSaving}
-                  onClick={() => setIsRemoveCredentialDialogOpen(true)}
-                >
-                  Remove credentials
-                </Button>
-              )}
             </FormDialogContent>
           </Dialog>
           <Button
@@ -733,29 +763,6 @@ const PluginCredentialEditor = ({
           </Button>
         </div>
       </div>
-      <ConfirmationAlertDialog
-        open={isRemoveCredentialDialogOpen}
-        onOpenChange={setIsRemoveCredentialDialogOpen}
-        title="Remove these Plugin Credentials?"
-        media={
-          <HugeiconsIcon
-            icon={Alert01Icon}
-            className="mx-auto size-16 text-destructive"
-          />
-        }
-        description={`Lynvo will no longer use the saved credentials for ${domain.domain}.`}
-        confirmLabel="Remove credentials"
-        confirmVariant="destructive"
-        pending={isRemovingCredential}
-        onConfirm={() => {
-          setIsRemovingCredential(true)
-          void onDeleteCredential(domain.id).finally(() => {
-            setIsRemovingCredential(false)
-            setIsRemoveCredentialDialogOpen(false)
-            setIsEditing(false)
-          })
-        }}
-      />
       <ConfirmationAlertDialog
         open={isRemoveDomainDialogOpen}
         onOpenChange={setIsRemoveDomainDialogOpen}

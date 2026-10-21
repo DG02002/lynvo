@@ -1,6 +1,5 @@
 import {
   Alert01Icon,
-  ArrowDown01Icon,
   Delete02Icon,
   MoreHorizontalIcon,
   Refresh01Icon,
@@ -25,12 +24,16 @@ import {
   PLUGIN_SERVER_VERIFICATION_STATUS,
 } from "~/lib/effect/services/plugin-server-verification-status"
 import { sourceStatusVariant } from "~/lib/source-status-variant"
-import { cn } from "~/lib/utils"
 
-import { PluginInfoTooltip } from "./plugin-info-tooltip"
+import { PluginInfoPopover } from "./plugin-info-popover"
 import { getPluginServerManifestView } from "./plugin-server-manifest"
 import type { CustomPluginServer } from "./plugin-settings-interaction"
-import { SettingsList, SettingsRow } from "./settings-layout"
+import {
+  SettingsHeadingText,
+  SettingsDisclosure,
+  SettingsList,
+  SettingsRow,
+} from "./settings-layout"
 
 interface CustomPluginServerRowProps {
   pluginServer: CustomPluginServer
@@ -50,7 +53,6 @@ const CustomPluginServerRow = ({
   onRefreshPluginServer,
   onTogglePluginServer,
 }: CustomPluginServerRowProps) => {
-  const [isExpanded, setIsExpanded] = React.useState(true)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [isDeleting, setIsDeleting] = React.useState(false)
   const manifest = getPluginServerManifestView(
@@ -63,139 +65,121 @@ const CustomPluginServerRow = ({
   const isUsable = isPluginServerUsable(pluginServer)
 
   return (
-    <div className="flex flex-col">
-      <SettingsRow className="gap-4">
-        <div className="-ml-1 flex min-w-0 items-center gap-3">
-          <PluginServerAvatar
-            serverId={pluginServer.id}
-            name={manifest.name}
-            className="size-10"
-          />
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-sm text-foreground">
-                {manifest.name}
-              </span>
-              {isDown && <Badge variant="destructive">Unavailable</Badge>}
-            </div>
-            <span
-              className="truncate font-mono text-xs text-muted-foreground"
-              title={pluginServer.baseUrl}
-            >
-              {pluginServer.baseUrl}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <Switch
-            checked={isUsable}
-            disabled={isDown}
-            onCheckedChange={() =>
-              onTogglePluginServer(pluginServer.id, pluginServer.enabled)
-            }
-            aria-label={
-              isDown
-                ? `${manifest.name} is unavailable`
-                : `${pluginServer.enabled ? "Disable" : "Enable"} ${manifest.name}`
-            }
-          />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-10"
-                  aria-label={`Actions for ${manifest.name}`}
-                />
-              }
-            >
-              <HugeiconsIcon icon={MoreHorizontalIcon} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  onClick={() => onRefreshPluginServer(pluginServer.id)}
-                >
-                  <HugeiconsIcon icon={Refresh01Icon} />
-                  Refresh
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {manifest.plugins.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-10"
-              aria-label={isExpanded ? "Collapse plugins" : "Expand plugins"}
-              aria-expanded={isExpanded}
-              aria-controls={sourceListId}
-              onClick={() => setIsExpanded((current) => !current)}
-            >
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                className={cn(
-                  "transition-transform duration-200",
-                  isExpanded ? "rotate-180" : "rotate-0"
-                )}
+    <>
+      <SettingsDisclosure
+        label={`${manifest.name} plugins`}
+        canExpand={manifest.plugins.length > 0}
+        contentId={sourceListId}
+        contentClassName="divide-y divide-border"
+        renderHeader={(disclosureButton) => (
+          <SettingsRow className="gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <PluginServerAvatar
+                serverId={pluginServer.id}
+                name={manifest.name}
+                className="size-12"
               />
-            </Button>
-          )}
-        </div>
-      </SettingsRow>
+              <div className="flex min-w-0 flex-col gap-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <SettingsHeadingText as="h3" className="truncate">
+                    {manifest.name}
+                  </SettingsHeadingText>
+                  {isDown && <Badge variant="destructive">Unavailable</Badge>}
+                </div>
+                <span
+                  className="truncate text-sm text-muted-foreground"
+                  title={pluginServer.baseUrl}
+                >
+                  {pluginServer.baseUrl}
+                </span>
+              </div>
+            </div>
 
-      {manifest.plugins.length > 0 && isExpanded && (
-        <div
-          id={sourceListId}
-          className="ml-9 divide-y divide-border border-t border-border"
-        >
-          {manifest.plugins.map((source) => {
-            const projectUrl = source.homepage ?? source.hosts.at(0)
-            return (
-              <SettingsRow key={source.id} className="gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <PluginIcon iconUrl={source.iconUrl} className="size-10" />
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate text-sm text-foreground">
-                      {source.displayName}
-                    </span>
-                    <PluginInfoTooltip
-                      pluginName={source.displayName}
-                      description={source.description}
-                      version={source.version}
-                      usageMultiplier={source.usageMultiplier}
-                      proxyCreditUsage={source.proxyCreditUsage}
-                      projectUrl={
-                        projectUrl &&
-                        (source.homepage ? projectUrl : `https://${projectUrl}`)
-                      }
+            <div className="flex shrink-0 items-center gap-1">
+              <Switch
+                checked={isUsable}
+                disabled={isDown}
+                onCheckedChange={() =>
+                  onTogglePluginServer(pluginServer.id, pluginServer.enabled)
+                }
+                aria-label={
+                  isDown
+                    ? `${manifest.name} is unavailable`
+                    : `${pluginServer.enabled ? "Disable" : "Enable"} ${manifest.name}`
+                }
+              />
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-10"
+                      aria-label={`Actions for ${manifest.name}`}
                     />
-                  </div>
+                  }
+                >
+                  <HugeiconsIcon icon={MoreHorizontalIcon} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={() => onRefreshPluginServer(pluginServer.id)}
+                    >
+                      <HugeiconsIcon icon={Refresh01Icon} />
+                      Refresh
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {disclosureButton}
+            </div>
+          </SettingsRow>
+        )}
+      >
+        {manifest.plugins.map((source) => {
+          const projectUrl = source.homepage ?? source.hosts.at(0)
+          return (
+            <SettingsRow key={source.id} className="gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <PluginIcon iconUrl={source.iconUrl} className="size-10" />
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-sm text-foreground">
+                    {source.displayName}
+                  </span>
+                  <PluginInfoPopover
+                    pluginName={source.displayName}
+                    description={source.description}
+                    version={source.version}
+                    usageMultiplier={source.usageMultiplier}
+                    proxyCreditUsage={source.proxyCreditUsage}
+                    projectUrl={
+                      projectUrl &&
+                      (source.homepage ? projectUrl : `https://${projectUrl}`)
+                    }
+                  />
                 </div>
-                <div className="flex shrink-0 items-center gap-2 pr-1">
-                  {(source.status === "down" ||
-                    source.status === "maintenance") && (
-                    <Badge variant={sourceStatusVariant(source.status)}>
-                      {source.status === "down" ? "Unavailable" : "Maintenance"}
-                    </Badge>
-                  )}
-                </div>
-              </SettingsRow>
-            )
-          })}
-        </div>
-      )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2 pr-1">
+                {(source.status === "down" ||
+                  source.status === "maintenance") && (
+                  <Badge variant={sourceStatusVariant(source.status)}>
+                    {source.status === "down" ? "Unavailable" : "Maintenance"}
+                  </Badge>
+                )}
+              </div>
+            </SettingsRow>
+          )
+        })}
+      </SettingsDisclosure>
       <ConfirmationAlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -218,7 +202,7 @@ const CustomPluginServerRow = ({
           })
         }}
       />
-    </div>
+    </>
   )
 }
 

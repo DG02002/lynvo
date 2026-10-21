@@ -4,6 +4,7 @@ import {
   getMediaArtworkRequest,
   getMediaEpisodeDisplayTitle,
   getMediaDisplayTitle,
+  getShowFolderArtworkRequest,
   hasEpisodeMarker,
   isEpisodeOnlyListing,
 } from "~/features/links/media-artwork/media-artwork-identity"
@@ -56,6 +57,21 @@ describe("Media artwork identity", () => {
       mediaKind: "tv",
       title: "Slow Sample",
       seasonNumber: 2,
+    })
+  })
+
+  it("maps show folder names to exact TV artwork requests", () => {
+    expect(getShowFolderArtworkRequest("Breaking Bad (2008)")).toEqual({
+      mediaKind: "tv",
+      title: "Breaking Bad",
+      year: 2008,
+      requireExactTitleMatch: true,
+    })
+    expect(getShowFolderArtworkRequest("Law and Order (1990)")).toEqual({
+      mediaKind: "tv",
+      title: "Law and Order",
+      year: 1990,
+      requireExactTitleMatch: true,
     })
   })
 

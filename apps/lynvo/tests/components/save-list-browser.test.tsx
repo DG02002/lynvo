@@ -205,6 +205,13 @@ describe("SaveListBrowser", () => {
                 },
               ],
             },
+            {
+              id: "root-episode",
+              url: "https://media.example/collection/root-episode.mkv",
+              label: "Root Episode",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
           ],
         },
         playback: { openedUrls: [] },
@@ -324,6 +331,91 @@ describe("SaveListBrowser", () => {
     expect(
       window.sessionStorage.getItem("lynvo:save-folder-scroll:saved-collection")
     ).not.toBeNull()
+  })
+
+  it("backs out of auto-descended wrapper folders to the origin page", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    })
+    const item: LinkViewItem = {
+      id: "wrapped-collection",
+      url: "https://media.example/wrapped-collection",
+      timestamp: 1,
+      title: "Wrapped Collection",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "wrapper",
+              url: "https://media.example/wrapped-collection/wrapper",
+              label: "Wrapper",
+              mediaNodeKind: "group",
+              type: "folder",
+              children: [
+                {
+                  id: "season",
+                  url: "https://media.example/wrapped-collection/wrapper/season",
+                  label: "Season",
+                  mediaNodeKind: "group",
+                  type: "folder",
+                  children: [
+                    {
+                      id: "episode-one",
+                      url: "https://media.example/wrapped-collection/wrapper/season/episode-one.mkv",
+                      label: "Episode One",
+                      mediaNodeKind: "playable",
+                      type: "file",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+    const onSelectedItemUrlChange = vi.fn()
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={onSelectedItemUrlChange}
+          actions={createLinkItemActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+        <BrowserBack />
+      </>,
+      ["/save?group=tv%3Awrapped%3AS01", "/save/folder/wrapped-collection"]
+    )
+
+    // The entry view descends through the single-folder wrappers to content.
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/wrapped-collection?path=wrapper/season"
+      )
+    )
+    expect(await screen.findByText("Episode One")).toBeVisible()
+
+    // The header Back leaves the saved link instead of surfacing the wrapper.
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
+    expect(onSelectedItemUrlChange).toHaveBeenCalledWith(null)
+
+    // Browser back also returns to the origin page, not the wrapper level.
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save?group=tv%3Awrapped%3AS01"
+      )
+    )
   })
 
   it("pushes folder paths and climbs them with browser back and Escape", async () => {
@@ -1176,7 +1268,7 @@ describe("SaveListBrowser", () => {
     ).not.toBeInTheDocument()
     expect(markOpened).not.toHaveBeenCalled()
     expect(playableItemButton).not.toHaveClass("bg-destructive/15")
-    expect(playableItemButton).not.toHaveClass("bg-link/15")
+    expect(playableItemButton).not.toHaveClass("bg-opened/15")
     expect(playableItemButton).toHaveClass("bg-muted/60")
     expect(playableItemRow).toHaveAttribute("data-resolution-state", "expanded")
     expect(
@@ -1230,7 +1322,7 @@ describe("SaveListBrowser", () => {
         "https://resolver-beta.example/playable-item-one"
       )
     )
-    expect(playableItemButton).toHaveClass("bg-link/15")
+    expect(playableItemButton).toHaveClass("bg-opened/15")
 
     fireEvent.click(playableItemButton)
     await waitFor(() => {
@@ -1721,7 +1813,7 @@ describe("SaveListBrowser", () => {
 
     expect(
       screen.getByRole("button", { name: "Open video.mp4, opened" })
-    ).toHaveClass("bg-link/15")
+    ).toHaveClass("bg-opened/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")

@@ -12,6 +12,8 @@ import {
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
+type TmdbImageType = "poster" | "still"
+
 interface TmdbImageProps {
   readonly path: string | undefined
   readonly variant: "card" | "detail" | "wide-card"
@@ -20,7 +22,7 @@ interface TmdbImageProps {
   readonly className?: string
   readonly width?: number
   readonly height?: number
-  readonly imageType?: "poster" | "still"
+  readonly imageType?: TmdbImageType
   readonly sizes?: string
 }
 
@@ -47,10 +49,7 @@ const getTmdbImageBaseUrlPair = (
 const hasImageLoaded = (element: HTMLImageElement | null): boolean =>
   Boolean(element?.complete && element.naturalWidth > 0)
 
-const getTmdbImageSrcSet = (
-  path: string,
-  imageType: "poster" | "still"
-): string => {
+const getTmdbImageSrcSet = (path: string, imageType: TmdbImageType): string => {
   const srcWidths =
     imageType === "still" ? TMDB_STILL_SRC_WIDTHS_PX : TMDB_POSTER_SRC_WIDTHS_PX
   return srcWidths
@@ -60,17 +59,9 @@ const getTmdbImageSrcSet = (
     .join(", ")
 }
 
-const getTmdbFullUrl = (
-  path: string | undefined,
-  isRemotePath: boolean,
-  fullBaseUrl: string
-) => {
+const getTmdbFullUrl = (path: string | undefined, fullBaseUrl: string) => {
   if (!path) {
     return undefined
-  }
-
-  if (isRemotePath) {
-    return path
   }
 
   return `${fullBaseUrl}${path}`
@@ -94,7 +85,7 @@ const TmdbImageContent = ({
 
   const isRemotePath = path?.startsWith("http") ?? false
   const baseUrlPair = getTmdbImageBaseUrlPair(variant)
-  const fullUrl = getTmdbFullUrl(path, isRemotePath, baseUrlPair.full)
+  const fullUrl = isRemotePath ? path : getTmdbFullUrl(path, baseUrlPair.full)
   const previewUrl =
     !path || isRemotePath ? undefined : `${baseUrlPair.preview}${path}`
   const fullSrcSet =

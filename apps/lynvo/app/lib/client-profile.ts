@@ -34,7 +34,7 @@ export const getCurrentClientProfile = () =>
       getDevelopmentTvBroUiEnabled(),
   })
 
-export const subscribeToClientProfile = (onStoreChange: () => void) =>
+const subscribeToClientProfile = (onStoreChange: () => void) =>
   subscribeToDevelopmentSettings(onStoreChange)
 
 const getIsTvBroAndroidTv = () =>

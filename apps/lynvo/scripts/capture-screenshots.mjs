@@ -10,6 +10,7 @@ import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec
 import {
   frameDocsScreenshot,
   frameScreenshot,
+  saveResponsiveWebpVariants,
   saveScreenshot,
   validatePalette,
 } from "./frame-screenshot.mjs"
@@ -88,7 +89,10 @@ const ShotSchema = Schema.Struct({
   framing: Schema.Union([
     Schema.Literal(false),
     Schema.Struct({
-      mode: Schema.Literals(["css", "postprocess"]),
+      mode: Schema.Literal("css"),
+    }),
+    Schema.Struct({
+      mode: Schema.Literal("postprocess"),
       theme: Schema.NonEmptyString,
     }),
   ]),
@@ -255,6 +259,12 @@ const validateShotFraming = (shot, state, palettes) => {
   if (shot.framing === false) {
     return
   }
+  if (shot.framing.mode === "css") {
+    if (shot.captureTarget === undefined) {
+      throw new Error(`${shot.name} must declare a target for CSS framing.`)
+    }
+    return
+  }
   const palette = palettes[shot.framing.theme]
   if (!palette) {
     throw new Error(
@@ -274,19 +284,6 @@ const validateShotFraming = (shot, state, palettes) => {
   }
   state.themes.add(shot.framing.theme)
   state.palettes.add(signature)
-  const expectedHomeTheme =
-    screenshotFrameSpec.homeThemes[
-      shot.context === "phone" ? "phone" : "desktop"
-    ]
-  if (
-    shot.framing.mode === "css" &&
-    (shot.captureTarget === undefined ||
-      shot.framing.theme !== expectedHomeTheme)
-  ) {
-    throw new Error(
-      `${shot.name} must use its assigned homepage CSS palette and capture target.`
-    )
-  }
 }
 
 const validateShot = (shot, state, palettes) => {
@@ -760,6 +757,15 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
   } else {
     await saveScreenshot(capture, outputPath)
   }
+  const responsiveOutputs = outputPath.startsWith(
+    path.join(APP_DIRECTORY, "public", "images", "homepage") + path.sep
+  )
+    ? await saveResponsiveWebpVariants(
+        capture,
+        outputPath,
+        screenshotFrameSpec.responsiveImageWidths
+      )
+    : []
   if (outputPath.startsWith(DOCS_IMAGES_DIRECTORY)) {
     // DocsScreenshot prefers PNG, so remove a stale alternate after the new output exists.
     const extension = path.extname(outputPath)
@@ -767,7 +773,13 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
     const alternatePath = `${outputPath.slice(0, -extension.length)}${alternateExtension}`
     await rm(alternatePath, { force: true })
   }
-  process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
+  const responsiveSuffix =
+    responsiveOutputs.length > 0
+      ? ` (+ ${responsiveOutputs.map((output) => path.basename(output)).join(", ")})`
+      : ""
+  process.stdout.write(
+    `Captured ${shot.name} → ${shot.output}${responsiveSuffix}\n`
+  )
 }
 
 const createExtractionCaptureGate = () => {
@@ -806,6 +818,18 @@ const createExtractionCaptureGate = () => {
   return { holdRoute, releaseAndWait, routePattern }
 }
 
+const installScreenshotActivityTouchStub = async (context) => {
+  // Fresh dev pages repeat this non-visual write and exhaust the shared local
+  // mutation limit before the full screenshot manifest can finish.
+  await context.route("**/api/settings/activity", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true }),
+    })
+  })
+}
+
 // A companion receiver is a second signed-in desktop page whose realtime
 // socket registers as a Remote Play receiver, so the captured page can list
 // it in the Connect Remote Play device list. It stays open until the shot
@@ -824,6 +848,7 @@ const openCompanionReceiver = async (browser, shot, origin) => {
     colorScheme: "dark",
     reducedMotion: "reduce",
   })
+  await installScreenshotActivityTouchStub(receiverContext)
   const receiverPage = await receiverContext.newPage()
   receiverPage.setDefaultTimeout(STEP_TIMEOUT_MS)
   receiverPage.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
@@ -875,6 +900,7 @@ const captureShot = async ({ browser, shot, origin, palettes }) => {
     isMobile: shot.context === "phone",
     hasTouch: shot.context === "phone",
   })
+  await installScreenshotActivityTouchStub(context)
   let companionReceiver
   let releaseHeldExtraction
   try {

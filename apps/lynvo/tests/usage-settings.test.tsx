@@ -21,6 +21,13 @@ const stubUsageFetch = (readLynvoUsage: () => Promise<Response> | Response) => {
   })
 }
 
+const expandBuiltInUsage = async () =>
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Expand Lynvo Plugin Server usage",
+    })
+  )
+
 describe("UsageSettings", () => {
   beforeEach(() => {
     clearAsyncResourceCache()
@@ -66,6 +73,7 @@ describe("UsageSettings", () => {
     const { unmount } = render(
       <UsageSettings lynvoPlugins={[]} userId="user-1" />
     )
+    await expandBuiltInUsage()
     expect(await screen.findByText("Monthly usage limit")).toBeVisible()
     unmount()
 
@@ -74,6 +82,7 @@ describe("UsageSettings", () => {
 
     render(<UsageSettings lynvoPlugins={[]} userId="user-1" />)
 
+    await expandBuiltInUsage()
     expect(screen.getByText("Monthly usage limit")).toBeVisible()
     expect(
       screen.queryByRole("status", { name: "Loading usage" })
@@ -101,6 +110,7 @@ describe("UsageSettings", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }))
 
+    await expandBuiltInUsage()
     expect(await screen.findByText("Monthly usage limit")).toBeVisible()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(
@@ -145,7 +155,11 @@ describe("UsageSettings", () => {
       />
     )
 
+    await expandBuiltInUsage()
     expect(await screen.findByText("Google Drive Index")).toBeVisible()
+    expect(
+      screen.getByRole("img", { name: "Lynvo Plugin Server" })
+    ).toBeVisible()
     expect(
       container.querySelector('img[src="https://drive.example/icon.png"]')
     ).toBeInTheDocument()
@@ -174,6 +188,7 @@ describe("UsageSettings", () => {
 
     render(<UsageSettings lynvoPlugins={null} />)
 
+    await expandBuiltInUsage()
     expect(await screen.findByText("Drive")).toBeVisible()
     expect(
       screen.getByText(

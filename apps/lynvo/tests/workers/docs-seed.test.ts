@@ -450,7 +450,9 @@ describe("docs seed CLI Saved link fixtures", () => {
         responseSchema: MediaArtworkResponseSchema,
       })
       expect(artwork.results[0]?.posterPath).toBe("/docs-seed-poster-test.jpg")
-      expect(artworkFetch).toHaveBeenCalledOnce()
+      // The search plus the work-details pass that attaches the logo and
+      // genres.
+      expect(artworkFetch).toHaveBeenCalledTimes(2)
     } finally {
       artworkFetch.mockRestore()
     }

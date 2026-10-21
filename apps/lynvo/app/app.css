@@ -37,6 +37,8 @@
   --color-stable-foreground: var(--stable-foreground);
   --color-stable: var(--stable);
   --color-link: var(--link);
+  /* Keep opened states on their original sky accent, separate from links. */
+  --color-opened: var(--color-sky-500);
   --color-frame-600: var(--frame-600);
   --color-frame-700: var(--frame-700);
   --color-frame-800: var(--frame-800);
@@ -111,6 +113,33 @@
      layer. */
   --tracking-code: 0.16em;
   --tracking-heading: -0.04em;
+}
+
+/* The URL field keeps 16px text at desktop despite Input's md:text-sm default. */
+@media (width >= 48rem) {
+  [data-url-field-input] {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+}
+
+/* Center the circular save action inside the input's rounded end at each size. */
+[data-url-field-save-button] {
+  border-radius: 50%;
+  position: relative;
+  inset-inline-end: -7px;
+}
+
+@media (width >= 40rem) {
+  [data-url-field-save-button] {
+    inset-inline-end: -4px;
+  }
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  [data-menu-trigger-look="gallery-overlay"] {
+    backdrop-filter: blur(6px);
+  }
 }
 
 :root {
@@ -398,42 +427,15 @@
 }
 
 .home-screenshot-stage {
-  --home-screenshot-upper-right: var(--home-screenshot-desktop-upper-right);
-  --home-screenshot-lower-left: var(--home-screenshot-desktop-lower-left);
-  --home-screenshot-base-start: var(--home-screenshot-desktop-base-start);
-  --home-screenshot-base-middle: var(--home-screenshot-desktop-base-middle);
-  --home-screenshot-base-end: var(--home-screenshot-desktop-base-end);
   --home-screenshot-frame-width: min(
     var(--home-screenshot-desktop-frame-width),
     var(--home-screenshot-frame-max-width)
-  );
-  --home-screenshot-background-padding: calc(
-    (100vw - var(--home-screenshot-frame-width)) / 2
   );
   display: flex;
   box-sizing: border-box;
   width: 100%;
   align-items: center;
   justify-content: center;
-  padding: var(--home-screenshot-background-padding);
-  background:
-    radial-gradient(
-      circle at var(--home-screenshot-upper-right-position),
-      var(--home-screenshot-upper-right) 0%,
-      transparent var(--home-screenshot-upper-right-fade)
-    ),
-    radial-gradient(
-      circle at var(--home-screenshot-lower-left-position),
-      var(--home-screenshot-lower-left) 0%,
-      transparent var(--home-screenshot-lower-left-fade)
-    ),
-    linear-gradient(
-      var(--home-screenshot-linear-angle),
-      var(--home-screenshot-base-start) 0%,
-      var(--home-screenshot-base-middle)
-        var(--home-screenshot-linear-middle-stop),
-      var(--home-screenshot-base-end) 100%
-    );
 }
 
 .home-screenshot-frame {
@@ -452,13 +454,10 @@
   border-radius: var(--home-screenshot-screen-radius);
 }
 
-.home-screenshot-stage[data-phone-viewport="true"] {
-  --home-screenshot-frame-width: var(--home-screenshot-phone-frame-width);
-  --home-screenshot-upper-right: var(--home-screenshot-phone-upper-right);
-  --home-screenshot-lower-left: var(--home-screenshot-phone-lower-left);
-  --home-screenshot-base-start: var(--home-screenshot-phone-base-start);
-  --home-screenshot-base-middle: var(--home-screenshot-phone-base-middle);
-  --home-screenshot-base-end: var(--home-screenshot-phone-base-end);
+@media (max-width: 767px) {
+  .home-screenshot-stage {
+    --home-screenshot-frame-width: var(--home-screenshot-phone-frame-width);
+  }
 }
 
 @keyframes home-demo-layer-in {
@@ -634,6 +633,10 @@
    must stay unlayered: the not-typeset blocks (DocsScreenshot, CodeBlock,
    DocsFaq) set their margins with utilities, which outrank every
    components-layer typeset rule. */
+.docs-shell a {
+  text-decoration-line: none;
+}
+
 .docs-content > :first-child,
 .docs-content > :first-child > :first-child {
   margin-block-start: 0;

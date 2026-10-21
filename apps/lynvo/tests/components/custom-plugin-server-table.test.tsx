@@ -3,7 +3,6 @@ import * as React from "react"
 import { MemoryRouter } from "react-router"
 import { describe, expect, it, vi } from "vitest"
 
-import { TooltipProvider } from "~/components/ui/tooltip"
 import { CustomPluginServerTable } from "~/features/site/settings/custom-plugin-server-table"
 
 const pluginServer = {
@@ -43,15 +42,13 @@ describe("CustomPluginServerTable", () => {
   const renderTable = (servers = [pluginServer]) =>
     render(
       <MemoryRouter>
-        <TooltipProvider delay={0}>
-          <CustomPluginServerTable
-            pluginServers={servers}
-            requestOrigin="http://localhost:5173"
-            onDeletePluginServer={vi.fn()}
-            onRefreshPluginServer={vi.fn()}
-            onTogglePluginServer={vi.fn()}
-          />
-        </TooltipProvider>
+        <CustomPluginServerTable
+          pluginServers={servers}
+          requestOrigin="http://localhost:5173"
+          onDeletePluginServer={vi.fn()}
+          onRefreshPluginServer={vi.fn()}
+          onTogglePluginServer={vi.fn()}
+        />
       </MemoryRouter>
     )
 
@@ -67,14 +64,26 @@ describe("CustomPluginServerTable", () => {
     expect(
       document.querySelector("[data-plugin-server-avatar='plugin-server-one']")
     ).not.toBeNull()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Expand Example Plugin Server plugins",
+      })
+    )
     expect(
       document.querySelector('[data-icon-fallback="source"]')
     ).not.toBeNull()
     expect(screen.queryByText(/Version 1\.0\.0/)).not.toBeInTheDocument()
   })
 
-  it("moves Plugin version, proxy usage, and project details into an info tooltip", () => {
+  it("moves Plugin version, proxy usage, and project details into an info popover", () => {
     renderTable()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Expand Example Plugin Server plugins",
+      })
+    )
 
     expect(
       screen.queryByRole("link", {
@@ -88,7 +97,7 @@ describe("CustomPluginServerTable", () => {
       "text-warning-foreground"
     )
 
-    fireEvent.mouseEnter(infoButton)
+    fireEvent.click(infoButton)
 
     expect(screen.getByText("Version 1.0.0")).toBeInTheDocument()
     expect(
@@ -103,6 +112,24 @@ describe("CustomPluginServerTable", () => {
       })
     ).toHaveAttribute("href", "https://source-alpha.example/project")
     expect(screen.queryByText("View project")).not.toBeInTheDocument()
+  })
+
+  it("collapses Plugin Server details until the row is expanded", () => {
+    renderTable()
+
+    expect(
+      screen.queryByRole("button", { name: "Source Alpha info" })
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Expand Example Plugin Server plugins",
+      })
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Source Alpha info" })
+    ).toBeInTheDocument()
   })
 
   it("keeps proxy state out of the Plugins table rows", () => {

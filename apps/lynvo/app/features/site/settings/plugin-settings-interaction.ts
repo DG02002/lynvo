@@ -60,9 +60,6 @@ export interface PluginSettingsCommands {
     password: string,
     username?: string
   ) => Promise<PluginSettingsMutationResult>
-  readonly deleteCredential: (
-    domainId: string
-  ) => Promise<PluginSettingsMutationResult>
   readonly createPluginServer: (
     value: CustomPluginServerFormValues
   ) => Promise<PluginSettingsMutationResult>
@@ -120,8 +117,6 @@ const defaultCommands: PluginSettingsCommands = {
       params: { domainId },
       payload: username ? { password, username } : { password },
     }),
-  deleteCredential: async (domainId) =>
-    await client.pluginDomains.deleteCredential({ params: { domainId } }),
   createPluginServer: async (value) =>
     await client.pluginServers.create({ payload: value }),
   deletePluginServer: async (pluginServerId) =>
@@ -217,7 +212,6 @@ export const useProxyProviderCommands = ({
         key: "proxy-key:scrape-do",
         operation: () => commands.setProxyProviderKey(token),
         messages: {
-          success: isRemoving ? "Proxy key removed" : "Proxy key saved",
           failure: isRemoving
             ? "The proxy key couldn’t be removed. Try again."
             : "The proxy key couldn’t be saved. Try again.",
@@ -237,7 +231,6 @@ export const useProxyProviderCommands = ({
       key: "proxy-balance:scrape-do",
       operation: () => commands.refreshProxyProviderBalance(),
       messages: {
-        success: "Proxy balance refreshed",
         failure: "The proxy balance couldn’t be refreshed. Try again.",
       },
       target: "server",

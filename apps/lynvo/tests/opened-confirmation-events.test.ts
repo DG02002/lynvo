@@ -4,10 +4,12 @@ import {
   markAfterAcceptedHandoff,
   OPENED_CONFIRMATION_EVENT,
 } from "~/lib/opened-confirmation-events"
+import { ASK_BEFORE_MARKING_AS_WATCHED_STORAGE_KEY } from "~/lib/settings/opened-confirmation-preference"
 
 describe("markAfterAcceptedHandoff", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.removeItem(ASK_BEFORE_MARKING_AS_WATCHED_STORAGE_KEY)
   })
 
   it("does not mark an item when the player handoff fails", () => {
@@ -24,12 +26,9 @@ describe("markAfterAcceptedHandoff", () => {
     expect(dispatchEvent).not.toHaveBeenCalled()
   })
 
-  it("asks before marking an accepted handoff on a small screen", () => {
+  it("asks before marking an accepted handoff when the preference is enabled", () => {
     const markOpened = vi.fn()
-    Object.defineProperty(window, "matchMedia", {
-      configurable: true,
-      value: vi.fn().mockReturnValue({ matches: true }),
-    })
+    localStorage.setItem(ASK_BEFORE_MARKING_AS_WATCHED_STORAGE_KEY, "true")
     const dispatchEvent = vi.spyOn(window, "dispatchEvent")
 
     markAfterAcceptedHandoff({
@@ -46,12 +45,8 @@ describe("markAfterAcceptedHandoff", () => {
     })
   })
 
-  it("marks an accepted handoff immediately on a larger screen", () => {
+  it("marks an accepted handoff immediately when the preference is disabled", () => {
     const markOpened = vi.fn()
-    Object.defineProperty(window, "matchMedia", {
-      configurable: true,
-      value: vi.fn().mockReturnValue({ matches: false }),
-    })
 
     markAfterAcceptedHandoff({
       accepted: true,

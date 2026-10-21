@@ -7,7 +7,6 @@ import { getDataVersion } from "../../workers/d1/data-version"
 import {
   beginPluginDomainCredentialChange,
   deletePluginDomainById,
-  deletePluginDomainCredential,
   finalizePluginDomainCredentialChange,
   getPluginDomainByDomain,
   listPluginDomains,
@@ -469,7 +468,7 @@ describe("d1 plugin registry", () => {
     expect(lookup?.id).toBe(created.id)
     expect(lookup?.pluginId).toBe("plugin-1")
 
-    let listing = await listPluginDomains(env.DB, user.id)
+    const listing = await listPluginDomains(env.DB, user.id)
     expect(listing[0]?.hasCredential).toBe(true)
 
     await setPluginDomainCredential(env.DB, user.id, {
@@ -537,16 +536,9 @@ describe("d1 plugin registry", () => {
 
     await expectLedgerMatchesInventory(user.id)
 
-    await deletePluginDomainCredential(env.DB, user.id, {
-      domainId: created.id,
-      now: NOW + 8_000,
-    })
-    listing = await listPluginDomains(env.DB, user.id)
-    expect(listing[0]?.hasCredential).toBe(false)
-
     await deletePluginDomainById(env.DB, user.id, {
       domainId: created.id,
-      now: NOW + 9_000,
+      now: NOW + 8_000,
     })
     const remaining = await listPluginDomains(env.DB, user.id)
     expect(remaining).toHaveLength(0)
@@ -593,16 +585,6 @@ describe("d1 plugin registry", () => {
       credential: { ...credential(), keyVersion: 2 },
       now: NOW + 2_000,
     })
-    await deletePluginDomainCredential(env.DB, user.id, {
-      domainId: created.id,
-      now: NOW + 3_000,
-    })
-    await expect(listPluginDomains(env.DB, user.id)).resolves.toMatchObject([
-      {
-        id: created.id,
-        hasCredential: false,
-      },
-    ])
   })
 
   it("rejects Plugin Domains for a Custom Plugin Server that is not ready", async () => {
@@ -651,13 +633,6 @@ describe("d1 plugin registry", () => {
         now: NOW + 2_000,
       })
     ).rejects.toThrow("Plugin server not found or no longer available")
-    await expect(
-      deletePluginDomainCredential(env.DB, user.id, {
-        domainId: created.id,
-        now: NOW + 3_000,
-      })
-    ).rejects.toThrow("Plugin server not found or no longer available")
-
     await setPluginServerCredentialStatus(server.id, "ready")
     const change = await beginPluginDomainCredentialChange(env.DB, user.id, {
       domainId: created.id,
@@ -905,68 +880,6 @@ describe("d1 plugin registry", () => {
       credential_attempt_id: null,
       credential_finalized_attempt_id: null,
     })
-    expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
-  })
-
-  it("does not revoke a domain credential after its plugin server changes ownership", async () => {
-    const owner = await createUser()
-    const newOwner = await createUser()
-    const server = await registerReadyServer(
-      owner.id,
-      "https://revoke-credential-race.example"
-    )
-    const created = await upsertPluginDomain(env.DB, owner.id, {
-      domain: "revoke-credential-race.example",
-      pluginServerId: server.id,
-      pluginId: "plugin-1",
-      credential: credential(),
-      now: NOW,
-    })
-    const ledgerBefore = await getStorageLedger(env.DB, owner.id)
-    const pause = createD1OwnershipReadPause(env.DB, {
-      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
-      rowId: owner.id,
-      label: "Plugin credential revoke",
-    })
-    const revokePromise = deletePluginDomainCredential(
-      pause.database,
-      owner.id,
-      { domainId: created.id, now: NOW + 1_000 }
-    )
-
-    await pause.waitForRead(revokePromise)
-    await env.DB.prepare(
-      "UPDATE user_plugin_servers SET user_id = ?2 WHERE id = ?1"
-    )
-      .bind(server.id, newOwner.id)
-      .run()
-    pause.resume()
-
-    await expect(revokePromise).rejects.toThrow(
-      "Plugin server not found or no longer available"
-    )
-    const [domain, storedCredential] = await Promise.all([
-      env.DB.prepare(
-        "SELECT credential_generation, credential_attempt_id, credential_finalized_attempt_id FROM user_plugin_domains WHERE id = ?1"
-      )
-        .bind(created.id)
-        .first<{
-          credential_generation: number
-          credential_attempt_id: string | null
-          credential_finalized_attempt_id: string | null
-        }>(),
-      env.DB.prepare(
-        "SELECT ciphertext FROM user_plugin_credentials WHERE plugin_domain_id = ?1"
-      )
-        .bind(created.id)
-        .first<{ ciphertext: string }>(),
-    ])
-    expect(domain).toEqual({
-      credential_generation: 1,
-      credential_attempt_id: null,
-      credential_finalized_attempt_id: null,
-    })
-    expect(storedCredential).toEqual({ ciphertext: "ciphertext" })
     expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
   })
 

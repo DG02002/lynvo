@@ -2,11 +2,6 @@ import { useEffect, useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
 
 import { getCookieValueFromHeader } from "~/lib/auth-cookie"
-import {
-  getCurrentClientProfile,
-  subscribeToClientProfile,
-  TVBRO_ANDROID_TV_PROFILE,
-} from "~/lib/client-profile"
 import type { loader as rootLoader } from "~/root"
 
 export type MediaView = "list" | "gallery"
@@ -15,8 +10,7 @@ export const MEDIA_VIEW_STORAGE_KEY = "lynvo:settings:media-view"
 export const MEDIA_VIEW_PREFERENCE_EVENT = "lynvo:media-view-preference-changed"
 export const MEDIA_VIEW_COOKIE_NAME = "lynvo-media-view"
 const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
-export const DEFAULT_MEDIA_VIEW: MediaView = "list"
-const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "gallery"
+export const DEFAULT_MEDIA_VIEW: MediaView = "gallery"
 const LEGACY_MEDIA_VIEW_VALUE = "hybrid"
 
 const mediaViewValues = new Set<string>(["list", "gallery"])
@@ -60,19 +54,10 @@ const migrateLegacyMediaViewPreference = (): void => {
   }
 }
 
-const getDefaultMediaView = (): MediaView =>
-  getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
-    ? TVBRO_DEFAULT_MEDIA_VIEW
-    : DEFAULT_MEDIA_VIEW
-
 const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
-  const unsubscribeFromClientProfile = subscribeToClientProfile(onStoreChange)
   window.addEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
-
-  return () => {
-    unsubscribeFromClientProfile()
+  return () =>
     window.removeEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
-  }
 }
 
 export const getMediaView = (): MediaView => {
@@ -84,7 +69,7 @@ export const getMediaView = (): MediaView => {
   if (storedMediaView !== undefined) {
     return storedMediaView.mediaView
   }
-  return getDefaultMediaView()
+  return DEFAULT_MEDIA_VIEW
 }
 
 const writeMediaViewCookie = (mediaView: MediaView): void => {

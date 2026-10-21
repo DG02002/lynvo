@@ -195,20 +195,6 @@
     "baseMiddle": "#042760",
     "baseEnd": "#1E3A7E"
   },
-  "aurora-058": {
-    "upperRight": "#6D65EF",
-    "lowerLeft": "#7792FF",
-    "baseStart": "#0B1137",
-    "baseMiddle": "#272C56",
-    "baseEnd": "#3D406C"
-  },
-  "aurora-059": {
-    "upperRight": "#85EC55",
-    "lowerLeft": "#4FEEAB",
-    "baseStart": "#117E6C",
-    "baseMiddle": "#18AA5E",
-    "baseEnd": "#17BA25"
-  },
   "aurora-060": {
     "upperRight": "#11A8F7",
     "lowerLeft": "#2595C3",

@@ -88,7 +88,8 @@ describe("media artwork cache", () => {
         candidates: [expectedCandidate],
       },
     ])
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // One search plus one work-details pass for the logo and genres.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
 
     await vi.waitFor(async () => {
       const cached = await globalThis.caches?.default.match(
@@ -112,7 +113,7 @@ describe("media artwork cache", () => {
         candidates: [expectedCandidate],
       },
     ])
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("does not serve a stored provider-id lookup from the title lookup's cache entry", async () => {
@@ -147,6 +148,45 @@ describe("media artwork cache", () => {
         identity: { providerId: 42, title: "Cache Test" },
       },
     ])
+  })
+
+  it("keeps exact-title folder lookups separate from fuzzy cache entries", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input)
+      if (url.includes("/tv/1396")) {
+        return jsonResponse({
+          id: 1396,
+          title: "Breaking Bad",
+          poster_path: "/breaking-bad.jpg",
+        })
+      }
+      return jsonResponse({
+        results: [
+          { id: 1396, title: "Breaking Bad", poster_path: "/breaking-bad.jpg" },
+        ],
+      })
+    })
+    const dependencies = {
+      waitUntil: () => {},
+      fetch: fetchMock,
+    }
+    const fuzzyRequest = { mediaKind: "tv" as const, title: "Breaking Ba" }
+    const exactRequest = { ...fuzzyRequest, requireExactTitleMatch: true }
+
+    const fuzzyResult = await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      [fuzzyRequest],
+      dependencies
+    )
+    const exactResult = await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      [exactRequest],
+      dependencies
+    )
+
+    expect(fuzzyResult[0]?.posterPath).toBe("/breaking-bad.jpg")
+    expect(exactResult[0]?.posterPath).toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it("ignores a negative entry from the previous cache namespace", async () => {

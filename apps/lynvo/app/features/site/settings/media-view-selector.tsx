@@ -1,7 +1,6 @@
 import { GridViewIcon, ListViewIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 
-import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 
 import type { MediaView } from "./media-view-preference"
@@ -11,7 +10,6 @@ interface MediaViewOption {
   label: string
   description: string
   icon: IconSvgElement
-  isBeta: boolean
 }
 
 interface MediaViewSelectorProps {
@@ -29,20 +27,17 @@ const mediaViewOptions: readonly MediaViewOption[] = [
     label: "List view",
     description: "Browse every saved link in rows.",
     icon: ListViewIcon,
-    isBeta: false,
   },
   {
     value: "gallery",
     label: "Gallery view",
     description: "Group movies and shows with artwork.",
     icon: GridViewIcon,
-    isBeta: true,
   },
 ]
 
 const ListViewPreview = () => (
-  <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
-    <span className="h-2 w-16 rounded-full bg-foreground/20" />
+  <div aria-hidden="true" className="flex h-full min-h-0 flex-col p-2">
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 items-center gap-2 border-b border-border/70">
         <span className="size-5 shrink-0 rounded bg-foreground/10" />
@@ -61,12 +56,17 @@ const ListViewPreview = () => (
 )
 
 const GalleryViewPreview = () => (
-  <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
-    <span className="h-2 w-16 rounded-full bg-foreground/20" />
-    <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
-      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
-      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
-      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
+  <div aria-hidden="true" className="flex h-full min-h-0 flex-col p-2">
+    <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-1 gap-2 sm:grid-cols-5 sm:grid-rows-2">
+      {Array.from({ length: 10 }, (_, posterIndex) => (
+        <span
+          key={posterIndex}
+          className={cn(
+            "min-w-0 rounded-lg border border-foreground/15 bg-foreground/10",
+            posterIndex >= 3 && "hidden sm:block"
+          )}
+        />
+      ))}
     </div>
   </div>
 )
@@ -102,7 +102,7 @@ export const MediaViewSelector = ({
             checked={isSelected}
             onChange={() => onValueChange(option.value)}
           />
-          <span className="block aspect-video min-h-0 overflow-hidden rounded-xl peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
+          <span className="block aspect-4/3 min-h-0 overflow-hidden rounded-xl peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring sm:aspect-video">
             <MediaViewPreview view={option.value} />
           </span>
           <span className="flex min-w-0 flex-col gap-1 px-1 pb-1">
@@ -113,7 +113,6 @@ export const MediaViewSelector = ({
                 aria-hidden="true"
               />
               <span className="min-w-0 flex-1">{option.label}</span>
-              {option.isBeta && <Badge variant="warning">Beta</Badge>}
             </span>
             <span
               className={cn(

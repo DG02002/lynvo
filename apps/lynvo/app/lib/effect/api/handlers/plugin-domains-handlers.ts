@@ -9,7 +9,6 @@ import {
 import {
   beginPluginDomainCredentialChange,
   deletePluginDomainById,
-  deletePluginDomainCredential,
   finalizePluginDomainCredentialChange,
   listPluginDomains,
   upsertPluginDomain,
@@ -213,30 +212,6 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               mapPluginDomainMutationError(
                 cause,
                 "The plugin credential couldn’t be saved"
-              ),
-          })
-          return versionedSuccess(dataVersion)
-        })
-      )
-      .handle("deleteCredential", ({ params }) =>
-        Effect.gen(function* () {
-          const user = yield* CurrentUser
-          const environment = yield* CloudflareEnv
-          const database = yield* requireDatabaseEffect(
-            environment,
-            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
-          )
-          const dataVersion = yield* Effect.tryPromise({
-            try: () =>
-              deletePluginDomainCredential(database, user.id, {
-                domainId: params.domainId,
-                now: Date.now(),
-                realtime: environment.USER_REALTIME_ROOM,
-              }),
-            catch: (cause) =>
-              mapPluginDomainMutationError(
-                cause,
-                "The plugin credential couldn’t be removed"
               ),
           })
           return versionedSuccess(dataVersion)
