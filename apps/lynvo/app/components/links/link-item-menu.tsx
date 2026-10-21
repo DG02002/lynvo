@@ -194,7 +194,7 @@ export const LinkItemMenu = ({
                               if (playableUrl === undefined) {
                                 return
                               }
-                              openInPlayerAndLogError(
+                              void openInPlayerAndLogError(
                                 () =>
                                   openInSpecificPlayerForHandoff(
                                     playableUrl,

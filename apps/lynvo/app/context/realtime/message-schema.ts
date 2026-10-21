@@ -1,52 +1,22 @@
 import { Result, Schema } from "effect"
+import {
+  dataChangedRealtimeMessageSchema,
+  remoteInboxChangedRealtimeMessageSchema,
+  sessionHelloRealtimeMessageSchema,
+  type DataChangedRealtimeMessage,
+  type RemoteInboxChangedRealtimeMessage,
+  type SessionHelloRealtimeMessage,
+} from "~shared/realtime-messages"
 
 import { remoteCommandWireMessageSchema } from "~/lib/remote-play/wire"
 
 declare global {
-  interface RemoteInboxChangedRealtimeMessage {
-    type: "remote-inbox.changed"
-    payload: Record<string, never>
-  }
-
-  interface SessionHelloRealtimeMessage {
-    type: "session_hello"
-    userId: string
-    sessionId: string
-    dataVersion?: number
-  }
-
-  interface DataChangedRealtimeMessage {
-    type: "data-changed"
-    payload: { version: number }
-  }
-
   type RealtimeMessage =
     | RemoteCommandWireMessage
     | RemoteInboxChangedRealtimeMessage
     | DataChangedRealtimeMessage
     | SessionHelloRealtimeMessage
 }
-
-const remoteInboxChangedRealtimeMessageSchema = Schema.Struct({
-  type: Schema.Literal("remote-inbox.changed"),
-  payload: Schema.Struct({}),
-})
-
-export const sessionHelloRealtimeMessageSchema = Schema.Struct({
-  type: Schema.Literal("session_hello"),
-  userId: Schema.String,
-  sessionId: Schema.String,
-  dataVersion: Schema.optional(
-    Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0)))
-  ),
-})
-
-const dataChangedRealtimeMessageSchema = Schema.Struct({
-  type: Schema.Literal("data-changed"),
-  payload: Schema.Struct({
-    version: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
-  }),
-})
 
 export const isRealtimeHeartbeatResponse = (value: string): boolean => {
   // The Durable Object's hibernation pair answers bare "ping" with "pong" without waking it.

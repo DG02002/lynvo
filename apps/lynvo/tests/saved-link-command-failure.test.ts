@@ -1,9 +1,10 @@
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
+import { presentSavedLinkCommandFailure } from "~/features/links/link-error-message"
 import {
-  presentSavedLinkCommandFailure,
   SavedLinkCommandFailureSchema,
+  type SavedLinkCommandFailure,
 } from "~/features/links/saved-link-command-failure"
 
 describe("saved-link command failure presentation", () => {

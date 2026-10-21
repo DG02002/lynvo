@@ -212,6 +212,7 @@ const tripCircuitBreakerOnTransportFailure = (
   void recordPluginServerVerificationFailure(database, options.userId, {
     id: pluginServerId,
     now: Date.now(),
+    realtime: options.environment.USER_REALTIME_ROOM,
   }).catch(() => undefined)
 }
 

@@ -1,3 +1,4 @@
+import { clearUserScopedStorage } from "~/context/remote-control/storage"
 import { authPaths } from "~/lib/paths"
 
 export const clearRevokedSessionState = (
@@ -5,11 +6,6 @@ export const clearRevokedSessionState = (
   location: Pick<Location, "assign">,
   userId: string
 ) => {
-  for (let index = storage.length - 1; index >= 0; index -= 1) {
-    const key = storage.key(index)
-    if (key?.includes(userId)) {
-      storage.removeItem(key)
-    }
-  }
+  clearUserScopedStorage(storage, userId)
   location.assign(authPaths.signIn)
 }

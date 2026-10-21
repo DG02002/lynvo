@@ -87,6 +87,11 @@ describe("realtime socket reconnect backoff", () => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
     window.sessionStorage.clear()
+    document
+      .querySelectorAll(
+        'meta[name="lynvo-user-id"], meta[name="lynvo-session-id"]'
+      )
+      .forEach((meta) => meta.remove())
   })
 
   it("seeds the reconnect delay from recent failures in sessionStorage", () => {
@@ -163,6 +168,41 @@ describe("realtime socket reconnect backoff", () => {
     expect(
       window.sessionStorage.getItem(REALTIME_RECONNECT_FAILURE_STORAGE_KEY)
     ).toBeNull()
+    connection.close()
+  })
+
+  it("checks the decoded session hello against the rendered identity", () => {
+    const userMeta = document.createElement("meta")
+    userMeta.name = "lynvo-user-id"
+    userMeta.content = "current-user"
+    const sessionMeta = document.createElement("meta")
+    sessionMeta.name = "lynvo-session-id"
+    sessionMeta.content = "current-session"
+    document.head.append(userMeta, sessionMeta)
+
+    const receiveMessage = vi.fn()
+    const onSessionRevoked = vi.fn()
+    const connection = openRealtimeSocket({
+      dispatch: vi.fn(),
+      receiveMessage,
+      onOpen: vi.fn(),
+      onSessionRevoked,
+    })
+
+    mockSockets[0]?.emit(
+      "message",
+      new MessageEvent("message", {
+        data: JSON.stringify({
+          type: "session_hello",
+          userId: "revoked-user",
+          sessionId: "revoked-session",
+          dataVersion: 1,
+        }),
+      })
+    )
+
+    expect(onSessionRevoked).toHaveBeenCalledOnce()
+    expect(receiveMessage).not.toHaveBeenCalled()
     connection.close()
   })
 })

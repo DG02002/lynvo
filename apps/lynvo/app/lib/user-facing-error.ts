@@ -1,7 +1,45 @@
+import { UNSUPPORTED_URL_CODE } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
 import { ApiResponseError } from "./api-errors"
+import {
+  ExtractionCommandError,
+  presentExtractionFailure,
+} from "./extraction/errors"
 import { sessionExpiredCopy } from "./session-copy"
+
+const unreachable = (value: never): never => {
+  throw new Error(`Unhandled user-facing error case: ${String(value)}`)
+}
+
+export const csrfExpiredMessage =
+  "The security session expired. Refresh the page, then try again."
+export const extractionErrorMessage =
+  "Links couldn’t be loaded from this address. Check the link, then try again."
+export const unsupportedLinkMessage = "The link is not supported."
+
+export type SaveIntentErrorKind =
+  | "missing-url"
+  | "invalid-url"
+  | "no-selection"
+  | "write-failed"
+
+export const getSaveIntentErrorMessage = (
+  kind: SaveIntentErrorKind
+): string | undefined => {
+  switch (kind) {
+    case "missing-url":
+      return "Enter a URL."
+    case "invalid-url":
+      return "Enter a valid URL."
+    case "no-selection":
+      return "Select at least one link."
+    case "write-failed":
+      return undefined
+    default:
+      return unreachable(kind)
+  }
+}
 
 const taggedErrorSchema = Schema.Struct({
   _tag: Schema.String,
@@ -18,7 +56,7 @@ const taggedErrorMessage = (cause: unknown): string | undefined => {
     case "UnauthorizedError":
       return sessionExpiredCopy.retry
     case "CsrfError":
-      return "The security session expired. Refresh the page, then try again."
+      return csrfExpiredMessage
     case "ValidationError":
     case "NotFoundError":
     case "UsageLimitError":
@@ -29,7 +67,9 @@ const taggedErrorMessage = (cause: unknown): string | undefined => {
     case "PluginCredentialChangeSupersededError":
       return parsed.success.message
     case "ExtractionError":
-      return "Links couldn’t be loaded from this address. Check the link, then try again."
+      return parsed.success.message === UNSUPPORTED_URL_CODE
+        ? unsupportedLinkMessage
+        : extractionErrorMessage
     default:
       return undefined
   }
@@ -42,6 +82,10 @@ export const getUserFacingErrorMessage = (
   if (cause instanceof ApiResponseError) {
     const reference = cause.requestId ? ` Reference: ${cause.requestId}` : ""
     return `${cause.message}${reference}`
+  }
+
+  if (cause instanceof ExtractionCommandError) {
+    return presentExtractionFailure(cause.failure)
   }
 
   return taggedErrorMessage(cause)?.trim() || fallback

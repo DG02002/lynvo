@@ -1,9 +1,3 @@
-import {
-  AlertCircleIcon,
-  Folder01Icon,
-  PlayIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useMemo } from "react"
 import type { MediaArtworkRequest } from "~shared/api-contracts"
 
@@ -16,11 +10,9 @@ import {
   getMediaArtworkRequest,
   getMediaDisplayTitle,
   hasEpisodeMarker,
-  parseMediaFilename,
   type GalleryGroup,
 } from "~/features/links/media-artwork"
-import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
-import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { useCurrentTimeMs } from "~/lib/use-coarse-time-bucket"
@@ -38,19 +30,23 @@ import { GalleryGroupMenu } from "./gallery-group-menu"
 import {
   MediaListRow,
   MediaListRowMeta,
+  getSaveListItemFallbackIcon,
+  SaveListItemFallbackIcon,
   SaveListRowIcon,
 } from "./media-list-row"
-import { MEDIA_LIST_HEADER_MENU_CELL_CLASS } from "./media-list-row-constants"
+import { getShouldCenterMobileNewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
-import {
-  FolderTitleDisplayToggleButton,
-  SaveListBackButton,
-} from "./save-list-header-controls"
+import { compareByEpisodeNumber } from "./save-list-browser-model"
+import { FolderTitleDisplayToggleButton } from "./save-list-header-controls"
 import {
   GALLERY_GROUP_CONTENT_CLASS,
   GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS,
-  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
+import { useSaveListSession } from "./save-list-session"
+import {
+  ImmersiveBrowserHeader,
+  SeasonArtworkAside,
+} from "./save-list-shared-layout"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 
@@ -81,34 +77,22 @@ const GalleryGroupItemRow = ({
 }: GalleryGroupItemRowProps) => {
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
-  const extractionState = item.extractionStatus?.state ?? "complete"
-  const isExtractionVisual =
-    getExtractionStatusInput(item, isExtracting) !== "idle"
+  const extractionStatus = getExtractionStatusInput(item, isExtracting)
+  const isExtractionVisual = extractionStatus !== "idle"
   const view = toLinkViewModel(item)
-  const directLinkTarget = directLink
-    ? getMediaNodeTargetOrUndefined(directLink)
-    : undefined
-  const rowFallbackIcon = isExtractionVisual ? (
-    <SaveListRowIcon>
-      {extractionState === "failed" ? (
-        <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
-      ) : (
-        <span
-          aria-hidden="true"
-          className="loading-skeleton-pulse inline-flex text-muted-foreground"
-        >
-          <HugeiconsIcon icon={Folder01Icon} className="size-6" />
-        </span>
-      )}
-    </SaveListRowIcon>
-  ) : (
+  const fallbackIconDescriptor = getSaveListItemFallbackIcon(
+    extractionStatus,
+    directLink !== undefined
+  )
+  const rowFallbackIcon = (
     <SaveListRowIcon
-      className={isDirectLinkExpired ? "text-muted-foreground" : undefined}
+      className={
+        fallbackIconDescriptor.isExtractionVisual || !isDirectLinkExpired
+          ? undefined
+          : "text-muted-foreground"
+      }
     >
-      <HugeiconsIcon
-        icon={directLink ? PlayIcon : Folder01Icon}
-        className="size-6"
-      />
+      <SaveListItemFallbackIcon descriptor={fallbackIconDescriptor} />
     </SaveListRowIcon>
   )
   const isSeasonFolder = artworkSource?.kind === "season"
@@ -129,21 +113,21 @@ const GalleryGroupItemRow = ({
       : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
-  const shouldCenterMobileNewBadge =
-    shouldShowRowArtwork && isEpisodeRow && titleDisplay === "episode"
+  const shouldCenterMobileNewBadge = getShouldCenterMobileNewBadge(
+    shouldShowRowArtwork && isEpisodeRow,
+    titleDisplay
+  )
 
   const handleActivate = () => {
     if (isExtractionVisual) {
       return
     }
     if (directLink) {
-      openInPlayerAndLogError(() => actions.play(directLink), {
-        itemLabel: directLink.label,
-        markOpened: () => {
-          if (directLinkTarget !== undefined) {
-            actions.markOpened(item.url, directLinkTarget)
-          }
-        },
+      void openPlayableAndMarkOpened({
+        actions,
+        itemUrl: item.url,
+        playableLink: directLink,
+        open: () => actions.play(directLink),
       })
       return
     }
@@ -243,8 +227,6 @@ const getItemArtworkSource = (
 
 interface GalleryGroupBrowserProps {
   readonly group: GalleryGroup
-  readonly actions: LinkItemActions
-  readonly extractingItems: Set<string>
   readonly currentTimeMs?: number
   readonly onExit: () => void
   readonly onOpenItem: (itemUrl: string) => void
@@ -252,12 +234,11 @@ interface GalleryGroupBrowserProps {
 
 export const GalleryGroupBrowser = ({
   group,
-  actions,
-  extractingItems,
   currentTimeMs: currentTimeMsInput,
   onExit,
   onOpenItem,
 }: GalleryGroupBrowserProps) => {
+  const { actions, extractingItems } = useSaveListSession()
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("episode")
   const itemLabels = useMemo(
@@ -282,55 +263,64 @@ export const GalleryGroupBrowser = ({
     if (!canShowEpisodeNames) {
       return itemEntries
     }
-    return itemEntries.toSorted(
-      (firstEntry, secondEntry) =>
-        (parseMediaFilename(firstEntry.itemLabel).episodeNumber ??
-          firstEntry.originalIndex) -
-        (parseMediaFilename(secondEntry.itemLabel).episodeNumber ??
-          secondEntry.originalIndex)
+    return itemEntries.toSorted((firstEntry, secondEntry) =>
+      compareByEpisodeNumber(
+        {
+          label: firstEntry.itemLabel,
+          originalIndex: firstEntry.originalIndex,
+        },
+        {
+          label: secondEntry.itemLabel,
+          originalIndex: secondEntry.originalIndex,
+        }
+      )
     )
   }, [group.items, itemLabels, itemArtworkSources, canShowEpisodeNames])
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-        <SaveListBackButton onNavigateBack={onExit} />
-        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-          <h1
-            aria-label={group.displayTitle}
-            className="hidden w-full min-w-0 text-base font-normal md:block"
-          >
-            <ExpandableFilename
-              value={group.displayTitle}
-              clampClassName="line-clamp-1"
-              className="w-full"
-            />
-          </h1>
-        </div>
-        {canShowEpisodeNames ? (
-          <div className="flex items-center justify-center px-1 md:px-0">
-            <FolderTitleDisplayToggleButton
-              titleDisplay={titleDisplay}
-              onToggle={toggleTitleDisplay}
-            />
+      <ImmersiveBrowserHeader
+        onNavigateBack={onExit}
+        title={
+          <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
+            <h1
+              aria-label={group.displayTitle}
+              className="hidden w-full min-w-0 text-base font-normal md:block"
+            >
+              <ExpandableFilename
+                value={group.displayTitle}
+                clampClassName="line-clamp-1"
+                className="w-full"
+              />
+            </h1>
           </div>
-        ) : null}
-        <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
+        }
+        center={
+          canShowEpisodeNames ? (
+            <div className="flex items-center justify-center px-1 md:px-0">
+              <FolderTitleDisplayToggleButton
+                titleDisplay={titleDisplay}
+                onToggle={toggleTitleDisplay}
+              />
+            </div>
+          ) : null
+        }
+        menu={
           <GalleryGroupMenu
             group={group}
             actions={actions}
             onExit={onExit}
             triggerLook="media-row"
           />
-        </div>
-      </header>
+        }
+      />
       <div className={GALLERY_GROUP_CONTENT_CLASS}>
-        <div className="border-b bg-muted/50 p-4 md:block md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
+        <SeasonArtworkAside as="div" className="md:block">
           <SeasonArtworkPanel
             displayTitle={group.displayTitle}
             artworkRequest={group.artworkRequest}
           />
-        </div>
+        </SeasonArtworkAside>
         <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
             {sortedItemEntries.map(({ item, itemLabel, artworkSource }) => {

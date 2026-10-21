@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useId, useState } from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
 import {
@@ -58,13 +59,15 @@ const formatBytes = (bytes: number) => {
 export function StorageSettings({ userId }: { userId?: string }) {
   const timeBucket = useMinuteTimeBucket()
   const retentionLabelId = useId()
-  const { data: usage, reload } = useAsyncResource(
-    () => readStorageSettings(),
-    [timeBucket],
-    {
-      cacheKey: userId ? getSettingsDataCacheKey("storage", userId) : undefined,
-    }
-  )
+  const {
+    data: usage,
+    error,
+    isLoading,
+    reload,
+    retry,
+  } = useAsyncResource(() => readStorageSettings(), [timeBucket], {
+    cacheKey: userId ? getSettingsDataCacheKey("storage", userId) : undefined,
+  })
   const [isUpdatingRetention, setIsUpdatingRetention] = useState(false)
   const [isClearingLinks, setIsClearingLinks] = useState(false)
   const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] = useState(false)
@@ -76,13 +79,28 @@ export function StorageSettings({ userId }: { userId?: string }) {
   if (!usage) {
     return (
       <SettingsPanel>
-        <div
-          aria-label="Loading storage usage"
-          className="flex flex-col gap-2"
-          role="status"
-        >
-          <SettingsLoadingBars titleWidth="sm" />
-        </div>
+        {error !== undefined ? (
+          <SettingsList>
+            <SettingsRow className="flex-col items-stretch gap-3 py-2">
+              <LoadErrorRetry
+                isRetrying={isLoading}
+                message={getUserFacingErrorMessage(
+                  error,
+                  "Storage settings couldn’t be loaded just now. Check the connection, then try again."
+                )}
+                onRetry={retry}
+              />
+            </SettingsRow>
+          </SettingsList>
+        ) : (
+          <div
+            aria-label="Loading storage usage"
+            className="flex flex-col gap-2"
+            role="status"
+          >
+            <SettingsLoadingBars titleWidth="sm" />
+          </div>
+        )}
       </SettingsPanel>
     )
   }
@@ -96,12 +114,25 @@ export function StorageSettings({ userId }: { userId?: string }) {
       return
     }
     const days = Number(value)
-    const preview = await previewStorageRetention(days)
-    if (preview.expiredLinkCount > 0) {
-      setPendingRetention({ days, expiredLinkCount: preview.expiredLinkCount })
-      return
+    try {
+      const preview = await previewStorageRetention(days)
+      if (preview.expiredLinkCount > 0) {
+        setPendingRetention({
+          days,
+          expiredLinkCount: preview.expiredLinkCount,
+        })
+        return
+      }
+      await applyRetentionChange(days, false)
+    } catch (previewError) {
+      showErrorToast({
+        title: "Couldn’t check the auto-delete period",
+        description: getUserFacingErrorMessage(
+          previewError,
+          "The auto-delete period couldn’t be checked. Try again."
+        ),
+      })
     }
-    await applyRetentionChange(days, false)
   }
 
   const applyRetentionChange = async (
@@ -128,11 +159,11 @@ export function StorageSettings({ userId }: { userId?: string }) {
         })
       }
       setPendingRetention(null)
-    } catch (error) {
+    } catch (updateError) {
       showErrorToast({
         title: "Couldn’t update the auto-delete period",
         description: getUserFacingErrorMessage(
-          error,
+          updateError,
           "The auto-delete period couldn’t be updated. Try again."
         ),
       })
@@ -160,11 +191,11 @@ export function StorageSettings({ userId }: { userId?: string }) {
           description: "There were no saved links left on the account.",
         })
       }
-    } catch (error) {
+    } catch (clearLinksError) {
       showErrorToast({
         title: "Couldn’t delete saved links",
         description: getUserFacingErrorMessage(
-          error,
+          clearLinksError,
           "Saved links couldn’t be removed. Try again."
         ),
       })
@@ -176,6 +207,20 @@ export function StorageSettings({ userId }: { userId?: string }) {
   return (
     <SettingsPanel>
       <div className="flex flex-col gap-6">
+        {error !== undefined && (
+          <SettingsList>
+            <SettingsRow className="flex-col items-stretch gap-3 py-2">
+              <LoadErrorRetry
+                isRetrying={isLoading}
+                message={getUserFacingErrorMessage(
+                  error,
+                  "Storage settings couldn’t be refreshed just now. Check the connection, then try again."
+                )}
+                onRetry={retry}
+              />
+            </SettingsRow>
+          </SettingsList>
+        )}
         <div className="flex flex-col gap-2">
           <span className="text-sm font-normal tabular-nums text-foreground">
             {formatBytes(usage.enforcedBytes)} of{" "}

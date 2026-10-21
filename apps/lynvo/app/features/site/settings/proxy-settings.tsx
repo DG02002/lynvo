@@ -20,16 +20,14 @@ import { PLUGIN_SERVER_VERIFICATION_STATUS } from "~/lib/effect/services/plugin-
 import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
 
 import { getPluginServerManifestView } from "./plugin-server-manifest"
-import {
-  usePluginSettingsInteraction,
-  type CustomPluginServer,
-} from "./plugin-settings-interaction"
+import type { CustomPluginServer } from "./plugin-settings-interaction"
 import {
   SectionHeading,
   SettingsList,
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
+import { useProxySettings } from "./use-proxy-settings"
 
 const BALANCE_FORMATTER = new Intl.NumberFormat()
 const CHECKED_AT_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -53,7 +51,7 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
     handleTogglePluginServerProxy,
     refreshProxyProviderBalance,
     serverOperations,
-  } = usePluginSettingsInteraction()
+  } = useProxySettings()
   const proxyServers = React.useMemo(
     () =>
       pluginServers.flatMap((pluginServer) => {
@@ -413,6 +411,7 @@ const ProxyKeyDialog = ({
         submitPending={isSaving}
         submitDisabled={isSaving}
         cancelDisabled={isSaving}
+        onCancel={() => setOpen(false)}
         onSubmit={async (event) => {
           event.preventDefault()
           setIsSaving(true)

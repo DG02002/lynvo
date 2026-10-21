@@ -541,6 +541,7 @@ interface PluginDomainUpsertInput {
   pluginId: string
   credential?: EncryptedCredentialInput | undefined
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 interface InsertNewPluginDomainInput {
@@ -615,6 +616,7 @@ const insertNewPluginDomain = async ({
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements,
     guard: applied.guard,
   })
@@ -718,6 +720,7 @@ const updateExistingPluginDomain = async ({
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements,
     guard: applied.guard,
   })
@@ -767,6 +770,7 @@ export const upsertPluginDomain = async (
     pluginId: string
     credential?: EncryptedCredentialInput | undefined
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<UpsertPluginDomainResult> => {
   try {
@@ -833,6 +837,7 @@ export const setPluginDomainCredential = async (
     domainId: string
     credential: EncryptedCredentialInput
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<number> => {
   const domainRow = await requireAuthorizedDomainRow(
@@ -850,6 +855,7 @@ export const setPluginDomainCredential = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: prepared.statements,
     guard: createChangedWriteGuard(prepared.conditions.guard),
   })
@@ -873,7 +879,11 @@ export interface BeginCredentialChangeResult {
 export const beginPluginDomainCredentialChange = async (
   database: D1Database,
   userId: string,
-  input: { domainId: string; now: number }
+  input: {
+    domainId: string
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<BeginCredentialChangeResult> => {
   const domainRow = await requireAuthorizedDomainRow(
     database,
@@ -911,6 +921,7 @@ export const beginPluginDomainCredentialChange = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       ...ledgerMutation.statements,
@@ -950,6 +961,7 @@ export const finalizePluginDomainCredentialChange = async (
     attemptId: string
     credential: EncryptedCredentialInput
     now: number
+    realtime?: DurableObjectNamespace
   }
 ): Promise<number> => {
   const domainRow = await requireAuthorizedDomainRow(
@@ -996,6 +1008,7 @@ export const finalizePluginDomainCredentialChange = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparedCredential.statements,
       ...finalizationPreparation.statements,
@@ -1025,7 +1038,11 @@ export const finalizePluginDomainCredentialChange = async (
 export const deletePluginDomainCredential = async (
   database: D1Database,
   userId: string,
-  input: { domainId: string; now: number }
+  input: {
+    domainId: string
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<number> => {
   const domainRow = await requireAuthorizedDomainRow(
     database,
@@ -1100,6 +1117,7 @@ export const deletePluginDomainCredential = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements,
     guard: createChangedWriteGuard(revokedConditions.guard),
   })
@@ -1202,7 +1220,11 @@ const deletePluginDomainDocument = async ({
 export const deletePluginDomainById = async (
   database: D1Database,
   userId: string,
-  input: { domainId: string; now: number }
+  input: {
+    domainId: string
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<number> => {
   const domainRow = await requireAuthorizedDomainRow(
     database,
@@ -1219,6 +1241,7 @@ export const deletePluginDomainById = async (
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: deletion.statements,
   })
   return dataVersion

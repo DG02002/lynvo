@@ -35,6 +35,10 @@ The typed Effect API is grouped under
 `apps/lynvo/app/lib/effect/api/`; D1-specific routes and transactions live in
 `apps/lynvo/workers/d1/`.
 
+New JSON endpoints use Effect HttpApi groups and existing `/api/data/*` routes
+migrate incrementally. See [ADR 0001](../adr/0001-api-style.md) for the API
+boundary decision.
+
 The browser calls Lynvo's same-origin API. It does not call the Plugin Server
 directly and never receives the Plugin Server's bearer credential.
 

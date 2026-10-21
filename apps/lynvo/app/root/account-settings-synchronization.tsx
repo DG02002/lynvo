@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import { useLocation } from "react-router"
 
 import {
   getPlayerPreferences,
@@ -15,8 +16,11 @@ export const AccountSettingsSynchronization = ({
   userId?: string
   loadPlayerPreferences?: typeof loadCloudPlayerPreferences
 }) => {
+  const { pathname } = useLocation()
+  const isPlayerSettingsRoute = pathname === "/settings/player"
+
   useEffect(() => {
-    if (!userId) {
+    if (!userId || isPlayerSettingsRoute) {
       return undefined
     }
     let didCancel = false
@@ -41,7 +45,7 @@ export const AccountSettingsSynchronization = ({
     return () => {
       didCancel = true
     }
-  }, [loadPlayerPreferences, userId])
+  }, [isPlayerSettingsRoute, loadPlayerPreferences, userId])
 
   return null
 }

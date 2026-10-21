@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react"
 
+import { clearUserScopedStorage } from "~/context/remote-control/storage"
 import { requestNoStoreSameOriginWithSessionIdentity } from "~/lib/api/client"
 
 const identityStatusSchema = Schema.Union([
@@ -75,12 +76,7 @@ export const IdentitySynchronizer = ({
         }
         isReloading.current = true
         if (userId) {
-          for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-            const key = localStorage.key(index)
-            if (key?.includes(userId)) {
-              localStorage.removeItem(key)
-            }
-          }
+          clearUserScopedStorage(localStorage, userId)
         }
         window.location.reload()
         return false

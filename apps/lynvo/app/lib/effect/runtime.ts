@@ -21,6 +21,8 @@ const createRuntime = (env: Env) => {
 let runtime: ReturnType<typeof createRuntime> | undefined
 
 export const getRuntime = (env: Env): ReturnType<typeof createRuntime> => {
+  // A Worker isolate keeps one deployment environment; test environments that
+  // reuse this module can otherwise keep the first injected Env here.
   runtime ??= createRuntime(env)
   return runtime
 }

@@ -7,6 +7,7 @@ import type {
 export interface LinksSnapshotStore {
   getSnapshot: () => LinkViewItem[]
   getVersion: () => number
+  shouldFetchVersion: (expectedVersion?: number, force?: boolean) => boolean
   hasServerSnapshot: () => boolean
   subscribe: (listener: () => void) => () => void
   applyServerSnapshot: (items: LinkViewItem[], version: number) => boolean
@@ -57,6 +58,13 @@ interface PendingEntry {
 }
 
 const TEMPORARY_ID_PREFIX = "temp:"
+
+export const shouldFetchLinksVersion = (
+  currentVersion: number,
+  expectedVersion?: number,
+  force = false
+): boolean =>
+  force || (expectedVersion !== undefined && expectedVersion > currentVersion)
 
 const haveSameServerItems = (
   currentItems: LinkViewItem[],
@@ -165,6 +173,8 @@ export const createLinksSnapshotStore = (
   return {
     getSnapshot: () => visibleItems,
     getVersion: () => version,
+    shouldFetchVersion: (expectedVersion, force) =>
+      shouldFetchLinksVersion(version, expectedVersion, force),
     hasServerSnapshot: () => hasServerSnapshot,
     subscribe: (listener) => {
       listeners.add(listener)

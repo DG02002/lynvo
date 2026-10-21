@@ -5,14 +5,16 @@ import type { ReactNode } from "react"
 import { Skeleton } from "~/components/ui/skeleton"
 import { cn } from "~/lib/utils"
 
-import { SaveListBackButton } from "./save-list-header-controls"
 import {
   FINDER_FOLDER_CONTENT_GRID_CLASS,
   GALLERY_GROUP_CONTENT_CLASS,
   GALLERY_GRID_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
-  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
+import {
+  ImmersiveBrowserHeader,
+  SeasonArtworkAside,
+} from "./save-list-shared-layout"
 
 interface SaveListStateProps {
   readonly title: string
@@ -138,13 +140,13 @@ const FolderAside = () => (
 )
 
 const GalleryGroupAside = () => (
-  <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
+  <SeasonArtworkAside>
     <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
       <div className="save-list-group-artwork-frame relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m">
         <SaveListCardSkeleton label="Loading artwork…" />
       </div>
     </div>
-  </aside>
+  </SeasonArtworkAside>
 )
 
 interface ImmersiveLoadingPreset {
@@ -186,18 +188,21 @@ export const SaveListImmersiveLoadingState = ({
         "flex h-svh flex-col overflow-hidden bg-background"
       )}
     >
-      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-        <SaveListBackButton onNavigateBack={onNavigateBack} />
-        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
-          <Skeleton aria-hidden="true" className="hidden h-5 w-48 md:block" />
-        </div>
-        <div className="flex items-center justify-center">
-          <Skeleton aria-hidden="true" radius="sm" className="size-5" />
-        </div>
-        <div className="flex items-center justify-center border-l">
-          <Skeleton aria-hidden="true" radius="lg" className="size-9" />
-        </div>
-      </header>
+      <ImmersiveBrowserHeader
+        onNavigateBack={onNavigateBack}
+        title={
+          <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
+            <Skeleton aria-hidden="true" className="hidden h-5 w-48 md:block" />
+          </div>
+        }
+        center={
+          <div className="flex items-center justify-center">
+            <Skeleton aria-hidden="true" radius="sm" className="size-5" />
+          </div>
+        }
+        menuCellClassName="flex items-center justify-center border-l"
+        menu={<Skeleton aria-hidden="true" radius="lg" className="size-9" />}
+      />
       <div className={preset.contentGridClass}>
         <preset.Aside />
         <div

@@ -23,8 +23,8 @@ import {
 } from "../constants"
 import {
   CHANGED_ROWS_GUARD,
-  createDataVersionBumpStatement,
   executeOwnedWrite,
+  executeOwnedWriteBatch,
   getDataVersion,
   type OwnedWriteGuard,
   type OwnedWriteResult,
@@ -139,6 +139,7 @@ interface CreateOrUpdateSavedLinkInput {
   createdAt?: number | undefined
   extractionCredential?: SavedLinkExtractionCredentialWrite | null
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 interface CreateOrUpdateSavedLinkAttemptInput {
@@ -157,16 +158,10 @@ interface CreateOrUpdateSavedLinkAttemptResult {
 }
 
 interface RunCreateOrUpdateSavedLinkAttemptsInput {
-  database: D1Database
-  userId: string
-  operationId: string
   attempt: () => Promise<CreateOrUpdateSavedLinkAttemptResult>
 }
 
 interface ExecuteCreateOrUpdateSavedLinkAttemptInput {
-  database: D1Database
-  userId: string
-  operationId: string
   attemptIndex: number
   attempt: () => Promise<CreateOrUpdateSavedLinkAttemptResult>
 }
@@ -226,7 +221,6 @@ interface SavedLinkOptimisticMutationAttemptResult {
 interface RunSavedLinkOptimisticMutationInput {
   database: D1Database
   userId: string
-  operationId: string
   attempt: () => Promise<SavedLinkOptimisticMutationAttemptResult>
 }
 
@@ -239,6 +233,7 @@ interface UpdateSavedLinkMetaInput {
   id: string
   meta: string
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 interface UpdateSavedLinkMetaAttemptInput {
@@ -253,11 +248,13 @@ interface ApplySavedLinkMetadataOperationInput {
   id: string
   operation: SavedLinkMetadataOperation
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 interface ClearSavedLinksInput {
   operationId: string
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 const toSavedLinkExtractionCredentialLinkState = (
@@ -353,7 +350,6 @@ interface ExpiredLinkUserSummary {
 
 interface PreparedExpiredLinkUserMutation {
   statements: D1PreparedStatement[]
-  dataVersionStatement: D1PreparedStatement
 }
 
 interface ExpiredLinkBatchOutcome {
@@ -538,6 +534,7 @@ const createSavedLinkMetadataNextRow = ({
 interface GuardedSavedLinkMetaWriteInput {
   readonly database: D1Database
   readonly userId: string
+  readonly realtime?: DurableObjectNamespace
   readonly operationId: string
   readonly existingRow: LinkRow
   readonly nextRow: LinkRow
@@ -548,6 +545,7 @@ interface GuardedSavedLinkMetaWriteInput {
 const executeGuardedSavedLinkMetaWrite = async ({
   database,
   userId,
+  realtime,
   operationId,
   existingRow,
   nextRow,
@@ -580,6 +578,7 @@ const executeGuardedSavedLinkMetaWrite = async ({
   return executeOwnedWrite({
     database,
     userId,
+    realtime,
     statements: [
       ...preparation.statements,
       updateStatement,
@@ -620,6 +619,7 @@ const executeApplySavedLinkMetadataAttempt = async (
   return executeGuardedSavedLinkMetaWrite({
     database,
     userId,
+    realtime: input.realtime,
     operationId: input.operationId,
     existingRow,
     nextRow,
@@ -656,6 +656,7 @@ const executeUpdateSavedLinkMetaAttempt = async ({
   return executeGuardedSavedLinkMetaWrite({
     database,
     userId,
+    realtime: input.realtime,
     operationId: input.operationId,
     existingRow,
     nextRow,
@@ -676,7 +677,12 @@ const executeUpdateSavedLinkMetaAttempt = async ({
 const executeDeleteSavedLink = async (
   database: D1Database,
   userId: string,
-  input: { operationId: string; id: string; now: number }
+  input: {
+    operationId: string
+    id: string
+    now: number
+    realtime?: DurableObjectNamespace
+  }
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const preparation = await ensureStorageLedger(database, userId, input.now)
@@ -700,6 +706,7 @@ const executeDeleteSavedLink = async (
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       createSavedLinkDeleteClaimStatement(database, deleteOperation),
@@ -740,10 +747,6 @@ const executeClearSavedLinks = async (
     preparation = await ensureStorageLedger(database, userId, input.now)
     ;({ savedLinkCount } = preparation.ledger)
     if (savedLinkCount === 0) {
-      await releaseReservedSavedLinkCommandOperation(database, {
-        userId,
-        operationId: input.operationId,
-      })
       return {
         success: false,
         replayed: false,
@@ -755,6 +758,7 @@ const executeClearSavedLinks = async (
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       database
@@ -826,113 +830,82 @@ const resolveSavedLinkReservationConflict = async (
   }
 }
 
-const reserveSavedLinkMutation = async (
-  database: D1Database,
-  userId: string,
-  input: SavedLinkMutationReservationInput
-): Promise<SavedLinkMutationResult | undefined> => {
-  const replay = await findSavedLinkOperationReplay(database, {
-    userId,
+interface WithReservedSavedLinkMutationInput
+  extends SavedLinkCommandOperationKey, SavedLinkMutationReservationInput {
+  database: D1Database
+}
+
+interface SavedLinkMutationExecution<Result> {
+  result: Result
+  completed: boolean
+}
+
+interface WithReservedSavedLinkMutationHandlers<Result> {
+  onReplay: (
+    operation: CompletedSavedLinkOperation,
+    dataVersion: number
+  ) => Result
+  onInFlight: (dataVersion: number) => Result
+  mutate: () => Promise<SavedLinkMutationExecution<Result>>
+}
+
+const withReservedSavedLinkMutation = async <Result>(
+  input: WithReservedSavedLinkMutationInput,
+  handlers: WithReservedSavedLinkMutationHandlers<Result>
+): Promise<Result> => {
+  const operationKey = {
+    userId: input.userId,
     operationId: input.operationId,
-  })
-  if (replay) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: replay.dataVersion,
-    }
   }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
-    operationId: input.operationId,
+  const replay = await findSavedLinkOperationReplay(
+    input.database,
+    operationKey
+  )
+  if (replay) {
+    return handlers.onReplay(replay.operation, replay.dataVersion)
+  }
+  const reserved = await reserveSavedLinkCommandOperation(input.database, {
+    ...operationKey,
     command: input.command,
     now: input.now,
   })
   if (!reserved) {
-    const outcome = await resolveSavedLinkReservationConflict(database, {
-      userId,
-      operationId: input.operationId,
-    })
+    const outcome = await resolveSavedLinkReservationConflict(
+      input.database,
+      operationKey
+    )
     return outcome.kind === "completed"
-      ? {
-          success: true,
-          replayed: true,
-          dataVersion: outcome.dataVersion,
-        }
-      : {
-          success: false,
-          replayed: false,
-          dataVersion: outcome.dataVersion,
-        }
+      ? handlers.onReplay(outcome.operation, outcome.dataVersion)
+      : handlers.onInFlight(outcome.dataVersion)
   }
-  return undefined
-}
-
-const reserveCreateOrUpdateSavedLink = async (
-  database: D1Database,
-  userId: string,
-  input: CreateOrUpdateSavedLinkInput
-): Promise<SavedLinkCommandResult | undefined> => {
-  const replay = await findSavedLinkOperationReplay(database, {
-    userId,
-    operationId: input.operationId,
-  })
-  if (replay) {
-    return {
-      id: replay.operation.linkId,
-      replayed: true,
-      dataVersion: replay.dataVersion,
-    }
+  let execution: SavedLinkMutationExecution<Result>
+  try {
+    execution = await handlers.mutate()
+  } catch (error) {
+    await releaseReservedSavedLinkCommandOperation(input.database, operationKey)
+    throw error
   }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
-    operationId: input.operationId,
-    command: "create-or-update",
-    now: input.now,
-  })
-  if (!reserved) {
-    const outcome = await resolveSavedLinkReservationConflict(database, {
-      userId,
-      operationId: input.operationId,
-    })
-    const replayed = outcome.kind === "completed"
-    return {
-      id: replayed ? outcome.operation.linkId : null,
-      replayed,
-      dataVersion: outcome.dataVersion,
-    }
+  if (!execution.completed) {
+    await releaseReservedSavedLinkCommandOperation(input.database, operationKey)
   }
-  return undefined
+  return execution.result
 }
 
 const attemptNextSavedLinkOptimisticMutation = async ({
   database,
   userId,
-  operationId,
   attempt,
   attemptsRemaining,
 }: SavedLinkOptimisticMutationStepInput): Promise<SavedLinkMutationResult> => {
-  try {
-    const result = await attempt()
-    if (result.changed) {
-      return {
-        success: true,
-        replayed: false,
-        dataVersion: result.dataVersion,
-      }
+  const result = await attempt()
+  if (result.changed) {
+    return {
+      success: true,
+      replayed: false,
+      dataVersion: result.dataVersion,
     }
-  } catch (error) {
-    await releaseReservedSavedLinkCommandOperation(database, {
-      userId,
-      operationId,
-    })
-    throw error
   }
   if (attemptsRemaining <= 1) {
-    await releaseReservedSavedLinkCommandOperation(database, {
-      userId,
-      operationId,
-    })
     return {
       success: false,
       replayed: false,
@@ -942,7 +915,6 @@ const attemptNextSavedLinkOptimisticMutation = async ({
   return attemptNextSavedLinkOptimisticMutation({
     database,
     userId,
-    operationId,
     attempt,
     attemptsRemaining: attemptsRemaining - 1,
   })
@@ -951,13 +923,11 @@ const attemptNextSavedLinkOptimisticMutation = async ({
 const runSavedLinkOptimisticMutation = async ({
   database,
   userId,
-  operationId,
   attempt,
 }: RunSavedLinkOptimisticMutationInput): Promise<SavedLinkMutationResult> =>
   attemptNextSavedLinkOptimisticMutation({
     database,
     userId,
-    operationId,
     attempt,
     attemptsRemaining: SAVED_LINK_OPTIMISTIC_RETRY_ATTEMPTS,
   })
@@ -1039,6 +1009,7 @@ const updateExistingSavedLink = async ({
   const { dataVersion, changed } = await executeGuardedSavedLinkMetaWrite({
     database,
     userId,
+    realtime: input.realtime,
     operationId: input.operationId,
     existingRow,
     nextRow,
@@ -1164,6 +1135,7 @@ const insertNewSavedLink = async ({
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime: input.realtime,
     statements: [
       ...preparation.statements,
       ...(evictionMutation?.statements ?? []),
@@ -1253,9 +1225,6 @@ const isConcurrentCreateConflict = (error: Error): boolean =>
   error.message.includes("UNIQUE constraint failed: links.user_id, links.url")
 
 const executeCreateOrUpdateSavedLinkAttempt = async ({
-  database,
-  userId,
-  operationId,
   attemptIndex,
   attempt,
 }: ExecuteCreateOrUpdateSavedLinkAttemptInput): Promise<
@@ -1271,25 +1240,15 @@ const executeCreateOrUpdateSavedLinkAttempt = async ({
     ) {
       return undefined
     }
-    await releaseReservedSavedLinkCommandOperation(database, {
-      userId,
-      operationId,
-    })
     throw error
   }
 }
 
 const runNextCreateOrUpdateSavedLinkAttempt = async ({
-  database,
-  userId,
-  operationId,
   attemptIndex,
   attempt,
 }: ExecuteCreateOrUpdateSavedLinkAttemptInput): Promise<SavedLinkCommandResult> => {
   const result = await executeCreateOrUpdateSavedLinkAttempt({
-    database,
-    userId,
-    operationId,
     attemptIndex,
     attempt,
   })
@@ -1301,31 +1260,18 @@ const runNextCreateOrUpdateSavedLinkAttempt = async ({
     }
   }
   if (attemptIndex + 1 >= SAVED_LINK_OPTIMISTIC_RETRY_ATTEMPTS) {
-    await releaseReservedSavedLinkCommandOperation(database, {
-      userId,
-      operationId,
-    })
     throw new Error("Saved link changed while saving; retry")
   }
   return runNextCreateOrUpdateSavedLinkAttempt({
-    database,
-    userId,
-    operationId,
     attemptIndex: attemptIndex + 1,
     attempt,
   })
 }
 
 const runCreateOrUpdateSavedLinkAttempts = async ({
-  database,
-  userId,
-  operationId,
   attempt,
 }: RunCreateOrUpdateSavedLinkAttemptsInput): Promise<SavedLinkCommandResult> =>
   runNextCreateOrUpdateSavedLinkAttempt({
-    database,
-    userId,
-    operationId,
     attemptIndex: 0,
     attempt,
   })
@@ -1407,140 +1353,207 @@ export const createOrUpdateSavedLink = async (
   database: D1Database,
   userId: string,
   input: CreateOrUpdateSavedLinkInput
-): Promise<SavedLinkCommandResult> => {
-  const replayed = await reserveCreateOrUpdateSavedLink(database, userId, input)
-  if (replayed) {
-    return replayed
-  }
-  const retentionDays = await getUserRetentionDays(database, userId)
-  await deleteExpiredLinksForUser({
-    database,
-    userId,
-    retentionDays,
-    now: input.now,
-  })
-
-  const metadataJson = canonicalizeLinkMetadataJson(input.meta)
-  const extractionState = input.extractionState ?? "complete"
-  return runCreateOrUpdateSavedLinkAttempts({
-    database,
-    userId,
-    operationId: input.operationId,
-    attempt: () =>
-      createOrUpdateSavedLinkAttempt({
-        database,
-        userId,
-        input,
-        metadataJson,
-        extractionState,
-        retentionDays,
+): Promise<SavedLinkCommandResult> =>
+  withReservedSavedLinkMutation(
+    {
+      database,
+      userId,
+      operationId: input.operationId,
+      command: "create-or-update",
+      now: input.now,
+    },
+    {
+      onReplay: (operation, dataVersion) => ({
+        id: operation.linkId,
+        replayed: true,
+        dataVersion,
       }),
-  })
-}
+      onInFlight: (dataVersion) => ({
+        id: null,
+        replayed: false,
+        dataVersion,
+      }),
+      mutate: async () => {
+        const retentionDays = await getUserRetentionDays(database, userId)
+        await deleteExpiredLinksForUser({
+          database,
+          userId,
+          retentionDays,
+          now: input.now,
+          realtime: input.realtime,
+        })
+
+        const metadataJson = canonicalizeLinkMetadataJson(input.meta)
+        const extractionState = input.extractionState ?? "complete"
+        const result = await runCreateOrUpdateSavedLinkAttempts({
+          attempt: () =>
+            createOrUpdateSavedLinkAttempt({
+              database,
+              userId,
+              input,
+              metadataJson,
+              extractionState,
+              retentionDays,
+            }),
+        })
+        return { result, completed: true }
+      },
+    }
+  )
 
 export const updateSavedLinkMeta = async (
   database: D1Database,
   userId: string,
   input: UpdateSavedLinkMetaInput
-): Promise<SavedLinkMutationResult> => {
-  const replayed = await reserveSavedLinkMutation(database, userId, {
-    operationId: input.operationId,
-    command: "update-meta",
-    now: input.now,
-  })
-  if (replayed) {
-    return replayed
-  }
-  const metadataJson = canonicalizeLinkMetadataJson(input.meta)
-  return runSavedLinkOptimisticMutation({
-    database,
-    userId,
-    operationId: input.operationId,
-    attempt: () =>
-      executeUpdateSavedLinkMetaAttempt({
-        database,
-        userId,
-        input,
-        metadataJson,
+): Promise<SavedLinkMutationResult> =>
+  withReservedSavedLinkMutation(
+    {
+      database,
+      userId,
+      operationId: input.operationId,
+      command: "update-meta",
+      now: input.now,
+    },
+    {
+      onReplay: (_operation, dataVersion) => ({
+        success: true,
+        replayed: true,
+        dataVersion,
       }),
-  })
-}
+      onInFlight: (dataVersion) => ({
+        success: false,
+        replayed: false,
+        dataVersion,
+      }),
+      mutate: async () => {
+        const metadataJson = canonicalizeLinkMetadataJson(input.meta)
+        const result = await runSavedLinkOptimisticMutation({
+          database,
+          userId,
+          attempt: () =>
+            executeUpdateSavedLinkMetaAttempt({
+              database,
+              userId,
+              input,
+              metadataJson,
+            }),
+        })
+        return { result, completed: result.success }
+      },
+    }
+  )
 
 export const applySavedLinkMetadataOperation = async (
   database: D1Database,
   userId: string,
   input: ApplySavedLinkMetadataOperationInput
-): Promise<SavedLinkMutationResult> => {
-  const replayed = await reserveSavedLinkMutation(database, userId, {
-    operationId: input.operationId,
-    command: "apply-metadata-operation",
-    now: input.now,
-  })
-  if (replayed) {
-    return replayed
-  }
-  return runSavedLinkOptimisticMutation({
-    database,
-    userId,
-    operationId: input.operationId,
-    attempt: () =>
-      executeApplySavedLinkMetadataAttempt(database, userId, input),
-  })
-}
+): Promise<SavedLinkMutationResult> =>
+  withReservedSavedLinkMutation(
+    {
+      database,
+      userId,
+      operationId: input.operationId,
+      command: "apply-metadata-operation",
+      now: input.now,
+    },
+    {
+      onReplay: (_operation, dataVersion) => ({
+        success: true,
+        replayed: true,
+        dataVersion,
+      }),
+      onInFlight: (dataVersion) => ({
+        success: false,
+        replayed: false,
+        dataVersion,
+      }),
+      mutate: async () => {
+        const result = await runSavedLinkOptimisticMutation({
+          database,
+          userId,
+          attempt: () =>
+            executeApplySavedLinkMetadataAttempt(database, userId, input),
+        })
+        return { result, completed: result.success }
+      },
+    }
+  )
 
 export const deleteSavedLinkById = async (
   database: D1Database,
   userId: string,
-  input: { operationId: string; id: string; now: number }
-): Promise<SavedLinkMutationResult> => {
-  const replayed = await reserveSavedLinkMutation(database, userId, {
-    operationId: input.operationId,
-    command: "delete",
-    now: input.now,
-  })
-  if (replayed) {
-    return replayed
+  input: {
+    operationId: string
+    id: string
+    now: number
+    realtime?: DurableObjectNamespace
   }
-  try {
-    return await executeDeleteSavedLink(database, userId, input)
-  } catch (error) {
-    await releaseReservedSavedLinkCommandOperation(database, {
+): Promise<SavedLinkMutationResult> =>
+  withReservedSavedLinkMutation(
+    {
+      database,
       userId,
       operationId: input.operationId,
-    })
-    throw error
-  }
-}
+      command: "delete",
+      now: input.now,
+    },
+    {
+      onReplay: (_operation, dataVersion) => ({
+        success: true,
+        replayed: true,
+        dataVersion,
+      }),
+      onInFlight: (dataVersion) => ({
+        success: false,
+        replayed: false,
+        dataVersion,
+      }),
+      mutate: async () => ({
+        result: await executeDeleteSavedLink(database, userId, input),
+        completed: true,
+      }),
+    }
+  )
 
 export const clearSavedLinks = async (
   database: D1Database,
   userId: string,
   input: ClearSavedLinksInput
-): Promise<ClearSavedLinksResult> => {
-  const replayed = await reserveSavedLinkMutation(database, userId, {
-    operationId: input.operationId,
-    command: "clear",
-    now: input.now,
-  })
-  if (replayed) {
-    return { ...replayed, deletedLinks: 0 }
-  }
-  try {
-    return await executeClearSavedLinks(database, userId, input)
-  } catch (error) {
-    await releaseReservedSavedLinkCommandOperation(database, {
+): Promise<ClearSavedLinksResult> =>
+  withReservedSavedLinkMutation(
+    {
+      database,
       userId,
       operationId: input.operationId,
-    })
-    throw error
-  }
-}
+      command: "clear",
+      now: input.now,
+    },
+    {
+      onReplay: (_operation, dataVersion) => ({
+        success: true,
+        replayed: true,
+        deletedLinks: 0,
+        dataVersion,
+      }),
+      onInFlight: (dataVersion) => ({
+        success: false,
+        replayed: false,
+        deletedLinks: 0,
+        dataVersion,
+      }),
+      mutate: async () => {
+        const result = await executeClearSavedLinks(database, userId, input)
+        return { result, completed: result.success }
+      },
+    }
+  )
 
 interface DeleteExpiredLinksForUserInput {
   database: D1Database
   userId: string
   retentionDays: number
   now: number
+  realtime?: DurableObjectNamespace
 }
 
 export const deleteExpiredLinksForUser = async ({
@@ -1548,6 +1561,7 @@ export const deleteExpiredLinksForUser = async ({
   userId,
   retentionDays,
   now,
+  realtime,
 }: DeleteExpiredLinksForUserInput): Promise<{
   deletedCount: number
   dataVersion: number
@@ -1578,6 +1592,7 @@ export const deleteExpiredLinksForUser = async ({
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
+    realtime,
     statements: [
       ...preparation.statements,
       ...ledgerStatements,
@@ -1644,20 +1659,19 @@ const prepareExpiredLinkUserMutation = async (
         deleteExtractionCredentials: false,
       }),
     ],
-    dataVersionStatement: createDataVersionBumpStatement(
-      database,
-      summary.userId,
-      CHANGED_ROWS_GUARD
-    ),
   }
 }
 
-const prepareExpiredLinkBatchStatements = async (
+const prepareExpiredLinkBatchWrites = async (
   database: D1Database,
   rows: readonly LinkRow[],
   now: number
 ): Promise<{
-  statements: D1PreparedStatement[]
+  writes: Array<{
+    userId: string
+    statements: D1PreparedStatement[]
+    guard: typeof CHANGED_ROWS_GUARD
+  }>
 }> => {
   const summaries = summarizeExpiredLinksByUser(rows)
   const preparedUsers = await Promise.all(
@@ -1665,28 +1679,26 @@ const prepareExpiredLinkBatchStatements = async (
       prepareExpiredLinkUserMutation(database, summary, now)
     )
   )
-  const statements: D1PreparedStatement[] = []
-  for (const preparedUser of preparedUsers) {
-    statements.push(...preparedUser.statements)
-    statements.push(preparedUser.dataVersionStatement)
+  return {
+    writes: summaries.map((summary, index) => ({
+      userId: summary.userId,
+      statements: preparedUsers[index]?.statements ?? [],
+      guard: CHANGED_ROWS_GUARD,
+    })),
   }
-  return { statements }
 }
 
 const processExpiredLinkBatch = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime?: DurableObjectNamespace
 ): Promise<ExpiredLinkBatchOutcome | undefined> => {
   const rows = await loadExpiredLinkBatch(database, now)
   if (!rows) {
     return undefined
   }
-  const { statements } = await prepareExpiredLinkBatchStatements(
-    database,
-    rows,
-    now
-  )
-  await database.batch(statements)
+  const { writes } = await prepareExpiredLinkBatchWrites(database, rows, now)
+  await executeOwnedWriteBatch({ database, realtime, writes })
   return {
     deletedLinks: rows.length,
     continued: rows.length === LINK_RETENTION_BATCH_SIZE,
@@ -1701,6 +1713,7 @@ export interface RetentionSweepOutcome {
 interface ExpiredLinkSweepState {
   database: D1Database
   now: number
+  realtime?: DurableObjectNamespace
   batchesRemaining: number
   deletedLinks: number
 }
@@ -1708,13 +1721,14 @@ interface ExpiredLinkSweepState {
 const sweepNextExpiredLinkBatch = async ({
   database,
   now,
+  realtime,
   batchesRemaining,
   deletedLinks,
 }: ExpiredLinkSweepState): Promise<RetentionSweepOutcome> => {
   if (batchesRemaining === 0) {
     return { deletedLinks, continued: true }
   }
-  const batchOutcome = await processExpiredLinkBatch(database, now)
+  const batchOutcome = await processExpiredLinkBatch(database, now, realtime)
   if (!batchOutcome) {
     return { deletedLinks, continued: false }
   }
@@ -1725,6 +1739,7 @@ const sweepNextExpiredLinkBatch = async ({
   return sweepNextExpiredLinkBatch({
     database,
     now,
+    realtime,
     batchesRemaining: batchesRemaining - 1,
     deletedLinks: nextDeletedLinks,
   })
@@ -1732,11 +1747,13 @@ const sweepNextExpiredLinkBatch = async ({
 
 export const sweepExpiredLinks = async (
   database: D1Database,
-  now: number
+  now: number,
+  realtime?: DurableObjectNamespace
 ): Promise<RetentionSweepOutcome> =>
   sweepNextExpiredLinkBatch({
     database,
     now,
+    realtime,
     batchesRemaining: RETENTION_SWEEP_MAX_BATCHES_PER_RUN,
     deletedLinks: 0,
   })

@@ -38,6 +38,7 @@ import {
   type ExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import { GalleryGroupMenu } from "./gallery-group-menu"
+import { getGallerySaveItemAriaLabel } from "./item-aria-label"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { SaveDateGroupSection } from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
@@ -47,6 +48,7 @@ import {
   GALLERY_IMAGE_SIZES,
 } from "./save-list-layout-constants"
 import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
+import { useSaveListSession } from "./save-list-session"
 import {
   SaveListCardSkeleton,
   SaveListEmptyState,
@@ -316,12 +318,14 @@ const GallerySaveItem = ({
     actions.markOpened(item.url, item.url)
     onOpenItem(item.url)
   }
-  let activationLabel = `Open ${group.displayTitle}`
-  if (isExtractionVisual && isExtractionFailed) {
-    activationLabel = `Open actions for ${group.displayTitle}`
-  } else if (isSingleItem && item && !directLink) {
-    activationLabel = `View ${getItemTitle(item)}`
-  }
+  const activationLabel = getGallerySaveItemAriaLabel({
+    groupTitle: group.displayTitle,
+    isExtractionVisual,
+    didExtractionFail: isExtractionFailed,
+    isSingleItem,
+    itemTitle: item ? getItemTitle(item) : undefined,
+    hasDirectLink: directLink !== undefined,
+  })
 
   return (
     <article
@@ -451,10 +455,6 @@ const GallerySaveItem = ({
 
 interface GallerySaveGridProps {
   readonly groups: readonly GalleryGroup[]
-  readonly actions: LinkItemActions
-  readonly extractingItems: Set<string>
-  readonly isHydrating: boolean
-  readonly highlightedId: string | null
   readonly currentTimeMs?: number
   readonly onOpenItem: (itemUrl: string) => void
   readonly onOpenGroup: (groupKey: string) => void
@@ -462,14 +462,12 @@ interface GallerySaveGridProps {
 
 export const GallerySaveGrid = ({
   groups,
-  actions,
-  extractingItems,
-  isHydrating,
-  highlightedId,
   currentTimeMs: currentTimeMsInput,
   onOpenItem,
   onOpenGroup,
 }: GallerySaveGridProps) => {
+  const { actions, extractingItems, isHydrating, highlightedId } =
+    useSaveListSession()
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   if (isHydrating) {
     return (

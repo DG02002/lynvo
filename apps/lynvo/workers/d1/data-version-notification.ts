@@ -1,3 +1,5 @@
+import { USER_REALTIME_ROOM_INTERNAL_URLS } from "../realtime/realtime-room-client"
+
 /**
  * Awaiting the room fetch is deliberate. Connected clients only poll for a
  * missed version while their realtime socket is disconnected, so a client
@@ -8,15 +10,36 @@
  * reconnect, in exchange for removing one Durable Object round trip from
  * the response path.
  */
-export const notifyAccountDataChanged = async (
-  env: Env,
+const notifyAccountDataChanged = async (
+  realtime: DurableObjectNamespace,
   userId: string,
   version: number
 ): Promise<void> => {
-  await env.USER_REALTIME_ROOM?.getByName(userId).fetch(
-    new Request("https://realtime.internal/notify-data-changed", {
+  const response = await realtime.getByName(userId).fetch(
+    new Request(USER_REALTIME_ROOM_INTERNAL_URLS.notifyDataChanged, {
       method: "POST",
       body: JSON.stringify({ version }),
     })
   )
+  if (!response.ok) {
+    throw new Error(
+      `Realtime data-change notification failed with HTTP ${response.status}`
+    )
+  }
+}
+
+export const notifyAccountDataChangedSafely = async (
+  realtime: DurableObjectNamespace,
+  userId: string,
+  version: number
+): Promise<void> => {
+  try {
+    await notifyAccountDataChanged(realtime, userId, version)
+  } catch (cause) {
+    console.warn("data_changed_push_failed", {
+      user_id: userId,
+      version,
+      error: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
 }

@@ -1,3 +1,5 @@
+// TV-Bro-specific UI mechanisms and extension guidance live in
+// docs/internals/tv-bro-ui.md.
 import { useSyncExternalStore } from "react"
 
 import {

@@ -328,6 +328,9 @@ export const registerD1AuthRoutes = (
     if (!database) {
       return context.text("Device exchange is not configured", 503)
     }
+    if (!isSameOriginRequest(context.req.raw)) {
+      return context.text("Forbidden", 403)
+    }
     const rateLimitResult = await checkRateLimit({
       environment: context.env,
       key: `auth:device-exchange:${getClientIp(context.req.raw)}`,

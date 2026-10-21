@@ -17,6 +17,18 @@ const pendingAcknowledgementSchema = Schema.Tuple([
   Schema.String,
   Schema.String,
 ])
+
+export const clearUserScopedStorage = (storage: Storage, userId: string) => {
+  // Remote-control keys include the raw user ID; keep that contract here so
+  // every account-scoped browser value is revoked through the same pass.
+  for (let index = storage.length - 1; index >= 0; index -= 1) {
+    const key = storage.key(index)
+    if (key?.includes(userId)) {
+      storage.removeItem(key)
+    }
+  }
+}
+
 const deliveryRecordSchema = Schema.Struct({
   processed: Schema.Array(timedCommandEntrySchema),
   applied: Schema.Array(timedCommandEntrySchema),

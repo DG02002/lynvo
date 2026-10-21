@@ -14,20 +14,17 @@ import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "../../workers/d1/storage-ledger"
-import {
-  insertGoogleUser,
-  updateUserStorageRetentionDays,
-} from "../../workers/d1/users"
+import { updateUserStorageRetentionDays } from "../../workers/d1/users"
+import { createUserFactory } from "../support/worker-fixtures"
 
 const NOW = 1_750_000_000_000
 const DAY_MS = 24 * 60 * 60 * 1000
 
-const createUser = async () =>
-  insertGoogleUser(env.DB, {
-    googleSubject: `subject-${crypto.randomUUID()}`,
-    email: "ledger-test@example.com",
-    now: NOW,
-  })
+const createUser = createUserFactory(
+  env.DB,
+  NOW,
+  () => "ledger-test@example.com"
+)
 
 const emptyMetadataJson = (source?: { readonly [key: string]: string }) =>
   JSON.stringify({

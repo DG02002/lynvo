@@ -7,12 +7,45 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
+import { GalleryGroupBrowser as GalleryGroupBrowserView } from "~/components/save-list/gallery-group-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { GalleryGroup } from "~/features/links/media-artwork"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 
 import type { MediaArtworkRequest } from "../../shared/api-contracts"
+import { createLinkItemActions } from "../support/link-item-actions"
 import { readJsonInitBody } from "../support/request-inspection"
+import { SaveListSessionTestProvider } from "../support/save-list-session-provider"
+
+interface GalleryGroupBrowserHarnessProps {
+  readonly group: GalleryGroup
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly currentTimeMs?: number
+  readonly onExit: () => void
+  readonly onOpenItem: (itemUrl: string) => void
+}
+
+const GalleryGroupBrowser = ({
+  group,
+  actions,
+  extractingItems,
+  currentTimeMs,
+  onExit,
+  onOpenItem,
+}: GalleryGroupBrowserHarnessProps) => (
+  <SaveListSessionTestProvider
+    actions={actions}
+    extractingItems={extractingItems}
+  >
+    <GalleryGroupBrowserView
+      group={group}
+      currentTimeMs={currentTimeMs}
+      onExit={onExit}
+      onOpenItem={onOpenItem}
+    />
+  </SaveListSessionTestProvider>
+)
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -52,18 +85,6 @@ const createMediaArtworkFetch = () =>
       headers: { "Content-Type": "application/json" },
     })
   })
-
-const createActions = (): LinkItemActions => ({
-  play: vi.fn().mockResolvedValue({ accepted: true }),
-  remove: vi.fn(),
-  showLinks: vi.fn(),
-  markOpened: vi.fn(),
-  expandFolder: vi.fn(),
-  softRefresh: vi.fn(),
-  hardRefresh: vi.fn(),
-  expandMirror: vi.fn().mockResolvedValue(null),
-  setArtwork: vi.fn(),
-})
 
 const createEpisodeItem = (
   itemId = "sample-episode-1",
@@ -115,7 +136,7 @@ const renderBrowser = (
   items: readonly LinkListItem[] = [createEpisodeItem()],
   overrides: { actions?: LinkItemActions; onExit?: () => void } = {}
 ) => {
-  const actions = overrides.actions ?? createActions()
+  const actions = overrides.actions ?? createLinkItemActions()
   const onExit = overrides.onExit ?? vi.fn()
   const view = render(
     <GalleryGroupBrowser
@@ -148,7 +169,7 @@ const renderNonEpisodeGroupBrowser = () =>
         lastAddedAt: Date.now(),
         items: [createEpisodeItem("ordinary-download", "downloaded-video.mkv")],
       }}
-      actions={createActions()}
+      actions={createLinkItemActions()}
       extractingItems={new Set()}
       onExit={vi.fn()}
       onOpenItem={vi.fn()}
@@ -444,7 +465,12 @@ describe("GalleryGroupBrowser", () => {
   it("keeps artwork picking and refreshing off group rows for direct media items", async () => {
     const episodeItem = createEpisodeItem()
     episodeItem.metadata.source.pluginId = "direct-media"
-    const { actions } = renderBrowser([episodeItem])
+    // The shared factory omits setArtwork; including it here proves the row
+    // hides the action because of the row, not the missing capability.
+    const setArtwork = vi.fn()
+    const { actions } = renderBrowser([episodeItem], {
+      actions: createLinkItemActions({ setArtwork }),
+    })
 
     fireEvent.click(
       screen.getAllByRole("button", {
@@ -478,7 +504,7 @@ describe("GalleryGroupBrowser", () => {
           episodeFilename.replace("S04E01", "S04E02")
         ),
       ],
-      { actions: createActions(), onExit: vi.fn() }
+      { actions: createLinkItemActions(), onExit: vi.fn() }
     )
 
     fireEvent.click(

@@ -212,6 +212,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
           options.freezeUsage
         ),
         now: DateTime.toEpochMillis(reservationTime),
+        realtime: options.environment.USER_REALTIME_ROOM,
       }),
     catch: (cause) =>
       cause instanceof UsageLimitExhaustedError
@@ -241,6 +242,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
               operationId,
               outcome,
               now: DateTime.toEpochMillis(settlementTime),
+              realtime: options.environment.USER_REALTIME_ROOM,
             }),
           catch: (settlementError) => settlementError,
         }).pipe(

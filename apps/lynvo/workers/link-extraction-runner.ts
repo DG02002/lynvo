@@ -14,8 +14,8 @@ import { decideSavePresentation } from "../app/lib/extraction/presentation"
 import {
   LINK_EXTRACTION_BATCH_SIZE,
   LINK_EXTRACTION_MAX_ATTEMPTS,
+  LINK_EXTRACTION_TRANSIENT_RETRY_SECONDS,
 } from "./constants"
-import { notifyAccountDataChanged } from "./d1/data-version-notification"
 import {
   claimNextSavedLinkExtraction,
   getSavedLinkQueueError,
@@ -71,18 +71,6 @@ const getSavedExtractionIdentity = (
   )
 }
 
-const notifySafely = async (
-  env: Env,
-  userId: string,
-  dataVersion: number
-): Promise<void> => {
-  try {
-    await notifyAccountDataChanged(env, userId, dataVersion)
-  } catch (error) {
-    console.error("Unable to notify saved link extraction change", error)
-  }
-}
-
 const runSavedLinkExtraction = async ({
   runtime,
   claim,
@@ -112,28 +100,24 @@ const settlePendingExtraction = async ({
   requestId,
   startedAt,
 }: PendingExtractionInput): Promise<void> => {
-  const requeued = await requeuePendingSavedLinkExtraction(
-    database,
-    claim.userId,
-    {
-      operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
-      id: claim.id,
-      leaseExpiresAt: claim.leaseExpiresAt,
-      retryAfterSeconds: pending.retryAfterSeconds,
-      now: Date.now(),
-      debugLogEntry: {
-        at: Date.now(),
-        pluginServerId: extraction.meta?.pluginServerId,
-        pluginId: extraction.meta?.pluginId,
-        outcome: "pending",
-        requestId,
-        attempt: claim.extractionAttempts,
-        durationMs: Date.now() - startedAt,
-        detail: `Server deferred extraction; retrying in ${pending.retryAfterSeconds}s`,
-      },
-    }
-  )
-  await notifySafely(env, claim.userId, requeued.dataVersion)
+  await requeuePendingSavedLinkExtraction(database, claim.userId, {
+    operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
+    id: claim.id,
+    leaseExpiresAt: claim.leaseExpiresAt,
+    retryAfterSeconds: pending.retryAfterSeconds,
+    now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
+    debugLogEntry: {
+      at: Date.now(),
+      pluginServerId: extraction.meta?.pluginServerId,
+      pluginId: extraction.meta?.pluginId,
+      outcome: "pending",
+      requestId,
+      attempt: claim.extractionAttempts,
+      durationMs: Date.now() - startedAt,
+      detail: `Server deferred extraction; retrying in ${pending.retryAfterSeconds}s`,
+    },
+  })
 }
 
 const settleEmptyExtraction = async ({
@@ -144,7 +128,7 @@ const settleEmptyExtraction = async ({
   requestId,
   startedAt,
 }: CompletedExtractionInput): Promise<void> => {
-  const settled = await settleSavedLinkExtraction(database, claim.userId, {
+  await settleSavedLinkExtraction(database, claim.userId, {
     operationId: `link-extraction:settle:${claim.id}:${claim.extractionAttempts}:failed`,
     id: claim.id,
     leaseExpiresAt: claim.leaseExpiresAt,
@@ -163,8 +147,8 @@ const settleEmptyExtraction = async ({
       detail: "Extraction succeeded but produced no playable links",
     },
     now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
   })
-  await notifySafely(env, claim.userId, settled.dataVersion)
 }
 
 const settleCompletedExtraction = async ({
@@ -175,7 +159,7 @@ const settleCompletedExtraction = async ({
   requestId,
   startedAt,
 }: CompletedExtractionInput): Promise<void> => {
-  const settled = await settleSavedLinkExtraction(database, claim.userId, {
+  await settleSavedLinkExtraction(database, claim.userId, {
     operationId: `link-extraction:settle:${claim.id}:${claim.extractionAttempts}:complete`,
     id: claim.id,
     leaseExpiresAt: claim.leaseExpiresAt,
@@ -193,8 +177,8 @@ const settleCompletedExtraction = async ({
       durationMs: Date.now() - startedAt,
     },
     now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
   })
-  await notifySafely(env, claim.userId, settled.dataVersion)
 }
 
 const settleFailedExtraction = async ({
@@ -211,7 +195,7 @@ const settleFailedExtraction = async ({
     linkId: claim.id,
     userId: claim.userId,
   })
-  const settled = await settleSavedLinkExtraction(database, claim.userId, {
+  await settleSavedLinkExtraction(database, claim.userId, {
     operationId: `link-extraction:settle:${claim.id}:${claim.extractionAttempts}:failed`,
     id: claim.id,
     leaseExpiresAt: claim.leaseExpiresAt,
@@ -232,8 +216,45 @@ const settleFailedExtraction = async ({
       httpStatus: extractionError.status,
     },
     now: Date.now(),
+    realtime: env.USER_REALTIME_ROOM,
   })
-  await notifySafely(env, claim.userId, settled.dataVersion)
+}
+
+const isRetryableExtractionError = (error: ExtractionError): boolean =>
+  error.message === "TEMPORARY_FAILURE" ||
+  error.status === 408 ||
+  (error.status !== undefined && error.status >= 500 && error.status <= 599)
+
+const requeueRetryableExtraction = async ({
+  env,
+  database,
+  claim,
+  identity,
+  requestId,
+  startedAt,
+  extractionError,
+}: FailedExtractionInput): Promise<void> => {
+  const now = Date.now()
+  await requeuePendingSavedLinkExtraction(database, claim.userId, {
+    operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
+    id: claim.id,
+    leaseExpiresAt: claim.leaseExpiresAt,
+    retryAfterSeconds: LINK_EXTRACTION_TRANSIENT_RETRY_SECONDS,
+    debugLogEntry: {
+      at: now,
+      pluginServerId: identity.pluginServerId,
+      pluginId: identity.pluginId,
+      outcome: "requeued",
+      requestId,
+      errorCode: extractionError.message,
+      attempt: claim.extractionAttempts,
+      durationMs: now - startedAt,
+      detail: `Temporary extraction failure; retrying in ${LINK_EXTRACTION_TRANSIENT_RETRY_SECONDS}s`,
+      httpStatus: extractionError.status,
+    },
+    now,
+    realtime: env.USER_REALTIME_ROOM,
+  })
 }
 
 const processClaimedSavedLinkExtraction = async (
@@ -267,11 +288,11 @@ export const processSavedLinkExtraction = async (
   const claim = await claimNextSavedLinkExtraction(database, {
     now: Date.now(),
     linkId,
+    realtime: env.USER_REALTIME_ROOM,
   })
   if (!claim) {
     return false
   }
-  await notifySafely(env, claim.userId, claim.dataVersion)
 
   const requestId = `background-link-extraction:${claim.id}:${claim.extractionAttempts}`
   const identity = getSavedExtractionIdentity(claim.metaJson)
@@ -311,7 +332,14 @@ export const processSavedLinkExtraction = async (
               error instanceof Error ? error.message : "Unable to load links.",
             url: claim.url,
           })
-    await settleFailedExtraction({ ...context, extractionError })
+    if (
+      isRetryableExtractionError(extractionError) &&
+      claim.extractionAttempts < LINK_EXTRACTION_MAX_ATTEMPTS
+    ) {
+      await requeueRetryableExtraction({ ...context, extractionError })
+    } else {
+      await settleFailedExtraction({ ...context, extractionError })
+    }
   }
   return true
 }

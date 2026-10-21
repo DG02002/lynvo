@@ -166,6 +166,7 @@ export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
             encrypted: null,
             balance: null,
             now: Date.now(),
+            realtime: environment.USER_REALTIME_ROOM,
           }),
         catch: (cause) =>
           new ProxyProviderError({
@@ -204,6 +205,7 @@ export const saveProxyProviderKey = Effect.fn("ProxyProviderKey.save")(
           encrypted,
           balance,
           now: Date.now(),
+          realtime: environment.USER_REALTIME_ROOM,
         }),
       catch: (cause) =>
         new ProxyProviderError({
@@ -280,6 +282,7 @@ export const refreshProxyProviderBalance = Effect.fn(
       updateProxyProviderBalance(database, input.user.id, {
         balance,
         now: checkedAt,
+        realtime: environment.USER_REALTIME_ROOM,
       }),
     catch: (cause) =>
       new ProxyProviderError({

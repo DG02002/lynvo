@@ -10,8 +10,6 @@ const requireReceiverId = () => {
 }
 
 export const remoteApi: RemoteControlTransport = {
-  connect: async () => undefined,
-  disconnect: async () => undefined,
   send: async (targetSessionId, intent) => {
     await client.remote.send({
       payload: {

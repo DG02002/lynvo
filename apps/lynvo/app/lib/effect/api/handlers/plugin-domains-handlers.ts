@@ -146,6 +146,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 pluginId: payload.pluginId,
                 credential,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               mapPluginServerAvailabilityError(
@@ -176,6 +177,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               beginPluginDomainCredentialChange(database, user.id, {
                 domainId: params.domainId,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               mapPluginDomainMutationError(
@@ -205,6 +207,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                   keyVersion: encrypted.keyVersion,
                 },
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               mapPluginDomainMutationError(
@@ -228,6 +231,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               deletePluginDomainCredential(database, user.id, {
                 domainId: params.domainId,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               mapPluginDomainMutationError(
@@ -251,6 +255,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               deletePluginDomainById(database, user.id, {
                 domainId: params.domainId,
                 now: Date.now(),
+                realtime: environment.USER_REALTIME_ROOM,
               }),
             catch: (cause) =>
               mapPluginDomainNotFoundError(

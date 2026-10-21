@@ -18,16 +18,16 @@ import {
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
+  getMediaNodeKey,
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
-import { openInPlayerAndMarkOpened } from "~/features/links/open-in-player"
+import { openPlayableAndMarkOpened } from "~/features/links/open-in-player"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { savePaths } from "~/lib/paths"
 
 import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"
 import {
-  getLinkKey,
   getLinksAtFolderPath,
   resolveFolderPath,
   type FolderLevel,
@@ -87,7 +87,7 @@ const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
     if (!getMediaNodeInteractionState(onlyLink).canExpand) {
       break
     }
-    descendedPath.push({ id: getLinkKey(onlyLink), label: onlyLink.label })
+    descendedPath.push({ id: getMediaNodeKey(onlyLink), label: onlyLink.label })
     currentLinks = onlyLink.children ?? []
   }
   return descendedPath
@@ -422,7 +422,7 @@ export const useFinderBrowserState = ({
     const folderOpenRequest = ++folderOpenRequestRef.current
     const openedFromLocationKey = currentLocationKeyRef.current
     resetHorizontalGesture()
-    const linkKey = getLinkKey(link)
+    const linkKey = getMediaNodeKey(link)
     const linkTarget = getMediaNodeTargetOrUndefined(link)
     if (linkTarget !== undefined) {
       actions.markOpened(item.url, linkTarget)
@@ -451,7 +451,7 @@ export const useFinderBrowserState = ({
   }
 
   const openLink = async (link: ExtractedLink) => {
-    const linkKey = getLinkKey(link)
+    const linkKey = getMediaNodeKey(link)
     if (getMediaNodeInteractionState(link).isFolder) {
       await openFolder(link, [
         ...visibleFolderPath,
@@ -460,14 +460,12 @@ export const useFinderBrowserState = ({
       return
     }
 
-    const linkTarget = getMediaNodeTargetOrUndefined(link)
-    await openInPlayerAndMarkOpened(() => actions.play(link), {
-      itemLabel: link.label,
-      markOpened: () => {
-        if (linkTarget !== undefined) {
-          actions.markOpened(item.url, linkTarget)
-        }
-      },
+    await openPlayableAndMarkOpened({
+      actions,
+      itemUrl: item.url,
+      playableLink: link,
+      open: () => actions.play(link),
+      shouldPropagateError: true,
     })
   }
 

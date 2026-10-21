@@ -9,33 +9,38 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
+  getSourceRequestContext,
   type PluginAdapterOptions,
 } from "../plugin-adapter"
-import { fetchValidatedUpstream } from "../upstream-response"
+import { cancelUpstreamResponseBody } from "../upstream-response"
 import { decodeUrlComponent } from "../url-policy"
-import { formatFileSize } from "./file-size"
+import {
+  fetchWithSourceRetries,
+  isRetryableSourceStatus,
+} from "./fetch-with-retries"
+import {
+  getResponseFileSize,
+  parseContentDispositionFilename,
+} from "./media-metadata"
 import { readRangeRequestCapability } from "./media-node"
 
-const CONTENT_DISPOSITION_FILENAME =
-  /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i
-const CONTENT_RANGE_TOTAL = /\/(\d+)$/
 const MAX_SIGNED_URL_DURATION_SECONDS = 31_536_000
 
 const getFilename = (targetUrl: string, headers: Headers): string => {
-  const headerFilename = CONTENT_DISPOSITION_FILENAME.exec(
-    headers.get("Content-Disposition") ?? ""
-  )?.[1]
+  const headerFilename = parseContentDispositionFilename(
+    headers.get("Content-Disposition")
+  )
   if (headerFilename) {
-    return decodeUrlComponent(headerFilename)
+    return headerFilename
   }
   const parsedUrl = new URL(targetUrl)
   const queryDisposition =
     parsedUrl.searchParams.get("response-content-disposition") ??
     parsedUrl.searchParams.get("content-disposition")
   if (queryDisposition) {
-    const match = CONTENT_DISPOSITION_FILENAME.exec(queryDisposition)?.[1]
+    const match = parseContentDispositionFilename(queryDisposition)
     if (match) {
-      return decodeUrlComponent(match)
+      return match
     }
   }
   const queryFilename =
@@ -45,18 +50,6 @@ const getFilename = (targetUrl: string, headers: Headers): string => {
   }
   const pathFilename = parsedUrl.pathname.split("/").at(-1)
   return pathFilename ? decodeUrlComponent(pathFilename) : "Unknown File"
-}
-
-const getFileSize = (status: number, headers: Headers): string | undefined => {
-  const rangeSize = CONTENT_RANGE_TOTAL.exec(
-    headers.get("Content-Range") ?? ""
-  )?.[1]
-  return formatFileSize(
-    rangeSize ??
-      (status === 200
-        ? (headers.get("Content-Length") ?? undefined)
-        : undefined)
-  )
 }
 
 const getSignedUrlExpiry = (targetUrl: string, now: number) => {
@@ -90,13 +83,27 @@ const getSignedUrlExpiry = (targetUrl: string, now: number) => {
 }
 
 export const extractDirectMedia = async (options: PluginAdapterOptions) => {
-  const response = await fetchValidatedUpstream(options.targetUrl, {
-    headers: {
-      "Accept-Encoding": "identity",
-      Range: DIRECT_MEDIA_RANGE_HEADER,
+  const sourceRequestContext = getSourceRequestContext(
+    options.plugin,
+    options.sourceRequestContext
+  )
+  const response = await fetchWithSourceRetries(
+    options.targetUrl,
+    {
+      headers: {
+        "Accept-Encoding": "identity",
+        Range: DIRECT_MEDIA_RANGE_HEADER,
+      },
     },
-  })
+    sourceRequestContext
+  )
   try {
+    if (isRetryableSourceStatus(response)) {
+      throw new ProtocolError(
+        "TEMPORARY_FAILURE",
+        `Direct Media upstream request failed (${response.status}).`
+      )
+    }
     const contentType =
       response.headers.get("Content-Type")?.toLowerCase() ?? ""
     const filename = getFilename(options.targetUrl, response.headers)
@@ -123,7 +130,7 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       url: options.targetUrl,
       status: "up" as const,
       rangeRequest: readRangeRequestCapability(response),
-      size: getFileSize(response.status, response.headers),
+      size: getResponseFileSize(response),
       ...getSignedUrlExpiry(options.targetUrl, Date.now()),
     }
     return {
@@ -135,6 +142,6 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       extensions: {},
     }
   } finally {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
   }
 }

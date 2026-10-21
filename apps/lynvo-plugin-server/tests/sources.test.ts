@@ -222,6 +222,57 @@ describe("Direct Media source adapter", () => {
     expect(cancel).toHaveBeenCalledOnce()
   })
 
+  it("prefers extended UTF-8 Content-Disposition filenames", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Disposition":
+            "attachment; filename=\"fallback.mp4\"; filename*=UTF-8'en'%E2%9C%93%20clip.mp4",
+          "Content-Range": "bytes 0-0/1",
+        },
+      })
+    )
+
+    const result = await extractDirectMedia({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://media.example/video.mp4",
+        },
+      },
+      targetUrl: "https://media.example/video.mp4",
+      plugin,
+    })
+
+    expect(result.nodes[0]).toMatchObject({ label: "✓ clip.mp4" })
+  })
+
+  it("keeps exhausted transient probe failures retryable", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 503 }))
+
+    await expect(
+      extractDirectMedia({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example/video.mp4",
+          },
+        },
+        targetUrl: "https://media.example/video.mp4",
+        plugin: { ...plugin, retry: { maxRetries: 2, delayMs: 0 } },
+      })
+    ).rejects.toMatchObject({
+      code: "TEMPORARY_FAILURE",
+      message: "Direct Media upstream request failed (503).",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+  })
+
   it("marks ignored ranges unsupported and preserves signed URL expiry", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(new Uint8Array([0]), {
@@ -1153,12 +1204,13 @@ describe("Google Drive public files source adapter", () => {
     })
   })
 
-  it("maps malformed encoded content-disposition filenames to unsupported URLs", async () => {
+  it("uses the plain filename when an extended UTF-8 filename is malformed", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, {
         status: 206,
         headers: {
-          "Content-Disposition": "attachment; filename*=UTF-8''bad%",
+          "Content-Disposition":
+            "attachment; filename=fallback.mkv; filename*=UTF-8''bad%",
           "Content-Range": "bytes 0-0/1",
         },
       })
@@ -1168,7 +1220,7 @@ describe("Google Drive public files source adapter", () => {
       fetchGoogleDrivePublicFileMetadata(
         "https://drive.usercontent.google.com/download?id=file-id"
       )
-    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
+    ).resolves.toMatchObject({ filename: "fallback.mkv" })
   })
 
   it("preserves a Drive resource key in the download URL", async () => {
@@ -1228,16 +1280,16 @@ describe("Google Drive public files source adapter", () => {
   })
 
   it("does not mistake a partial response length for the Drive file size", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(new Uint8Array([0]), {
-        status: 206,
-        headers: {
-          "Content-Disposition": 'attachment; filename="example-video.mkv"',
-          "Content-Length": "1",
-          "Content-Range": "bytes 0-0/*",
-        },
-      })
-    )
+    const response = new Response(new Uint8Array([0]), {
+      status: 206,
+      headers: {
+        "Content-Disposition": 'attachment; filename="example-video.mkv"',
+        "Content-Length": "1",
+        "Content-Range": "bytes 0-0/*",
+      },
+    })
+    const cancel = vi.spyOn(response.body!, "cancel")
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
 
     await expect(
       fetchGoogleDrivePublicFileMetadata(
@@ -1247,5 +1299,6 @@ describe("Google Drive public files source adapter", () => {
       filename: "example-video.mkv",
       rangeRequest: "supported",
     })
+    expect(cancel).toHaveBeenCalledOnce()
   })
 })

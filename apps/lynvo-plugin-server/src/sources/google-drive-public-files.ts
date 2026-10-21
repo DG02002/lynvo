@@ -14,17 +14,26 @@ import {
 } from "../constants"
 import {
   createPluginResponseMetadata,
+  getSourceRequestContext,
   type PluginAdapterOptions,
+  type SourceRequestContext,
 } from "../plugin-adapter"
 import {
-  fetchValidatedUpstream,
+  cancelUpstreamResponseBody,
   readBoundedUpstreamText,
 } from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
+import { fetchWithSourceRetries } from "./fetch-with-retries"
 import { formatFileSize } from "./file-size"
 import {
+  getResponseFileSize,
+  parseContentDispositionFilename,
+} from "./media-metadata"
+import {
+  createSourceFolderNodes,
   createSourcePlayableNode,
   readRangeRequestCapability,
+  type SourceFolderNodeInput,
 } from "./media-node"
 import { isVideoFile } from "./video-file"
 
@@ -103,49 +112,37 @@ const isHtmlResponse = (response: Response): boolean =>
   response.headers.get("content-type")?.toLowerCase().includes("text/html") ??
   false
 
-const getContentDispositionFilename = (
-  contentDisposition: string | null
-): string | undefined => {
-  if (!contentDisposition) {
-    return undefined
-  }
-  const encodedFilename = /filename\*=UTF-8''([^;]+)/i.exec(
-    contentDisposition
-  )?.[1]
-  if (encodedFilename) {
-    return decodeUrlComponent(encodedFilename)
-  }
-  return /filename="([^"]+)"/i.exec(contentDisposition)?.[1]
-}
-
 export const fetchGoogleDrivePublicFileMetadata = async (
-  downloadUrl: string
+  downloadUrl: string,
+  sourceRequestContext: Partial<SourceRequestContext> = {}
 ): Promise<GoogleDrivePublicFileMetadata> => {
-  const response = await fetchValidatedUpstream(downloadUrl, {
-    headers: { Range: "bytes=0-0" },
-  })
+  const response = await fetchWithSourceRetries(
+    downloadUrl,
+    { headers: { Range: "bytes=0-0" } },
+    sourceRequestContext
+  )
   if (isHtmlResponse(response)) {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive file is rate-limited. Try again in 24 hours.")
   }
   if (!response.ok) {
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive file is not publicly accessible.")
   }
-  const filename =
-    getContentDispositionFilename(
-      response.headers.get("content-disposition")
-    ) ?? "Google Drive file"
-  const totalBytes =
-    /\/(\d+)$/.exec(response.headers.get("content-range") ?? "")?.[1] ??
-    (response.status === 200
-      ? response.headers.get("content-length")
-      : undefined) ??
-    undefined
-  // The probe above already asked for one byte, so its response decides the
-  // range capability instead of a second request at handoff time.
-  const rangeRequest: RangeRequestCapability =
-    readRangeRequestCapability(response)
-  return { filename, size: formatFileSize(totalBytes), rangeRequest }
+  try {
+    const filename =
+      parseContentDispositionFilename(
+        response.headers.get("content-disposition")
+      ) ?? "Google Drive file"
+    const size = getResponseFileSize(response)
+    // The probe above already asked for one byte, so its response decides the
+    // range capability instead of a second request at handoff time.
+    const rangeRequest: RangeRequestCapability =
+      readRangeRequestCapability(response)
+    return { filename, size, rangeRequest }
+  } finally {
+    await cancelUpstreamResponseBody(response)
+  }
 }
 
 export interface GoogleDrivePublicFolderItem {
@@ -227,39 +224,51 @@ export const parseGoogleDrivePublicFolderItems = (
 export const createGoogleDrivePublicFolderNodes = (
   items: readonly GoogleDrivePublicFolderItem[]
 ): MediaNode[] =>
-  items.flatMap<MediaNode>((item) => {
-    if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+  createSourceFolderNodes(
+    items.flatMap<SourceFolderNodeInput>((item) => {
+      if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+        return [
+          {
+            kind: "folder",
+            id: item.id,
+            label: item.name,
+            nodeUrl: `https://drive.google.com/drive/folders/${encodeUrlPathSegment(item.id)}`,
+          },
+        ]
+      }
+      if (!isVideoFile(item.name)) {
+        return []
+      }
       return [
         {
-          kind: "resolvable",
+          kind: "file",
           id: item.id,
           label: item.name,
-          nodeUrl: `https://drive.google.com/drive/folders/${encodeUrlPathSegment(item.id)}`,
-          resolutionKind: "folder",
+          mediaUrl: createGoogleDriveDownloadUrl(item.id),
+          size: formatFileSize(item.size),
         },
       ]
-    }
-    if (!isVideoFile(item.name)) {
-      return []
-    }
-    const size = formatFileSize(item.size)
-    const node = createSourcePlayableNode({
-      id: item.id,
-      label: item.name,
-      url: createGoogleDriveDownloadUrl(item.id),
-      size,
     })
-    return [node]
-  })
+  )
 
 export const extractGoogleDrivePublicFolder = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  sourceRequestContext: providedSourceRequestContext,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const sourceRequestContext = getSourceRequestContext(
+    plugin,
+    providedSourceRequestContext
+  )
   extractGoogleDriveFolderId(targetUrl)
-  const response = await fetchValidatedUpstream(targetUrl, {})
+  const response = await fetchWithSourceRetries(
+    targetUrl,
+    {},
+    sourceRequestContext
+  )
   if (!response.ok) {
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive folder is not publicly accessible.")
   }
   const declaredSize = Number(response.headers.get("content-length"))
@@ -267,7 +276,7 @@ export const extractGoogleDrivePublicFolder = async ({
     Number.isFinite(declaredSize) &&
     declaredSize > GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES
   ) {
-    await response.body?.cancel()
+    await cancelUpstreamResponseBody(response)
     throw new Error("Google Drive public folder response is too large.")
   }
   const html = await readBoundedUpstreamText(response).catch((error) => {
@@ -303,12 +312,20 @@ export const extractGoogleDrivePublicFile = async ({
   targetUrl,
   plugin,
   publicAssetOrigin,
+  sourceRequestContext: providedSourceRequestContext,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const sourceRequestContext = getSourceRequestContext(
+    plugin,
+    providedSourceRequestContext
+  )
   const sourceUrl = new URL(targetUrl)
   const fileId = extractGoogleDriveFileId(sourceUrl)
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
-  const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
+  const metadata = await fetchGoogleDrivePublicFileMetadata(
+    downloadUrl,
+    sourceRequestContext
+  )
   const node = createSourcePlayableNode({
     id: fileId,
     label: metadata.filename,

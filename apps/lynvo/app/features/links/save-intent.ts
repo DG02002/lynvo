@@ -1,5 +1,6 @@
 import type {
   ExtractedLink,
+  LinkWriteResult,
   LinkViewItem,
   MetaData,
 } from "~/features/links/types"
@@ -7,6 +8,7 @@ import {
   parsePluginDomainCandidate,
   type PluginDomainSuggestion,
 } from "~/lib/plugin-domain"
+import type { SaveIntentErrorKind } from "~/lib/user-facing-error"
 
 import type { SavedLinkSelection } from "./saved-link-interaction"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
@@ -16,11 +18,11 @@ interface SaveIntentOperations {
     url: string,
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
-  ) => Promise<string | undefined>
+  ) => Promise<LinkWriteResult>
   enqueueLink: (
     savedUrl: string,
     sourceUrl?: string
-  ) => Promise<string | undefined>
+  ) => Promise<LinkWriteResult>
 }
 
 export interface SaveIntentOptions extends SaveIntentOperations {
@@ -31,7 +33,7 @@ export interface SaveIntentOptions extends SaveIntentOperations {
 
 interface SaveIntentErrorResult {
   kind: "error"
-  message: string
+  errorKind: SaveIntentErrorKind
   previewMeta?: MetaData
 }
 
@@ -76,7 +78,7 @@ export interface ConfirmSaveIntentOptions {
 
 interface ConfirmSaveIntentErrorResult {
   kind: "error"
-  message: string
+  errorKind: SaveIntentErrorKind
 }
 
 interface ConfirmSaveIntentUpdatedResult {
@@ -107,10 +109,10 @@ export const resolveSaveIntent = async ({
   const targetUrl = normalizeUrl(rawUrl || "")
 
   if (!targetUrl) {
-    return { kind: "error", message: "Enter a URL." }
+    return { kind: "error", errorKind: "missing-url" }
   }
   if (!isProbablyValidUrl(targetUrl)) {
-    return { kind: "error", message: "Enter a valid URL." }
+    return { kind: "error", errorKind: "invalid-url" }
   }
 
   const pluginDomainCandidate = parsePluginDomainCandidate(targetUrl)
@@ -127,13 +129,13 @@ export const resolveSaveIntent = async ({
   // extraction queue first, so a refresh can never discard in-flight work.
   // Manual mode opens the selection dialog from the persisted extraction
   // once the queued link completes.
-  const queuedId =
+  const queuedResult =
     savedUrl === targetUrl
       ? await enqueueLink(savedUrl)
       : await enqueueLink(savedUrl, targetUrl)
-  return queuedId
-    ? { kind: "queued", linkId: queuedId }
-    : { kind: "error", message: "Unable to save link. Try again." }
+  return queuedResult.kind === "saved"
+    ? { kind: "queued", linkId: queuedResult.id }
+    : { kind: "error", errorKind: "write-failed" }
 }
 
 export const confirmSaveIntent = async ({
@@ -147,7 +149,7 @@ export const confirmSaveIntent = async ({
   if (selectedLinks.length === 0) {
     return {
       kind: "error",
-      message: "Select at least one link.",
+      errorKind: "no-selection",
     }
   }
 
@@ -161,8 +163,8 @@ export const confirmSaveIntent = async ({
     }
   }
 
-  const newId = await addLink(originalUrl, meta, selectedLinks)
-  return newId
+  const result = await addLink(originalUrl, meta, selectedLinks)
+  return result.kind === "saved"
     ? { kind: "saved", pluginDomainSuggestion }
-    : { kind: "error", message: "Unable to save selected links. Try again." }
+    : { kind: "error", errorKind: "write-failed" }
 }
