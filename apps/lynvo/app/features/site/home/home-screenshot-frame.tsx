@@ -42,6 +42,18 @@ const phonePaletteStyle: HomeScreenshotFrameStyle = {
 
 const { frame } = screenshotFrameSpec
 const { aurora } = screenshotFrameSpec
+const homepageImagePath = "/images/homepage/library-overview"
+const homepageImageSourceSet = [
+  ...screenshotFrameSpec.responsiveImageWidths.map(
+    (width) => `${homepageImagePath}-${width}.webp ${width}w`
+  ),
+  `${homepageImagePath}.webp 2940w`,
+].join(", ")
+const imagePadding = frame.paddingCssPixels * 2
+const homepageImageSizes = [
+  `(max-width: ${frame.phoneViewportMaxWidthCssPixels}px) calc(${frame.phoneWidthViewportPercent}vw - ${imagePadding}px)`,
+  `min(calc(${frame.widthViewportPercent}vw - ${imagePadding}px), ${frame.maxWidthCssPixels - imagePadding}px)`,
+].join(", ")
 const phoneViewportQuery = `(max-width: ${frame.phoneViewportMaxWidthCssPixels}px)`
 const subscribeToPhoneViewport = (onChange: () => void) => {
   const query = window.matchMedia(phoneViewportQuery)
@@ -103,7 +115,9 @@ export const HomeScreenshotFrame = () => {
           decoding="async"
           height="1672"
           loading="lazy"
-          src="/images/homepage/library-overview.webp"
+          sizes={homepageImageSizes}
+          src={`${homepageImagePath}.webp`}
+          srcSet={homepageImageSourceSet}
           width="2940"
         />
       </div>

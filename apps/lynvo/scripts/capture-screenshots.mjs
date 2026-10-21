@@ -10,6 +10,7 @@ import screenshotFrameSpec from "../app/features/site/home/screenshot-frame-spec
 import {
   frameDocsScreenshot,
   frameScreenshot,
+  saveResponsiveWebpVariants,
   saveScreenshot,
   validatePalette,
 } from "./frame-screenshot.mjs"
@@ -760,6 +761,15 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
   } else {
     await saveScreenshot(capture, outputPath)
   }
+  const responsiveOutputs = outputPath.startsWith(
+    path.join(APP_DIRECTORY, "public", "images", "homepage") + path.sep
+  )
+    ? await saveResponsiveWebpVariants(
+        capture,
+        outputPath,
+        screenshotFrameSpec.responsiveImageWidths
+      )
+    : []
   if (outputPath.startsWith(DOCS_IMAGES_DIRECTORY)) {
     // DocsScreenshot prefers PNG, so remove a stale alternate after the new output exists.
     const extension = path.extname(outputPath)
@@ -767,7 +777,13 @@ const saveCapturedShot = async ({ page, shot, palettes }) => {
     const alternatePath = `${outputPath.slice(0, -extension.length)}${alternateExtension}`
     await rm(alternatePath, { force: true })
   }
-  process.stdout.write(`Captured ${shot.name} → ${shot.output}\n`)
+  const responsiveSuffix =
+    responsiveOutputs.length > 0
+      ? ` (+ ${responsiveOutputs.map((output) => path.basename(output)).join(", ")})`
+      : ""
+  process.stdout.write(
+    `Captured ${shot.name} → ${shot.output}${responsiveSuffix}\n`
+  )
 }
 
 const createExtractionCaptureGate = () => {

@@ -266,10 +266,10 @@ const createRoundedCapture = async (capture, layout) => {
     .toBuffer()
 }
 
-const writeScreenshot = async (image, outputPath) => {
+const writeScreenshot = async (image, outputPath, webpQuality = 95) => {
   const formattedImage =
     path.extname(outputPath) === ".webp"
-      ? image.webp({ effort: 6, quality: 95, smartSubsample: true })
+      ? image.webp({ effort: 6, quality: webpQuality, smartSubsample: true })
       : image.png({
           adaptiveFiltering: true,
           compressionLevel: 9,
@@ -289,6 +289,45 @@ export const validatePalette = (palette, label = "The screenshot palette") => {
 
 export const saveScreenshot = async (capture, outputPath) => {
   await writeScreenshot(sharp(capture), outputPath)
+}
+
+export const saveResponsiveWebpVariants = async (
+  capture,
+  outputPath,
+  widths
+) => {
+  const metadata = await sharp(capture).metadata()
+  if (
+    path.extname(outputPath) !== ".webp" ||
+    !metadata.width ||
+    !Array.isArray(widths) ||
+    widths.length === 0 ||
+    widths.some(
+      (width, index) =>
+        !Number.isSafeInteger(width) ||
+        width <= 0 ||
+        width >= metadata.width ||
+        (index > 0 && width <= widths[index - 1])
+    )
+  ) {
+    throw new Error(
+      "Responsive WebP widths must be ascending and fit the source image."
+    )
+  }
+
+  const extension = path.extname(outputPath)
+  const outputStem = outputPath.slice(0, -extension.length)
+  return Promise.all(
+    widths.map(async (width) => {
+      const responsiveOutputPath = `${outputStem}-${width}${extension}`
+      await writeScreenshot(
+        sharp(capture).resize({ width, withoutEnlargement: true }),
+        responsiveOutputPath,
+        90
+      )
+      return responsiveOutputPath
+    })
+  )
 }
 
 const renderFramedScreenshot = async ({
