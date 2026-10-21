@@ -358,14 +358,6 @@ export const client = {
         "PATCH",
         { payload: input.payload, schema: VersionedMutationBodySchema }
       ),
-    deleteCredential: (
-      input: PluginDomainParams
-    ): Promise<VersionedMutationBody> =>
-      mutation<VersionedMutationBody>(
-        `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
-        "DELETE",
-        { schema: VersionedMutationBodySchema }
-      ),
     delete: (input: PluginDomainParams): Promise<VersionedMutationBody> =>
       mutation<VersionedMutationBody>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}`,

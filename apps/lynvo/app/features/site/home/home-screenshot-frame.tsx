@@ -98,7 +98,7 @@ export const HomeScreenshotFrame = () => {
     >
       <div className="home-screenshot-frame">
         <img
-          alt="Lynvo Library in List view"
+          alt="Lynvo Library in Gallery view"
           className="home-screenshot-frame__image"
           decoding="async"
           height="1672"

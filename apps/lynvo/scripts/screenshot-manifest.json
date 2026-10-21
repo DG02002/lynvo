@@ -184,6 +184,7 @@
           }
         }
       ],
+      "setup": ["list-view"],
       "output": "app/features/site/docs/images/library-list-view.webp",
       "framing": {
         "mode": "postprocess",
@@ -372,7 +373,7 @@
           }
         }
       ],
-      "setup": ["list-view"],
+      "setup": ["list-view", "watched-confirmation"],
       "output": "app/features/site/docs/images/opening-links-watched-confirmation.webp",
       "framing": {
         "mode": "postprocess",
@@ -460,6 +461,7 @@
           }
         }
       ],
+      "setup": ["list-view"],
       "output": "app/features/site/docs/images/player-not-installed.webp",
       "framing": {
         "mode": "postprocess",
@@ -486,45 +488,6 @@
             "role": "heading",
             "name": "Plugins"
           }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Collapse plugins",
-            "index": 0
-          },
-          "expectVisible": {
-            "role": "button",
-            "name": "Expand plugins",
-            "index": 0
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Collapse plugins",
-            "index": 0
-          },
-          "expectVisible": {
-            "role": "button",
-            "name": "Expand plugins",
-            "index": 1
-          }
-        },
-        {
-          "action": "click",
-          "target": {
-            "role": "button",
-            "name": "Collapse plugins",
-            "index": 0
-          },
-          "expectVisible": {
-            "role": "button",
-            "name": "Expand plugins",
-            "index": 2
-          }
         }
       ],
       "output": "app/features/site/docs/images/settings-plugins.webp",
@@ -549,8 +512,19 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "text": "Key saved",
-            "index": 0
+            "role": "button",
+            "name": "Scrape.do key actions"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Expand Scrape.do usage"
+          },
+          "expectVisible": {
+            "text": "Monthly credit usage",
+            "exact": true
           }
         }
       ],
@@ -576,17 +550,26 @@
           "action": "navigate",
           "path": "/settings/proxy",
           "expectVisible": {
-            "text": "Key saved",
-            "index": 0
+            "role": "button",
+            "name": "Scrape.do key actions"
           }
         },
         {
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Change Scrape.do key",
-            "exact": false,
-            "index": 0
+            "name": "Scrape.do key actions"
+          },
+          "expectVisible": {
+            "role": "menuitem",
+            "name": "Change key"
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "menuitem",
+            "name": "Change key"
           },
           "expectVisible": {
             "text": "Scrape.do API token",
@@ -714,6 +697,7 @@
     },
     {
       "name": "saving-links-extraction-failed",
+      "setup": ["list-view"],
       "seedScenario": "docs",
       "route": "/save",
       "context": "desktop",
@@ -736,7 +720,8 @@
           "action": "click",
           "target": {
             "role": "button",
-            "name": "Report issue"
+            "name": "Report issue",
+            "index": 0
           },
           "expectVisible": {
             "text": "Report an issue",
@@ -947,8 +932,8 @@
       "companionReceiver": {
         "route": "/save",
         "expectVisible": {
-          "text": "Today",
-          "exact": true
+          "role": "button",
+          "name": "Open menu for 12 Angry Men"
         }
       },
       "viewport": {
@@ -962,8 +947,8 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Today",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for 12 Angry Men"
           }
         },
         {
@@ -984,7 +969,8 @@
             "name": "Remote Play"
           },
           "expectVisible": {
-            "text": "Chrome on Linux",
+            "role": "heading",
+            "name": "Connect Remote Play",
             "exact": true
           }
         }
@@ -1125,6 +1111,19 @@
           "action": "navigate",
           "path": "/settings/usage",
           "expectVisible": {
+            "role": "button",
+            "name": "Expand Lynvo Plugin Server usage",
+            "index": 0
+          }
+        },
+        {
+          "action": "click",
+          "target": {
+            "role": "button",
+            "name": "Expand Lynvo Plugin Server usage",
+            "index": 0
+          },
+          "expectVisible": {
             "role": "heading",
             "name": "Monthly usage limit",
             "index": 0
@@ -1181,8 +1180,8 @@
           "action": "navigate",
           "path": "/save",
           "expectVisible": {
-            "text": "Today",
-            "exact": true
+            "role": "button",
+            "name": "Open menu for 12 Angry Men"
           }
         }
       ],
@@ -1210,7 +1209,7 @@
           "path": "/",
           "expectVisible": {
             "role": "img",
-            "name": "Lynvo Library in List view"
+            "name": "Lynvo Library in Gallery view"
           }
         }
       ],
@@ -1241,7 +1240,7 @@
           "path": "/",
           "expectVisible": {
             "role": "img",
-            "name": "Lynvo Library in List view"
+            "name": "Lynvo Library in Gallery view"
           }
         }
       ],
@@ -1368,8 +1367,8 @@
           "exact": true
         },
         "expectVisible": {
-          "text": "Beta",
-          "exact": true
+          "role": "radio",
+          "name": "Gallery view"
         }
       }
     ],
@@ -1392,8 +1391,21 @@
           "exact": true
         },
         "expectVisible": {
-          "text": "Beta",
-          "exact": true
+          "role": "radio",
+          "name": "Gallery view"
+        }
+      }
+    ],
+    "watched-confirmation": [
+      {
+        "action": "click",
+        "target": {
+          "role": "switch",
+          "name": "Ask before marking items as watched"
+        },
+        "expectVisible": {
+          "role": "switch",
+          "name": "Ask before marking items as watched"
         }
       }
     ]

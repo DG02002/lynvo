@@ -301,10 +301,6 @@ const findMarkerMatch = (matchingText: string): MarkerMatch | undefined => {
       episodeNumber: Number(episodeLabelMatch[1]),
     }
   }
-  if (episodeLabelMatches.length > 1) {
-    return undefined
-  }
-
   const seasonMatch = SEASON_PATTERN.exec(matchingText)
   if (!seasonMatch) {
     return undefined

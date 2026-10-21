@@ -60,9 +60,6 @@ export interface PluginSettingsCommands {
     password: string,
     username?: string
   ) => Promise<PluginSettingsMutationResult>
-  readonly deleteCredential: (
-    domainId: string
-  ) => Promise<PluginSettingsMutationResult>
   readonly createPluginServer: (
     value: CustomPluginServerFormValues
   ) => Promise<PluginSettingsMutationResult>
@@ -120,8 +117,6 @@ const defaultCommands: PluginSettingsCommands = {
       params: { domainId },
       payload: username ? { password, username } : { password },
     }),
-  deleteCredential: async (domainId) =>
-    await client.pluginDomains.deleteCredential({ params: { domainId } }),
   createPluginServer: async (value) =>
     await client.pluginServers.create({ payload: value }),
   deletePluginServer: async (pluginServerId) =>

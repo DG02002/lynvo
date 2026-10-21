@@ -806,6 +806,18 @@ const createExtractionCaptureGate = () => {
   return { holdRoute, releaseAndWait, routePattern }
 }
 
+const installScreenshotActivityTouchStub = async (context) => {
+  // Fresh dev pages repeat this non-visual write and exhaust the shared local
+  // mutation limit before the full screenshot manifest can finish.
+  await context.route("**/api/settings/activity", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true }),
+    })
+  })
+}
+
 // A companion receiver is a second signed-in desktop page whose realtime
 // socket registers as a Remote Play receiver, so the captured page can list
 // it in the Connect Remote Play device list. It stays open until the shot
@@ -824,6 +836,7 @@ const openCompanionReceiver = async (browser, shot, origin) => {
     colorScheme: "dark",
     reducedMotion: "reduce",
   })
+  await installScreenshotActivityTouchStub(receiverContext)
   const receiverPage = await receiverContext.newPage()
   receiverPage.setDefaultTimeout(STEP_TIMEOUT_MS)
   receiverPage.setDefaultNavigationTimeout(STEP_TIMEOUT_MS)
@@ -875,6 +888,7 @@ const captureShot = async ({ browser, shot, origin, palettes }) => {
     isMobile: shot.context === "phone",
     hasTouch: shot.context === "phone",
   })
+  await installScreenshotActivityTouchStub(context)
   let companionReceiver
   let releaseHeldExtraction
   try {

@@ -31,7 +31,7 @@ const buttonVariants = cva(
         overlay:
           "bg-background/80 text-foreground shadow-none hover:bg-background/80 hover:text-foreground aria-expanded:bg-background/80 dark:hover:bg-background/80",
         "immersive-back":
-          "rounded-none text-lg tracking-tight text-foreground hover:bg-muted/70 hover:text-foreground",
+          "rounded-none text-lg text-foreground hover:bg-muted/70 hover:text-foreground",
         "finder-row":
           "rounded-lg text-left text-sm font-normal transition-colors hover:bg-muted/50 hover:text-foreground",
       },

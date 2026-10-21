@@ -22,6 +22,6 @@ export const ImmersiveBackButton = ({
       className="size-6 text-foreground"
       data-icon="inline-start"
     />
-    <span className="hidden md:inline">Back</span>
+    <span className="hidden tracking-tight md:inline">Back</span>
   </Button>
 )

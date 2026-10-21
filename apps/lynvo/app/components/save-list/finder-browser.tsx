@@ -435,10 +435,8 @@ interface FinderBrowserLinkRowProps {
   readonly actions: LinkItemActions
   readonly extractingItems: Set<string>
   readonly parentFolderName?: string
-  readonly shouldShowEpisodeStills: boolean
-  readonly shouldShowArtwork: boolean
+  readonly isEpisodeListing: boolean
   readonly shouldStackEpisodeStill: boolean
-  readonly shouldShowRowPosters: boolean
   readonly titleDisplay: FolderTitleDisplay
   readonly displayTitle: string
   readonly onActivate: () => void
@@ -451,10 +449,8 @@ const FinderBrowserLinkRow = ({
   actions,
   extractingItems,
   parentFolderName,
-  shouldShowEpisodeStills,
-  shouldShowArtwork,
+  isEpisodeListing,
   shouldStackEpisodeStill,
-  shouldShowRowPosters,
   titleDisplay,
   displayTitle,
   onActivate,
@@ -463,8 +459,8 @@ const FinderBrowserLinkRow = ({
   const linkTarget = getMediaNodeTargetOrUndefined(link)
   const { isFolder } = getMediaNodeInteractionState(link)
   const isEpisodeRow =
-    shouldShowEpisodeStills && hasEpisodeMarker(link.label, parentFolderName)
-  const shouldShowEpisodeStillForLink = shouldShowArtwork && isEpisodeRow
+    isEpisodeListing && hasEpisodeMarker(link.label, parentFolderName)
+  const shouldShowEpisodeStillForLink = isEpisodeRow
   const isExpired = !isFolder && !isPlayableLinkFresh(link, currentTimeMs)
   const isResolving =
     linkTarget !== undefined && extractingItems.has(linkTarget)
@@ -528,7 +524,7 @@ const FinderBrowserLinkRow = ({
           label={link.label}
           parentFolderName={parentFolderName}
           presentation={getSaveListBrowserItemIconPresentation(
-            shouldShowRowPosters,
+            isEpisodeListing,
             isFolder
           )}
           rowFallbackIcon={rowStatusIcon}
@@ -655,7 +651,6 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
     shouldShowRowPosters &&
     episodeListingLabels.length > 0 &&
     isEpisodeOnlyListing(episodeListingLabels, parentFolderName)
-  const shouldShowEpisodeStills = isEpisodeListing
   const sharedSeasonIdentity = useMemo(
     () =>
       isEpisodeListing
@@ -874,7 +869,7 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
                   actions={actions}
                   isResolving={extractingItems.has(linkTarget)}
                   episodeStill={
-                    shouldShowEpisodeStills &&
+                    isEpisodeListing &&
                     hasEpisodeMarker(link.label, parentFolderName)
                       ? {
                           parentFolderName,
@@ -900,12 +895,10 @@ export const FinderBrowser = ({ item, onExit }: FinderBrowserProps) => {
                 actions={actions}
                 extractingItems={extractingItems}
                 parentFolderName={parentFolderName}
-                shouldShowEpisodeStills={isEpisodeListing}
-                shouldShowArtwork={shouldShowEpisodeStills}
+                isEpisodeListing={isEpisodeListing}
                 shouldStackEpisodeStill={
                   isEpisodeListing && sharedSeasonIdentity !== undefined
                 }
-                shouldShowRowPosters={shouldShowEpisodeStills}
                 titleDisplay={currentTitleDisplay}
                 displayTitle={getRowDisplayTitle(link)}
                 onActivate={() => void openLink(link)}

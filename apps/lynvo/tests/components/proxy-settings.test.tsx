@@ -92,6 +92,9 @@ describe("ProxySettings", () => {
     )
 
     expect(await screen.findByText("First Server")).toBeVisible()
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Expand Scrape.do usage" })
+    )
     expect(screen.getByRole("img", { name: "Scrape.do" })).toBeVisible()
     expect(screen.queryByText("Key saved")).not.toBeInTheDocument()
     expect(screen.getByText("Monthly credit usage")).toBeVisible()
@@ -111,7 +114,9 @@ describe("ProxySettings", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Scrape.do key actions" })
     )
-    expect(screen.getByRole("menuitem", { name: "Change key" })).toBeVisible()
+    expect(
+      await screen.findByRole("menuitem", { name: "Change key" })
+    ).toBeVisible()
     expect(screen.getByRole("menuitem", { name: "Remove key" })).toBeVisible()
 
     fireEvent.click(screen.getByRole("menuitem", { name: "Change key" }))
@@ -264,6 +269,9 @@ describe("ProxySettings", () => {
       </MemoryRouter>
     )
 
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Expand Scrape.do usage" })
+    )
     expect(await screen.findByText("27 of 1,000 credits used")).toBeVisible()
     fireEvent.click(
       screen.getByRole("button", { name: "Refresh Scrape.do credits" })
@@ -361,6 +369,9 @@ describe("ProxySettings", () => {
           path.includes("/api/plugin-servers/") && path.endsWith("/proxy/key")
       )
     ).toBe(false)
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Expand Scrape.do usage" })
+    )
     expect(await screen.findByText("100 of 1,000 credits used")).toBeVisible()
   })
 })

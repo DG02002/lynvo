@@ -181,7 +181,6 @@ describe("Plugin settings interactions", () => {
     }
     const commands: Partial<PluginSettingsCommands> = {
       setCredential: async () => await success("save-credential"),
-      deleteCredential: async () => await success("delete-credential"),
       createPluginServer: async () => await success("create-server"),
       togglePluginServer: async () => await success("toggle-server"),
       refreshPluginServer: async () => await success("refresh-server"),
@@ -199,7 +198,6 @@ describe("Plugin settings interactions", () => {
 
     await act(async () => {
       await result.current.domain.handleSetDomainCredential("domain", "secret")
-      await result.current.domain.handleDeleteDomainCredential("domain")
       await result.current.server.handleAddPluginServer({
         baseUrl: "https://plugins.example",
         apiKey: "secret",
@@ -214,7 +212,6 @@ describe("Plugin settings interactions", () => {
 
     expect(calls).toEqual([
       "save-credential",
-      "delete-credential",
       "create-server",
       "toggle-server",
       "refresh-server",

@@ -230,9 +230,10 @@ describe("GalleryGroupBrowser", () => {
     const artworkFrame = view.container.querySelector(
       ".save-list-group-artwork-frame"
     )
-    expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
+    expect(artworkFrame?.parentElement).toHaveClass("max-w-60", "md:max-w-none")
     // The panel keeps the genres and the TMDB attribution under the poster.
-    expect(await screen.findByText("Crime · Drama · TV-MA")).toBeVisible()
+    expect(await screen.findByText("Crime · Drama")).toBeVisible()
+    expect(screen.getByText("TV-MA")).toBeVisible()
     expect(screen.getByAltText("The Movie Database (TMDB)")).toBeInTheDocument()
     expect(screen.queryByText(/^Artwork:/)).not.toBeInTheDocument()
   })
@@ -278,13 +279,13 @@ describe("GalleryGroupBrowser", () => {
     })
     expect(episodeNamesSwitch).toBeInTheDocument()
     expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "true")
-    expect(screen.getByText("Show episode names")).toHaveClass(
+    expect(screen.getByText("Show episode names").parentElement).toHaveClass(
       "text-base",
       "text-foreground"
     )
-    expect(screen.getByText("Show episode names")).not.toHaveClass(
-      "text-muted-foreground"
-    )
+    expect(
+      screen.getByText("Show episode names").parentElement
+    ).not.toHaveClass("text-muted-foreground")
   })
 
   it("lets users switch gallery rows to filenames", async () => {

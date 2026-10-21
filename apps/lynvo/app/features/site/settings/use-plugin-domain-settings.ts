@@ -103,20 +103,6 @@ export const usePluginDomainSettings = ({
     [commands, run]
   )
 
-  const handleDeleteDomainCredential = React.useCallback(
-    async (domainId: string) => {
-      await run({
-        key: domainId,
-        operation: () => commands.deleteCredential(domainId),
-        messages: {
-          success: "Plugin password removed",
-          failure: "The Plugin password couldn’t be removed. Try again.",
-        },
-      })
-    },
-    [commands, run]
-  )
-
   return {
     domains,
     domainDrafts,
@@ -125,6 +111,5 @@ export const usePluginDomainSettings = ({
     addDomain,
     handleDeleteDomain,
     handleSetDomainCredential,
-    handleDeleteDomainCredential,
   }
 }

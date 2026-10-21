@@ -1,7 +1,10 @@
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 import { Link, type LinkProps } from "react-router"
 
 import { SelectTrigger as LynvoSelectTrigger } from "~/components/select-trigger"
+import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
 import { SelectContent } from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
@@ -53,6 +56,87 @@ export function SettingsRow({
   return (
     <div className={cn(settingsRowClass, className)} {...props}>
       {children}
+    </div>
+  )
+}
+
+export function SettingsDisclosureContent({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("ms-15 border-t border-border", className)} {...props}>
+      {children}
+    </div>
+  )
+}
+
+export function SettingsDisclosure({
+  canExpand = true,
+  children,
+  contentClassName,
+  contentId: providedContentId,
+  defaultExpanded = false,
+  expanded,
+  label,
+  onExpandedChange,
+  renderHeader,
+}: {
+  canExpand?: boolean
+  children: React.ReactNode
+  contentClassName?: string
+  contentId?: string
+  defaultExpanded?: boolean
+  expanded?: boolean
+  label: string
+  onExpandedChange?: (expanded: boolean) => void
+  renderHeader: (disclosureButton: React.ReactNode) => React.ReactNode
+}) {
+  const generatedContentId = React.useId()
+  const contentId = providedContentId ?? generatedContentId
+  const [uncontrolledExpanded, setUncontrolledExpanded] =
+    React.useState(defaultExpanded)
+  const isExpanded = canExpand && (expanded ?? uncontrolledExpanded)
+
+  const toggleExpanded = () => {
+    const nextExpanded = !isExpanded
+    if (expanded === undefined) {
+      setUncontrolledExpanded(nextExpanded)
+    }
+    onExpandedChange?.(nextExpanded)
+  }
+
+  const disclosureButton = canExpand ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-10"
+      aria-label={`${isExpanded ? "Collapse" : "Expand"} ${label}`}
+      aria-expanded={isExpanded}
+      aria-controls={contentId}
+      onClick={toggleExpanded}
+    >
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        className={cn(
+          "transition-transform duration-200",
+          isExpanded ? "rotate-180" : "rotate-0"
+        )}
+      />
+    </Button>
+  ) : null
+
+  return (
+    <div className="flex flex-col">
+      {renderHeader(disclosureButton)}
+      <SettingsDisclosureContent
+        id={contentId}
+        className={cn(!isExpanded && "hidden", contentClassName)}
+      >
+        {isExpanded ? children : null}
+      </SettingsDisclosureContent>
     </div>
   )
 }

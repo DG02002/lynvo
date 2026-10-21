@@ -1,5 +1,3 @@
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
 import { LoadErrorRetry } from "~/components/load-error-retry"
@@ -21,6 +19,7 @@ import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SectionHeading,
   SettingsLoadingBars,
+  SettingsDisclosure,
   SettingsList,
   SettingsPanel,
   SettingsRow,
@@ -111,6 +110,21 @@ const UsageItem = ({
   </SettingsRow>
 )
 
+const partitionUsageEntries = (entries: readonly UsageReadEntry[]) => {
+  const systemEntries: UsageReadEntry[] = []
+  const pluginEntries: UsageReadEntry[] = []
+
+  for (const entry of entries) {
+    if (entry.iconKind === "hidden") {
+      systemEntries.push(entry)
+    } else {
+      pluginEntries.push(entry)
+    }
+  }
+
+  return { systemEntries, pluginEntries }
+}
+
 const UsageServerGroup = ({
   avatar,
   children,
@@ -119,12 +133,11 @@ const UsageServerGroup = ({
   avatar: React.ReactNode
   children: React.ReactNode
   name: string
-}) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
-  const contentId = React.useId()
-
-  return (
-    <div className="flex flex-col">
+}) => (
+  <SettingsDisclosure
+    label={`${name} usage`}
+    contentClassName="flex flex-col gap-2 pb-4"
+    renderHeader={(disclosureButton) => (
       <SettingsRow className="gap-4">
         <div className="flex min-w-0 items-center gap-3">
           {avatar}
@@ -132,36 +145,13 @@ const UsageServerGroup = ({
             {name}
           </SettingsHeadingText>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-10"
-          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${name} usage`}
-          aria-expanded={isExpanded}
-          aria-controls={contentId}
-          onClick={() => setIsExpanded((current) => !current)}
-        >
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            className={`transition-transform duration-200 ${
-              isExpanded ? "rotate-180" : "rotate-0"
-            }`}
-          />
-        </Button>
+        {disclosureButton}
       </SettingsRow>
-      <div
-        id={contentId}
-        className={
-          isExpanded
-            ? "ms-15 flex flex-col gap-2 border-t border-border pb-4"
-            : "hidden"
-        }
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
+    )}
+  >
+    {children}
+  </SettingsDisclosure>
+)
 
 const UsageLoading = () => (
   <SettingsList role="status" aria-label="Loading usage">
@@ -235,12 +225,10 @@ export const UsageSettings = ({
     )
   }
 
-  const lynvoSystemEntries = snapshot.lynvo.entries.filter(
-    (item) => item.iconKind === "hidden"
-  )
-  const lynvoPluginEntries = snapshot.lynvo.entries.filter(
-    (item) => item.iconKind !== "hidden"
-  )
+  const {
+    systemEntries: lynvoSystemEntries,
+    pluginEntries: lynvoPluginEntries,
+  } = partitionUsageEntries(snapshot.lynvo.entries)
 
   return (
     <div className="flex flex-col gap-7">
@@ -320,11 +308,8 @@ export const UsageSettings = ({
           {snapshot.custom.groups.length > 0 && (
             <SettingsList>
               {snapshot.custom.groups.map((group) => {
-                const systemEntries = group.entries.filter(
-                  (item) => item.iconKind === "hidden"
-                )
-                const pluginEntries = group.entries.filter(
-                  (item) => item.iconKind !== "hidden"
+                const { systemEntries, pluginEntries } = partitionUsageEntries(
+                  group.entries
                 )
 
                 return (

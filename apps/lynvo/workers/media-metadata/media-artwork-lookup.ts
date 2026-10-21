@@ -201,9 +201,8 @@ const searchTvSelectingByTitle = (
 
 const searchMovieSelectingByTitle = (
   adapter: TmdbAdapter,
-  title: string,
-  year: number | undefined
-) => searchSelectingByTitle(adapter.searchMovie, { title, year })
+  searchRequest: TitleSearchRequest
+) => searchSelectingByTitle(adapter.searchMovie, searchRequest)
 
 interface SubtitleSeasonArtwork {
   readonly posterPath: string | undefined
@@ -539,11 +538,11 @@ const lookupMovieArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
-  const search = await searchMovieSelectingByTitle(
-    adapter,
-    request.title,
-    request.year
-  )
+  const search = await searchMovieSelectingByTitle(adapter, {
+    title: request.title,
+    year: request.year,
+    requireExactTitleMatch: request.requireExactTitleMatch,
+  })
   if (search.kind !== "success") {
     return failedOutcome
   }

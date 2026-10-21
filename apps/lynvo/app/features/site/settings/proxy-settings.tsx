@@ -1,6 +1,5 @@
 import {
   Add01Icon,
-  ArrowDown01Icon,
   Delete02Icon,
   Key01Icon,
   MoreHorizontalIcon,
@@ -32,6 +31,7 @@ import { getPluginServerManifestView } from "./plugin-server-manifest"
 import type { CustomPluginServer } from "./plugin-settings-interaction"
 import {
   SectionHeading,
+  SettingsDisclosure,
   SettingsHeadingText,
   SettingsList,
   SettingsPanel,
@@ -230,7 +230,6 @@ const ProxyProviderRow = ({
   onSetProxyKey,
   onRefreshCredits,
 }: ProxyProviderRowProps) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
   const [isKeyDialogOpen, setIsKeyDialogOpen] = React.useState(false)
   const detailsId = React.useId()
   const hasCredits =
@@ -245,161 +244,142 @@ const ProxyProviderRow = ({
       : 0
 
   return (
-    <div className="flex flex-col">
-      <SettingsRow className="flex-col items-stretch gap-4 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-12 shrink-0 items-center justify-center">
-              <ScrapeDoMark className="size-8" />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <SettingsHeadingText as="h3">Scrape.do</SettingsHeadingText>
-              {keyStatusLabel !== undefined && (
-                <span className="text-base text-muted-foreground">
-                  {keyStatusLabel}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {hasKey && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-10"
-                      disabled={isKeyBusy}
-                      aria-busy={isKeyBusy}
-                      aria-label="Scrape.do key actions"
-                    />
-                  }
-                >
-                  <HugeiconsIcon icon={MoreHorizontalIcon} />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => setIsKeyDialogOpen(true)}>
-                      <HugeiconsIcon icon={Key01Icon} />
-                      Change key
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      disabled={isKeyBusy}
-                      onClick={() => {
-                        void onSetProxyKey("")
-                      }}
-                    >
-                      <HugeiconsIcon icon={Delete02Icon} />
-                      Remove key
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {!hasKey && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled={isKeyBusy}
-                aria-busy={isKeyBusy}
-                aria-label="Add Scrape.do key"
-                onClick={() => setIsKeyDialogOpen(true)}
-              >
-                <HugeiconsIcon icon={Add01Icon} />
-              </Button>
-            )}
-            <ProxyKeyDialog
-              open={isKeyDialogOpen}
-              onOpenChange={setIsKeyDialogOpen}
-              onSetProxyKey={onSetProxyKey}
-            />
-            {hasKey && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10"
-                aria-label={`${isExpanded ? "Collapse" : "Expand"} Scrape.do usage`}
-                aria-expanded={isExpanded}
-                aria-controls={detailsId}
-                onClick={() => setIsExpanded((current) => !current)}
-              >
-                <HugeiconsIcon
-                  icon={ArrowDown01Icon}
-                  className={`transition-transform duration-200 ${
-                    isExpanded ? "rotate-180" : "rotate-0"
-                  }`}
-                />
-              </Button>
-            )}
-          </div>
-        </div>
-      </SettingsRow>
-      <div
-        id={detailsId}
-        className={
-          hasKey && isExpanded
-            ? "ms-15 flex flex-col gap-2 border-t border-border pb-4"
-            : "hidden"
-        }
-      >
-        {hasKey &&
-          (hasCredits ? (
-            <SettingsUsageMeter
-              title={
-                <SettingsHeadingText as="h4">
-                  Monthly credit usage
-                </SettingsHeadingText>
-              }
-              trailing={`${BALANCE_FORMATTER.format(usedPercent)}% used`}
-              progress={{
-                value: usedPercent,
-                label: "Scrape.do monthly credits used",
-              }}
-              footer={
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                  <span>
-                    {BALANCE_FORMATTER.format(usedCredits)} of{" "}
-                    {BALANCE_FORMATTER.format(balanceLimit)} credits used
+    <SettingsDisclosure
+      label="Scrape.do usage"
+      canExpand={hasKey}
+      contentId={detailsId}
+      contentClassName="flex flex-col gap-2 pb-4"
+      renderHeader={(disclosureButton) => (
+        <SettingsRow className="flex-col items-stretch gap-4 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex size-12 shrink-0 items-center justify-center">
+                <ScrapeDoMark className="size-8" />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <SettingsHeadingText as="h3">Scrape.do</SettingsHeadingText>
+                {keyStatusLabel !== undefined && (
+                  <span className="text-base text-muted-foreground">
+                    {keyStatusLabel}
                   </span>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {balanceCheckedAt !== null && (
-                      <span>
-                        Checked{" "}
-                        <time
-                          dateTime={new Date(balanceCheckedAt).toISOString()}
-                        >
-                          {formatCheckedAt(balanceCheckedAt)}
-                        </time>
-                      </span>
-                    )}
-                    <RefreshCreditsButton
-                      isRefreshing={isRefreshingCredits}
-                      onRefresh={onRefreshCredits}
-                    />
-                  </div>
-                </div>
-              }
-            />
-          ) : (
-            <SettingsUsageMeter
-              title={
-                <span className="text-base text-muted-foreground">
-                  Monthly credit usage is unavailable.
+                )}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {hasKey && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-10"
+                        disabled={isKeyBusy}
+                        aria-busy={isKeyBusy}
+                        aria-label="Scrape.do key actions"
+                      />
+                    }
+                  >
+                    <HugeiconsIcon icon={MoreHorizontalIcon} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        onClick={() => setIsKeyDialogOpen(true)}
+                      >
+                        <HugeiconsIcon icon={Key01Icon} />
+                        Change key
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled={isKeyBusy}
+                        onClick={() => {
+                          void onSetProxyKey("")
+                        }}
+                      >
+                        <HugeiconsIcon icon={Delete02Icon} />
+                        Remove key
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {!hasKey && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={isKeyBusy}
+                  aria-busy={isKeyBusy}
+                  aria-label="Add Scrape.do key"
+                  onClick={() => setIsKeyDialogOpen(true)}
+                >
+                  <HugeiconsIcon icon={Add01Icon} />
+                </Button>
+              )}
+              <ProxyKeyDialog
+                open={isKeyDialogOpen}
+                onOpenChange={setIsKeyDialogOpen}
+                onSetProxyKey={onSetProxyKey}
+              />
+              {disclosureButton}
+            </div>
+          </div>
+        </SettingsRow>
+      )}
+    >
+      {hasKey &&
+        (hasCredits ? (
+          <SettingsUsageMeter
+            title={
+              <SettingsHeadingText as="h4">
+                Monthly credit usage
+              </SettingsHeadingText>
+            }
+            trailing={`${BALANCE_FORMATTER.format(usedPercent)}% used`}
+            progress={{
+              value: usedPercent,
+              label: "Scrape.do monthly credits used",
+            }}
+            footer={
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <span>
+                  {BALANCE_FORMATTER.format(usedCredits)} of{" "}
+                  {BALANCE_FORMATTER.format(balanceLimit)} credits used
                 </span>
-              }
-              trailing={
-                <RefreshCreditsButton
-                  isRefreshing={isRefreshingCredits}
-                  onRefresh={onRefreshCredits}
-                />
-              }
-            />
-          ))}
-      </div>
-    </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {balanceCheckedAt !== null && (
+                    <span>
+                      Checked{" "}
+                      <time dateTime={new Date(balanceCheckedAt).toISOString()}>
+                        {formatCheckedAt(balanceCheckedAt)}
+                      </time>
+                    </span>
+                  )}
+                  <RefreshCreditsButton
+                    isRefreshing={isRefreshingCredits}
+                    onRefresh={onRefreshCredits}
+                  />
+                </div>
+              </div>
+            }
+          />
+        ) : (
+          <SettingsUsageMeter
+            title={
+              <span className="text-base text-muted-foreground">
+                Monthly credit usage is unavailable.
+              </span>
+            }
+            trailing={
+              <RefreshCreditsButton
+                isRefreshing={isRefreshingCredits}
+                onRefresh={onRefreshCredits}
+              />
+            }
+          />
+        ))}
+    </SettingsDisclosure>
   )
 }
 

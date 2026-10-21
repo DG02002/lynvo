@@ -1099,7 +1099,9 @@ const createDocsLinkFixtures = (seedTime: number): readonly LinkFixture[] => [
     filename: "Oppenheimer (2023) - 2160p Blu-ray HEVC HDR10.mkv",
     daysAgo: 2,
     size: "21.3 GB",
-    expiry: seedTime + 45 * MINUTE_MS,
+    // Keep the docs screenshot fixture out of the relative countdown window:
+    // its minute label can change between server render and browser hydration.
+    expiry: seedTime + 8 * DAY_MS,
   }),
   {
     slug: "breaking-bad-season-01",

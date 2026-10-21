@@ -4,10 +4,13 @@ import {
   type MediaArtworkResult,
 } from "../../shared/api-contracts"
 import {
-  MEDIA_ARTWORK_CACHE_VERSION,
+  getMediaArtworkTitleMatchCacheKeyParts,
+  isCurrentMediaArtworkTitleMatchVersion,
+  isUnresolvedMediaArtworkResult,
   MEDIA_ARTWORK_TITLE_MATCH_VERSION,
   MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER,
-} from "../constants"
+} from "../../shared/media-artwork-cache"
+import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
 import {
   lookupMediaArtworkOutcomes,
   mediaArtworkOutcomeToResult,
@@ -40,7 +43,7 @@ const canonicalRequestJson = (request: MediaArtworkRequest): string =>
     request.year ?? null,
     request.seasonNumber ?? null,
     request.episodeNumber ?? null,
-    ...(request.requireExactTitleMatch ? ["exact-title"] : []),
+    ...getMediaArtworkTitleMatchCacheKeyParts(request),
   ])
 
 const buildCacheUrl = async (request: MediaArtworkRequest): Promise<string> => {
@@ -66,13 +69,11 @@ const readCachedResult = async (
     // SAFETY: cache entries are written exclusively by writeCachedResult,
     // whose bodies are MediaArtworkResult JSON.
     const result = (await cached.json()) as MediaArtworkResult
-    const isUnresolvedCandidateResult = Boolean(
-      result.candidates?.length && !result.posterPath && !result.stillPath
-    )
     if (
-      isUnresolvedCandidateResult &&
-      cached.headers.get(MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER) !==
-        String(MEDIA_ARTWORK_TITLE_MATCH_VERSION)
+      isUnresolvedMediaArtworkResult(result) &&
+      !isCurrentMediaArtworkTitleMatchVersion(
+        cached.headers.get(MEDIA_ARTWORK_TITLE_MATCH_VERSION_HEADER)
+      )
     ) {
       return undefined
     }

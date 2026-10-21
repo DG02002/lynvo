@@ -54,8 +54,6 @@ const migrateLegacyMediaViewPreference = (): void => {
   }
 }
 
-const getDefaultMediaView = (): MediaView => DEFAULT_MEDIA_VIEW
-
 const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
   window.addEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
   return () =>
@@ -71,7 +69,7 @@ export const getMediaView = (): MediaView => {
   if (storedMediaView !== undefined) {
     return storedMediaView.mediaView
   }
-  return getDefaultMediaView()
+  return DEFAULT_MEDIA_VIEW
 }
 
 const writeMediaViewCookie = (mediaView: MediaView): void => {

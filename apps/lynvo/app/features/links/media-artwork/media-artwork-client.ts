@@ -6,6 +6,12 @@ import {
   type MediaArtworkResponse,
   type MediaArtworkResult,
 } from "~shared/api-contracts"
+import {
+  getMediaArtworkTitleMatchCacheKeyParts,
+  isCurrentMediaArtworkTitleMatchVersion,
+  isUnresolvedMediaArtworkResult,
+  MEDIA_ARTWORK_TITLE_MATCH_VERSION,
+} from "~shared/media-artwork-cache"
 
 import { requestSameOrigin } from "~/lib/api/client"
 import {
@@ -16,7 +22,6 @@ import {
   MEDIA_ARTWORK_FLUSH_DELAY_MS,
   MEDIA_ARTWORK_FOUND_TTL_MS,
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
-  MEDIA_ARTWORK_TITLE_MATCH_VERSION,
 } from "~/lib/constants"
 
 export const getMediaArtworkKey = (request: MediaArtworkRequest): string => {
@@ -29,9 +34,7 @@ export const getMediaArtworkKey = (request: MediaArtworkRequest): string => {
     request.seasonNumber ?? "",
     request.episodeNumber ?? "",
   ]
-  if (request.requireExactTitleMatch) {
-    keyParts.push("exact-title")
-  }
+  keyParts.push(...getMediaArtworkTitleMatchCacheKeyParts(request))
   return keyParts.join("|")
 }
 
@@ -45,11 +48,6 @@ interface CachedMediaArtworkEntry {
   readonly expiresAt: number
   readonly titleMatchVersion?: number
 }
-
-const isUnresolvedCandidateResult = (
-  value: MediaArtworkResult | null | undefined
-): boolean =>
-  Boolean(value?.candidates?.length && !value.posterPath && !value.stillPath)
 
 const toMediaArtworkCacheKey = (key: string): string =>
   `${MEDIA_ARTWORK_CACHE_STORAGE_PREFIX}${key}`
@@ -115,8 +113,8 @@ const readCachedMediaArtwork = (
       return undefined
     }
     if (
-      isUnresolvedCandidateResult(parsedEntry.value) &&
-      parsedEntry.titleMatchVersion !== MEDIA_ARTWORK_TITLE_MATCH_VERSION
+      isUnresolvedMediaArtworkResult(parsedEntry.value) &&
+      !isCurrentMediaArtworkTitleMatchVersion(parsedEntry.titleMatchVersion)
     ) {
       localStorage.removeItem(toMediaArtworkCacheKey(key))
       return undefined

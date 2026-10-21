@@ -36,8 +36,9 @@ describe("LinkInputSection", () => {
     expect(linkInput).not.toHaveClass("h-full")
     expect(inputGroupAddon).toHaveClass("py-2")
     expect(screen.getByRole("button", { name: "Save link" })).toHaveClass(
-      "size-14.5",
-      "-my-[7px]"
+      "size-12",
+      "-my-[5px]",
+      "sm:size-13"
     )
     const saveButton = screen.getByRole("button", { name: "Save link" })
     expect(saveButton).toHaveAttribute("data-url-field-save-button", "")
