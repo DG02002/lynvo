@@ -89,7 +89,10 @@ const ShotSchema = Schema.Struct({
   framing: Schema.Union([
     Schema.Literal(false),
     Schema.Struct({
-      mode: Schema.Literals(["css", "postprocess"]),
+      mode: Schema.Literal("css"),
+    }),
+    Schema.Struct({
+      mode: Schema.Literal("postprocess"),
       theme: Schema.NonEmptyString,
     }),
   ]),
@@ -256,6 +259,12 @@ const validateShotFraming = (shot, state, palettes) => {
   if (shot.framing === false) {
     return
   }
+  if (shot.framing.mode === "css") {
+    if (shot.captureTarget === undefined) {
+      throw new Error(`${shot.name} must declare a target for CSS framing.`)
+    }
+    return
+  }
   const palette = palettes[shot.framing.theme]
   if (!palette) {
     throw new Error(
@@ -275,19 +284,6 @@ const validateShotFraming = (shot, state, palettes) => {
   }
   state.themes.add(shot.framing.theme)
   state.palettes.add(signature)
-  const expectedHomeTheme =
-    screenshotFrameSpec.homeThemes[
-      shot.context === "phone" ? "phone" : "desktop"
-    ]
-  if (
-    shot.framing.mode === "css" &&
-    (shot.captureTarget === undefined ||
-      shot.framing.theme !== expectedHomeTheme)
-  ) {
-    throw new Error(
-      `${shot.name} must use its assigned homepage CSS palette and capture target.`
-    )
-  }
 }
 
 const validateShot = (shot, state, palettes) => {

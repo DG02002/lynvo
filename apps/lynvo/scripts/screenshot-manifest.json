@@ -1215,8 +1215,7 @@
       ],
       "output": ".screenshots/intermediates/marketing-homepage-desktop.png",
       "framing": {
-        "mode": "css",
-        "theme": "aurora-058"
+        "mode": "css"
       }
     },
     {
@@ -1246,8 +1245,7 @@
       ],
       "output": ".screenshots/intermediates/marketing-homepage-phone.png",
       "framing": {
-        "mode": "css",
-        "theme": "aurora-059"
+        "mode": "css"
       }
     },
     {
