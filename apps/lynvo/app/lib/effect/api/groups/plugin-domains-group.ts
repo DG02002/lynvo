@@ -52,18 +52,6 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
         ValidationApiError,
       ],
     }),
-    HttpApiEndpoint.delete("deleteCredential", "/:domainId/credential", {
-      params: { domainId: Schema.String },
-      success: VersionedMutationResponseSchema,
-      error: [
-        UnauthorizedApiError,
-        CsrfApiError,
-        BackendApiError,
-        PluginDomainNotFoundApiError,
-        PluginServerUnavailableApiError,
-        PluginCredentialChangeSupersededApiError,
-      ],
-    }),
     HttpApiEndpoint.delete("delete", "/:domainId", {
       params: {
         domainId: Schema.String,

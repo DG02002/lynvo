@@ -22,30 +22,19 @@ const domainRow = {
 const readyServerRow = { user_id: "user-1", credential_status: "ready" }
 
 describe("Plugin Domains Worker error contract", () => {
-  it("exposes a missing domain as a typed not-found error", async () => {
-    const database = createAuthenticatedWorkerDatabase({
-      handler: (sql) =>
-        sql.includes("FROM user_plugin_domains WHERE id = ?1")
-          ? { rows: [] }
-          : undefined,
-    })
+  it("does not expose a credential removal endpoint", async () => {
     const response = await app.fetch(
       await buildAuthenticatedWorkerRequest(
-        "/api/plugin-domains/missing-domain/credential",
+        "/api/plugin-domains/domain-1/credential",
         { method: "DELETE" }
       ),
       createWorkerEnvironment({
-        database,
         environment: "development",
       }),
       createWorkerExecutionContext()
     )
 
     expect(response.status).toBe(404)
-    await expect(response.json()).resolves.toEqual({
-      _tag: "PluginDomainNotFoundError",
-      message: "Plugin domain not found",
-    })
   })
 
   it("exposes a missing plugin server as a typed unavailable error", async () => {

@@ -103,7 +103,7 @@ export const HomeScreenshotFrame = () => {
           decoding="async"
           height="1672"
           loading="lazy"
-          src="/images/homepage/library-overview.png"
+          src="/images/homepage/library-overview.webp"
           width="2940"
         />
       </div>
